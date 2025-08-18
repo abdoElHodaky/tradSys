@@ -51,10 +51,12 @@ The platform is built with a layered architecture:
 - **High Performance**: Optimized for low-latency trading operations
 - **Scalable Architecture**: Microservices design with gRPC communication
 - **Real-time Data**: WebSocket streaming for market data and order updates
+- **Binary Protocol**: Protocol Buffers for efficient binary serialization
+- **P2P Communication**: PeerJS integration for peer-to-peer trading signals
 - **Risk Management**: Pre-trade risk checks and circuit breakers
-- **Strategy Framework**: Pluggable trading strategies
+- **Strategy Framework**: Pluggable trading strategies with backtesting
 - **Database Optimization**: Query builder with performance optimizations
-- **Monitoring**: Prometheus metrics for system health
+- **Monitoring & Alerting**: Prometheus metrics and real-time alerting system
 
 ## Technology Stack
 
@@ -99,6 +101,7 @@ The platform is built with a layered architecture:
    protoc --go_out=. --go-grpc_out=. proto/marketdata/marketdata.proto
    protoc --go_out=. --go-grpc_out=. proto/orders/orders.proto
    protoc --go_out=. --go-grpc_out=. proto/risk/risk.proto
+   protoc --go_out=. --go-grpc_out=. proto/ws/message.proto
    ```
 
 4. Build the application:
@@ -123,7 +126,18 @@ The REST API is available at `http://localhost:8080` and provides endpoints for:
 
 ### WebSocket API
 
-Connect to the WebSocket server at `ws://localhost:8080/ws` to receive real-time market data and order updates.
+The platform provides multiple WebSocket endpoints:
+
+- Legacy WebSocket: `ws://localhost:8080/ws` - JSON-based messaging
+- Enhanced WebSocket: `ws://localhost:8080/ws/v2` - Binary Protocol Buffers messaging with compression
+- PeerJS Signaling: `ws://localhost:8080/peerjs/ws` - WebRTC signaling for peer-to-peer communication
+
+### PeerJS API
+
+The PeerJS API is available at:
+
+- Signaling server: `ws://localhost:8080/peerjs/ws`
+- Stats endpoint: `http://localhost:8080/peerjs/stats`
 
 ### gRPC Services
 
@@ -132,6 +146,53 @@ The gRPC server is available at `localhost:50051` and provides the following ser
 - MarketDataService: For market data operations
 - OrderService: For order management
 - RiskService: For risk management
+- StrategyService: For strategy management and backtesting
+
+### Strategy Framework
+
+The platform includes a strategy framework for implementing trading strategies:
+
+```go
+// Create a new market making strategy
+strategy := strategy.NewMarketMakingStrategy(
+    "BTC-USD-MarketMaker",
+    logger,
+    "BTC-USD",
+    10.0,  // 10 basis points spread
+    1.0,   // 1 BTC quantity
+    5.0,   // 5 BTC max position
+    time.Second*30,
+    orderService,
+)
+
+// Register with strategy manager
+strategyManager.RegisterStrategy(strategy)
+
+// Start the strategy
+strategyManager.StartStrategy(context.Background(), strategy.GetName())
+```
+
+### Backtesting
+
+The platform includes a backtesting engine for testing strategies:
+
+```go
+// Create a backtest engine
+backtestEngine := strategy.NewBacktestEngine(logger)
+
+// Register strategy
+backtestEngine.RegisterStrategy(strategy)
+
+// Load market data
+backtestEngine.LoadMarketData(marketData)
+
+// Run backtest
+result, err := backtestEngine.RunBacktest(
+    context.Background(),
+    strategy.GetName(),
+    10000.0, // Initial capital
+)
+```
 
 ## Development
 
@@ -141,20 +202,38 @@ The gRPC server is available at `localhost:50051` and provides the following ser
 ├── api/                  # REST API handlers
 ├── cmd/                  # Application entry points
 │   └── server/           # Main server
+├── docs/                 # Documentation
+│   └── architecture.md   # Architecture documentation
 ├── internal/             # Internal packages
+│   ├── api/              # API handlers
+│   │   └── handlers/     # API endpoint handlers
 │   ├── db/               # Database layer
 │   │   ├── models/       # Database models
 │   │   ├── query/        # Query builder and optimizer
 │   │   └── repositories/ # Data access layer
 │   ├── marketdata/       # Market data service
+│   ├── monitoring/       # Monitoring and alerting
+│   │   ├── metrics.go    # Prometheus metrics collection
+│   │   └── alerts.go     # Alerting system
 │   ├── orders/           # Order management service
+│   ├── peerjs/           # PeerJS integration
+│   │   ├── server.go     # PeerJS signaling server
+│   │   └── client.go     # PeerJS client implementation
 │   ├── risk/             # Risk management service
 │   ├── strategy/         # Strategy engine
+│   │   ├── framework.go  # Strategy framework
+│   │   ├── market_making.go # Market making strategy
+│   │   └── backtest.go   # Backtesting engine
 │   └── ws/               # WebSocket server
+│       ├── server.go     # Legacy WebSocket server
+│       ├── enhanced_server.go # Enhanced WebSocket server
+│       ├── connection_pool.go # Connection pooling
+│       └── binary_message.go # Binary message handling
 └── proto/                # Protocol Buffer definitions
     ├── marketdata/       # Market data service definitions
     ├── orders/           # Order service definitions
-    └── risk/             # Risk service definitions
+    ├── risk/             # Risk service definitions
+    └── ws/               # WebSocket message definitions
 ```
 
 ## Performance Considerations
@@ -178,6 +257,29 @@ TradSys is optimized for high-frequency trading with:
    - Go's goroutines and channels for parallel processing
    - Lock-free data structures where possible
 
+## Implementation Phases
+
+The platform has been implemented in three phases:
+
+### Phase 1: Core Infrastructure
+- Enhanced WebSocket server with binary messaging
+- Connection pooling and optimization
+- Market data service
+- Order management system
+- Risk management system
+
+### Phase 2: P2P Communication
+- PeerJS signaling server
+- WebRTC-based peer-to-peer communication
+- Client-side PeerJS implementation
+
+### Phase 3: Strategy & Monitoring
+- Strategy framework with pluggable strategies
+- Market making strategy implementation
+- Backtesting engine for strategy testing
+- Prometheus metrics collection
+- Real-time alerting system
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
@@ -185,4 +287,3 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
-
