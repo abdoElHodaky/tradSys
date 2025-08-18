@@ -9,31 +9,34 @@ import (
 // OrderStatus represents the status of an order
 type OrderStatus string
 
+// Order status constants
 const (
-	OrderStatusNew       OrderStatus = "NEW"
-	OrderStatusAccepted  OrderStatus = "ACCEPTED"
-	OrderStatusRejected  OrderStatus = "REJECTED"
-	OrderStatusFilled    OrderStatus = "FILLED"
-	OrderStatusPartial   OrderStatus = "PARTIAL"
-	OrderStatusCancelled OrderStatus = "CANCELLED"
+	OrderStatusNew       OrderStatus = "NEW"       // Order has been created but not processed
+	OrderStatusAccepted  OrderStatus = "ACCEPTED"  // Order has been accepted by the system
+	OrderStatusRejected  OrderStatus = "REJECTED"  // Order has been rejected
+	OrderStatusFilled    OrderStatus = "FILLED"    // Order has been completely filled
+	OrderStatusPartial   OrderStatus = "PARTIAL"   // Order has been partially filled
+	OrderStatusCancelled OrderStatus = "CANCELLED" // Order has been cancelled
 )
 
 // OrderType represents the type of an order
 type OrderType string
 
+// Order type constants
 const (
-	OrderTypeMarket    OrderType = "MARKET"
-	OrderTypeLimit     OrderType = "LIMIT"
-	OrderTypeStop      OrderType = "STOP"
-	OrderTypeStopLimit OrderType = "STOP_LIMIT"
+	OrderTypeMarket    OrderType = "MARKET"     // Market order - executed at current market price
+	OrderTypeLimit     OrderType = "LIMIT"      // Limit order - executed at specified price or better
+	OrderTypeStop      OrderType = "STOP"       // Stop order - becomes market order when price reaches stop price
+	OrderTypeStopLimit OrderType = "STOP_LIMIT" // Stop-limit order - becomes limit order when price reaches stop price
 )
 
 // OrderSide represents the side of an order
 type OrderSide string
 
+// Order side constants
 const (
-	OrderSideBuy  OrderSide = "BUY"
-	OrderSideSell OrderSide = "SELL"
+	OrderSideBuy  OrderSide = "BUY"  // Buy order
+	OrderSideSell OrderSide = "SELL" // Sell order
 )
 
 // Order represents an order in the system
@@ -82,4 +85,3 @@ type Position struct {
 	RealizedPnL   float64
 	LastUpdated   time.Time `gorm:"index;not null"`
 }
-

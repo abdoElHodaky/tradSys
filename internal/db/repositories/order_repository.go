@@ -179,11 +179,17 @@ func (r *OrderRepository) GetOrderStatistics(ctx context.Context, symbol string)
 		Where("created_at > ?", time.Now().Add(-24*time.Hour))
 	
 	// Add parameters for the CASE statements
-	builder.whereArgs = append([]interface{}{
-		string(models.OrderStatusFilled),
-		string(models.OrderStatusCancelled),
-		string(models.OrderStatusFilled),
-	}, builder.whereArgs...)
+	// Create a new builder with the CASE statement parameters
+	newBuilder := query.NewBuilder(r.db, r.logger).
+		Table(builder.GetTable()).
+		Select(builder.GetFields()...)
+	
+	// Add the CASE statement parameters first
+	newBuilder.Where("symbol = ?", symbol)
+	newBuilder.Where("created_at > ?", time.Now().Add(-24*time.Hour))
+	
+	// Replace the builder with the new one
+	builder = newBuilder
 	
 	err := builder.First(&result)
 	if err != nil {
@@ -273,4 +279,3 @@ func (r *OrderRepository) UpdatePosition(ctx context.Context, position *models.P
 	
 	return tx.Commit().Error
 }
-

@@ -137,14 +137,14 @@ func (s *Service) CheckOrderRisk(ctx context.Context, req *pb.RiskCheckRequest) 
 				Approved: false,
 				Reason:   "Circuit breaker is triggered for this symbol",
 			}, nil
-		} else {
-			// Reset circuit breaker
-			circuitBreaker.Triggered = false
-			if err := s.repository.UpdateCircuitBreaker(ctx, circuitBreaker); err != nil {
-				s.logger.Error("Failed to reset circuit breaker",
-					zap.Error(err),
-					zap.String("symbol", order.Symbol))
-			}
+		}
+		
+		// Reset circuit breaker
+		circuitBreaker.Triggered = false
+		if err := s.repository.UpdateCircuitBreaker(ctx, circuitBreaker); err != nil {
+			s.logger.Error("Failed to reset circuit breaker",
+				zap.Error(err),
+				zap.String("symbol", order.Symbol))
 		}
 	}
 	
@@ -239,4 +239,3 @@ func (s *Service) recordRiskCheck(ctx context.Context, orderID, accountID, symbo
 			zap.String("order_id", orderID))
 	}
 }
-

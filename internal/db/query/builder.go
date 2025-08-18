@@ -46,10 +46,20 @@ func (b *Builder) Table(table string) *Builder {
 	return b
 }
 
+// GetTable returns the current table
+func (b *Builder) GetTable() string {
+	return b.table
+}
+
 // Select sets the fields to select
 func (b *Builder) Select(fields ...string) *Builder {
 	b.fields = fields
 	return b
+}
+
+// GetFields returns the current fields
+func (b *Builder) GetFields() []string {
+	return b.fields
 }
 
 // Join adds a join clause
@@ -63,6 +73,16 @@ func (b *Builder) Where(condition string, args ...interface{}) *Builder {
 	b.wheres = append(b.wheres, condition)
 	b.whereArgs = append(b.whereArgs, args...)
 	return b
+}
+
+// GetWheres returns the current where conditions
+func (b *Builder) GetWheres() []string {
+	return b.wheres
+}
+
+// GetWhereArgs returns the current where arguments
+func (b *Builder) GetWhereArgs() []interface{} {
+	return b.whereArgs
 }
 
 // OrderBy sets the order by clause
@@ -201,4 +221,3 @@ func (b *Builder) First(dest interface{}) error {
 	b.Limit(1)
 	return b.Execute(dest)
 }
-

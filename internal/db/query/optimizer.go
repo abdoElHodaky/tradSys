@@ -25,7 +25,6 @@ func NewOptimizer(db *gorm.DB, logger *zap.Logger) *Optimizer {
 
 // AnalyzeQuery analyzes a query and returns execution plan
 func (o *Optimizer) AnalyzeQuery(query string, args ...interface{}) (string, error) {
-	var plan string
 	rows, err := o.db.Raw(fmt.Sprintf("EXPLAIN QUERY PLAN %s", query), args...).Rows()
 	if err != nil {
 		return "", err
@@ -128,4 +127,3 @@ func (o *Optimizer) EnableQueryOptimizations() error {
 	o.logger.Info("SQLite optimizations enabled")
 	return nil
 }
-

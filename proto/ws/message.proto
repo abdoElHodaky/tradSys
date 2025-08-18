@@ -1,0 +1,218 @@
+syntax = "proto3";
+
+package ws;
+
+option go_package = "github.com/abdoElHodaky/tradSys/proto/ws";
+
+// WebSocketMessage represents a message sent over WebSocket
+message WebSocketMessage {
+  // Type of message
+  string type = 1;
+  
+  // Channel the message belongs to
+  string channel = 2;
+  
+  // Symbol the message is related to (optional)
+  string symbol = 3;
+  
+  // Timestamp of the message in milliseconds since epoch
+  int64 timestamp = 4;
+  
+  // Message payload
+  oneof payload {
+    // Market data message
+    MarketDataPayload market_data = 5;
+    
+    // Order message
+    OrderPayload order = 6;
+    
+    // Trade message
+    TradePayload trade = 7;
+    
+    // Heartbeat message
+    HeartbeatPayload heartbeat = 8;
+    
+    // Subscription message
+    SubscriptionPayload subscription = 9;
+    
+    // Error message
+    ErrorPayload error = 10;
+    
+    // Generic message with string data
+    string text = 11;
+  }
+}
+
+// MarketDataPayload contains market data information
+message MarketDataPayload {
+  // Symbol
+  string symbol = 1;
+  
+  // Last price
+  double last_price = 2;
+  
+  // Bid price
+  double bid_price = 3;
+  
+  // Ask price
+  double ask_price = 4;
+  
+  // Bid size
+  double bid_size = 5;
+  
+  // Ask size
+  double ask_size = 6;
+  
+  // Volume
+  double volume = 7;
+  
+  // Open price
+  double open = 8;
+  
+  // High price
+  double high = 9;
+  
+  // Low price
+  double low = 10;
+  
+  // Close price
+  double close = 11;
+  
+  // Timestamp of the market data in milliseconds since epoch
+  int64 timestamp = 12;
+  
+  // Exchange the data came from
+  string exchange = 13;
+  
+  // Order book snapshot (optional)
+  OrderBookSnapshot order_book = 14;
+}
+
+// OrderBookSnapshot contains a snapshot of the order book
+message OrderBookSnapshot {
+  // Bids in the order book
+  repeated OrderBookLevel bids = 1;
+  
+  // Asks in the order book
+  repeated OrderBookLevel asks = 2;
+  
+  // Timestamp of the snapshot in milliseconds since epoch
+  int64 timestamp = 3;
+}
+
+// OrderBookLevel represents a level in the order book
+message OrderBookLevel {
+  // Price
+  double price = 1;
+  
+  // Size
+  double size = 2;
+  
+  // Number of orders at this level
+  int32 count = 3;
+}
+
+// OrderPayload contains order information
+message OrderPayload {
+  // Order ID
+  string order_id = 1;
+  
+  // Client order ID
+  string client_order_id = 2;
+  
+  // Symbol
+  string symbol = 3;
+  
+  // Side (BUY or SELL)
+  string side = 4;
+  
+  // Type (MARKET, LIMIT, etc.)
+  string type = 5;
+  
+  // Status (NEW, FILLED, CANCELLED, etc.)
+  string status = 6;
+  
+  // Price
+  double price = 7;
+  
+  // Quantity
+  double quantity = 8;
+  
+  // Filled quantity
+  double filled_quantity = 9;
+  
+  // Average fill price
+  double avg_fill_price = 10;
+  
+  // Timestamp of the order in milliseconds since epoch
+  int64 timestamp = 11;
+}
+
+// TradePayload contains trade information
+message TradePayload {
+  // Trade ID
+  string trade_id = 1;
+  
+  // Order ID
+  string order_id = 2;
+  
+  // Symbol
+  string symbol = 3;
+  
+  // Side (BUY or SELL)
+  string side = 4;
+  
+  // Price
+  double price = 5;
+  
+  // Quantity
+  double quantity = 6;
+  
+  // Timestamp of the trade in milliseconds since epoch
+  int64 timestamp = 7;
+  
+  // Exchange the trade occurred on
+  string exchange = 8;
+  
+  // Fee
+  double fee = 9;
+  
+  // Fee currency
+  string fee_currency = 10;
+}
+
+// HeartbeatPayload contains heartbeat information
+message HeartbeatPayload {
+  // Timestamp of the heartbeat in milliseconds since epoch
+  int64 timestamp = 1;
+}
+
+// SubscriptionPayload contains subscription information
+message SubscriptionPayload {
+  // Action (subscribe or unsubscribe)
+  string action = 1;
+  
+  // Channel to subscribe to
+  string channel = 2;
+  
+  // Symbol to subscribe to (optional)
+  string symbol = 3;
+  
+  // Success status
+  bool success = 4;
+  
+  // Message
+  string message = 5;
+}
+
+// ErrorPayload contains error information
+message ErrorPayload {
+  // Error code
+  int32 code = 1;
+  
+  // Error message
+  string message = 2;
+  
+  // Additional data
+  string data = 3;
+}

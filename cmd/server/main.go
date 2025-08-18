@@ -8,10 +8,12 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/abdoElHodaky/tradSys/internal/api/handlers"
 	"github.com/abdoElHodaky/tradSys/internal/db"
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"github.com/abdoElHodaky/tradSys/internal/marketdata"
 	"github.com/abdoElHodaky/tradSys/internal/orders"
+	"github.com/abdoElHodaky/tradSys/internal/peerjs"
 	"github.com/abdoElHodaky/tradSys/internal/risk"
 	"github.com/abdoElHodaky/tradSys/internal/ws"
 	marketdatapb "github.com/abdoElHodaky/tradSys/proto/marketdata"
@@ -47,22 +49,31 @@ func main() {
 	orderRepo := repositories.NewOrderRepository(database, logger)
 	marketDataRepo := repositories.NewMarketDataRepository(database, logger)
 	riskRepo := repositories.NewRiskRepository(database, logger)
-	strategyRepo := repositories.NewStrategyRepository(database, logger)
+	_ = repositories.NewStrategyRepository(database, logger) // Will be used in future
 
 	// Initialize services
 	marketDataService := marketdata.NewService(logger, marketDataRepo)
 	orderService := orders.NewService(logger, orderRepo)
 	riskService := risk.NewService(logger, riskRepo)
 
-	// Initialize WebSocket server
+	// Initialize WebSocket servers
+	// Legacy WebSocket server
 	wsServer := ws.NewServer(logger)
 	go wsServer.Run()
+	
+	// Enhanced WebSocket server with binary message support
+	enhancedWsOptions := ws.DefaultEnhancedServerOptions()
+	enhancedWsServer := ws.NewEnhancedServer(logger, enhancedWsOptions)
+	
+	// Initialize PeerJS server
+	peerServer := peerjs.NewPeerServer(logger)
+	peerServer.StartCleanupTask(5*time.Minute, 10*time.Minute)
 
 	// Start gRPC server
 	go startGRPCServer(logger, marketDataService, orderService, riskService)
 
 	// Start REST API server
-	go startRESTServer(logger, wsServer)
+	go startRESTServer(logger, wsServer, enhancedWsServer, peerServer)
 
 	// Wait for termination signal
 	sigCh := make(chan os.Signal, 1)
@@ -88,7 +99,7 @@ func startGRPCServer(logger *zap.Logger, marketDataService marketdatapb.MarketDa
 	}
 }
 
-func startRESTServer(logger *zap.Logger, wsServer *ws.Server) {
+func startRESTServer(logger *zap.Logger, wsServer *ws.Server, enhancedWsServer *ws.EnhancedServer, peerServer *peerjs.PeerServer) {
 	router := gin.Default()
 
 	// Health check endpoint
@@ -99,17 +110,34 @@ func startRESTServer(logger *zap.Logger, wsServer *ws.Server) {
 	// Metrics endpoint
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-	// WebSocket endpoint
+	// Legacy WebSocket endpoint
 	router.GET("/ws", func(c *gin.Context) {
 		wsServer.ServeWs(c.Writer, c.Request)
 	})
-
-	// API routes would be defined here
-	// TODO: Implement API routes
+	
+	// Enhanced WebSocket endpoint with binary message support
+	router.GET("/ws/v2", func(c *gin.Context) {
+		enhancedWsServer.ServeWs(c.Writer, c.Request)
+	})
+	
+	// PeerJS WebSocket endpoint
+	router.GET("/peerjs/ws", func(c *gin.Context) {
+		peerServer.HandleConnection(c.Writer, c.Request)
+	})
+	
+	// PeerJS stats endpoint
+	router.GET("/peerjs/stats", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"peer_count": peerServer.GetPeerCount(),
+		})
+	})
+	
+	// Register PeerJS handler
+	peerJSHandler := handlers.NewPeerJSHandler(logger)
+	peerJSHandler.RegisterRoutes(router)
 
 	logger.Info("Starting REST server on :8080")
 	if err := router.Run(":8080"); err != nil {
 		logger.Fatal("Failed to start REST server", zap.Error(err))
 	}
 }
-
