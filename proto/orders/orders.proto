@@ -1,0 +1,87 @@
+syntax = "proto3";
+package orders;
+option go_package = "github.com/abdoElHodaky/tradSys/proto/orders";
+
+enum OrderType {
+  MARKET = 0;
+  LIMIT = 1;
+  STOP = 2;
+  STOP_LIMIT = 3;
+}
+
+enum OrderSide {
+  BUY = 0;
+  SELL = 1;
+}
+
+enum OrderStatus {
+  NEW = 0;
+  ACCEPTED = 1;
+  REJECTED = 2;
+  FILLED = 3;
+  PARTIAL = 4;
+  CANCELLED = 5;
+}
+
+message Order {
+  string order_id = 1;
+  string symbol = 2;
+  OrderType type = 3;
+  OrderSide side = 4;
+  double quantity = 5;
+  double price = 6;
+  string client_id = 7;
+  int64 timestamp = 8;
+  OrderStatus status = 9;
+  double filled_quantity = 10;
+  double average_price = 11;
+  string exchange = 12;
+  string notes = 13;
+}
+
+message OrderRequest {
+  string symbol = 1;
+  OrderType type = 2;
+  OrderSide side = 3;
+  double quantity = 4;
+  double price = 5;
+  string client_id = 6;
+  string exchange = 7;
+}
+
+message OrderResponse {
+  string order_id = 1;
+  OrderStatus status = 2;
+  string message = 3;
+  Order order = 4;
+}
+
+message OrderCancelRequest {
+  string order_id = 1;
+  string client_id = 2;
+}
+
+message OrderStatusRequest {
+  string order_id = 1;
+}
+
+message OrderListRequest {
+  string symbol = 1;
+  OrderStatus status = 2;
+  string client_id = 3;
+  int64 start_time = 4;
+  int64 end_time = 5;
+}
+
+message OrderList {
+  repeated Order orders = 1;
+}
+
+service OrderService {
+  rpc PlaceOrder(OrderRequest) returns (OrderResponse);
+  rpc CancelOrder(OrderCancelRequest) returns (OrderResponse);
+  rpc GetOrderStatus(OrderStatusRequest) returns (OrderResponse);
+  rpc GetOrders(OrderListRequest) returns (OrderList);
+  rpc SubscribeOrderUpdates(OrderStatusRequest) returns (stream OrderResponse);
+}
+
