@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - TradSys</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-size: .875rem;
+        }
+        
+        .feather {
+            width: 16px;
+            height: 16px;
+            vertical-align: text-bottom;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 48px 0 0;
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+        }
+        
+        @media (max-width: 767.98px) {
+            .sidebar {
+                top: 5rem;
+            }
+        }
+        
+        .sidebar-sticky {
+            position: relative;
+            top: 0;
+            height: calc(100vh - 48px);
+            padding-top: .5rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        
+        .sidebar .nav-link {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .sidebar .nav-link .feather {
+            margin-right: 4px;
+            color: #727272;
+        }
+        
+        .sidebar .nav-link.active {
+            color: #2470dc;
+        }
+        
+        .sidebar .nav-link:hover .feather,
+        .sidebar .nav-link.active .feather {
+            color: inherit;
+        }
+        
+        /* Navbar */
+        .navbar-brand {
+            padding-top: .75rem;
+            padding-bottom: .75rem;
+            font-size: 1rem;
+            background-color: rgba(0, 0, 0, .25);
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .25);
+        }
+        
+        .navbar .navbar-toggler {
+            top: .25rem;
+            right: 1rem;
+        }
+        
+        /* Content */
+        .main-content {
+            padding-top: 1.5rem;
+        }
+        
+        /* Charts */
+        .chart-container {
+            height: 300px;
+            margin-bottom: 1rem;
+        }
+        
+        /* Order book */
+        .order-book {
+            height: 400px;
+            overflow-y: auto;
+        }
+        
+        .order-book-header {
+            position: sticky;
+            top: 0;
+            background-color: #f8f9fa;
+            z-index: 1;
+        }
+        
+        /* Trading form */
+        .trading-form {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: .25rem;
+        }
+        
+        /* User profile */
+        .user-profile {
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-radius: .25rem;
+        }
+    </style>
+</head>
+<body>
+    <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">TradSys</a>
+        <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <input class="form-control form-control-dark w-100" type="text" placeholder="Search" aria-label="Search">
+        <div class="navbar-nav">
+            <div class="nav-item text-nowrap">
+                <a class="nav-link px-3" href="#" id="logoutButton">Sign out</a>
+            </div>
+        </div>
+    </header>
+    
+    <div class="container-fluid">
+        <div class="row">
+            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" aria-current="page" href="#" data-page="dashboard">
+                                <i class="bi bi-house-door"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="trading">
+                                <i class="bi bi-graph-up"></i>
+                                Trading
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="orders">
+                                <i class="bi bi-list-check"></i>
+                                Orders
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="portfolio">
+                                <i class="bi bi-briefcase"></i>
+                                Portfolio
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="settings">
+                                <i class="bi bi-gear"></i>
+                                Settings
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                        <span>Admin</span>
+                    </h6>
+                    <ul class="nav flex-column mb-2" id="adminMenu" style="display: none;">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="users">
+                                <i class="bi bi-people"></i>
+                                Users
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="system">
+                                <i class="bi bi-cpu"></i>
+                                System
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+            
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+                <div id="dashboardPage">
+                    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                        <h1 class="h2">Dashboard</h1>
+                        <div class="btn-toolbar mb-2 mb-md-0">
+                            <div class="btn-group me-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary">Share</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary">Export</button>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle">
+                                <i class="bi bi-calendar"></i>
+                                This week
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Portfolio Value</h5>
+                                    <h2 class="card-text">$10,245.63</h2>
+                                    <p class="card-text text-success">+2.5% <small class="text-muted">from yesterday</small></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Open Positions</h5>
+                                    <h2 class="card-text">5</h2>
+                                    <p class="card-text text-muted">3 profitable, 2 losing</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Today's P&L</h5>
+                                    <h2 class="card-text text-success">+$245.63</h2>
+                                    <p class="card-text text-muted">Based on 12 trades</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h2>Market Overview</h2>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Last Price</th>
+                                    <th>Change</th>
+                                    <th>Change %</th>
+                                    <th>Volume</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>BTC/USD</td>
+                                    <td>$42,567.89</td>
+                                    <td class="text-success">+$1,234.56</td>
+                                    <td class="text-success">+2.98%</td>
+                                    <td>1,234.56</td>
+                                    <td><button class="btn btn-sm btn-primary">Trade</button></td>
+                                </tr>
+                                <tr>
+                                    <td>ETH/USD</td>
+                                    <td>$2,345.67</td>
+                                    <td class="text-success">+$123.45</td>
+                                    <td class="text-success">+5.56%</td>
+                                    <td>5,678.90</td>
+                                    <td><button class="btn btn-sm btn-primary">Trade</button></td>
+                                </tr>
+                                <tr>
+                                    <td>XRP/USD</td>
+                                    <td>$0.5678</td>
+                                    <td class="text-danger">-$0.0123</td>
+                                    <td class="text-danger">-2.12%</td>
+                                    <td>12,345,678</td>
+                                    <td><button class="btn btn-sm btn-primary">Trade</button></td>
+                                </tr>
+                                <tr>
+                                    <td>LTC/USD</td>
+                                    <td>$123.45</td>
+                                    <td class="text-success">+$3.45</td>
+                                    <td class="text-success">+2.87%</td>
+                                    <td>234,567</td>
+                                    <td><button class="btn btn-sm btn-primary">Trade</button></td>
+                                </tr>
+                                <tr>
+                                    <td>ADA/USD</td>
+                                    <td>$1.2345</td>
+                                    <td class="text-danger">-$0.0345</td>
+                                    <td class="text-danger">-2.72%</td>
+                                    <td>3,456,789</td>
+                                    <td><button class="btn btn-sm btn-primary">Trade</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div id="usersPage" style="display: none;">
+                    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                        <h1 class="h2">User Management</h1>
+                        <div class="btn-toolbar mb-2 mb-md-0">
+                            <button type="button" class="btn btn-sm btn-primary" id="addUserButton">
+                                <i class="bi bi-person-plus"></i>
+                                Add User
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-striped table-sm">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Last Login</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userTableBody">
+                                <!-- User data will be loaded here -->
+                            </tbody>
+                        </table>
+                        
+                        <nav aria-label="User pagination">
+                            <ul class="pagination" id="userPagination">
+                                <!-- Pagination will be generated here -->
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+                
+                <!-- Other pages will be added here -->
+            </main>
+        </div>
+    </div>
+    
+    <!-- Add User Modal -->
+    <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addUserModalLabel">Add User</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addUserForm">
+                        <div class="mb-3">
+                            <label for="addUsername" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="addUsername" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="addEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="addEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="addPassword" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="addPassword" required>
+                            <div class="form-text">
+                                Password must contain at least 8 characters, including uppercase, lowercase, number, and special character.
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <div class="mb-3">
+                                    <label for="addFirstName" class="form-label">First Name</label>
+                                    <input type="text" class="form-control" id="addFirstName" required>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="mb-3">
+                                    <label for="addLastName" class="form-label">Last Name</label>
+                                    <input type="text" class="form-control" id="addLastName" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="addRole" class="form-label">Role</label>
+                            <select class="form-select" id="addRole" required>
+                                <option value="readonly">Read Only</option>
+                                <option value="analyst">Analyst</option>
+                                <option value="trader">Trader</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveUserButton">Save User</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is logged in
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+            
+            // Get user profile
+            fetchUserProfile();
+            
+            // Navigation
+            const navLinks = document.querySelectorAll('.nav-link[data-page]');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Hide all pages
+                    document.querySelectorAll('main > div[id$="Page"]').forEach(page => {
+                        page.style.display = 'none';
+                    });
+                    
+                    // Show selected page
+                    const pageName = this.getAttribute('data-page');
+                    const page = document.getElementById(pageName + 'Page');
+                    if (page) {
+                        page.style.display = 'block';
+                    }
+                    
+                    // Update active link
+                    navLinks.forEach(link => link.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+            
+            // Logout
+            document.getElementById('logoutButton').addEventListener('click', function(e) {
+                e.preventDefault();
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+            });
+            
+            // User management
+            if (document.getElementById('addUserButton')) {
+                document.getElementById('addUserButton').addEventListener('click', function() {
+                    const modal = new bootstrap.Modal(document.getElementById('addUserModal'));
+                    modal.show();
+                });
+            }
+            
+            if (document.getElementById('saveUserButton')) {
+                document.getElementById('saveUserButton').addEventListener('click', function() {
+                    addUser();
+                });
+            }
+            
+            // Load users if on users page
+            if (document.getElementById('usersPage')) {
+                loadUsers(1);
+            }
+        });
+        
+        function fetchUserProfile() {
+            const token = localStorage.getItem('token');
+            
+            fetch('/api/users/profile', {
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch user profile');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Show admin menu if user is admin
+                if (data.user && data.user.role === 'admin') {
+                    document.getElementById('adminMenu').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching user profile:', error);
+                // Redirect to login if unauthorized
+                if (error.message.includes('401')) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                }
+            });
+        }
+        
+        function loadUsers(page) {
+            const token = localStorage.getItem('token');
+            
+            fetch(`/api/admin/users?page=${page}&page_size=10`, {
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch users');
+                }
+                return response.json();
+            })
+            .then(data => {
+                renderUsers(data.users);
+                renderPagination(data.pagination);
+            })
+            .catch(error => {
+                console.error('Error fetching users:', error);
+            });
+        }
+        
+        function renderUsers(users) {
+            const tableBody = document.getElementById('userTableBody');
+            tableBody.innerHTML = '';
+            
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                
+                // Format dates
+                const createdAt = new Date(user.createdAt).toLocaleDateString();
+                const lastLogin = user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never';
+                
+                row.innerHTML = `
+                    <td>${user.id}</td>
+                    <td>${user.username}</td>
+                    <td>${user.email}</td>
+                    <td>${user.role}</td>
+                    <td>${user.active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-danger">Inactive</span>'}</td>
+                    <td>${createdAt}</td>
+                    <td>${lastLogin}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary edit-user" data-id="${user.id}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger delete-user" data-id="${user.id}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+            
+            // Add event listeners for edit and delete buttons
+            document.querySelectorAll('.edit-user').forEach(button => {
+                button.addEventListener('click', function() {
+                    const userId = this.getAttribute('data-id');
+                    editUser(userId);
+                });
+            });
+            
+            document.querySelectorAll('.delete-user').forEach(button => {
+                button.addEventListener('click', function() {
+                    const userId = this.getAttribute('data-id');
+                    deleteUser(userId);
+                });
+            });
+        }
+        
+        function renderPagination(pagination) {
+            const paginationElement = document.getElementById('userPagination');
+            paginationElement.innerHTML = '';
+            
+            // Previous button
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${pagination.page <= 1 ? 'disabled' : ''}`;
+            prevLi.innerHTML = `<a class="page-link" href="#" data-page="${pagination.page - 1}">Previous</a>`;
+            paginationElement.appendChild(prevLi);
+            
+            // Page numbers
+            for (let i = 1; i <= pagination.pages; i++) {
+                const li = document.createElement('li');
+                li.className = `page-item ${pagination.page === i ? 'active' : ''}`;
+                li.innerHTML = `<a class="page-link" href="#" data-page="${i}">${i}</a>`;
+                paginationElement.appendChild(li);
+            }
+            
+            // Next button
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${pagination.page >= pagination.pages ? 'disabled' : ''}`;
+            nextLi.innerHTML = `<a class="page-link" href="#" data-page="${pagination.page + 1}">Next</a>`;
+            paginationElement.appendChild(nextLi);
+            
+            // Add event listeners
+            document.querySelectorAll('.page-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const page = parseInt(this.getAttribute('data-page'));
+                    if (page > 0 && page <= pagination.pages) {
+                        loadUsers(page);
+                    }
+                });
+            });
+        }
+        
+        function addUser() {
+            const token = localStorage.getItem('token');
+            
+            const username = document.getElementById('addUsername').value;
+            const email = document.getElementById('addEmail').value;
+            const password = document.getElementById('addPassword').value;
+            const firstName = document.getElementById('addFirstName').value;
+            const lastName = document.getElementById('addLastName').value;
+            const role = document.getElementById('addRole').value;
+            
+            fetch('/api/admin/users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify({
+                    username,
+                    email,
+                    password,
+                    first_name: firstName,
+                    last_name: lastName,
+                    role
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to add user');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addUserModal'));
+                modal.hide();
+                
+                // Reload users
+                loadUsers(1);
+                
+                // Show success message
+                alert('User added successfully');
+            })
+            .catch(error => {
+                console.error('Error adding user:', error);
+                alert('Failed to add user: ' + error.message);
+            });
+        }
+        
+        function editUser(userId) {
+            // Implementation for editing a user
+            console.log('Edit user:', userId);
+        }
+        
+        function deleteUser(userId) {
+            // Implementation for deleting a user
+            console.log('Delete user:', userId);
+        }
+    </script>
+</body>
+</html>
