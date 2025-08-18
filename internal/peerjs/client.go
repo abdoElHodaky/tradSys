@@ -34,6 +34,14 @@ type PeerConnection struct {
 	mu         sync.RWMutex
 }
 
+// Message represents a PeerJS message
+type Message struct {
+	Type    string      `json:"type"`
+	Src     string      `json:"src,omitempty"`
+	Dst     string      `json:"dst,omitempty"`
+	Payload interface{} `json:"payload,omitempty"`
+}
+
 // MessageHandler is a function that handles a message
 type MessageHandler func(msg Message) error
 
