@@ -6,10 +6,15 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
+//<<<<<<< codegen-bot/pairs-management-implementation
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"github.com/abdoElHodaky/tradSys/internal/orders"
 	"github.com/abdoElHodaky/tradSys/proto/marketdata"
 	orderspb "github.com/abdoElHodaky/tradSys/proto/orders"
+//=======
+	"github.com/abdoElHodaky/tradSys/proto/marketdata"
+	"github.com/abdoElHodaky/tradSys/proto/orders"
+//>>>>>>> main
 	"go.uber.org/zap"
 )
 
@@ -28,7 +33,11 @@ type Strategy interface {
 	OnMarketData(ctx context.Context, data *marketdata.MarketDataResponse) error
 	
 	// OnOrderUpdate processes order updates
+//<<<<<<< codegen-bot/pairs-management-implementation
 	OnOrderUpdate(ctx context.Context, order *orderspb.OrderResponse) error
+//=======
+	OnOrderUpdate(ctx context.Context, order *orders.OrderResponse) error
+//>>>>>>> main
 	
 	// GetName returns the name of the strategy
 	GetName() string
@@ -42,6 +51,7 @@ type Strategy interface {
 
 // StrategyManager manages trading strategies
 type StrategyManager struct {
+//<<<<<<< codegen-bot/pairs-management-implementation
 	logger         *zap.Logger
 	strategies     map[string]Strategy
 	running        map[string]bool
@@ -68,6 +78,20 @@ func NewStrategyManager(
 		pairRepo:     pairRepo,
 		statsRepo:    statsRepo,
 		positionRepo: positionRepo,
+//=======
+	logger     *zap.Logger
+	strategies map[string]Strategy
+	running    map[string]bool
+	mu         sync.RWMutex
+}
+
+// NewStrategyManager creates a new strategy manager
+func NewStrategyManager(logger *zap.Logger) *StrategyManager {
+	return &StrategyManager{
+		logger:     logger,
+		strategies: make(map[string]Strategy),
+		running:    make(map[string]bool),
+//>>>>>>> main
 	}
 }
 
@@ -204,6 +228,7 @@ func (m *StrategyManager) IsStrategyRunning(name string) (bool, error) {
 	return m.running[name], nil
 }
 
+//<<<<<<< codegen-bot/pairs-management-implementation
 // CreatePairsStrategy creates a new statistical arbitrage strategy
 func (m *StrategyManager) CreatePairsStrategy(ctx context.Context, params StatisticalArbitrageParams) (Strategy, error) {
 	// Create a new statistical arbitrage strategy
@@ -231,6 +256,8 @@ func (m *StrategyManager) CreatePairsStrategy(ctx context.Context, params Statis
 	return strategy, nil
 }
 
+//=======
+//>>>>>>> main
 // ProcessMarketData processes market data updates for all running strategies
 func (m *StrategyManager) ProcessMarketData(ctx context.Context, data *marketdata.MarketDataResponse) {
 	m.mu.RLock()
@@ -250,7 +277,11 @@ func (m *StrategyManager) ProcessMarketData(ctx context.Context, data *marketdat
 }
 
 // ProcessOrderUpdate processes order updates for all running strategies
+//<<<<<<< codegen-bot/pairs-management-implementation
 func (m *StrategyManager) ProcessOrderUpdate(ctx context.Context, order *orderspb.OrderResponse) {
+//=======
+func (m *StrategyManager) ProcessOrderUpdate(ctx context.Context, order *orders.OrderResponse) {
+//>>>>>>> main
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	
@@ -326,7 +357,11 @@ func (s *BaseStrategy) OnMarketData(ctx context.Context, data *marketdata.Market
 }
 
 // OnOrderUpdate processes order updates
+//<<<<<<< codegen-bot/pairs-management-implementation
 func (s *BaseStrategy) OnOrderUpdate(ctx context.Context, order *orderspb.OrderResponse) error {
+//=======
+func (s *BaseStrategy) OnOrderUpdate(ctx context.Context, order *orders.OrderResponse) error {
+//>>>>>>> main
 	// To be implemented by derived strategies
 	return nil
 }
@@ -397,6 +432,7 @@ type BacktestResult struct {
 	Metrics       map[string]float64
 }
 
+//<<<<<<< codegen-bot/pairs-management-implementation
 // StatisticalArbitrageParams contains parameters for the statistical arbitrage strategy
 type StatisticalArbitrageParams struct {
 	Name           string
@@ -412,6 +448,8 @@ type StatisticalArbitrageParams struct {
 	UpdateInterval time.Duration
 }
 
+//=======
+//>>>>>>> main
 // Errors
 var (
 	ErrStrategyNotFound         = NewError("strategy not found")

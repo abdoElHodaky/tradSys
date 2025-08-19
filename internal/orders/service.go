@@ -61,6 +61,7 @@ func (s *Service) PlaceOrder(ctx context.Context, req *pb.OrderRequest) (*pb.Ord
 	
 	// Persist to database
 	dbOrder := &models.Order{
+//<<<<<<< codegen-bot/pairs-management-implementation
 		OrderID:    order.OrderId,
 		Symbol:     order.Symbol,
 		Type:       models.OrderType(mapOrderTypeToString(order.Type)),
@@ -76,6 +77,19 @@ func (s *Service) PlaceOrder(ctx context.Context, req *pb.OrderRequest) (*pb.Ord
 		CreatedAt:  time.Now(),
 		UpdatedAt:  time.Now(),
 		Timestamp:  time.Now(),
+//=======
+		OrderID:   order.OrderId,
+		Symbol:    order.Symbol,
+		Type:      models.OrderType(mapOrderTypeToString(order.Type)),
+		Side:      models.OrderSide(mapOrderSideToString(order.Side)),
+		Quantity:  order.Quantity,
+		Price:     order.Price,
+		ClientID:  order.ClientId,
+		Status:    models.OrderStatusAccepted,
+		Exchange:  order.Exchange,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+//>>>>>>> main
 	}
 	
 	if err := s.repository.Create(ctx, dbOrder); err != nil {
@@ -436,3 +450,7 @@ func mapStringToOrderStatus(orderStatus string) pb.OrderStatus {
 		return pb.OrderStatus_NEW
 	}
 }
+//<<<<<<< codegen-bot/pairs-management-implementation
+//=======
+
+//>>>>>>> main
