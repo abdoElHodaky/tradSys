@@ -13,12 +13,14 @@ import (
 // CQRSFactory creates CQRS components
 type CQRSFactory struct {
 	logger *zap.Logger
+	useWatermill bool
 }
 
 // NewCQRSFactory creates a new CQRS factory
-func NewCQRSFactory(logger *zap.Logger) *CQRSFactory {
+func NewCQRSFactory(logger *zap.Logger, useWatermill bool) *CQRSFactory {
 	return &CQRSFactory{
 		logger: logger,
+		useWatermill: useWatermill,
 	}
 }
 
@@ -37,9 +39,26 @@ func (f *CQRSFactory) CreateEventStore() store.EventStore {
 }
 
 // CreateEventBus creates an event bus
-func (f *CQRSFactory) CreateEventBus(eventStore store.EventStore) eventbus.EventBus {
+func (f *CQRSFactory) CreateEventBus(eventStore store.EventStore) (eventbus.EventBus, error) {
+	if f.useWatermill {
+		// Create a Watermill event bus
+		config := DefaultWatermillEventBusConfig()
+		bus, err := NewWatermillEventBus(eventStore, f.logger, config)
+		if err != nil {
+			return nil, err
+		}
+		
+		// Start the event bus
+		err = bus.Start()
+		if err != nil {
+			return nil, err
+		}
+		
+		return bus, nil
+	}
+	
 	// Create an asynchronous event bus
-	return eventbus.NewAsyncEventBus(eventStore, f.logger, 10)
+	return eventbus.NewAsyncEventBus(eventStore, f.logger, 10), nil
 }
 
 // CreateCommandBus creates a command bus
@@ -74,13 +93,28 @@ func (f *CQRSFactory) CreateEventSourcedCommandBus(eventBus eventbus.EventBus, a
 	return command.NewEventSourcedCommandBus(eventBus, aggregateRepo, f.logger)
 }
 
+// CreateWatermillCQRSAdapter creates a Watermill CQRS adapter
+func (f *CQRSFactory) CreateWatermillCQRSAdapter(eventStore store.EventStore, aggregateRepo aggregate.Repository) (*WatermillCQRSAdapter, error) {
+	// Create a Watermill CQRS adapter
+	config := DefaultWatermillCQRSConfig()
+	adapter, err := NewWatermillCQRSAdapter(eventStore, aggregateRepo, f.logger, config)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Start the adapter
+	err = adapter.Start()
+	if err != nil {
+		return nil, err
+	}
+	
+	return adapter, nil
+}
+
 // CreateCQRSSystem creates a complete CQRS system
-func (f *CQRSFactory) CreateCQRSSystem() *CQRSSystem {
+func (f *CQRSFactory) CreateCQRSSystem() (*CQRSSystem, error) {
 	// Create the event store
 	eventStore := f.CreateEventStore()
-	
-	// Create the event bus
-	eventBus := f.CreateEventBus(eventStore)
 	
 	// Create the aggregate repository
 	aggregateRepo := f.CreateAggregateRepository(eventStore)
@@ -88,14 +122,50 @@ func (f *CQRSFactory) CreateCQRSSystem() *CQRSSystem {
 	// Create the projection manager
 	projectionManager := f.CreateProjectionManager(eventStore)
 	
-	// Create the command bus
-	commandBus := f.CreateCommandBus()
+	var eventBus eventbus.EventBus
+	var commandBus command.Bus
+	var queryBus query.Bus
+	var eventSourcedCommandBus *command.EventSourcedCommandBus
+	var watermillAdapter *WatermillCQRSAdapter
 	
-	// Create the event-sourced command bus
-	eventSourcedCommandBus := f.CreateEventSourcedCommandBus(eventBus, aggregateRepo)
-	
-	// Create the query bus
-	queryBus := f.CreateQueryBus()
+	if f.useWatermill {
+		// Create the Watermill CQRS adapter
+		adapter, err := f.CreateWatermillCQRSAdapter(eventStore, aggregateRepo)
+		if err != nil {
+			return nil, err
+		}
+		
+		// Create the event bus adapter
+		eventBus = adapter.CreateEventBusAdapter()
+		
+		// Create the command bus
+		commandBus = f.CreateCommandBus()
+		
+		// Create the event-sourced command bus
+		eventSourcedCommandBus = f.CreateEventSourcedCommandBus(eventBus, aggregateRepo)
+		
+		// Create the query bus
+		queryBus = f.CreateQueryBus()
+		
+		// Set the Watermill adapter
+		watermillAdapter = adapter
+	} else {
+		// Create the event bus
+		var err error
+		eventBus, err = f.CreateEventBus(eventStore)
+		if err != nil {
+			return nil, err
+		}
+		
+		// Create the command bus
+		commandBus = f.CreateCommandBus()
+		
+		// Create the event-sourced command bus
+		eventSourcedCommandBus = f.CreateEventSourcedCommandBus(eventBus, aggregateRepo)
+		
+		// Create the query bus
+		queryBus = f.CreateQueryBus()
+	}
 	
 	// Create the CQRS system
 	return &CQRSSystem{
@@ -106,8 +176,10 @@ func (f *CQRSFactory) CreateCQRSSystem() *CQRSSystem {
 		CommandBus:            commandBus,
 		EventSourcedCommandBus: eventSourcedCommandBus,
 		QueryBus:              queryBus,
+		WatermillAdapter:      watermillAdapter,
 		Logger:                f.logger,
-	}
+		UseWatermill:          f.useWatermill,
+	}, nil
 }
 
 // CQRSSystem represents a complete CQRS system
@@ -119,14 +191,19 @@ type CQRSSystem struct {
 	CommandBus            command.Bus
 	EventSourcedCommandBus *command.EventSourcedCommandBus
 	QueryBus              query.Bus
+	WatermillAdapter      *WatermillCQRSAdapter
 	Logger                *zap.Logger
+	UseWatermill          bool
 }
 
 // Start starts the CQRS system
 func (s *CQRSSystem) Start() error {
-	// Start the event bus
-	if starter, ok := s.EventBus.(interface{ Start() }); ok {
-		starter.Start()
+	// Start the event bus if it implements the Start method
+	if starter, ok := s.EventBus.(interface{ Start() error }); ok {
+		err := starter.Start()
+		if err != nil {
+			return err
+		}
 	}
 	
 	return nil
@@ -134,12 +211,23 @@ func (s *CQRSSystem) Start() error {
 
 // Stop stops the CQRS system
 func (s *CQRSSystem) Stop() error {
-	// Stop the event bus
-	if stopper, ok := s.EventBus.(interface{ Stop() }); ok {
-		stopper.Stop()
+	// Stop the Watermill adapter if it exists
+	if s.WatermillAdapter != nil {
+		err := s.WatermillAdapter.Stop()
+		if err != nil {
+			return err
+		}
 	}
 	
-	// Close the event store
+	// Stop the event bus if it implements the Stop method
+	if stopper, ok := s.EventBus.(interface{ Stop() error }); ok {
+		err := stopper.Stop()
+		if err != nil {
+			return err
+		}
+	}
+	
+	// Close the event store if it implements the Close method
 	if closer, ok := s.EventStore.(interface{ Close() error }); ok {
 		return closer.Close()
 	}
