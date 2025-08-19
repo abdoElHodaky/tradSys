@@ -10,8 +10,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// Event represents an event in the event sourcing pattern
-type Event struct {
+// StoredEvent represents an event in the event store
+type StoredEvent struct {
 	ID            string                 `json:"id"`
 	AggregateID   string                 `json:"aggregate_id"`
 	AggregateType string                 `json:"aggregate_type"`

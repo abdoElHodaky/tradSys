@@ -11,8 +11,8 @@ import (
 
 // WebSocketHandler handles WebSocket connections
 type WebSocketHandler struct {
-	hub    *Hub
-	logger *zap.Logger
+	hub      *Hub
+	logger   *zap.Logger
 	upgrader websocket.Upgrader
 }
 
@@ -81,7 +81,7 @@ func (h *WebSocketHandler) HandleConnection(c *gin.Context) {
 	client := NewClient(clientID, conn, h.hub, h.logger)
 	
 	// Register the client with the hub
-	h.hub.Register(client)
+	h.hub.Register <- client
 	
 	// Start the client's read and write pumps
 	go client.ReadPump()
