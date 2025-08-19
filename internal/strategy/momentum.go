@@ -231,8 +231,8 @@ func (s *MomentumStrategy) generateBuySignal(ctx context.Context, symbol string,
 	// Create order
 	order := &models.Order{
 		Symbol:     symbol,
-		Side:       "buy",
-		OrderType:  "market",
+		Side:       models.OrderSideBuy,
+		Type:       models.OrderTypeMarket,
 		Quantity:   adjustedPositionSize,
 		Price:      price,
 		StopLoss:   stopLoss,
@@ -288,8 +288,8 @@ func (s *MomentumStrategy) generateSellSignal(ctx context.Context, symbol string
 	// Create order
 	order := &models.Order{
 		Symbol:     symbol,
-		Side:       "sell",
-		OrderType:  "market",
+		Side:       models.OrderSideSell,
+		Type:       models.OrderTypeMarket,
 		Quantity:   adjustedPositionSize,
 		Price:      price,
 		StopLoss:   stopLoss,

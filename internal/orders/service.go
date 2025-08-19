@@ -61,17 +61,21 @@ func (s *Service) PlaceOrder(ctx context.Context, req *pb.OrderRequest) (*pb.Ord
 	
 	// Persist to database
 	dbOrder := &models.Order{
-		OrderID:   order.OrderId,
-		Symbol:    order.Symbol,
-		Type:      models.OrderType(mapOrderTypeToString(order.Type)),
-		Side:      models.OrderSide(mapOrderSideToString(order.Side)),
-		Quantity:  order.Quantity,
-		Price:     order.Price,
-		ClientID:  order.ClientId,
-		Status:    models.OrderStatusAccepted,
-		Exchange:  order.Exchange,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		OrderID:    order.OrderId,
+		Symbol:     order.Symbol,
+		Type:       models.OrderType(mapOrderTypeToString(order.Type)),
+		Side:       models.OrderSide(mapOrderSideToString(order.Side)),
+		Quantity:   order.Quantity,
+		Price:      order.Price,
+		StopLoss:   order.StopLoss,
+		TakeProfit: order.TakeProfit,
+		ClientID:   order.ClientId,
+		Status:     models.OrderStatusAccepted,
+		Exchange:   order.Exchange,
+		Strategy:   order.Strategy,
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+		Timestamp:  time.Now(),
 	}
 	
 	if err := s.repository.Create(ctx, dbOrder); err != nil {
@@ -432,4 +436,3 @@ func mapStringToOrderStatus(orderStatus string) pb.OrderStatus {
 		return pb.OrderStatus_NEW
 	}
 }
-

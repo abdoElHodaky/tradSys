@@ -226,8 +226,8 @@ func (s *MeanReversionStrategy) generateBuySignal(ctx context.Context, symbol st
 	// Create order
 	order := &models.Order{
 		Symbol:     symbol,
-		Side:       "buy",
-		OrderType:  "limit",
+		Side:       models.OrderSideBuy,
+		Type:       models.OrderTypeLimit,
 		Quantity:   adjustedPositionSize,
 		Price:      price,
 		StopLoss:   stopLoss,
@@ -280,8 +280,8 @@ func (s *MeanReversionStrategy) generateSellSignal(ctx context.Context, symbol s
 	// Create order
 	order := &models.Order{
 		Symbol:     symbol,
-		Side:       "sell",
-		OrderType:  "limit",
+		Side:       models.OrderSideSell,
+		Type:       models.OrderTypeLimit,
 		Quantity:   adjustedPositionSize,
 		Price:      price,
 		StopLoss:   stopLoss,

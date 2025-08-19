@@ -37,6 +37,9 @@ message Order {
   double average_price = 11;
   string exchange = 12;
   string notes = 13;
+  double stop_loss = 14;
+  double take_profit = 15;
+  string strategy = 16;
 }
 
 message OrderRequest {
@@ -47,6 +50,9 @@ message OrderRequest {
   double price = 5;
   string client_id = 6;
   string exchange = 7;
+  double stop_loss = 8;
+  double take_profit = 9;
+  string strategy = 10;
 }
 
 message OrderResponse {
@@ -84,4 +90,3 @@ service OrderService {
   rpc GetOrders(OrderListRequest) returns (OrderList);
   rpc SubscribeOrderUpdates(OrderStatusRequest) returns (stream OrderResponse);
 }
-
