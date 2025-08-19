@@ -5,15 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sync"
 
 	"github.com/ThreeDotsLabs/watermill"
-	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/command"
 	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/eventbus"
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/query"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/aggregate"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/store"
@@ -27,8 +25,6 @@ type WatermillCQRSAdapter struct {
 	
 	// Watermill components
 	router          *message.Router
-	commandBus      *cqrs.CommandBus
-	eventBus        *cqrs.EventBus
 	
 	// Our components
 	eventStore      store.EventStore
@@ -74,7 +70,19 @@ func NewWatermillCQRSAdapter(
 	}
 	
 	// Add recovery middleware
-	router.AddMiddleware(middleware.Recoverer)
+	router.AddMiddleware(func(h message.HandlerFunc) message.HandlerFunc {
+		return func(msg *message.Message) ([]*message.Message, error) {
+			defer func() {
+				if r := recover(); r != nil {
+					logger.Error("Recovered from panic in message handler",
+						zap.Any("panic", r),
+						zap.String("message_uuid", msg.UUID),
+					)
+				}
+			}()
+			return h(msg)
+		}
+	})
 	
 	// Create command publisher/subscriber
 	commandPubSub := gochannel.NewGoChannel(
@@ -94,44 +102,10 @@ func NewWatermillCQRSAdapter(
 		watermillLogger,
 	)
 	
-	// Create CQRS facade
-	cqrsFacade, err := cqrs.NewFacade(cqrs.FacadeConfig{
-		GenerateCommandsTopic: func(commandName string) string {
-			return "commands." + commandName
-		},
-		GenerateEventsTopic: func(eventName string) string {
-			return "events." + eventName
-		},
-		CommandHandlers: func(cb *cqrs.CommandBus, eb *cqrs.EventBus) []cqrs.CommandHandler {
-			// Command handlers will be registered later
-			return []cqrs.CommandHandler{}
-		},
-		EventHandlers: func(cb *cqrs.CommandBus, eb *cqrs.EventBus) []cqrs.EventHandler {
-			// Event handlers will be registered later
-			return []cqrs.EventHandler{}
-		},
-		Router:                router,
-		CommandsPublisher:     commandPubSub,
-		CommandsSubscriberConstructor: func(handlerName string) (message.Subscriber, error) {
-			return commandPubSub, nil
-		},
-		EventsPublisher:     eventPubSub,
-		EventsSubscriberConstructor: func(handlerName string) (message.Subscriber, error) {
-			return eventPubSub, nil
-		},
-		Logger:              watermillLogger,
-		CommandEventMarshaler: cqrs.JSONMarshaler{},
-	})
-	if err != nil {
-		return nil, err
-	}
-	
 	return &WatermillCQRSAdapter{
 		logger:            logger,
 		watermillLogger:   watermillLogger,
 		router:            router,
-		commandBus:        cqrsFacade.CommandBus(),
-		eventBus:          cqrsFacade.EventBus(),
 		eventStore:        eventStore,
 		aggregateRepo:     aggregateRepo,
 		commandPublisher:  commandPubSub,
@@ -174,54 +148,66 @@ func (a *WatermillCQRSAdapter) RegisterCommandHandler(
 	// Get the command name
 	commandName := cmd.CommandName()
 	
-	// Create a watermill command handler
-	watermillHandler := func(ctx context.Context, cmd interface{}) error {
-		// Convert to our command type
-		ourCmd, ok := cmd.(command.Command)
-		if !ok {
-			return fmt.Errorf("command %T does not implement Command interface", cmd)
+	// Create a handler function
+	handlerFunc := func(msg *message.Message) ([]*message.Message, error) {
+		// Unmarshal the command
+		var cmd command.Command
+		err := json.Unmarshal(msg.Payload, &cmd)
+		if err != nil {
+			return nil, err
 		}
 		
 		// Handle the command
-		events, err := handler.Handle(ctx, ourCmd)
+		events, err := handler.Handle(context.Background(), cmd)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		
 		// Save and publish events
 		if len(events) > 0 {
 			// Save events to the event store
-			err = a.eventStore.SaveEvents(ctx, events)
+			err = a.eventStore.SaveEvents(context.Background(), events)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			
 			// Publish events
+			var messages []*message.Message
 			for _, event := range events {
-				// Convert to watermill event
-				watermillEvent := struct {
-					Event *eventsourcing.Event `json:"event"`
-				}{
-					Event: event,
+				// Convert to message
+				payload, err := json.Marshal(event)
+				if err != nil {
+					return nil, err
 				}
 				
-				// Publish the event
-				err = a.eventBus.Publish(ctx, watermillEvent)
-				if err != nil {
-					return err
-				}
+				// Create a message
+				msg := message.NewMessage(watermill.NewUUID(), payload)
+				
+				// Add metadata
+				msg.Metadata.Set("aggregate_id", event.AggregateID)
+				msg.Metadata.Set("aggregate_type", event.AggregateType)
+				msg.Metadata.Set("event_type", event.EventType)
+				
+				messages = append(messages, msg)
 			}
+			
+			return messages, nil
 		}
 		
-		return nil
+		return nil, nil
 	}
 	
-	// Register the handler with watermill
-	return a.commandBus.AddHandler(
-		commandName,
-		reflect.New(commandType).Interface(),
-		watermillHandler,
+	// Register the handler
+	a.router.AddHandler(
+		"command_handler_"+commandName,
+		"commands."+commandName,
+		a.commandSubscriber,
+		"events.*",
+		a.eventPublisher,
+		handlerFunc,
 	)
+	
+	return nil
 }
 
 // RegisterEventHandler registers an event handler
@@ -229,40 +215,45 @@ func (a *WatermillCQRSAdapter) RegisterEventHandler(
 	eventType string,
 	handler eventsourcing.EventHandler,
 ) error {
-	// Create a watermill event handler
-	watermillHandler := func(ctx context.Context, event interface{}) error {
-		// Convert to our event type
-		wrapper, ok := event.(struct {
-			Event *eventsourcing.Event `json:"event"`
-		})
-		if !ok {
-			return fmt.Errorf("event %T is not a valid event wrapper", event)
+	// Create a handler function
+	handlerFunc := func(msg *message.Message) error {
+		// Unmarshal the event
+		var event eventsourcing.Event
+		err := json.Unmarshal(msg.Payload, &event)
+		if err != nil {
+			return err
 		}
 		
 		// Handle the event
-		return handler.HandleEvent(wrapper.Event)
+		return handler.HandleEvent(&event)
 	}
 	
-	// Create a dummy event for registration
-	dummyEvent := struct {
-		Event *eventsourcing.Event `json:"event"`
-	}{
-		Event: &eventsourcing.Event{
-			EventType: eventType,
+	// Register the handler
+	a.router.AddNoPublisherHandler(
+		"event_handler_"+eventType,
+		"events."+eventType,
+		a.eventSubscriber,
+		func(msg *message.Message) error {
+			return handlerFunc(msg)
 		},
-	}
-	
-	// Register the handler with watermill
-	return a.eventBus.AddHandler(
-		"handler_"+eventType,
-		dummyEvent,
-		watermillHandler,
 	)
+	
+	return nil
 }
 
 // DispatchCommand dispatches a command
 func (a *WatermillCQRSAdapter) DispatchCommand(ctx context.Context, cmd command.Command) error {
-	return a.commandBus.Send(ctx, cmd)
+	// Marshal the command
+	payload, err := json.Marshal(cmd)
+	if err != nil {
+		return err
+	}
+	
+	// Create a message
+	msg := message.NewMessage(watermill.NewUUID(), payload)
+	
+	// Publish the message
+	return a.commandPublisher.Publish("commands."+cmd.CommandName(), msg)
 }
 
 // CreateEventBusAdapter creates an EventBus adapter that uses Watermill
@@ -270,6 +261,9 @@ func (a *WatermillCQRSAdapter) CreateEventBusAdapter() eventbus.EventBus {
 	return &watermillEventBusAdapter{
 		adapter: a,
 		logger:  a.logger,
+		handlers: make([]eventsourcing.EventHandler, 0),
+		typeHandlers: make(map[string][]eventsourcing.EventHandler),
+		aggHandlers: make(map[string][]eventsourcing.EventHandler),
 	}
 }
 
@@ -293,15 +287,22 @@ func (a *watermillEventBusAdapter) PublishEvent(ctx context.Context, event *even
 		return err
 	}
 	
-	// Convert to watermill event
-	watermillEvent := struct {
-		Event *eventsourcing.Event `json:"event"`
-	}{
-		Event: event,
+	// Marshal the event
+	payload, err := json.Marshal(event)
+	if err != nil {
+		return err
 	}
 	
-	// Publish the event
-	return a.adapter.eventBus.Publish(ctx, watermillEvent)
+	// Create a message
+	msg := message.NewMessage(watermill.NewUUID(), payload)
+	
+	// Add metadata
+	msg.Metadata.Set("aggregate_id", event.AggregateID)
+	msg.Metadata.Set("aggregate_type", event.AggregateType)
+	msg.Metadata.Set("event_type", event.EventType)
+	
+	// Publish the message
+	return a.adapter.eventPublisher.Publish("events."+event.EventType, msg)
 }
 
 // PublishEvents publishes multiple events
@@ -318,15 +319,22 @@ func (a *watermillEventBusAdapter) PublishEvents(ctx context.Context, events []*
 	
 	// Publish each event
 	for _, event := range events {
-		// Convert to watermill event
-		watermillEvent := struct {
-			Event *eventsourcing.Event `json:"event"`
-		}{
-			Event: event,
+		// Marshal the event
+		payload, err := json.Marshal(event)
+		if err != nil {
+			return err
 		}
 		
-		// Publish the event
-		err = a.adapter.eventBus.Publish(ctx, watermillEvent)
+		// Create a message
+		msg := message.NewMessage(watermill.NewUUID(), payload)
+		
+		// Add metadata
+		msg.Metadata.Set("aggregate_id", event.AggregateID)
+		msg.Metadata.Set("aggregate_type", event.AggregateType)
+		msg.Metadata.Set("event_type", event.EventType)
+		
+		// Publish the message
+		err = a.adapter.eventPublisher.Publish("events."+event.EventType, msg)
 		if err != nil {
 			return err
 		}
@@ -340,11 +348,30 @@ func (a *watermillEventBusAdapter) Subscribe(handler eventsourcing.EventHandler)
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	
-	if a.handlers == nil {
-		a.handlers = make([]eventsourcing.EventHandler, 0)
+	a.handlers = append(a.handlers, handler)
+	
+	// Register a handler for all events
+	handlerFunc := func(msg *message.Message) error {
+		// Unmarshal the event
+		var event eventsourcing.Event
+		err := json.Unmarshal(msg.Payload, &event)
+		if err != nil {
+			return err
+		}
+		
+		// Handle the event
+		return handler.HandleEvent(&event)
 	}
 	
-	a.handlers = append(a.handlers, handler)
+	// Register the handler
+	a.adapter.router.AddNoPublisherHandler(
+		"event_handler_all_"+watermill.NewUUID(),
+		"events.*",
+		a.adapter.eventSubscriber,
+		func(msg *message.Message) error {
+			return handlerFunc(msg)
+		},
+	)
 	
 	return nil
 }
@@ -353,10 +380,6 @@ func (a *watermillEventBusAdapter) Subscribe(handler eventsourcing.EventHandler)
 func (a *watermillEventBusAdapter) SubscribeToType(eventType string, handler eventsourcing.EventHandler) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	
-	if a.typeHandlers == nil {
-		a.typeHandlers = make(map[string][]eventsourcing.EventHandler)
-	}
 	
 	if _, ok := a.typeHandlers[eventType]; !ok {
 		a.typeHandlers[eventType] = make([]eventsourcing.EventHandler, 0)
@@ -373,15 +396,39 @@ func (a *watermillEventBusAdapter) SubscribeToAggregate(aggregateType string, ha
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	
-	if a.aggHandlers == nil {
-		a.aggHandlers = make(map[string][]eventsourcing.EventHandler)
-	}
-	
 	if _, ok := a.aggHandlers[aggregateType]; !ok {
 		a.aggHandlers[aggregateType] = make([]eventsourcing.EventHandler, 0)
 	}
 	
 	a.aggHandlers[aggregateType] = append(a.aggHandlers[aggregateType], handler)
+	
+	// Register a handler for all events of this aggregate type
+	handlerFunc := func(msg *message.Message) error {
+		// Check if the message is for this aggregate type
+		if msg.Metadata.Get("aggregate_type") != aggregateType {
+			return nil
+		}
+		
+		// Unmarshal the event
+		var event eventsourcing.Event
+		err := json.Unmarshal(msg.Payload, &event)
+		if err != nil {
+			return err
+		}
+		
+		// Handle the event
+		return handler.HandleEvent(&event)
+	}
+	
+	// Register the handler
+	a.adapter.router.AddNoPublisherHandler(
+		"event_handler_aggregate_"+aggregateType+"_"+watermill.NewUUID(),
+		"events.*",
+		a.adapter.eventSubscriber,
+		func(msg *message.Message) error {
+			return handlerFunc(msg)
+		},
+	)
 	
 	return nil
 }

@@ -8,7 +8,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
-	"github.com/google/uuid"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/store"
 	"go.uber.org/zap"
@@ -265,13 +264,13 @@ func (b *WatermillEventBus) eventToMessage(event *eventsourcing.Event) (*message
 	}
 	
 	// Create a new message
-	msg := message.NewMessage(uuid.New().String(), payload)
+	msg := message.NewMessage(watermill.NewUUID(), payload)
 	
 	// Add metadata
 	msg.Metadata.Set("aggregate_id", event.AggregateID)
 	msg.Metadata.Set("aggregate_type", event.AggregateType)
 	msg.Metadata.Set("event_type", event.EventType)
-	msg.Metadata.Set("version", string(event.Version))
+	msg.Metadata.Set("version", string(rune(event.Version)))
 	
 	return msg, nil
 }

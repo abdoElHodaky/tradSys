@@ -8,7 +8,7 @@ import (
 
 	"github.com/abdoElHodaky/tradSys/internal/architecture/discovery"
 	"github.com/gin-gonic/gin"
-	"go-micro.dev/v4/registry"
+	"github.com/micro/go-micro/registry"
 	"go.uber.org/zap"
 )
 
