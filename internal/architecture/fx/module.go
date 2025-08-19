@@ -23,6 +23,18 @@ var Module = fx.Options(
 	// Include the gateway module
 	fx.Options(GatewayModule),
 	
+	// Include the CQRS module
+	fx.Options(CQRSModule),
+	
+	// Include the circuit breaker module
+	fx.Options(CircuitBreakerModule),
+	
+	// Include the tracing module
+	fx.Options(TracingModule),
+	
+	// Include the sharding module
+	fx.Options(ShardingModule),
+	
 	// Register lifecycle hooks
 	fx.Invoke(registerArchitectureHooks),
 )

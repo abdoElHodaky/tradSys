@@ -2,12 +2,14 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"sync"
 
 	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/eventbus"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
+	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/store"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 )
@@ -241,129 +243,4 @@ func (d *ShardingEventBusDecorator) SubscribeToType(eventType string, handler ev
 func (d *ShardingEventBusDecorator) SubscribeToAggregate(aggregateType string, handler eventsourcing.EventHandler) error {
 	return d.eventBus.SubscribeToAggregate(aggregateType, handler)
 }
-
-// NatsShardingEventBus is a NATS implementation of the EventBus interface with sharding
-type NatsShardingEventBus struct {
-	conn         *nats.Conn
-	js           nats.JetStreamContext
-	eventStore   store.EventStore
-	handlers     []eventsourcing.EventHandler
-	typeHandlers map[string][]eventsourcing.EventHandler
-	aggHandlers  map[string][]eventsourcing.EventHandler
-	logger       *zap.Logger
-	mu           sync.RWMutex
-	topicPrefix  string
-	subs         []*nats.Subscription
-	ctx          context.Context
-	cancel       context.CancelFunc
-	manager      *EventShardingManager
-}
-
-// NewNatsShardingEventBus creates a new NATS event bus with sharding
-func NewNatsShardingEventBus(
-	eventStore store.EventStore,
-	logger *zap.Logger,
-	config eventbus.NatsEventBusConfig,
-	manager *EventShardingManager,
-) (*NatsShardingEventBus, error) {
-	// Create a context for managing subscriptions
-	ctx, cancel := context.WithCancel(context.Background())
-	
-	// Create NATS connection options
-	opts := []nats.Option{
-		nats.Name("tradSys-event-bus"),
-		nats.Timeout(config.ConnectionTimeout),
-		nats.MaxReconnects(config.MaxReconnects),
-		nats.ReconnectWait(config.ReconnectWait),
-		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
-			logger.Warn("NATS disconnected", zap.Error(err))
-		}),
-		nats.ReconnectHandler(func(nc *nats.Conn) {
-			logger.Info("NATS reconnected", zap.String("url", nc.ConnectedUrl()))
-		}),
-		nats.ErrorHandler(func(nc *nats.Conn, sub *nats.Subscription, err error) {
-			logger.Error("NATS error", zap.Error(err), zap.String("subject", sub.Subject))
-		}),
-	}
-	
-	// Connect to NATS
-	nc, err := nats.Connect(config.URLs[0], opts...)
-	if err != nil {
-		cancel()
-		return nil, fmt.Errorf("failed to connect to NATS: %w", err)
-	}
-	
-	// Create the event bus
-	bus := &NatsShardingEventBus{
-		conn:         nc,
-		eventStore:   eventStore,
-		handlers:     make([]eventsourcing.EventHandler, 0),
-		typeHandlers: make(map[string][]eventsourcing.EventHandler),
-		aggHandlers:  make(map[string][]eventsourcing.EventHandler),
-		logger:       logger,
-		topicPrefix:  config.TopicPrefix,
-		subs:         make([]*nats.Subscription, 0),
-		ctx:          ctx,
-		cancel:       cancel,
-		manager:      manager,
-	}
-	
-	// Setup JetStream if enabled
-	if config.UseJetStream {
-		// Create JetStream context
-		js, err := nc.JetStream()
-		if err != nil {
-			nc.Close()
-			cancel()
-			return nil, fmt.Errorf("failed to create JetStream context: %w", err)
-		}
-		
-		bus.js = js
-		
-		// Initialize the sharding manager
-		err = manager.Initialize(ctx)
-		if err != nil {
-			nc.Close()
-			cancel()
-			return nil, fmt.Errorf("failed to initialize sharding manager: %w", err)
-		}
-	}
-	
-	return bus, nil
-}
-
-// PublishEvent publishes an event with sharding
-func (b *NatsShardingEventBus) PublishEvent(ctx context.Context, event *eventsourcing.Event) error {
-	// Save the event to the store
-	err := b.eventStore.SaveEvents(ctx, []*eventsourcing.Event{event})
-	if err != nil {
-		return err
-	}
-	
-	// Marshal the event to JSON
-	payload, err := json.Marshal(event)
-	if err != nil {
-		return err
-	}
-	
-	// Get the subject for the event
-	subject := b.manager.GetSubjectForEvent(event)
-	
-	// Publish the event
-	if b.js != nil {
-		// Publish with JetStream
-		_, err = b.js.Publish(subject, payload)
-	} else {
-		// Publish with standard NATS
-		err = b.conn.Publish(subject, payload)
-	}
-	
-	if err != nil {
-		return fmt.Errorf("failed to publish event: %w", err)
-	}
-	
-	return nil
-}
-
-// Other methods would be similar to NatsEventBus but with sharding support
 
