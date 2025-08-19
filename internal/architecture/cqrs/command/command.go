@@ -2,99 +2,152 @@ package command
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"reflect"
 	"sync"
+
+	"go.uber.org/zap"
 )
 
 // Command represents a command in the CQRS pattern
 type Command interface {
-	// CommandName returns the name of the command
 	CommandName() string
 }
 
-// CommandHandler handles a specific command type
-type CommandHandler interface {
-	// Handle handles a command
+// Handler represents a command handler in the CQRS pattern
+type Handler interface {
 	Handle(ctx context.Context, command Command) error
 }
 
-// CommandHandlerFunc is a function that implements CommandHandler
-type CommandHandlerFunc func(ctx context.Context, command Command) error
+// HandlerFunc is a function that implements the Handler interface
+type HandlerFunc func(ctx context.Context, command Command) error
 
-// Handle implements CommandHandler
-func (f CommandHandlerFunc) Handle(ctx context.Context, command Command) error {
+// Handle handles a command
+func (f HandlerFunc) Handle(ctx context.Context, command Command) error {
 	return f(ctx, command)
 }
 
-// CommandBus dispatches commands to their handlers
+// CommandBus represents a command bus in the CQRS pattern
 type CommandBus struct {
-	handlers map[string]CommandHandler
+	handlers map[string]Handler
+	logger   *zap.Logger
 	mu       sync.RWMutex
 }
 
 // NewCommandBus creates a new command bus
 func NewCommandBus() *CommandBus {
 	return &CommandBus{
-		handlers: make(map[string]CommandHandler),
+		handlers: make(map[string]Handler),
 	}
 }
 
-// RegisterHandler registers a handler for a specific command type
-func (cb *CommandBus) RegisterHandler(commandType reflect.Type, handler CommandHandler) error {
-	if commandType.Kind() != reflect.Ptr {
-		return errors.New("command type must be a pointer type")
+// SetLogger sets the logger for the command bus
+func (b *CommandBus) SetLogger(logger *zap.Logger) {
+	b.logger = logger
+}
+
+// Register registers a handler for a command
+func (b *CommandBus) Register(commandType reflect.Type, handler Handler) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	// Create a zero value of the command type
+	command, ok := reflect.New(commandType).Elem().Interface().(Command)
+	if !ok {
+		return fmt.Errorf("command type %s does not implement Command interface", commandType.Name())
 	}
-	
-	commandName := commandType.Elem().Name()
-	
-	cb.mu.Lock()
-	defer cb.mu.Unlock()
-	
-	if _, exists := cb.handlers[commandName]; exists {
-		return errors.New("handler already registered for command: " + commandName)
+
+	// Get the command name
+	commandName := command.CommandName()
+
+	// Check if a handler is already registered for the command
+	if _, exists := b.handlers[commandName]; exists {
+		return fmt.Errorf("handler already registered for command %s", commandName)
 	}
-	
-	cb.handlers[commandName] = handler
+
+	// Register the handler
+	b.handlers[commandName] = handler
+
+	if b.logger != nil {
+		b.logger.Info("Registered command handler",
+			zap.String("command", commandName),
+			zap.String("handler", reflect.TypeOf(handler).String()))
+	}
+
 	return nil
 }
 
-// RegisterHandlerFunc registers a handler function for a specific command type
-func (cb *CommandBus) RegisterHandlerFunc(commandType reflect.Type, handler func(ctx context.Context, command Command) error) error {
-	return cb.RegisterHandler(commandType, CommandHandlerFunc(handler))
+// RegisterFunc registers a handler function for a command
+func (b *CommandBus) RegisterFunc(commandType reflect.Type, handler func(ctx context.Context, command Command) error) error {
+	return b.Register(commandType, HandlerFunc(handler))
 }
 
 // Dispatch dispatches a command to its handler
-func (cb *CommandBus) Dispatch(ctx context.Context, command Command) error {
-	if command == nil {
-		return errors.New("command cannot be nil")
-	}
-	
+func (b *CommandBus) Dispatch(ctx context.Context, command Command) error {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	// Get the command name
 	commandName := command.CommandName()
-	
-	cb.mu.RLock()
-	handler, exists := cb.handlers[commandName]
-	cb.mu.RUnlock()
-	
+
+	// Get the handler for the command
+	handler, exists := b.handlers[commandName]
 	if !exists {
-		return errors.New("no handler registered for command: " + commandName)
+		return fmt.Errorf("no handler registered for command %s", commandName)
 	}
-	
+
+	// Handle the command
+	if b.logger != nil {
+		b.logger.Debug("Dispatching command",
+			zap.String("command", commandName),
+			zap.String("handler", reflect.TypeOf(handler).String()))
+	}
+
 	return handler.Handle(ctx, command)
 }
 
-// HasHandler checks if a handler is registered for a specific command type
-func (cb *CommandBus) HasHandler(commandType reflect.Type) bool {
-	if commandType.Kind() != reflect.Ptr {
-		return false
-	}
-	
-	commandName := commandType.Elem().Name()
-	
-	cb.mu.RLock()
-	defer cb.mu.RUnlock()
-	
-	_, exists := cb.handlers[commandName]
-	return exists
+// CreateOrderCommand represents a command to create an order
+type CreateOrderCommand struct {
+	UserID       string
+	AccountID    string
+	Symbol       string
+	Side         string
+	Type         string
+	Quantity     float64
+	Price        float64
+	StopPrice    float64
+	TimeInForce  string
+	ClientOrderID string
+}
+
+// CommandName returns the name of the command
+func (c *CreateOrderCommand) CommandName() string {
+	return "CreateOrder"
+}
+
+// CancelOrderCommand represents a command to cancel an order
+type CancelOrderCommand struct {
+	OrderID string
+	UserID  string
+}
+
+// CommandName returns the name of the command
+func (c *CancelOrderCommand) CommandName() string {
+	return "CancelOrder"
+}
+
+// UpdateOrderCommand represents a command to update an order
+type UpdateOrderCommand struct {
+	OrderID     string
+	UserID      string
+	Quantity    float64
+	Price       float64
+	StopPrice   float64
+	TimeInForce string
+}
+
+// CommandName returns the name of the command
+func (c *UpdateOrderCommand) CommandName() string {
+	return "UpdateOrder"
 }
 

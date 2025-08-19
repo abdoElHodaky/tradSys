@@ -2,7 +2,6 @@ package discovery
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"time"
 
@@ -10,126 +9,84 @@ import (
 	"go.uber.org/zap"
 )
 
-// Common errors
-var (
-	ErrServiceNotFound = errors.New("service not found")
-	ErrNoHealthyNodes  = errors.New("no healthy nodes available")
-)
-
 // ServiceDiscovery provides service discovery functionality
 type ServiceDiscovery struct {
 	registry registry.Registry
 	logger   *zap.Logger
 	cache    map[string][]*registry.Service
+	cacheTTL time.Duration
 	cacheMu  sync.RWMutex
-	ttl      time.Duration
-	lastSync time.Time
 }
 
-// NewServiceDiscovery creates a new service discovery instance
-func NewServiceDiscovery(reg registry.Registry, logger *zap.Logger) *ServiceDiscovery {
-	sd := &ServiceDiscovery{
-		registry: reg,
+// NewServiceDiscovery creates a new service discovery
+func NewServiceDiscovery(registry registry.Registry, logger *zap.Logger) *ServiceDiscovery {
+	return &ServiceDiscovery{
+		registry: registry,
 		logger:   logger,
 		cache:    make(map[string][]*registry.Service),
-		ttl:      time.Minute, // Default TTL for cache entries
+		cacheTTL: 30 * time.Second,
 	}
-
-	// Start a background goroutine to refresh the cache
-	go sd.refreshCache()
-
-	return sd
-}
-
-// refreshCache periodically refreshes the service cache
-func (sd *ServiceDiscovery) refreshCache() {
-	ticker := time.NewTicker(sd.ttl / 2)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		sd.cacheMu.Lock()
-		// Clear the cache
-		sd.cache = make(map[string][]*registry.Service)
-		sd.lastSync = time.Now()
-		sd.cacheMu.Unlock()
-
-		sd.logger.Debug("Refreshed service discovery cache")
-	}
-}
-
-// GetService gets a service by name
-func (sd *ServiceDiscovery) GetService(ctx context.Context, name string) ([]*registry.Service, error) {
-	// Check the cache first
-	sd.cacheMu.RLock()
-	if services, ok := sd.cache[name]; ok && time.Since(sd.lastSync) < sd.ttl {
-		sd.cacheMu.RUnlock()
-		return services, nil
-	}
-	sd.cacheMu.RUnlock()
-
-	// Cache miss or expired, get from registry
-	services, err := sd.registry.GetService(name)
-	if err != nil {
-		sd.logger.Error("Failed to get service from registry", 
-			zap.String("service", name), 
-			zap.Error(err))
-		return nil, err
-	}
-
-	if len(services) == 0 {
-		return nil, ErrServiceNotFound
-	}
-
-	// Update the cache
-	sd.cacheMu.Lock()
-	sd.cache[name] = services
-	sd.cacheMu.Unlock()
-
-	return services, nil
-}
-
-// ListServices lists all services
-func (sd *ServiceDiscovery) ListServices(ctx context.Context) ([]*registry.Service, error) {
-	services, err := sd.registry.ListServices()
-	if err != nil {
-		sd.logger.Error("Failed to list services from registry", zap.Error(err))
-		return nil, err
-	}
-
-	return services, nil
 }
 
 // RegisterService registers a service with the registry
-func (sd *ServiceDiscovery) RegisterService(ctx context.Context, service *registry.Service) error {
-	err := sd.registry.Register(service)
-	if err != nil {
-		sd.logger.Error("Failed to register service", 
-			zap.String("service", service.Name), 
-			zap.Error(err))
-		return err
-	}
+func (d *ServiceDiscovery) RegisterService(ctx context.Context, service *registry.Service) error {
+	d.logger.Info("Registering service",
+		zap.String("name", service.Name),
+		zap.Int("nodes", len(service.Nodes)))
 
-	sd.logger.Info("Registered service", zap.String("service", service.Name))
-	return nil
+	return d.registry.Register(service)
 }
 
 // DeregisterService deregisters a service from the registry
-func (sd *ServiceDiscovery) DeregisterService(ctx context.Context, service *registry.Service) error {
-	err := sd.registry.Deregister(service)
-	if err != nil {
-		sd.logger.Error("Failed to deregister service", 
-			zap.String("service", service.Name), 
-			zap.Error(err))
-		return err
-	}
+func (d *ServiceDiscovery) DeregisterService(ctx context.Context, service *registry.Service) error {
+	d.logger.Info("Deregistering service",
+		zap.String("name", service.Name),
+		zap.Int("nodes", len(service.Nodes)))
 
-	sd.logger.Info("Deregistered service", zap.String("service", service.Name))
-	return nil
+	return d.registry.Deregister(service)
 }
 
-// Watch watches for service changes
-func (sd *ServiceDiscovery) Watch(ctx context.Context, service string) (registry.Watcher, error) {
-	return sd.registry.Watch(registry.WatchService(service))
+// GetService gets a service from the registry
+func (d *ServiceDiscovery) GetService(ctx context.Context, name string) ([]*registry.Service, error) {
+	// Check the cache
+	d.cacheMu.RLock()
+	services, ok := d.cache[name]
+	d.cacheMu.RUnlock()
+
+	if ok {
+		return services, nil
+	}
+
+	// Get the service from the registry
+	services, err := d.registry.GetService(name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update the cache
+	d.cacheMu.Lock()
+	d.cache[name] = services
+	d.cacheMu.Unlock()
+
+	// Start a goroutine to clear the cache after TTL
+	go func() {
+		time.Sleep(d.cacheTTL)
+		d.cacheMu.Lock()
+		delete(d.cache, name)
+		d.cacheMu.Unlock()
+	}()
+
+	return services, nil
+}
+
+// ListServices lists all services in the registry
+func (d *ServiceDiscovery) ListServices(ctx context.Context) ([]*registry.Service, error) {
+	return d.registry.ListServices()
+}
+
+// Watch watches for changes in the registry
+func (d *ServiceDiscovery) Watch(ctx context.Context, name string) (registry.Watcher, error) {
+	return d.registry.Watch(registry.WatchService(name))
 }
 
 // ServiceSelector provides service selection functionality
@@ -139,9 +96,9 @@ type ServiceSelector struct {
 	strategy  SelectionStrategy
 }
 
-// SelectionStrategy defines the interface for service selection strategies
+// SelectionStrategy represents a strategy for selecting a service node
 type SelectionStrategy interface {
-	Select(services []*registry.Service) (*registry.Node, error)
+	Select(nodes []*registry.Node) (*registry.Node, error)
 }
 
 // NewServiceSelector creates a new service selector
@@ -154,100 +111,68 @@ func NewServiceSelector(discovery *ServiceDiscovery, logger *zap.Logger, strateg
 }
 
 // Select selects a node for a service
-func (ss *ServiceSelector) Select(ctx context.Context, service string) (*registry.Node, error) {
-	services, err := ss.discovery.GetService(ctx, service)
+func (s *ServiceSelector) Select(ctx context.Context, name string) (*registry.Node, error) {
+	// Get the service
+	services, err := s.discovery.GetService(ctx, name)
 	if err != nil {
 		return nil, err
 	}
 
-	node, err := ss.strategy.Select(services)
-	if err != nil {
-		ss.logger.Error("Failed to select node", 
-			zap.String("service", service), 
-			zap.Error(err))
-		return nil, err
+	// Check if the service has nodes
+	if len(services) == 0 || len(services[0].Nodes) == 0 {
+		return nil, registry.ErrNotFound
 	}
 
-	return node, nil
+	// Select a node using the strategy
+	return s.strategy.Select(services[0].Nodes)
 }
 
-// RoundRobinStrategy implements a round-robin selection strategy
+// RoundRobinStrategy provides round-robin selection strategy
 type RoundRobinStrategy struct {
-	counters map[string]int
-	mu       sync.Mutex
+	index int
+	mu    sync.Mutex
 }
 
-// NewRoundRobinStrategy creates a new round-robin selection strategy
+// NewRoundRobinStrategy creates a new round-robin strategy
 func NewRoundRobinStrategy() *RoundRobinStrategy {
 	return &RoundRobinStrategy{
-		counters: make(map[string]int),
+		index: 0,
 	}
 }
 
-// Select selects a node using round-robin
-func (s *RoundRobinStrategy) Select(services []*registry.Service) (*registry.Node, error) {
-	if len(services) == 0 {
-		return nil, ErrServiceNotFound
-	}
-
-	// Flatten nodes from all services
-	var nodes []*registry.Node
-	for _, service := range services {
-		for _, node := range service.Nodes {
-			if node.Metadata["status"] == "healthy" {
-				nodes = append(nodes, node)
-			}
-		}
-	}
-
+// Select selects a node using round-robin strategy
+func (s *RoundRobinStrategy) Select(nodes []*registry.Node) (*registry.Node, error) {
 	if len(nodes) == 0 {
-		return nil, ErrNoHealthyNodes
+		return nil, registry.ErrNotFound
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Get the counter for this service
-	counter := s.counters[services[0].Name]
-	
-	// Select the node
-	node := nodes[counter%len(nodes)]
-	
-	// Increment the counter
-	s.counters[services[0].Name] = (counter + 1) % len(nodes)
-	
+	// Get the next node
+	node := nodes[s.index%len(nodes)]
+
+	// Increment the index
+	s.index++
+
 	return node, nil
 }
 
-// RandomStrategy implements a random selection strategy
+// RandomStrategy provides random selection strategy
 type RandomStrategy struct{}
 
-// NewRandomStrategy creates a new random selection strategy
+// NewRandomStrategy creates a new random strategy
 func NewRandomStrategy() *RandomStrategy {
 	return &RandomStrategy{}
 }
 
-// Select selects a node randomly
-func (s *RandomStrategy) Select(services []*registry.Service) (*registry.Node, error) {
-	if len(services) == 0 {
-		return nil, ErrServiceNotFound
-	}
-
-	// Flatten nodes from all services
-	var nodes []*registry.Node
-	for _, service := range services {
-		for _, node := range service.Nodes {
-			if node.Metadata["status"] == "healthy" {
-				nodes = append(nodes, node)
-			}
-		}
-	}
-
+// Select selects a node using random strategy
+func (s *RandomStrategy) Select(nodes []*registry.Node) (*registry.Node, error) {
 	if len(nodes) == 0 {
-		return nil, ErrNoHealthyNodes
+		return nil, registry.ErrNotFound
 	}
 
-	// Select a random node
+	// Get a random node
 	return nodes[time.Now().UnixNano()%int64(len(nodes))], nil
 }
 

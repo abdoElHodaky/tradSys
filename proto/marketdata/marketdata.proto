@@ -1,37 +1,132 @@
 syntax = "proto3";
+
 package marketdata;
+
 option go_package = "github.com/abdoElHodaky/tradSys/proto/marketdata";
 
+// MarketDataService provides market data functionality
+service MarketDataService {
+  // GetMarketData gets market data for a symbol
+  rpc GetMarketData(MarketDataRequest) returns (MarketDataResponse);
+  
+  // StreamMarketData streams market data for a symbol
+  rpc StreamMarketData(MarketDataRequest) returns (stream MarketDataResponse);
+  
+  // GetHistoricalData gets historical market data for a symbol
+  rpc GetHistoricalData(HistoricalDataRequest) returns (HistoricalDataResponse);
+  
+  // GetSymbols gets available symbols
+  rpc GetSymbols(SymbolsRequest) returns (SymbolsResponse);
+}
+
+// MarketDataRequest represents a request for market data
 message MarketDataRequest {
+  // Symbol to get market data for
   string symbol = 1;
-  string exchange = 2;
+  
+  // Interval for the market data
+  string interval = 2;
 }
 
-message Quote {
+// MarketDataResponse represents a response with market data
+message MarketDataResponse {
+  // Symbol of the market data
   string symbol = 1;
-  double bid = 2;
-  double ask = 3;
-  int64 timestamp = 4;
-  string exchange = 5;
-  double bid_size = 6;
-  double ask_size = 7;
+  
+  // Price of the symbol
+  double price = 2;
+  
+  // Volume of the symbol
+  double volume = 3;
+  
+  // Bid price of the symbol
+  double bid = 4;
+  
+  // Ask price of the symbol
+  double ask = 5;
+  
+  // High price of the symbol
+  double high = 6;
+  
+  // Low price of the symbol
+  double low = 7;
+  
+  // Open price of the symbol
+  double open = 8;
+  
+  // Close price of the symbol
+  double close = 9;
+  
+  // Timestamp of the market data
+  int64 timestamp = 10;
+  
+  // Interval of the market data
+  string interval = 11;
 }
 
+// HistoricalDataRequest represents a request for historical market data
 message HistoricalDataRequest {
+  // Symbol to get historical data for
   string symbol = 1;
-  string exchange = 2;
+  
+  // Interval for the historical data
+  string interval = 2;
+  
+  // Start time for the historical data
   int64 start_time = 3;
+  
+  // End time for the historical data
   int64 end_time = 4;
+  
+  // Limit for the number of data points
   int32 limit = 5;
 }
 
-message QuoteList {
-  repeated Quote quotes = 1;
+// HistoricalDataResponse represents a response with historical market data
+message HistoricalDataResponse {
+  // Symbol of the historical data
+  string symbol = 1;
+  
+  // Interval of the historical data
+  string interval = 2;
+  
+  // Data points of the historical data
+  repeated MarketDataResponse data = 3;
 }
 
-service MarketDataService {
-  rpc GetQuote(MarketDataRequest) returns (Quote);
-  rpc SubscribeQuotes(MarketDataRequest) returns (stream Quote);
-  rpc GetHistoricalData(HistoricalDataRequest) returns (QuoteList);
+// SymbolsRequest represents a request for available symbols
+message SymbolsRequest {
+  // Filter for the symbols
+  string filter = 1;
+}
+
+// SymbolsResponse represents a response with available symbols
+message SymbolsResponse {
+  // Symbols available
+  repeated Symbol symbols = 1;
+}
+
+// Symbol represents a trading symbol
+message Symbol {
+  // Name of the symbol
+  string name = 1;
+  
+  // Base currency of the symbol
+  string base_currency = 2;
+  
+  // Quote currency of the symbol
+  string quote_currency = 3;
+  
+  // Minimum price increment of the symbol
+  double price_increment = 4;
+  
+  // Minimum quantity increment of the symbol
+  double quantity_increment = 5;
+  
+  // Minimum order size of the symbol
+  double min_order_size = 6;
+  
+  // Maximum order size of the symbol
+  double max_order_size = 7;
 }
 
