@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
+	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
+	"github.com/abdoElHodaky/tradSys/internal/orders"
 	"github.com/abdoElHodaky/tradSys/proto/marketdata"
-	"github.com/abdoElHodaky/tradSys/proto/orders"
+	orderspb "github.com/abdoElHodaky/tradSys/proto/orders"
 	"go.uber.org/zap"
 )
 
@@ -26,7 +28,7 @@ type Strategy interface {
 	OnMarketData(ctx context.Context, data *marketdata.MarketDataResponse) error
 	
 	// OnOrderUpdate processes order updates
-	OnOrderUpdate(ctx context.Context, order *orders.OrderResponse) error
+	OnOrderUpdate(ctx context.Context, order *orderspb.OrderResponse) error
 	
 	// GetName returns the name of the strategy
 	GetName() string
@@ -40,18 +42,32 @@ type Strategy interface {
 
 // StrategyManager manages trading strategies
 type StrategyManager struct {
-	logger     *zap.Logger
-	strategies map[string]Strategy
-	running    map[string]bool
-	mu         sync.RWMutex
+	logger         *zap.Logger
+	strategies     map[string]Strategy
+	running        map[string]bool
+	mu             sync.RWMutex
+	orderService   orders.OrderService
+	pairRepo       *repositories.PairRepository
+	statsRepo      *repositories.PairStatisticsRepository
+	positionRepo   *repositories.PairPositionRepository
 }
 
 // NewStrategyManager creates a new strategy manager
-func NewStrategyManager(logger *zap.Logger) *StrategyManager {
+func NewStrategyManager(
+	logger *zap.Logger,
+	orderService orders.OrderService,
+	pairRepo *repositories.PairRepository,
+	statsRepo *repositories.PairStatisticsRepository,
+	positionRepo *repositories.PairPositionRepository,
+) *StrategyManager {
 	return &StrategyManager{
-		logger:     logger,
-		strategies: make(map[string]Strategy),
-		running:    make(map[string]bool),
+		logger:       logger,
+		strategies:   make(map[string]Strategy),
+		running:      make(map[string]bool),
+		orderService: orderService,
+		pairRepo:     pairRepo,
+		statsRepo:    statsRepo,
+		positionRepo: positionRepo,
 	}
 }
 
@@ -188,6 +204,33 @@ func (m *StrategyManager) IsStrategyRunning(name string) (bool, error) {
 	return m.running[name], nil
 }
 
+// CreatePairsStrategy creates a new statistical arbitrage strategy
+func (m *StrategyManager) CreatePairsStrategy(ctx context.Context, params StatisticalArbitrageParams) (Strategy, error) {
+	// Create a new statistical arbitrage strategy
+	strategy := NewStatisticalArbitrageStrategy(
+		m.logger,
+		params,
+		m.orderService,
+		m.pairRepo,
+		m.statsRepo,
+		m.positionRepo,
+	)
+	
+	// Register the strategy
+	if err := m.RegisterStrategy(strategy); err != nil {
+		return nil, err
+	}
+	
+	// Initialize the strategy
+	if err := strategy.Initialize(ctx); err != nil {
+		// Unregister the strategy if initialization fails
+		m.UnregisterStrategy(strategy.GetName())
+		return nil, err
+	}
+	
+	return strategy, nil
+}
+
 // ProcessMarketData processes market data updates for all running strategies
 func (m *StrategyManager) ProcessMarketData(ctx context.Context, data *marketdata.MarketDataResponse) {
 	m.mu.RLock()
@@ -207,7 +250,7 @@ func (m *StrategyManager) ProcessMarketData(ctx context.Context, data *marketdat
 }
 
 // ProcessOrderUpdate processes order updates for all running strategies
-func (m *StrategyManager) ProcessOrderUpdate(ctx context.Context, order *orders.OrderResponse) {
+func (m *StrategyManager) ProcessOrderUpdate(ctx context.Context, order *orderspb.OrderResponse) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	
@@ -283,7 +326,7 @@ func (s *BaseStrategy) OnMarketData(ctx context.Context, data *marketdata.Market
 }
 
 // OnOrderUpdate processes order updates
-func (s *BaseStrategy) OnOrderUpdate(ctx context.Context, order *orders.OrderResponse) error {
+func (s *BaseStrategy) OnOrderUpdate(ctx context.Context, order *orderspb.OrderResponse) error {
 	// To be implemented by derived strategies
 	return nil
 }
@@ -352,6 +395,21 @@ type BacktestResult struct {
 	PnL           float64
 	Trades        []models.Trade
 	Metrics       map[string]float64
+}
+
+// StatisticalArbitrageParams contains parameters for the statistical arbitrage strategy
+type StatisticalArbitrageParams struct {
+	Name           string
+	PairID         string
+	Symbol1        string
+	Symbol2        string
+	Ratio          float64
+	ZScoreEntry    float64
+	ZScoreExit     float64
+	PositionSize   float64
+	MaxPositions   int
+	LookbackPeriod int
+	UpdateInterval time.Duration
 }
 
 // Errors
