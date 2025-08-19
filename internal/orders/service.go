@@ -61,7 +61,10 @@ func (s *Service) PlaceOrder(ctx context.Context, req *pb.OrderRequest) (*pb.Ord
 	
 	// Persist to database
 	dbOrder := &models.Order{
+//<<<<<<< codegen-bot/fix-order-model-syntax
+//=======
 //<<<<<<< codegen-bot/pairs-management-implementation
+//>>>>>>> main
 		OrderID:    order.OrderId,
 		Symbol:     order.Symbol,
 		Type:       models.OrderType(mapOrderTypeToString(order.Type)),
@@ -77,6 +80,8 @@ func (s *Service) PlaceOrder(ctx context.Context, req *pb.OrderRequest) (*pb.Ord
 		CreatedAt:  time.Now(),
 		UpdatedAt:  time.Now(),
 		Timestamp:  time.Now(),
+//<<<<<<< codegen-bot/fix-order-model-syntax
+//=======
 //=======
 		OrderID:   order.OrderId,
 		Symbol:    order.Symbol,
@@ -89,6 +94,7 @@ func (s *Service) PlaceOrder(ctx context.Context, req *pb.OrderRequest) (*pb.Ord
 		Exchange:  order.Exchange,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
+//>>>>>>> main
 //>>>>>>> main
 	}
 	
@@ -450,7 +456,10 @@ func mapStringToOrderStatus(orderStatus string) pb.OrderStatus {
 		return pb.OrderStatus_NEW
 	}
 }
+//<<<<<<< codegen-bot/fix-order-model-syntax
+//=======
 //<<<<<<< codegen-bot/pairs-management-implementation
 //=======
 
 //>>>>>>> main
+//>>>>>>> main 

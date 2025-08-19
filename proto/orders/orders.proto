@@ -37,11 +37,17 @@ message Order {
   double average_price = 11;
   string exchange = 12;
   string notes = 13;
+//<<<<<<< codegen-bot/fix-order-model-syntax
+  double stop_loss = 14;
+  double take_profit = 15;
+  string strategy = 16;
+//=======
 //<<<<<<< codegen-bot/pairs-management-implementation
   double stop_loss = 14;
   double take_profit = 15;
   string strategy = 16;
 ///=======
+//>>>>>>> main
 //>>>>>>> main
 }
 
@@ -53,11 +59,17 @@ message OrderRequest {
   double price = 5;
   string client_id = 6;
   string exchange = 7;
+//<<<<<<< codegen-bot/fix-order-model-syntax
+  double stop_loss = 8;
+  double take_profit = 9;
+  string strategy = 10;
+//=======
 //<<<<<<< codegen-bot/pairs-management-implementation
   double stop_loss = 8;
   double take_profit = 9;
   string strategy = 10;
 //=======
+//>>>>>>> main
 //>>>>>>> main
 }
 
@@ -96,7 +108,10 @@ service OrderService {
   rpc GetOrders(OrderListRequest) returns (OrderList);
   rpc SubscribeOrderUpdates(OrderStatusRequest) returns (stream OrderResponse);
 }
+//<<<<<<< codegen-bot/fix-order-model-syntax
+//=======
 //<<<<<<< codegen-bot/pairs-management-implementation
 //=======
 
+//>>>>>>> main
 //>>>>>>> main
