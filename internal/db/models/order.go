@@ -48,19 +48,39 @@ type Order struct {
 	Side       OrderSide   `gorm:"not null"`
 	Quantity   float64     `gorm:"not null"`
 	Price      float64
+//<<<<<<< codegen-bot/fix-order-model-syntax
 	StopLoss   float64     `gorm:"default:0"` // Stop loss price level
 	TakeProfit float64     `gorm:"default:0"` // Take profit price level
+//=======
+//<<<<<<< codegen-bot/pairs-management-implementation
+	StopLoss   float64     `gorm:"default:0"` // Stop loss price level
+	TakeProfit float64     `gorm:"default:0"` // Take profit price level
+//=======
+//>>>>>>> main
+//>>>>>>> main
 	ClientID   string      `gorm:"index"`
 	Status     OrderStatus `gorm:"not null"`
 	FilledQty  float64     `gorm:"default:0"`
 	AvgPrice   float64     `gorm:"default:0"`
 	Exchange   string
 	ExternalID string
+//<<<<<<< codegen-bot/fix-order-model-syntax
+//=======
+//<<<<<<< codegen-bot/pairs-management-implementation
+//>>>>>>> main
 	Strategy   string      `gorm:"index"` // Strategy that generated this order
 	Notes      string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 	Timestamp  time.Time   `gorm:"index"` // Time when the order was created by the strategy
+//<<<<<<< codegen-bot/fix-order-model-syntax
+//=======
+//=======
+	Notes      string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+//>>>>>>> main
+//>>>>>>> main
 }
 
 // Trade represents an executed trade
