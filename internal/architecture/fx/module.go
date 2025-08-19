@@ -1,6 +1,9 @@
 package fx
 
 import (
+	"github.com/abdoElHodaky/tradSys/internal/db"
+	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
+	"github.com/abdoElHodaky/tradSys/internal/marketdata"
 	"github.com/abdoElHodaky/tradSys/internal/trading/order_matching"
 	"github.com/abdoElHodaky/tradSys/internal/trading/order_management"
 	"github.com/abdoElHodaky/tradSys/internal/trading/risk_management"
@@ -15,6 +18,12 @@ var Module = fx.Options(
 	fx.Provide(func(logger *zap.Logger) *order_matching.Engine {
 		return order_matching.NewEngine(logger)
 	}),
+	
+	// Include database module
+	fx.Options(db.Module),
+	
+	// Include repositories module
+	fx.Options(repositories.Module),
 )
 
 // NewOrdersModule creates a new orders module for the fx application
@@ -47,6 +56,9 @@ func NewMarketDataModule() fx.Option {
 		fx.Provide(func(engine *order_matching.Engine, logger *zap.Logger) *market_data.Handler {
 			return market_data.NewHandler(engine, logger)
 		}),
+		
+		// Include external market data module
+		fx.Options(marketdata.Module),
 	)
 }
 

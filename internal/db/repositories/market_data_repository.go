@@ -5,205 +5,154 @@ import (
 	"errors"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/db/models"
-	"github.com/abdoElHodaky/tradSys/internal/db/query"
+	"github.com/abdoElHodaky/tradSys/internal/db"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
-// MarketDataRepository handles database operations for market data
+// MarketDataRepository represents a repository for market data
 type MarketDataRepository struct {
-	db        *gorm.DB
-	logger    *zap.Logger
-	optimizer *query.Optimizer
+	db     *gorm.DB
+	logger *zap.Logger
 }
 
 // NewMarketDataRepository creates a new market data repository
 func NewMarketDataRepository(db *gorm.DB, logger *zap.Logger) *MarketDataRepository {
-	repo := &MarketDataRepository{
-		db:        db,
-		logger:    logger,
-		optimizer: query.NewOptimizer(db, logger),
+	return &MarketDataRepository{
+		db:     db,
+		logger: logger,
 	}
-	
-	return repo
 }
 
-// SaveQuote inserts or updates a quote
-func (r *MarketDataRepository) SaveQuote(ctx context.Context, quote *models.Quote) error {
-	// Use a transaction for better performance when doing upsert
-	tx := r.db.WithContext(ctx).Begin()
-	if tx.Error != nil {
-		return tx.Error
-	}
-	
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-	
-	// Try to update existing quote
-	result := tx.Model(&models.Quote{}).
-		Where("symbol = ? AND exchange = ?", quote.Symbol, quote.Exchange).
-		Updates(map[string]interface{}{
-			"bid":       quote.Bid,
-			"ask":       quote.Ask,
-			"bid_size":  quote.BidSize,
-			"ask_size":  quote.AskSize,
-			"timestamp": quote.Timestamp,
-			"updated_at": time.Now(),
-		})
-	
-	// If no record was updated, create a new one
-	if result.RowsAffected == 0 {
-		if err := tx.Create(quote).Error; err != nil {
-			tx.Rollback()
-			r.logger.Error("Failed to create quote", 
-				zap.Error(err),
-				zap.String("symbol", quote.Symbol))
-			return err
-		}
-	} else if result.Error != nil {
-		tx.Rollback()
-		r.logger.Error("Failed to update quote", 
-			zap.Error(result.Error),
-			zap.String("symbol", quote.Symbol))
+// Create creates a new market data entry
+func (r *MarketDataRepository) Create(ctx context.Context, marketData *db.MarketData) error {
+	result := r.db.WithContext(ctx).Create(marketData)
+	if result.Error != nil {
+		r.logger.Error("Failed to create market data", 
+			zap.Error(result.Error), 
+			zap.String("symbol", marketData.Symbol),
+			zap.String("type", marketData.Type))
 		return result.Error
 	}
-	
-	return tx.Commit().Error
+	return nil
 }
 
-// GetLatestQuote retrieves the latest quote for a symbol
-func (r *MarketDataRepository) GetLatestQuote(ctx context.Context, symbol, exchange string) (*models.Quote, error) {
-	var quote models.Quote
-	
-	builder := query.NewBuilder(r.db, r.logger).
-		Table("quotes").
-		UseIndex("idx_quotes_symbol_exchange_timestamp").
-		Where("symbol = ?", symbol).
-		Where("exchange = ?", exchange).
-		OrderBy("timestamp DESC").
-		Limit(1)
-	
-	err := builder.First(&quote)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+// BatchCreate creates multiple market data entries
+func (r *MarketDataRepository) BatchCreate(ctx context.Context, marketDataEntries []*db.MarketData) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, marketData := range marketDataEntries {
+			if err := tx.Create(marketData).Error; err != nil {
+				r.logger.Error("Failed to create market data in batch", 
+					zap.Error(err), 
+					zap.String("symbol", marketData.Symbol),
+					zap.String("type", marketData.Type))
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// GetLatestBySymbolAndType gets the latest market data by symbol and type
+func (r *MarketDataRepository) GetLatestBySymbolAndType(ctx context.Context, symbol, dataType string) (*db.MarketData, error) {
+	var marketData db.MarketData
+	result := r.db.WithContext(ctx).
+		Where("symbol = ? AND type = ?", symbol, dataType).
+		Order("timestamp DESC").
+		First(&marketData)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
-		r.logger.Error("Failed to get latest quote",
-			zap.Error(err),
+		r.logger.Error("Failed to get latest market data", 
+			zap.Error(result.Error), 
 			zap.String("symbol", symbol),
-			zap.String("exchange", exchange))
-		return nil, err
+			zap.String("type", dataType))
+		return nil, result.Error
 	}
-	
-	return &quote, nil
+	return &marketData, nil
 }
 
-// GetQuoteHistory retrieves historical quotes for a symbol
-func (r *MarketDataRepository) GetQuoteHistory(ctx context.Context, symbol, exchange string, start, end time.Time, limit int) ([]*models.Quote, error) {
-	var quotes []*models.Quote
-	
-	builder := query.NewBuilder(r.db, r.logger).
-		Table("quotes").
-		UseIndex("idx_quotes_symbol_exchange_timestamp").
-		Where("symbol = ?", symbol).
-		Where("exchange = ?", exchange).
-		Where("timestamp BETWEEN ? AND ?", start, end).
-		OrderBy("timestamp ASC")
-	
-	if limit > 0 {
-		builder.Limit(limit)
-	}
-	
-	err := builder.Execute(&quotes)
-	if err != nil {
-		r.logger.Error("Failed to get quote history",
-			zap.Error(err),
-			zap.String("symbol", symbol),
-			zap.String("exchange", exchange))
-		return nil, err
-	}
-	
-	return quotes, nil
-}
-
-// SaveOHLCV inserts OHLCV data
-func (r *MarketDataRepository) SaveOHLCV(ctx context.Context, ohlcv *models.OHLCV) error {
-	result := r.db.WithContext(ctx).Create(ohlcv)
+// GetBySymbolAndTimeRange gets market data by symbol and time range
+func (r *MarketDataRepository) GetBySymbolAndTimeRange(ctx context.Context, symbol, dataType string, start, end time.Time) ([]*db.MarketData, error) {
+	var marketDataEntries []*db.MarketData
+	result := r.db.WithContext(ctx).
+		Where("symbol = ? AND type = ? AND timestamp BETWEEN ? AND ?", symbol, dataType, start, end).
+		Order("timestamp ASC").
+		Find(&marketDataEntries)
 	if result.Error != nil {
-		r.logger.Error("Failed to save OHLCV data", 
-			zap.Error(result.Error),
-			zap.String("symbol", ohlcv.Symbol))
+		r.logger.Error("Failed to get market data by time range", 
+			zap.Error(result.Error), 
+			zap.String("symbol", symbol),
+			zap.String("type", dataType),
+			zap.Time("start", start),
+			zap.Time("end", end))
+		return nil, result.Error
+	}
+	return marketDataEntries, nil
+}
+
+// GetOHLCVBySymbolAndTimeRange gets OHLCV data by symbol and time range
+func (r *MarketDataRepository) GetOHLCVBySymbolAndTimeRange(ctx context.Context, symbol string, interval string, start, end time.Time) ([]*db.MarketData, error) {
+	var marketDataEntries []*db.MarketData
+	result := r.db.WithContext(ctx).
+		Where("symbol = ? AND type = ? AND data LIKE ? AND timestamp BETWEEN ? AND ?", 
+			symbol, "ohlcv", "%\"interval\":\""+interval+"\"%", start, end).
+		Order("timestamp ASC").
+		Find(&marketDataEntries)
+	if result.Error != nil {
+		r.logger.Error("Failed to get OHLCV data", 
+			zap.Error(result.Error), 
+			zap.String("symbol", symbol),
+			zap.String("interval", interval),
+			zap.Time("start", start),
+			zap.Time("end", end))
+		return nil, result.Error
+	}
+	return marketDataEntries, nil
+}
+
+// DeleteOlderThan deletes market data older than a specified time
+func (r *MarketDataRepository) DeleteOlderThan(ctx context.Context, dataType string, olderThan time.Time) error {
+	result := r.db.WithContext(ctx).
+		Where("type = ? AND timestamp < ?", dataType, olderThan).
+		Delete(&db.MarketData{})
+	if result.Error != nil {
+		r.logger.Error("Failed to delete old market data", 
+			zap.Error(result.Error), 
+			zap.String("type", dataType),
+			zap.Time("older_than", olderThan))
 		return result.Error
 	}
 	return nil
 }
 
-// GetOHLCV retrieves OHLCV data for a symbol and timeframe
-func (r *MarketDataRepository) GetOHLCV(ctx context.Context, symbol, timeframe string, start, end time.Time) ([]*models.OHLCV, error) {
-	var data []*models.OHLCV
-	
-	builder := query.NewBuilder(r.db, r.logger).
-		Table("ohlcv").
-		UseIndex("idx_ohlcv_symbol_timeframe_timestamp").
-		Where("symbol = ?", symbol).
-		Where("timeframe = ?", timeframe).
-		Where("timestamp BETWEEN ? AND ?", start, end).
-		OrderBy("timestamp ASC")
-	
-	// Analyze the query plan
-	query, args := builder.Build()
-	plan, err := r.optimizer.AnalyzeQuery(query, args...)
-	if err == nil {
-		r.logger.Debug("OHLCV query execution plan", zap.String("plan", plan))
-	}
-	
-	err = builder.Execute(&data)
-	if err != nil {
-		r.logger.Error("Failed to get OHLCV data",
-			zap.Error(err),
-			zap.String("symbol", symbol),
-			zap.String("timeframe", timeframe))
-		return nil, err
-	}
-	
-	return data, nil
-}
-
-// SaveMarketDepth saves market depth data
-func (r *MarketDataRepository) SaveMarketDepth(ctx context.Context, depth *models.MarketDepth) error {
-	result := r.db.WithContext(ctx).Create(depth)
+// GetSymbols gets all symbols with market data
+func (r *MarketDataRepository) GetSymbols(ctx context.Context) ([]string, error) {
+	var symbols []string
+	result := r.db.WithContext(ctx).Model(&db.MarketData{}).
+		Distinct("symbol").
+		Pluck("symbol", &symbols)
 	if result.Error != nil {
-		r.logger.Error("Failed to save market depth", 
-			zap.Error(result.Error),
-			zap.String("symbol", depth.Symbol))
-		return result.Error
+		r.logger.Error("Failed to get symbols", zap.Error(result.Error))
+		return nil, result.Error
 	}
-	return nil
+	return symbols, nil
 }
 
-// GetMarketDepth retrieves market depth for a symbol
-func (r *MarketDataRepository) GetMarketDepth(ctx context.Context, symbol, exchange string) ([]*models.MarketDepth, error) {
-	var depths []*models.MarketDepth
-	
-	builder := query.NewBuilder(r.db, r.logger).
-		Table("market_depths").
+// GetDataTypes gets all data types for a symbol
+func (r *MarketDataRepository) GetDataTypes(ctx context.Context, symbol string) ([]string, error) {
+	var dataTypes []string
+	result := r.db.WithContext(ctx).Model(&db.MarketData{}).
 		Where("symbol = ?", symbol).
-		Where("exchange = ?", exchange).
-		OrderBy("level ASC")
-	
-	err := builder.Execute(&depths)
-	if err != nil {
-		r.logger.Error("Failed to get market depth",
-			zap.Error(err),
-			zap.String("symbol", symbol),
-			zap.String("exchange", exchange))
-		return nil, err
+		Distinct("type").
+		Pluck("type", &dataTypes)
+	if result.Error != nil {
+		r.logger.Error("Failed to get data types", 
+			zap.Error(result.Error), 
+			zap.String("symbol", symbol))
+		return nil, result.Error
 	}
-	
-	return depths, nil
+	return dataTypes, nil
 }
 

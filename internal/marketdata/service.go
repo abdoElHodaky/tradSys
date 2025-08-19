@@ -2,226 +2,560 @@ package marketdata
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"time"
 
+	"github.com/abdoElHodaky/tradSys/internal/db"
+	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
+	"github.com/abdoElHodaky/tradSys/internal/marketdata/external"
+	"github.com/patrickmn/go-cache"
 	"go.uber.org/zap"
 )
 
-// Common errors
-var (
-	ErrInvalidCommand = errors.New("invalid command")
-	ErrInvalidQuery   = errors.New("invalid query")
-	ErrSourceNotFound = errors.New("market data source not found")
-)
-
-// MarketData represents market data for a symbol
-type MarketData struct {
-	Symbol    string
-	Price     float64
-	Volume    float64
-	Timestamp time.Time
-}
-
-// Service provides market data functionality
+// Service represents a market data service
 type Service struct {
-	logger  *zap.Logger
-	sources map[string]DataSource
-	mu      sync.RWMutex
+	// MarketDataRepository is the market data repository
+	MarketDataRepository *repositories.MarketDataRepository
+	// ExternalManager is the external market data provider manager
+	ExternalManager *external.Manager
+	// Cache is a cache for market data
+	Cache *cache.Cache
+	// Subscriptions is a map of subscription ID to subscription
+	Subscriptions map[string]*Subscription
+	// SymbolSubscriptions is a map of symbol to subscriptions
+	SymbolSubscriptions map[string]map[string]*Subscription
+	// Logger
+	logger *zap.Logger
+	// Mutex for thread safety
+	mu sync.RWMutex
+	// Context
+	ctx context.Context
+	// Cancel function
+	cancel context.CancelFunc
 }
 
-// DataSource represents a market data source
-type DataSource interface {
-	GetData(ctx context.Context, symbol string, timeRange string) ([]MarketData, error)
-	Start(ctx context.Context) error
-	Stop(ctx context.Context) error
+// Subscription represents a market data subscription
+type Subscription struct {
+	// ID is the unique identifier for the subscription
+	ID string
+	// Symbol is the trading symbol
+	Symbol string
+	// Type is the type of market data
+	Type external.MarketDataType
+	// Interval is the interval for OHLCV data
+	Interval string
+	// Channel is the channel for sending market data
+	Channel chan interface{}
+	// CreatedAt is the time the subscription was created
+	CreatedAt time.Time
 }
 
 // NewService creates a new market data service
-func NewService(params ServiceParams) *Service {
-	return &Service{
-		logger:  params.Logger,
-		sources: make(map[string]DataSource),
+func NewService(
+	marketDataRepository *repositories.MarketDataRepository,
+	externalManager *external.Manager,
+	logger *zap.Logger,
+) *Service {
+	ctx, cancel := context.WithCancel(context.Background())
+	
+	service := &Service{
+		MarketDataRepository: marketDataRepository,
+		ExternalManager:      externalManager,
+		Cache:                cache.New(5*time.Minute, 10*time.Minute),
+		Subscriptions:        make(map[string]*Subscription),
+		SymbolSubscriptions:  make(map[string]map[string]*Subscription),
+		logger:               logger,
+		ctx:                  ctx,
+		cancel:               cancel,
+	}
+	
+	// Start data persistence task
+	go service.persistMarketData()
+	
+	return service
+}
+
+// persistMarketData periodically persists market data to the database
+func (s *Service) persistMarketData() {
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+	
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		case <-ticker.C:
+			s.persistCachedMarketData()
+		}
 	}
 }
 
-// AddMarketDataSource adds a market data source
-func (s *Service) AddMarketDataSource(ctx context.Context, source string, config map[string]interface{}) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+// persistCachedMarketData persists cached market data to the database
+func (s *Service) persistCachedMarketData() {
+	// Get all items from cache
+	items := s.Cache.Items()
 	
-	// Check if the source already exists
-	if _, exists := s.sources[source]; exists {
-		s.logger.Info("Market data source already exists", zap.String("source", source))
-		return nil
-	}
+	// Create a batch of market data entries
+	marketDataEntries := make([]*db.MarketData, 0, len(items))
 	
-	// Create a new data source based on the source type
-	var dataSource DataSource
-	switch source {
-	case "websocket":
-		dataSource = NewWebSocketDataSource(config, s.logger)
-	case "rest":
-		dataSource = NewRESTDataSource(config, s.logger)
-	default:
-		s.logger.Error("Unknown market data source type", zap.String("source", source))
-		return errors.New("unknown market data source type")
-	}
-	
-	// Start the data source
-	if err := dataSource.Start(ctx); err != nil {
-		s.logger.Error("Failed to start market data source", zap.String("source", source), zap.Error(err))
-		return err
-	}
-	
-	// Add the data source to the map
-	s.sources[source] = dataSource
-	s.logger.Info("Added market data source", zap.String("source", source))
-	
-	return nil
-}
-
-// RemoveMarketDataSource removes a market data source
-func (s *Service) RemoveMarketDataSource(ctx context.Context, source string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	
-	// Check if the source exists
-	dataSource, exists := s.sources[source]
-	if !exists {
-		s.logger.Warn("Market data source not found", zap.String("source", source))
-		return ErrSourceNotFound
-	}
-	
-	// Stop the data source
-	if err := dataSource.Stop(ctx); err != nil {
-		s.logger.Error("Failed to stop market data source", zap.String("source", source), zap.Error(err))
-		return err
-	}
-	
-	// Remove the data source from the map
-	delete(s.sources, source)
-	s.logger.Info("Removed market data source", zap.String("source", source))
-	
-	return nil
-}
-
-// GetMarketData gets market data for a symbol
-func (s *Service) GetMarketData(ctx context.Context, symbol string, timeRange string) ([]MarketData, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	
-	// Check if there are any sources
-	if len(s.sources) == 0 {
-		s.logger.Warn("No market data sources available")
-		return nil, errors.New("no market data sources available")
-	}
-	
-	// Get data from all sources
-	var allData []MarketData
-	for sourceName, source := range s.sources {
-		data, err := source.GetData(ctx, symbol, timeRange)
-		if err != nil {
-			s.logger.Warn("Failed to get market data from source", 
-				zap.String("source", sourceName), 
-				zap.String("symbol", symbol), 
-				zap.Error(err))
+	for key, item := range items {
+		// Skip expired items
+		if item.Expired() {
 			continue
 		}
 		
-		allData = append(allData, data...)
+		// Convert cached data to market data entry
+		switch data := item.Object.(type) {
+		case *external.OrderBookData:
+			marketDataEntries = append(marketDataEntries, &db.MarketData{
+				Symbol:    data.Symbol,
+				Type:      string(external.MarketDataTypeOrderBook),
+				Timestamp: data.Timestamp,
+				Data:      s.serializeOrderBookData(data),
+			})
+		case *external.TradeData:
+			marketDataEntries = append(marketDataEntries, &db.MarketData{
+				Symbol:    data.Symbol,
+				Type:      string(external.MarketDataTypeTrade),
+				Price:     data.Price,
+				Volume:    data.Quantity,
+				Timestamp: data.Timestamp,
+				Data:      s.serializeTradeData(data),
+			})
+		case *external.TickerData:
+			marketDataEntries = append(marketDataEntries, &db.MarketData{
+				Symbol:    data.Symbol,
+				Type:      string(external.MarketDataTypeTicker),
+				Price:     data.Price,
+				Volume:    data.Volume,
+				Timestamp: data.Timestamp,
+				Data:      s.serializeTickerData(data),
+			})
+		case *external.OHLCVData:
+			marketDataEntries = append(marketDataEntries, &db.MarketData{
+				Symbol:    data.Symbol,
+				Type:      string(external.MarketDataTypeOHLCV),
+				Open:      data.Open,
+				High:      data.High,
+				Low:       data.Low,
+				Close:     data.Close,
+				Volume:    data.Volume,
+				Timestamp: data.Timestamp,
+				Data:      s.serializeOHLCVData(data),
+			})
+		}
 	}
 	
-	// Sort data by timestamp (newest first)
-	// In a real implementation, we would sort the data here
+	// Persist market data entries
+	if len(marketDataEntries) > 0 {
+		if err := s.MarketDataRepository.BatchCreate(context.Background(), marketDataEntries); err != nil {
+			s.logger.Error("Failed to persist market data", zap.Error(err))
+		}
+	}
+}
+
+// serializeOrderBookData serializes order book data to JSON
+func (s *Service) serializeOrderBookData(data *external.OrderBookData) string {
+	// In a real implementation, this would serialize the data to JSON
+	return "{}"
+}
+
+// serializeTradeData serializes trade data to JSON
+func (s *Service) serializeTradeData(data *external.TradeData) string {
+	// In a real implementation, this would serialize the data to JSON
+	return "{}"
+}
+
+// serializeTickerData serializes ticker data to JSON
+func (s *Service) serializeTickerData(data *external.TickerData) string {
+	// In a real implementation, this would serialize the data to JSON
+	return "{}"
+}
+
+// serializeOHLCVData serializes OHLCV data to JSON
+func (s *Service) serializeOHLCVData(data *external.OHLCVData) string {
+	// In a real implementation, this would serialize the data to JSON
+	return "{}"
+}
+
+// SubscribeOrderBook subscribes to order book updates
+func (s *Service) SubscribeOrderBook(ctx context.Context, symbol string) (*Subscription, error) {
+	// Create subscription
+	subscription := &Subscription{
+		ID:        generateID(),
+		Symbol:    symbol,
+		Type:      external.MarketDataTypeOrderBook,
+		Channel:   make(chan interface{}, 100),
+		CreatedAt: time.Now(),
+	}
 	
-	return allData, nil
+	// Add to subscriptions
+	s.mu.Lock()
+	s.Subscriptions[subscription.ID] = subscription
+	
+	// Add to symbol subscriptions
+	if _, exists := s.SymbolSubscriptions[symbol]; !exists {
+		s.SymbolSubscriptions[symbol] = make(map[string]*Subscription)
+	}
+	s.SymbolSubscriptions[symbol][subscription.ID] = subscription
+	s.mu.Unlock()
+	
+	// Subscribe to external provider
+	provider, err := s.ExternalManager.GetDefaultProvider()
+	if err != nil {
+		return nil, err
+	}
+	
+	// Create callback function
+	callback := func(data interface{}) {
+		// Cache the data
+		s.Cache.Set(
+			"orderbook:"+symbol, 
+			data, 
+			cache.DefaultExpiration,
+		)
+		
+		// Send to subscriber
+		select {
+		case subscription.Channel <- data:
+		default:
+			s.logger.Warn("Order book channel full, dropping update",
+				zap.String("subscription_id", subscription.ID),
+				zap.String("symbol", symbol))
+		}
+	}
+	
+	// Subscribe to external provider
+	if err := provider.SubscribeOrderBook(ctx, symbol, callback); err != nil {
+		return nil, err
+	}
+	
+	return subscription, nil
 }
 
-// WebSocketDataSource implements DataSource using WebSockets
-type WebSocketDataSource struct {
-	config map[string]interface{}
-	logger *zap.Logger
-	// Add WebSocket connection and other fields
+// SubscribeTrades subscribes to trade updates
+func (s *Service) SubscribeTrades(ctx context.Context, symbol string) (*Subscription, error) {
+	// Create subscription
+	subscription := &Subscription{
+		ID:        generateID(),
+		Symbol:    symbol,
+		Type:      external.MarketDataTypeTrade,
+		Channel:   make(chan interface{}, 100),
+		CreatedAt: time.Now(),
+	}
+	
+	// Add to subscriptions
+	s.mu.Lock()
+	s.Subscriptions[subscription.ID] = subscription
+	
+	// Add to symbol subscriptions
+	if _, exists := s.SymbolSubscriptions[symbol]; !exists {
+		s.SymbolSubscriptions[symbol] = make(map[string]*Subscription)
+	}
+	s.SymbolSubscriptions[symbol][subscription.ID] = subscription
+	s.mu.Unlock()
+	
+	// Subscribe to external provider
+	provider, err := s.ExternalManager.GetDefaultProvider()
+	if err != nil {
+		return nil, err
+	}
+	
+	// Create callback function
+	callback := func(data interface{}) {
+		// Cache the data
+		s.Cache.Set(
+			"trade:"+symbol, 
+			data, 
+			cache.DefaultExpiration,
+		)
+		
+		// Send to subscriber
+		select {
+		case subscription.Channel <- data:
+		default:
+			s.logger.Warn("Trade channel full, dropping update",
+				zap.String("subscription_id", subscription.ID),
+				zap.String("symbol", symbol))
+		}
+	}
+	
+	// Subscribe to external provider
+	if err := provider.SubscribeTrades(ctx, symbol, callback); err != nil {
+		return nil, err
+	}
+	
+	return subscription, nil
 }
 
-// NewWebSocketDataSource creates a new WebSocket data source
-func NewWebSocketDataSource(config map[string]interface{}, logger *zap.Logger) *WebSocketDataSource {
-	return &WebSocketDataSource{
-		config: config,
-		logger: logger,
+// SubscribeTicker subscribes to ticker updates
+func (s *Service) SubscribeTicker(ctx context.Context, symbol string) (*Subscription, error) {
+	// Create subscription
+	subscription := &Subscription{
+		ID:        generateID(),
+		Symbol:    symbol,
+		Type:      external.MarketDataTypeTicker,
+		Channel:   make(chan interface{}, 100),
+		CreatedAt: time.Now(),
+	}
+	
+	// Add to subscriptions
+	s.mu.Lock()
+	s.Subscriptions[subscription.ID] = subscription
+	
+	// Add to symbol subscriptions
+	if _, exists := s.SymbolSubscriptions[symbol]; !exists {
+		s.SymbolSubscriptions[symbol] = make(map[string]*Subscription)
+	}
+	s.SymbolSubscriptions[symbol][subscription.ID] = subscription
+	s.mu.Unlock()
+	
+	// Subscribe to external provider
+	provider, err := s.ExternalManager.GetDefaultProvider()
+	if err != nil {
+		return nil, err
+	}
+	
+	// Create callback function
+	callback := func(data interface{}) {
+		// Cache the data
+		s.Cache.Set(
+			"ticker:"+symbol, 
+			data, 
+			cache.DefaultExpiration,
+		)
+		
+		// Send to subscriber
+		select {
+		case subscription.Channel <- data:
+		default:
+			s.logger.Warn("Ticker channel full, dropping update",
+				zap.String("subscription_id", subscription.ID),
+				zap.String("symbol", symbol))
+		}
+	}
+	
+	// Subscribe to external provider
+	if err := provider.SubscribeTicker(ctx, symbol, callback); err != nil {
+		return nil, err
+	}
+	
+	return subscription, nil
+}
+
+// SubscribeOHLCV subscribes to OHLCV updates
+func (s *Service) SubscribeOHLCV(ctx context.Context, symbol, interval string) (*Subscription, error) {
+	// Create subscription
+	subscription := &Subscription{
+		ID:        generateID(),
+		Symbol:    symbol,
+		Type:      external.MarketDataTypeOHLCV,
+		Interval:  interval,
+		Channel:   make(chan interface{}, 100),
+		CreatedAt: time.Now(),
+	}
+	
+	// Add to subscriptions
+	s.mu.Lock()
+	s.Subscriptions[subscription.ID] = subscription
+	
+	// Add to symbol subscriptions
+	if _, exists := s.SymbolSubscriptions[symbol]; !exists {
+		s.SymbolSubscriptions[symbol] = make(map[string]*Subscription)
+	}
+	s.SymbolSubscriptions[symbol][subscription.ID] = subscription
+	s.mu.Unlock()
+	
+	// Subscribe to external provider
+	provider, err := s.ExternalManager.GetDefaultProvider()
+	if err != nil {
+		return nil, err
+	}
+	
+	// Create callback function
+	callback := func(data interface{}) {
+		// Cache the data
+		s.Cache.Set(
+			"ohlcv:"+symbol+":"+interval, 
+			data, 
+			cache.DefaultExpiration,
+		)
+		
+		// Send to subscriber
+		select {
+		case subscription.Channel <- data:
+		default:
+			s.logger.Warn("OHLCV channel full, dropping update",
+				zap.String("subscription_id", subscription.ID),
+				zap.String("symbol", symbol),
+				zap.String("interval", interval))
+		}
+	}
+	
+	// Subscribe to external provider
+	if err := provider.SubscribeOHLCV(ctx, symbol, interval, callback); err != nil {
+		return nil, err
+	}
+	
+	return subscription, nil
+}
+
+// Unsubscribe unsubscribes from market data
+func (s *Service) Unsubscribe(ctx context.Context, subscriptionID string) error {
+	s.mu.Lock()
+	subscription, exists := s.Subscriptions[subscriptionID]
+	if !exists {
+		s.mu.Unlock()
+		return nil
+	}
+	
+	// Remove from subscriptions
+	delete(s.Subscriptions, subscriptionID)
+	
+	// Remove from symbol subscriptions
+	if symbolSubs, exists := s.SymbolSubscriptions[subscription.Symbol]; exists {
+		delete(symbolSubs, subscriptionID)
+	}
+	
+	// Get subscription details before unlocking
+	symbol := subscription.Symbol
+	dataType := subscription.Type
+	interval := subscription.Interval
+	
+	s.mu.Unlock()
+	
+	// Unsubscribe from external provider
+	provider, err := s.ExternalManager.GetDefaultProvider()
+	if err != nil {
+		return err
+	}
+	
+	// Unsubscribe based on data type
+	switch dataType {
+	case external.MarketDataTypeOrderBook:
+		return provider.UnsubscribeOrderBook(ctx, symbol)
+	case external.MarketDataTypeTrade:
+		return provider.UnsubscribeTrades(ctx, symbol)
+	case external.MarketDataTypeTicker:
+		return provider.UnsubscribeTicker(ctx, symbol)
+	case external.MarketDataTypeOHLCV:
+		return provider.UnsubscribeOHLCV(ctx, symbol, interval)
+	}
+	
+	return nil
+}
+
+// GetOrderBook gets the order book
+func (s *Service) GetOrderBook(ctx context.Context, symbol string) (*external.OrderBookData, error) {
+	// Check cache first
+	if cachedData, found := s.Cache.Get("orderbook:" + symbol); found {
+		return cachedData.(*external.OrderBookData), nil
+	}
+	
+	// Get from external provider
+	provider, err := s.ExternalManager.GetDefaultProvider()
+	if err != nil {
+		return nil, err
+	}
+	
+	orderBook, err := provider.GetOrderBook(ctx, symbol)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Cache the data
+	s.Cache.Set("orderbook:"+symbol, orderBook, cache.DefaultExpiration)
+	
+	return orderBook, nil
+}
+
+// GetTrades gets trades
+func (s *Service) GetTrades(ctx context.Context, symbol string, limit int) ([]external.TradeData, error) {
+	// Get from external provider
+	provider, err := s.ExternalManager.GetDefaultProvider()
+	if err != nil {
+		return nil, err
+	}
+	
+	trades, err := provider.GetTrades(ctx, symbol, limit)
+	if err != nil {
+		return nil, err
+	}
+	
+	return trades, nil
+}
+
+// GetTicker gets the ticker
+func (s *Service) GetTicker(ctx context.Context, symbol string) (*external.TickerData, error) {
+	// Check cache first
+	if cachedData, found := s.Cache.Get("ticker:" + symbol); found {
+		return cachedData.(*external.TickerData), nil
+	}
+	
+	// Get from external provider
+	provider, err := s.ExternalManager.GetDefaultProvider()
+	if err != nil {
+		return nil, err
+	}
+	
+	ticker, err := provider.GetTicker(ctx, symbol)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Cache the data
+	s.Cache.Set("ticker:"+symbol, ticker, cache.DefaultExpiration)
+	
+	return ticker, nil
+}
+
+// GetOHLCV gets OHLCV data
+func (s *Service) GetOHLCV(ctx context.Context, symbol, interval string, limit int) ([]external.OHLCVData, error) {
+	// Get from external provider
+	provider, err := s.ExternalManager.GetDefaultProvider()
+	if err != nil {
+		return nil, err
+	}
+	
+	ohlcv, err := provider.GetOHLCV(ctx, symbol, interval, limit)
+	if err != nil {
+		return nil, err
+	}
+	
+	return ohlcv, nil
+}
+
+// GetHistoricalOHLCV gets historical OHLCV data from the database
+func (s *Service) GetHistoricalOHLCV(ctx context.Context, symbol, interval string, start, end time.Time) ([]*db.MarketData, error) {
+	return s.MarketDataRepository.GetOHLCVBySymbolAndTimeRange(ctx, symbol, interval, start, end)
+}
+
+// Stop stops the service
+func (s *Service) Stop() {
+	s.cancel()
+	
+	// Close all subscription channels
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	
+	for _, subscription := range s.Subscriptions {
+		close(subscription.Channel)
 	}
 }
 
-// GetData gets market data from the WebSocket data source
-func (ds *WebSocketDataSource) GetData(ctx context.Context, symbol string, timeRange string) ([]MarketData, error) {
-	// In a real implementation, this would get data from the WebSocket connection
-	// For now, return some dummy data
-	return []MarketData{
-		{
-			Symbol:    symbol,
-			Price:     100.0,
-			Volume:    1000.0,
-			Timestamp: time.Now(),
-		},
-	}, nil
+// Helper function to generate a unique ID
+func generateID() string {
+	return "sub_" + time.Now().Format("20060102150405") + "_" + randomString(8)
 }
 
-// Start starts the WebSocket data source
-func (ds *WebSocketDataSource) Start(ctx context.Context) error {
-	// In a real implementation, this would establish the WebSocket connection
-	ds.logger.Info("Starting WebSocket data source")
-	return nil
-}
-
-// Stop stops the WebSocket data source
-func (ds *WebSocketDataSource) Stop(ctx context.Context) error {
-	// In a real implementation, this would close the WebSocket connection
-	ds.logger.Info("Stopping WebSocket data source")
-	return nil
-}
-
-// RESTDataSource implements DataSource using REST APIs
-type RESTDataSource struct {
-	config map[string]interface{}
-	logger *zap.Logger
-	// Add HTTP client and other fields
-}
-
-// NewRESTDataSource creates a new REST data source
-func NewRESTDataSource(config map[string]interface{}, logger *zap.Logger) *RESTDataSource {
-	return &RESTDataSource{
-		config: config,
-		logger: logger,
+// Helper function to generate a random string
+func randomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	result := make([]byte, length)
+	for i := range result {
+		result[i] = charset[time.Now().UnixNano()%int64(len(charset))]
+		time.Sleep(1 * time.Nanosecond)
 	}
-}
-
-// GetData gets market data from the REST data source
-func (ds *RESTDataSource) GetData(ctx context.Context, symbol string, timeRange string) ([]MarketData, error) {
-	// In a real implementation, this would make HTTP requests to get data
-	// For now, return some dummy data
-	return []MarketData{
-		{
-			Symbol:    symbol,
-			Price:     100.0,
-			Volume:    1000.0,
-			Timestamp: time.Now(),
-		},
-	}, nil
-}
-
-// Start starts the REST data source
-func (ds *RESTDataSource) Start(ctx context.Context) error {
-	// In a real implementation, this would initialize the HTTP client
-	ds.logger.Info("Starting REST data source")
-	return nil
-}
-
-// Stop stops the REST data source
-func (ds *RESTDataSource) Stop(ctx context.Context) error {
-	// In a real implementation, this would clean up the HTTP client
-	ds.logger.Info("Stopping REST data source")
-	return nil
+	return string(result)
 }
 
