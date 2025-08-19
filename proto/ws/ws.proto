@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package ws;
+
+option go_package = "github.com/abdoElHodaky/tradSys/proto/ws";
+
+// WebSocketMessage represents a message sent over WebSocket
+message WebSocketMessage {
+  // Type of the message
+  string type = 1;
+  
+  // Payload of the message
+  bytes payload = 2;
+  
+  // Timestamp of the message
+  int64 timestamp = 3;
+  
+  // Sequence number of the message
+  int64 sequence = 4;
+  
+  // Channel or topic of the message
+  string channel = 5;
+  
+  // Sender of the message
+  string sender = 6;
+  
+  // Recipients of the message
+  repeated string recipients = 7;
+}
+
+// WebSocketRequest represents a request to the WebSocket service
+message WebSocketRequest {
+  // Type of the request
+  string type = 1;
+  
+  // Payload of the request
+  bytes payload = 2;
+  
+  // Channel or topic to subscribe to
+  string channel = 3;
+  
+  // Authentication token
+  string token = 4;
+  
+  // Client ID
+  string client_id = 5;
+}
+
+// WebSocketResponse represents a response from the WebSocket service
+message WebSocketResponse {
+  // Type of the response
+  string type = 1;
+  
+  // Payload of the response
+  bytes payload = 2;
+  
+  // Status code
+  int32 status = 3;
+  
+  // Error message
+  string error = 4;
+  
+  // Channel or topic of the response
+  string channel = 5;
+}
+
+// WebSocketService provides WebSocket functionality
+service WebSocketService {
+  // Subscribe subscribes to a channel
+  rpc Subscribe(WebSocketRequest) returns (WebSocketResponse);
+  
+  // Unsubscribe unsubscribes from a channel
+  rpc Unsubscribe(WebSocketRequest) returns (WebSocketResponse);
+  
+  // Send sends a message to a channel
+  rpc Send(WebSocketMessage) returns (WebSocketResponse);
+  
+  // Receive receives messages from subscribed channels
+  rpc Receive(WebSocketRequest) returns (stream WebSocketMessage);
+}
+

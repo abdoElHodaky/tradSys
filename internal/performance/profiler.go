@@ -2,184 +2,158 @@ package performance
 
 import (
 	"fmt"
-	"net/http"
-	"net/http/pprof"
 	"os"
+	"path/filepath"
 	"runtime"
 	"runtime/pprof"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
-// Profiler provides performance profiling capabilities
+// Profiler provides profiling functionality
 type Profiler struct {
-	logger *zap.Logger
+	logger       *zap.Logger
+	cpuProfile   *os.File
+	memProfile   *os.File
+	profilesDir  string
+	isRunning    bool
+	startTime    time.Time
+	sampleRate   int
+	memThreshold uint64
+}
+
+// ProfilerOptions contains options for the profiler
+type ProfilerOptions struct {
+	ProfilesDir  string
+	SampleRate   int
+	MemThreshold uint64
+}
+
+// DefaultProfilerOptions returns default profiler options
+func DefaultProfilerOptions() ProfilerOptions {
+	return ProfilerOptions{
+		ProfilesDir:  "profiles",
+		SampleRate:   100,
+		MemThreshold: 1024 * 1024 * 100, // 100 MB
+	}
 }
 
 // NewProfiler creates a new profiler
-func NewProfiler(logger *zap.Logger) *Profiler {
+func NewProfiler(logger *zap.Logger, options ProfilerOptions) (*Profiler, error) {
+	// Create the profiles directory if it doesn't exist
+	if err := os.MkdirAll(options.ProfilesDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create profiles directory: %w", err)
+	}
+
 	return &Profiler{
-		logger: logger,
-	}
+		logger:       logger,
+		profilesDir:  options.ProfilesDir,
+		sampleRate:   options.SampleRate,
+		memThreshold: options.MemThreshold,
+	}, nil
 }
 
-// RegisterHTTPEndpoints registers HTTP endpoints for profiling
-func (p *Profiler) RegisterHTTPEndpoints(router *gin.Engine) {
-	// Create a profiling group
-	profiling := router.Group("/debug/pprof")
-	{
-		profiling.GET("/", gin.WrapF(pprof.Index))
-		profiling.GET("/cmdline", gin.WrapF(pprof.Cmdline))
-		profiling.GET("/profile", gin.WrapF(pprof.Profile))
-		profiling.POST("/symbol", gin.WrapF(pprof.Symbol))
-		profiling.GET("/symbol", gin.WrapF(pprof.Symbol))
-		profiling.GET("/trace", gin.WrapF(pprof.Trace))
-		profiling.GET("/allocs", gin.WrapH(pprof.Handler("allocs")))
-		profiling.GET("/block", gin.WrapH(pprof.Handler("block")))
-		profiling.GET("/goroutine", gin.WrapH(pprof.Handler("goroutine")))
-		profiling.GET("/heap", gin.WrapH(pprof.Handler("heap")))
-		profiling.GET("/mutex", gin.WrapH(pprof.Handler("mutex")))
-		profiling.GET("/threadcreate", gin.WrapH(pprof.Handler("threadcreate")))
+// StartCPUProfiling starts CPU profiling
+func (p *Profiler) StartCPUProfiling() error {
+	if p.isRunning {
+		return fmt.Errorf("profiler is already running")
 	}
 
-	// Add custom profiling endpoints
-	router.GET("/debug/performance/memory", p.memoryStats)
-	router.GET("/debug/performance/gc", p.gcStats)
-	router.GET("/debug/performance/cpu", p.cpuProfile)
-}
-
-// memoryStats returns memory statistics
-func (p *Profiler) memoryStats(c *gin.Context) {
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-
-	c.JSON(http.StatusOK, gin.H{
-		"alloc":        m.Alloc,
-		"total_alloc":  m.TotalAlloc,
-		"sys":          m.Sys,
-		"lookups":      m.Lookups,
-		"mallocs":      m.Mallocs,
-		"frees":        m.Frees,
-		"heap_alloc":   m.HeapAlloc,
-		"heap_sys":     m.HeapSys,
-		"heap_idle":    m.HeapIdle,
-		"heap_inuse":   m.HeapInuse,
-		"heap_objects": m.HeapObjects,
-		"stack_inuse":  m.StackInuse,
-		"stack_sys":    m.StackSys,
-		"mspan_inuse":  m.MSpanInuse,
-		"mspan_sys":    m.MSpanSys,
-		"mcache_inuse": m.MCacheInuse,
-		"mcache_sys":   m.MCacheSys,
-		"buck_hash_sys": m.BuckHashSys,
-		"gc_sys":       m.GCSys,
-		"other_sys":    m.OtherSys,
-		"next_gc":      m.NextGC,
-		"last_gc":      m.LastGC,
-		"pause_total_ns": m.PauseTotalNs,
-		"num_gc":       m.NumGC,
-		"num_forced_gc": m.NumForcedGC,
-	})
-}
-
-// gcStats returns garbage collection statistics
-func (p *Profiler) gcStats(c *gin.Context) {
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-
-	c.JSON(http.StatusOK, gin.H{
-		"next_gc":      m.NextGC,
-		"last_gc":      m.LastGC,
-		"pause_total_ns": m.PauseTotalNs,
-		"num_gc":       m.NumGC,
-		"num_forced_gc": m.NumForcedGC,
-		"gc_cpu_fraction": m.GCCPUFraction,
-	})
-}
-
-// cpuProfile generates a CPU profile
-func (p *Profiler) cpuProfile(c *gin.Context) {
-	// Get duration from query parameter (default: 30 seconds)
-	durationStr := c.DefaultQuery("duration", "30")
-	duration, err := time.ParseDuration(durationStr + "s")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid duration"})
-		return
-	}
-
-	// Create a temporary file for the CPU profile
-	f, err := os.CreateTemp("", "cpu-profile-*.pprof")
-	if err != nil {
-		p.logger.Error("Failed to create CPU profile file", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create CPU profile file"})
-		return
-	}
-	defer f.Close()
-
-	// Start CPU profiling
-	if err := pprof.StartCPUProfile(f); err != nil {
-		p.logger.Error("Failed to start CPU profile", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start CPU profile"})
-		return
-	}
-
-	// Stop CPU profiling after the specified duration
-	time.Sleep(duration)
-	pprof.StopCPUProfile()
-
-	// Return the profile file
-	c.File(f.Name())
-}
-
-// StartCPUProfile starts CPU profiling to a file
-func (p *Profiler) StartCPUProfile(filename string) error {
-	f, err := os.Create(filename)
+	// Create a CPU profile file
+	cpuProfilePath := filepath.Join(p.profilesDir, fmt.Sprintf("cpu-%s.pprof", time.Now().Format("20060102-150405")))
+	cpuProfile, err := os.Create(cpuProfilePath)
 	if err != nil {
 		return fmt.Errorf("failed to create CPU profile file: %w", err)
 	}
 
-	if err := pprof.StartCPUProfile(f); err != nil {
-		f.Close()
-		return fmt.Errorf("failed to start CPU profile: %w", err)
+	// Start CPU profiling
+	if err := pprof.StartCPUProfile(cpuProfile); err != nil {
+		cpuProfile.Close()
+		return fmt.Errorf("failed to start CPU profiling: %w", err)
 	}
 
-	p.logger.Info("CPU profiling started", zap.String("filename", filename))
+	p.cpuProfile = cpuProfile
+	p.isRunning = true
+	p.startTime = time.Now()
+
+	p.logger.Info("Started CPU profiling", zap.String("file", cpuProfilePath))
 	return nil
 }
 
-// StopCPUProfile stops CPU profiling
-func (p *Profiler) StopCPUProfile() {
+// StopCPUProfiling stops CPU profiling
+func (p *Profiler) StopCPUProfiling() error {
+	if !p.isRunning || p.cpuProfile == nil {
+		return fmt.Errorf("CPU profiling is not running")
+	}
+
+	// Stop CPU profiling
 	pprof.StopCPUProfile()
-	p.logger.Info("CPU profiling stopped")
+	p.cpuProfile.Close()
+	p.cpuProfile = nil
+	p.isRunning = false
+
+	duration := time.Since(p.startTime)
+	p.logger.Info("Stopped CPU profiling", zap.Duration("duration", duration))
+	return nil
 }
 
-// WriteHeapProfile writes a heap profile to a file
-func (p *Profiler) WriteHeapProfile(filename string) error {
-	f, err := os.Create(filename)
+// CaptureHeapProfile captures a heap profile
+func (p *Profiler) CaptureHeapProfile() error {
+	// Create a heap profile file
+	heapProfilePath := filepath.Join(p.profilesDir, fmt.Sprintf("heap-%s.pprof", time.Now().Format("20060102-150405")))
+	heapProfile, err := os.Create(heapProfilePath)
 	if err != nil {
 		return fmt.Errorf("failed to create heap profile file: %w", err)
 	}
-	defer f.Close()
+	defer heapProfile.Close()
 
-	if err := pprof.WriteHeapProfile(f); err != nil {
+	// Write heap profile
+	if err := pprof.WriteHeapProfile(heapProfile); err != nil {
 		return fmt.Errorf("failed to write heap profile: %w", err)
 	}
 
-	p.logger.Info("Heap profile written", zap.String("filename", filename))
+	p.logger.Info("Captured heap profile", zap.String("file", heapProfilePath))
 	return nil
 }
 
-// MemoryStats returns memory statistics
-func (p *Profiler) MemoryStats() runtime.MemStats {
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	return m
+// StartMemoryMonitoring starts monitoring memory usage
+func (p *Profiler) StartMemoryMonitoring(interval time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			var m runtime.MemStats
+			runtime.ReadMemStats(&m)
+
+			// Log memory stats
+			p.logger.Info("Memory stats",
+				zap.Uint64("alloc", m.Alloc),
+				zap.Uint64("total_alloc", m.TotalAlloc),
+				zap.Uint64("sys", m.Sys),
+				zap.Uint64("heap_alloc", m.HeapAlloc),
+				zap.Uint64("heap_sys", m.HeapSys),
+				zap.Uint64("heap_idle", m.HeapIdle),
+				zap.Uint64("heap_inuse", m.HeapInuse),
+				zap.Uint64("heap_released", m.HeapReleased),
+				zap.Uint64("heap_objects", m.HeapObjects),
+				zap.Uint64("num_gc", uint64(m.NumGC)),
+			)
+
+			// Capture heap profile if memory usage exceeds threshold
+			if m.Alloc > p.memThreshold {
+				p.logger.Warn("Memory usage exceeds threshold, capturing heap profile",
+					zap.Uint64("alloc", m.Alloc),
+					zap.Uint64("threshold", p.memThreshold),
+				)
+				if err := p.CaptureHeapProfile(); err != nil {
+					p.logger.Error("Failed to capture heap profile", zap.Error(err))
+				}
+			}
+		}
+	}()
+
+	p.logger.Info("Started memory monitoring", zap.Duration("interval", interval))
 }
 
-// ForceGC forces a garbage collection
-func (p *Profiler) ForceGC() {
-	runtime.GC()
-	p.logger.Info("Forced garbage collection")
-}

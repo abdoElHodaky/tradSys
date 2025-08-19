@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"time"
 
@@ -152,7 +153,7 @@ func (g *APIGateway) handleRequest(route Route) gin.HandlerFunc {
 		c.Status(resp.StatusCode)
 		
 		// Copy the response body
-		_, err = c.Writer.ReadFrom(resp.Body)
+		_, err = io.Copy(c.Writer, resp.Body)
 		if err != nil {
 			g.logger.Error("Failed to copy response body",
 				zap.String("service", route.ServiceName),

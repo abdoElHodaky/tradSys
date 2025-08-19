@@ -5,71 +5,112 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/config"
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/golang-jwt/jwt/v4"
 )
 
-// Claims represents the JWT claims
-type Claims struct {
+// JWTConfig contains configuration for JWT authentication
+type JWTConfig struct {
+	SecretKey     string
+	TokenDuration time.Duration
+	Issuer        string
+}
+
+// JWTClaims represents the claims in a JWT token
+type JWTClaims struct {
 	UserID   string `json:"user_id"`
 	Username string `json:"username"`
 	Role     string `json:"role"`
 	jwt.RegisteredClaims
 }
 
-// GenerateToken generates a JWT token for the given user
-func GenerateToken(userID, username, role string) (string, error) {
-	cfg := config.GetConfig()
+// JWTService provides JWT token generation and validation
+type JWTService struct {
+	config JWTConfig
+}
 
-	// Create claims
-	claims := &Claims{
+// NewJWTService creates a new JWT service
+func NewJWTService(config JWTConfig) *JWTService {
+	return &JWTService{
+		config: config,
+	}
+}
+
+// GenerateToken generates a new JWT token for a user
+func (s *JWTService) GenerateToken(userID, username, role string) (string, error) {
+	claims := JWTClaims{
 		UserID:   userID,
 		Username: username,
 		Role:     role,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(cfg.Auth.TokenDuration) * time.Minute)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.config.TokenDuration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
-			Issuer:    "tradsys",
+			Issuer:    s.config.Issuer,
 			Subject:   userID,
 		},
 	}
 
-	// Create token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	// Sign token
-	tokenString, err := token.SignedString([]byte(cfg.Auth.JWTSecret))
+	signedToken, err := token.SignedString([]byte(s.config.SecretKey))
 	if err != nil {
 		return "", fmt.Errorf("failed to sign token: %w", err)
 	}
 
-	return tokenString, nil
+	return signedToken, nil
 }
 
 // ValidateToken validates a JWT token and returns the claims
-func ValidateToken(tokenString string) (*Claims, error) {
-	cfg := config.GetConfig()
-
-	// Parse token
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		// Validate signing method
+func (s *JWTService) ValidateToken(tokenString string) (*JWTClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-
-		return []byte(cfg.Auth.JWTSecret), nil
+		return []byte(s.config.SecretKey), nil
 	})
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse token: %w", err)
 	}
 
-	// Extract claims
-	claims, ok := token.Claims.(*Claims)
-	if !ok || !token.Valid {
+	if !token.Valid {
 		return nil, errors.New("invalid token")
+	}
+
+	claims, ok := token.Claims.(*JWTClaims)
+	if !ok {
+		return nil, errors.New("invalid token claims")
 	}
 
 	return claims, nil
 }
+
+// RefreshToken refreshes a JWT token
+func (s *JWTService) RefreshToken(tokenString string) (string, error) {
+	claims, err := s.ValidateToken(tokenString)
+	if err != nil {
+		return "", err
+	}
+
+	// Create new claims with updated expiration
+	newClaims := JWTClaims{
+		UserID:   claims.UserID,
+		Username: claims.Username,
+		Role:     claims.Role,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.config.TokenDuration)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+			Issuer:    s.config.Issuer,
+			Subject:   claims.Subject,
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, newClaims)
+	signedToken, err := token.SignedString([]byte(s.config.SecretKey))
+	if err != nil {
+		return "", fmt.Errorf("failed to sign refreshed token: %w", err)
+	}
+
+	return signedToken, nil
+}
+

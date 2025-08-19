@@ -5,7 +5,6 @@ import (
 
 	"github.com/abdoElHodaky/tradSys/internal/architecture/discovery"
 	"go-micro.dev/v4/registry"
-	"go-micro.dev/v4/registry/mdns"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -27,7 +26,8 @@ var DiscoveryModule = fx.Options(
 
 // NewRegistry creates a new registry
 func NewRegistry() registry.Registry {
-	return mdns.NewRegistry()
+	// Use the default registry from go-micro
+	return registry.DefaultRegistry
 }
 
 // NewServiceDiscovery creates a new service discovery
