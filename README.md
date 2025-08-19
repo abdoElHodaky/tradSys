@@ -130,6 +130,7 @@ The platform provides multiple WebSocket endpoints:
 
 - Legacy WebSocket: `ws://localhost:8080/ws` - JSON-based messaging
 - Enhanced WebSocket: `ws://localhost:8080/ws/v2` - Binary Protocol Buffers messaging with compression
+- Optimized WebSocket: `ws://localhost:8080/ws/v3` - High-performance WebSocket with worker pools and buffer recycling
 - PeerJS Signaling: `ws://localhost:8080/peerjs/ws` - WebRTC signaling for peer-to-peer communication
 
 ### PeerJS API
@@ -170,6 +171,46 @@ strategyManager.RegisterStrategy(strategy)
 
 // Start the strategy
 strategyManager.StartStrategy(context.Background(), strategy.GetName())
+```
+
+### Optimized Strategy Framework
+
+For high-frequency trading, the platform provides an optimized strategy framework:
+
+```go
+// Create an optimized strategy manager with worker pool
+optimizedManager := strategy.NewOptimizedStrategyManager(
+    logger,
+    runtime.NumCPU(), // Use all available CPU cores
+)
+
+// Create an optimized statistical arbitrage strategy
+strategy := strategy.NewOptimizedStatisticalArbitrageStrategy(
+    logger,
+    strategy.StatisticalArbitrageParams{
+        Name:           "BTC-ETH-Arb",
+        PairID:         "BTC-ETH",
+        Symbol1:        "BTC-USD",
+        Symbol2:        "ETH-USD",
+        Ratio:          15.5,
+        ZScoreEntry:    2.0,
+        ZScoreExit:     0.5,
+        PositionSize:   1.0,
+        MaxPositions:   3,
+        LookbackPeriod: 100,
+        UpdateInterval: time.Millisecond * 100,
+    },
+    orderService,
+    pairRepo,
+    statsRepo,
+    positionRepo,
+)
+
+// Register with priority (lower number = higher priority)
+optimizedManager.RegisterStrategy(strategy, 1)
+
+// Start the strategy
+optimizedManager.StartStrategy(context.Background(), strategy.GetName())
 ```
 
 ### Backtesting
@@ -219,14 +260,26 @@ result, err := backtestEngine.RunBacktest(
 │   ├── peerjs/           # PeerJS integration
 │   │   ├── server.go     # PeerJS signaling server
 │   │   └── client.go     # PeerJS client implementation
+│   ├── performance/      # Performance optimization
+│   │   ├── latency/      # Latency tracking
+│   │   │   └── tracker.go # Latency tracking system
+│   │   └── pools/        # Object pooling
+│   │       ├── buffer_pool.go # Buffer pooling
+│   │       ├── market_data_pool.go # Market data object pooling
+│   │       └── order_pool.go # Order object pooling
 │   ├── risk/             # Risk management service
 │   ├── strategy/         # Strategy engine
 │   │   ├── framework.go  # Strategy framework
+│   │   ├── optimized_framework.go # Optimized strategy framework
+│   │   ├── incremental_statistics.go # Efficient statistical calculations
 │   │   ├── market_making.go # Market making strategy
+│   │   ├── statistical_arbitrage.go # Statistical arbitrage strategy
+│   │   ├── optimized_statistical_arbitrage.go # Optimized statistical arbitrage
 │   │   └── backtest.go   # Backtesting engine
 │   └── ws/               # WebSocket server
 │       ├── server.go     # Legacy WebSocket server
 │       ├── enhanced_server.go # Enhanced WebSocket server
+│       ├── optimized_server.go # Optimized WebSocket server
 │       ├── connection_pool.go # Connection pooling
 │       └── binary_message.go # Binary message handling
 └── proto/                # Protocol Buffer definitions
@@ -243,23 +296,42 @@ TradSys is optimized for high-frequency trading with:
 1. **Memory Management**
    - Object pooling to minimize GC pressure
    - Zero-allocation techniques for hot paths
+   - Pre-allocated buffers with capacity planning
+   - Buffer recycling to reduce memory allocations
 
 2. **Database Optimization**
    - Query optimization with execution plan analysis
    - Index management for common query patterns
    - Asynchronous persistence for critical paths
+   - Connection pooling with optimal settings
 
 3. **Network Optimization**
    - Binary protocols for all internal communication
    - Message batching and compression
+   - WebSocket optimization with worker pools
+   - Zero-copy deserialization where possible
 
 4. **Concurrency Model**
    - Go's goroutines and channels for parallel processing
    - Lock-free data structures where possible
+   - Worker pools for controlled concurrency
+   - Priority-based execution for critical strategies
+
+5. **Statistical Optimization**
+   - Incremental statistical calculations
+   - Welford's algorithm for numerical stability
+   - Efficient correlation and cointegration calculations
+   - Optimized z-score calculation
+
+6. **Latency Monitoring**
+   - High-precision latency tracking with nanosecond resolution
+   - Latency histograms for performance analysis
+   - Alerting for excessive latency
+   - Circuit breaker pattern for risk management
 
 ## Implementation Phases
 
-The platform has been implemented in four phases:
+The platform has been implemented in multiple phases:
 
 ### Phase 1: Core Infrastructure
 - Enhanced WebSocket server with binary messaging
@@ -325,6 +397,14 @@ The platform has been implemented in four phases:
 - Enhanced concurrency controls for database operations
 - Improved error handling and code quality
 
+### Phase 3.7: High-Frequency Trading Optimization
+- Implemented object pooling for market data and orders
+- Added incremental statistical calculations for better performance
+- Created optimized WebSocket server with worker pools
+- Implemented high-precision latency tracking
+- Optimized statistical arbitrage strategy for HFT
+- Added circuit breaker pattern for risk management
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
@@ -332,3 +412,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
