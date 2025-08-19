@@ -29,6 +29,18 @@ var Module = fx.Options(
 	// Include the circuit breaker module
 	fx.Options(CircuitBreakerModule),
 	
+	// Include the architecture circuit breaker module
+	fx.Options(ArchitectureCircuitBreakerModule),
+	
+	// Include the bulkhead module
+	fx.Options(BulkheadModule),
+	
+	// Include the worker pool module
+	fx.Options(WorkerPoolModule),
+	
+	// Include the service registry module
+	fx.Options(ServiceRegistryModule),
+	
 	// Include the tracing module
 	fx.Options(TracingModule),
 	
@@ -98,6 +110,20 @@ func NewRiskModule() fx.Option {
 			// This is a placeholder for the actual risk module
 			return nil
 		}),
+	)
+}
+
+// NewTradingModule creates a new trading module
+func NewTradingModule() fx.Option {
+	return fx.Module("trading",
+		// Include the market data module
+		fx.Options(NewMarketDataModule()),
+		
+		// Include the orders module
+		fx.Options(NewOrdersModule()),
+		
+		// Include the risk module
+		fx.Options(NewRiskModule()),
 	)
 }
 
