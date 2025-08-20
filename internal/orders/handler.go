@@ -2,91 +2,92 @@ package orders
 
 import (
 	"context"
-	"errors"
 
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"github.com/abdoElHodaky/tradSys/proto/orders"
 	"github.com/abdoElHodaky/tradSys/proto/risk"
-	gomicro "go-micro.dev/v4"
+	"github.com/google/uuid"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 // HandlerParams contains the parameters for creating an order handler
 type HandlerParams struct {
 	fx.In
 
-	Logger     *zap.Logger
-	Repository *repositories.OrderRepository `optional:"true"`
-	Service    *gomicro.Service              `optional:"true"`
+	Logger          *zap.Logger
+	Repository      *repositories.OrderRepository `optional:"true"`
+	RiskServiceConn *grpc.ClientConn              `optional:"true" name:"riskService"`
 }
 
 // Handler implements the OrderService handler
 type Handler struct {
 	orders.UnimplementedOrderServiceServer
-	logger      *zap.Logger
-	repository  *repositories.OrderRepository
-	riskService risk.RiskService
+	logger     *zap.Logger
+	repository *repositories.OrderRepository
+	riskClient risk.RiskServiceClient
 }
 
 // NewHandler creates a new order handler with fx dependency injection
 func NewHandler(p HandlerParams) *Handler {
-	var riskService risk.RiskService
-	
-	// Create client for the risk service if service is available
-	if p.Service != nil {
-		riskService = risk.NewRiskService("risk", (*p.Service).Client())
+	var riskClient risk.RiskServiceClient
+	if p.RiskServiceConn != nil {
+		riskClient = risk.NewRiskServiceClient(p.RiskServiceConn)
 	}
 
 	return &Handler{
-		logger:      p.Logger,
-		repository:  p.Repository,
-		riskService: riskService,
+		logger:     p.Logger,
+		repository: p.Repository,
+		riskClient: riskClient,
 	}
 }
 
 // CreateOrder implements the OrderService.CreateOrder method
 func (h *Handler) CreateOrder(ctx context.Context, req *orders.CreateOrderRequest, rsp *orders.OrderResponse) error {
 	h.logger.Info("CreateOrder called",
-		zap.String("user_id", req.UserId),
 		zap.String("symbol", req.Symbol),
-		zap.Int32("side", int32(req.Side)),
-		zap.Int32("type", int32(req.Type)))
+		zap.String("side", req.Side.String()),
+		zap.Float64("quantity", req.Quantity))
 
 	// Validate order with risk service if available
-	if h.riskService != nil {
+	if h.riskClient != nil {
 		validateReq := &risk.ValidateOrderRequest{
-			AccountId: req.AccountId,
 			Symbol:    req.Symbol,
 			Side:      risk.OrderSide(req.Side),
-			Type:      risk.OrderType(req.Type),
 			Quantity:  req.Quantity,
 			Price:     req.Price,
+			AccountId: "default", // In a real implementation, this would come from auth context
 		}
 
-		validateRsp, err := h.riskService.ValidateOrder(ctx, validateReq)
+		validateRsp, err := h.riskClient.ValidateOrder(ctx, validateReq)
 		if err != nil {
 			h.logger.Error("Failed to validate order with risk service", zap.Error(err))
 			return err
 		}
 
-		if !validateRsp.IsValid {
-			return errors.New(validateRsp.RejectionReason)
+		if !validateRsp.Valid {
+			h.logger.Warn("Order validation failed",
+				zap.String("reason", validateRsp.Reason),
+				zap.Float64("max_allowed_quantity", validateRsp.MaxAllowedQuantity))
+			return grpc.Errorf(grpc.Code(400), "Order validation failed: %s", validateRsp.Reason)
 		}
 	}
 
 	// Implementation would go here
 	// For now, just return a placeholder response
-	rsp.Id = "ord-123456"
-	rsp.UserId = req.UserId
-	rsp.AccountId = req.AccountId
+	rsp.OrderId = uuid.New().String()
 	rsp.Symbol = req.Symbol
-	rsp.Side = req.Side
 	rsp.Type = req.Type
+	rsp.Side = req.Side
+	rsp.Status = orders.OrderStatus_PENDING
 	rsp.Quantity = req.Quantity
+	rsp.FilledQuantity = 0
 	rsp.Price = req.Price
-	rsp.Status = orders.OrderStatus_NEW
+	rsp.StopPrice = req.StopPrice
 	rsp.CreatedAt = 1625097600000
+	rsp.UpdatedAt = 1625097600000
+	rsp.ClientOrderId = req.ClientOrderId
 
 	return nil
 }
@@ -94,22 +95,18 @@ func (h *Handler) CreateOrder(ctx context.Context, req *orders.CreateOrderReques
 // GetOrder implements the OrderService.GetOrder method
 func (h *Handler) GetOrder(ctx context.Context, req *orders.GetOrderRequest, rsp *orders.OrderResponse) error {
 	h.logger.Info("GetOrder called",
-		zap.String("id", req.Id),
-		zap.String("user_id", req.UserId))
+		zap.String("order_id", req.OrderId))
 
 	// Implementation would go here
 	// For now, just return a placeholder response
-	rsp.Id = req.Id
-	rsp.UserId = req.UserId
-	rsp.AccountId = "acc-123456"
+	rsp.OrderId = req.OrderId
 	rsp.Symbol = "BTC-USD"
-	rsp.Side = orders.OrderSide_BUY
 	rsp.Type = orders.OrderType_LIMIT
+	rsp.Side = orders.OrderSide_BUY
+	rsp.Status = orders.OrderStatus_OPEN
 	rsp.Quantity = 1.0
+	rsp.FilledQuantity = 0.5
 	rsp.Price = 50000.0
-	rsp.Status = orders.OrderStatus_FILLED
-	rsp.FilledQty = 1.0
-	rsp.AvgPrice = 50000.0
 	rsp.CreatedAt = 1625097600000
 	rsp.UpdatedAt = 1625097660000
 
@@ -119,22 +116,20 @@ func (h *Handler) GetOrder(ctx context.Context, req *orders.GetOrderRequest, rsp
 // CancelOrder implements the OrderService.CancelOrder method
 func (h *Handler) CancelOrder(ctx context.Context, req *orders.CancelOrderRequest, rsp *orders.OrderResponse) error {
 	h.logger.Info("CancelOrder called",
-		zap.String("id", req.Id),
-		zap.String("user_id", req.UserId))
+		zap.String("order_id", req.OrderId))
 
 	// Implementation would go here
 	// For now, just return a placeholder response
-	rsp.Id = req.Id
-	rsp.UserId = req.UserId
-	rsp.AccountId = "acc-123456"
+	rsp.OrderId = req.OrderId
 	rsp.Symbol = "BTC-USD"
-	rsp.Side = orders.OrderSide_BUY
 	rsp.Type = orders.OrderType_LIMIT
+	rsp.Side = orders.OrderSide_BUY
+	rsp.Status = orders.OrderStatus_CANCELED
 	rsp.Quantity = 1.0
+	rsp.FilledQuantity = 0.5
 	rsp.Price = 50000.0
-	rsp.Status = orders.OrderStatus_CANCELLED
 	rsp.CreatedAt = 1625097600000
-	rsp.UpdatedAt = 1625097660000
+	rsp.UpdatedAt = 1625097720000
 
 	return nil
 }
@@ -142,74 +137,37 @@ func (h *Handler) CancelOrder(ctx context.Context, req *orders.CancelOrderReques
 // GetOrders implements the OrderService.GetOrders method
 func (h *Handler) GetOrders(ctx context.Context, req *orders.GetOrdersRequest, rsp *orders.GetOrdersResponse) error {
 	h.logger.Info("GetOrders called",
-		zap.String("user_id", req.UserId),
-		zap.String("symbol", req.Symbol))
+		zap.String("symbol", req.Symbol),
+		zap.String("status", req.Status.String()))
 
 	// Implementation would go here
-	// For now, just return placeholder orders
+	// For now, just return placeholder responses
 	rsp.Orders = []*orders.OrderResponse{
 		{
-			Id:        "ord-123456",
-			UserId:    req.UserId,
-			AccountId: "acc-123456",
-			Symbol:    "BTC-USD",
-			Side:      orders.OrderSide_BUY,
-			Type:      orders.OrderType_LIMIT,
-			Quantity:  1.0,
-			Price:     50000.0,
-			Status:    orders.OrderStatus_FILLED,
-			FilledQty: 1.0,
-			AvgPrice:  50000.0,
-			CreatedAt: 1625097600000,
-			UpdatedAt: 1625097660000,
+			OrderId:        uuid.New().String(),
+			Symbol:         req.Symbol,
+			Type:           orders.OrderType_LIMIT,
+			Side:           orders.OrderSide_BUY,
+			Status:         req.Status,
+			Quantity:       1.0,
+			FilledQuantity: 0.5,
+			Price:          50000.0,
+			CreatedAt:      1625097600000,
+			UpdatedAt:      1625097660000,
 		},
 		{
-			Id:        "ord-123457",
-			UserId:    req.UserId,
-			AccountId: "acc-123456",
-			Symbol:    "ETH-USD",
-			Side:      orders.OrderSide_SELL,
-			Type:      orders.OrderType_MARKET,
-			Quantity:  5.0,
-			Status:    orders.OrderStatus_FILLED,
-			FilledQty: 5.0,
-			AvgPrice:  3000.0,
-			CreatedAt: 1625097700000,
-			UpdatedAt: 1625097760000,
+			OrderId:        uuid.New().String(),
+			Symbol:         req.Symbol,
+			Type:           orders.OrderType_MARKET,
+			Side:           orders.OrderSide_SELL,
+			Status:         req.Status,
+			Quantity:       0.5,
+			FilledQuantity: 0.5,
+			Price:          51000.0,
+			CreatedAt:      1625097700000,
+			UpdatedAt:      1625097760000,
 		},
 	}
-	rsp.Total = 2
-
-	return nil
-}
-
-// StreamOrders implements the OrderService.StreamOrders method
-func (h *Handler) StreamOrders(ctx context.Context, req *orders.StreamOrdersRequest, stream orders.OrderService_StreamOrdersServer) error {
-	h.logger.Info("StreamOrders called",
-		zap.String("user_id", req.UserId),
-		zap.String("symbol", req.Symbol))
-
-	// Implementation would go here
-	// For now, just return a placeholder order
-	order := &orders.OrderResponse{
-		Id:        "ord-123456",
-		UserId:    req.UserId,
-		AccountId: req.AccountId,
-		Symbol:    req.Symbol,
-		Side:      orders.OrderSide_BUY,
-		Type:      orders.OrderType_LIMIT,
-		Quantity:  1.0,
-		Price:     50000.0,
-		Status:    orders.OrderStatus_NEW,
-		CreatedAt: 1625097600000,
-	}
-
-	if err := stream.Send(order); err != nil {
-		return err
-	}
-
-	// In a real implementation, we would continue sending updates
-	// until the context is canceled or the stream is closed
 
 	return nil
 }

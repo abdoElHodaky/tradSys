@@ -9,3 +9,15 @@ scrape_configs:
       - targets: ['tradesys:8080']
     metrics_path: /metrics
 
+  - job_name: 'api-gateway'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['api-gateway:8000']
+    metrics_path: /metrics
+
+  - job_name: 'nats'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['nats:8222']
+    metrics_path: /metrics
+

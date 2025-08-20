@@ -2,240 +2,137 @@ package risk
 
 import (
 	"context"
-	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/db/models"
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
-	orderspb "github.com/abdoElHodaky/tradSys/proto/orders"
-	pb "github.com/abdoElHodaky/tradSys/proto/risk"
+	"github.com/abdoElHodaky/tradSys/proto/risk"
+	"go.uber.org/fx"
 	"go.uber.org/zap"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
-// Service implements the RiskService gRPC interface
+// ServiceParams contains the parameters for creating a risk service
+type ServiceParams struct {
+	fx.In
+
+	Logger     *zap.Logger
+	Repository *repositories.RiskRepository `optional:"true"`
+}
+
+// Service provides risk management operations
 type Service struct {
-	pb.UnimplementedRiskServiceServer
 	logger     *zap.Logger
 	repository *repositories.RiskRepository
-	orderRepo  *repositories.OrderRepository
 }
 
-// NewService creates a new risk service
-func NewService(logger *zap.Logger, repository *repositories.RiskRepository) *Service {
+// NewService creates a new risk service with fx dependency injection
+func NewService(p ServiceParams) *Service {
 	return &Service{
-		logger:     logger,
-		repository: repository,
+		logger:     p.Logger,
+		repository: p.Repository,
 	}
 }
 
-// SetOrderRepository sets the order repository
-func (s *Service) SetOrderRepository(repo *repositories.OrderRepository) {
-	s.orderRepo = repo
+// ValidateOrder validates an order against risk parameters
+func (s *Service) ValidateOrder(ctx context.Context, symbol string, side risk.OrderSide, quantity, price float64, accountID string) (*risk.ValidateOrderResponse, error) {
+	s.logger.Info("Validating order",
+		zap.String("symbol", symbol),
+		zap.String("side", side.String()),
+		zap.Float64("quantity", quantity),
+		zap.Float64("price", price),
+		zap.String("account_id", accountID))
+
+	// Implementation would go here
+	// For now, just return a placeholder response
+	response := &risk.ValidateOrderResponse{
+		Valid:              true,
+		MaxAllowedQuantity: 10.0,
+		MaxAllowedNotional: 500000.0,
+	}
+
+	// Check if the order exceeds position limits
+	if quantity > response.MaxAllowedQuantity {
+		response.Valid = false
+		response.Reason = "Order quantity exceeds maximum allowed"
+	}
+
+	// Check if the order exceeds notional value limits
+	notionalValue := quantity * price
+	if notionalValue > response.MaxAllowedNotional {
+		response.Valid = false
+		response.Reason = "Order notional value exceeds maximum allowed"
+	}
+
+	return response, nil
 }
 
-// CheckOrderRisk checks if an order passes risk checks
-func (s *Service) CheckOrderRisk(ctx context.Context, req *pb.RiskCheckRequest) (*pb.RiskCheckResponse, error) {
-	order := req.Order
-	
-	// Default account ID if not provided
-	accountID := "default"
-	if order.ClientId != "" {
-		accountID = order.ClientId
+// GetPositions returns current positions
+func (s *Service) GetPositions(ctx context.Context, accountID, symbol string) ([]*risk.Position, error) {
+	s.logger.Info("Getting positions",
+		zap.String("account_id", accountID),
+		zap.String("symbol", symbol))
+
+	// Implementation would go here
+	// For now, just return placeholder positions
+	positions := []*risk.Position{
+		{
+			Symbol:        "BTC-USD",
+			Quantity:      1.5,
+			AveragePrice:  48000.0,
+			UnrealizedPnl: 3000.0,
+			RealizedPnl:   1000.0,
+			UpdatedAt:     1625097600000,
+		},
 	}
-	
-	// Get risk limits
-	riskLimit, err := s.repository.GetRiskLimit(ctx, accountID, order.Symbol)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get risk limits: %v", err)
-	}
-	
-	// Check if risk limits are active
-	if !riskLimit.Active {
-		s.logger.Warn("Risk limits are disabled",
-			zap.String("account_id", accountID),
-			zap.String("symbol", order.Symbol))
-		
-		// Record risk check
-		s.recordRiskCheck(ctx, order.OrderId, accountID, order.Symbol, false, "Risk limits are disabled")
-		
-		return &pb.RiskCheckResponse{
-			Approved: false,
-			Reason:   "Risk limits are disabled for this account",
-		}, nil
-	}
-	
-	// Check order size
-	if order.Quantity > riskLimit.MaxOrderSize {
-		s.logger.Warn("Order exceeds maximum order size",
-			zap.String("order_id", order.OrderId),
-			zap.Float64("quantity", order.Quantity),
-			zap.Float64("max_order_size", riskLimit.MaxOrderSize))
-		
-		// Record risk check
-		s.recordRiskCheck(ctx, order.OrderId, accountID, order.Symbol, false, "Order exceeds maximum order size")
-		
-		return &pb.RiskCheckResponse{
-			Approved: false,
-			Reason:   "Order exceeds maximum order size",
-		}, nil
-	}
-	
-	// Check position limits
-	if s.orderRepo != nil {
-		position, err := s.orderRepo.GetPosition(ctx, order.Symbol, accountID)
-		if err != nil {
-			s.logger.Error("Failed to get position",
-				zap.Error(err),
-				zap.String("symbol", order.Symbol),
-				zap.String("account_id", accountID))
-		} else {
-			// Calculate new position after order
-			newPosition := position.Quantity
-			if order.Side == orderspb.OrderSide_BUY {
-				newPosition += order.Quantity
-			} else {
-				newPosition -= order.Quantity
-			}
-			
-			// Check if new position exceeds limits
-			if newPosition > riskLimit.MaxPosition {
-				s.logger.Warn("Order would exceed maximum position",
-					zap.String("order_id", order.OrderId),
-					zap.Float64("new_position", newPosition),
-					zap.Float64("max_position", riskLimit.MaxPosition))
-				
-				// Record risk check
-				s.recordRiskCheck(ctx, order.OrderId, accountID, order.Symbol, false, "Order would exceed maximum position")
-				
-				return &pb.RiskCheckResponse{
-					Approved: false,
-					Reason:   "Order would exceed maximum position",
-				}, nil
+
+	// If symbol is specified, filter the positions
+	if symbol != "" {
+		var filteredPositions []*risk.Position
+		for _, pos := range positions {
+			if pos.Symbol == symbol {
+				filteredPositions = append(filteredPositions, pos)
 			}
 		}
+		positions = filteredPositions
 	}
-	
-	// Check circuit breaker
-	circuitBreaker, err := s.repository.GetCircuitBreaker(ctx, order.Symbol)
-	if err != nil {
-		s.logger.Error("Failed to get circuit breaker",
-			zap.Error(err),
-			zap.String("symbol", order.Symbol))
-	} else if circuitBreaker.Triggered {
-		// Check if circuit breaker has reset
-		if circuitBreaker.ResetTime.After(time.Now()) {
-			s.logger.Warn("Circuit breaker is triggered",
-				zap.String("order_id", order.OrderId),
-				zap.String("symbol", order.Symbol),
-				zap.Time("reset_time", circuitBreaker.ResetTime))
-			
-			// Record risk check
-			s.recordRiskCheck(ctx, order.OrderId, accountID, order.Symbol, false, "Circuit breaker is triggered")
-			
-			return &pb.RiskCheckResponse{
-				Approved: false,
-				Reason:   "Circuit breaker is triggered for this symbol",
-			}, nil
-		}
-		
-		// Reset circuit breaker
-		circuitBreaker.Triggered = false
-		if err := s.repository.UpdateCircuitBreaker(ctx, circuitBreaker); err != nil {
-			s.logger.Error("Failed to reset circuit breaker",
-				zap.Error(err),
-				zap.String("symbol", order.Symbol))
-		}
-	}
-	
-	// Record risk check
-	s.recordRiskCheck(ctx, order.OrderId, accountID, order.Symbol, true, "Order passed all risk checks")
-	
-	return &pb.RiskCheckResponse{
-		Approved: true,
-		Reason:   "Order passed all risk checks",
-	}, nil
+
+	return positions, nil
 }
 
-// GetPosition gets the current position for a symbol
-func (s *Service) GetPosition(ctx context.Context, req *pb.PositionRequest) (*pb.Position, error) {
-	if s.orderRepo == nil {
-		return nil, status.Errorf(codes.Internal, "order repository not set")
+// GetRiskLimits returns risk limits for a symbol
+func (s *Service) GetRiskLimits(ctx context.Context, symbol, accountID string) (*risk.RiskLimits, error) {
+	s.logger.Info("Getting risk limits",
+		zap.String("symbol", symbol),
+		zap.String("account_id", accountID))
+
+	// Implementation would go here
+	// For now, just return placeholder risk limits
+	limits := &risk.RiskLimits{
+		Symbol:            symbol,
+		MaxPositionSize:   10.0,
+		MaxNotionalValue:  500000.0,
+		MaxLeverage:       5.0,
+		MaxDailyVolume:    100.0,
+		MaxDailyTrades:    100,
+		MaxDrawdownPercent: 10.0,
 	}
-	
-	position, err := s.orderRepo.GetPosition(ctx, req.Symbol, req.AccountId)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get position: %v", err)
-	}
-	
-	return &pb.Position{
-		Symbol:        position.Symbol,
-		AccountId:     position.AccountID,
-		Quantity:      position.Quantity,
-		AveragePrice:  position.AveragePrice,
-		UnrealizedPnl: position.UnrealizedPnL,
-		RealizedPnl:   position.RealizedPnL,
-		Timestamp:     position.LastUpdated.UnixNano(),
-	}, nil
+
+	return limits, nil
 }
 
-// GetAllPositions gets all positions for an account
-func (s *Service) GetAllPositions(ctx context.Context, req *pb.PositionRequest) (*pb.PositionList, error) {
-	// This is a placeholder - in a real system, you would implement this
-	// For now, we'll just return an empty list
-	return &pb.PositionList{
-		Positions: []*pb.Position{},
-	}, nil
+// UpdateRiskLimits updates risk limits for a symbol
+func (s *Service) UpdateRiskLimits(ctx context.Context, symbol, accountID string, limits *risk.RiskLimits) (*risk.RiskLimits, error) {
+	s.logger.Info("Updating risk limits",
+		zap.String("symbol", symbol),
+		zap.String("account_id", accountID),
+		zap.Float64("max_position_size", limits.MaxPositionSize),
+		zap.Float64("max_notional_value", limits.MaxNotionalValue))
+
+	// Implementation would go here
+	// For now, just return the updated limits
+	return limits, nil
 }
 
-// GetRiskLimits gets risk limits for an account
-func (s *Service) GetRiskLimits(ctx context.Context, req *pb.RiskLimitRequest) (*pb.RiskLimit, error) {
-	riskLimit, err := s.repository.GetRiskLimit(ctx, req.AccountId, req.Symbol)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get risk limits: %v", err)
-	}
-	
-	return &pb.RiskLimit{
-		AccountId:      riskLimit.AccountID,
-		Symbol:         riskLimit.Symbol,
-		MaxPosition:    riskLimit.MaxPosition,
-		MaxOrderSize:   riskLimit.MaxOrderSize,
-		MaxDailyLoss:   riskLimit.MaxDailyLoss,
-		CurrentDailyLoss: riskLimit.CurrentDailyLoss,
-		Active:         riskLimit.Active,
-	}, nil
-}
+// ServiceModule provides the risk service module for fx
+var ServiceModule = fx.Options(
+	fx.Provide(NewService),
+)
 
-// GetCircuitBreakerStatus gets the status of a circuit breaker
-func (s *Service) GetCircuitBreakerStatus(ctx context.Context, req *pb.CircuitBreakerRequest) (*pb.CircuitBreakerStatus, error) {
-	circuitBreaker, err := s.repository.GetCircuitBreaker(ctx, req.Symbol)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get circuit breaker: %v", err)
-	}
-	
-	return &pb.CircuitBreakerStatus{
-		Symbol:      circuitBreaker.Symbol,
-		Triggered:   circuitBreaker.Triggered,
-		Reason:      circuitBreaker.Reason,
-		TriggerTime: circuitBreaker.TriggerTime.UnixNano(),
-		ResetTime:   circuitBreaker.ResetTime.UnixNano(),
-	}, nil
-}
-
-// recordRiskCheck records a risk check
-func (s *Service) recordRiskCheck(ctx context.Context, orderID, accountID, symbol string, approved bool, reason string) {
-	riskCheck := &models.RiskCheck{
-		OrderID:   orderID,
-		AccountID: accountID,
-		Symbol:    symbol,
-		Approved:  approved,
-		Reason:    reason,
-		CheckTime: time.Now(),
-	}
-	
-	if err := s.repository.CreateRiskCheck(ctx, riskCheck); err != nil {
-		s.logger.Error("Failed to record risk check",
-			zap.Error(err),
-			zap.String("order_id", orderID))
-	}
-}

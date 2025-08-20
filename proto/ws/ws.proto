@@ -4,78 +4,78 @@ package ws;
 
 option go_package = "github.com/abdoElHodaky/tradSys/proto/ws";
 
-// WebSocketMessage represents a message sent over WebSocket
-message WebSocketMessage {
-  // Type of the message
-  string type = 1;
-  
-  // Payload of the message
-  bytes payload = 2;
-  
-  // Timestamp of the message
-  int64 timestamp = 3;
-  
-  // Sequence number of the message
-  int64 sequence = 4;
-  
-  // Channel or topic of the message
-  string channel = 5;
-  
-  // Sender of the message
-  string sender = 6;
-  
-  // Recipients of the message
-  repeated string recipients = 7;
-}
-
-// WebSocketRequest represents a request to the WebSocket service
-message WebSocketRequest {
-  // Type of the request
-  string type = 1;
-  
-  // Payload of the request
-  bytes payload = 2;
-  
-  // Channel or topic to subscribe to
-  string channel = 3;
-  
-  // Authentication token
-  string token = 4;
-  
-  // Client ID
-  string client_id = 5;
-}
-
-// WebSocketResponse represents a response from the WebSocket service
-message WebSocketResponse {
-  // Type of the response
-  string type = 1;
-  
-  // Payload of the response
-  bytes payload = 2;
-  
-  // Status code
-  int32 status = 3;
-  
-  // Error message
-  string error = 4;
-  
-  // Channel or topic of the response
-  string channel = 5;
-}
-
-// WebSocketService provides WebSocket functionality
+// WebSocketService provides WebSocket operations
 service WebSocketService {
-  // Subscribe subscribes to a channel
-  rpc Subscribe(WebSocketRequest) returns (WebSocketResponse);
+  // Subscribe subscribes to a topic
+  rpc Subscribe(SubscribeRequest) returns (SubscribeResponse) {}
   
-  // Unsubscribe unsubscribes from a channel
-  rpc Unsubscribe(WebSocketRequest) returns (WebSocketResponse);
+  // Unsubscribe unsubscribes from a topic
+  rpc Unsubscribe(UnsubscribeRequest) returns (UnsubscribeResponse) {}
   
-  // Send sends a message to a channel
-  rpc Send(WebSocketMessage) returns (WebSocketResponse);
+  // Publish publishes a message to a topic
+  rpc Publish(PublishRequest) returns (PublishResponse) {}
   
-  // Receive receives messages from subscribed channels
-  rpc Receive(WebSocketRequest) returns (stream WebSocketMessage);
+  // GetConnections returns active WebSocket connections
+  rpc GetConnections(GetConnectionsRequest) returns (GetConnectionsResponse) {}
+}
+
+// SubscribeRequest is a request to subscribe to a topic
+message SubscribeRequest {
+  string topic = 1;
+  string client_id = 2;
+  map<string, string> filters = 3;
+}
+
+// SubscribeResponse contains the result of a subscription
+message SubscribeResponse {
+  bool success = 1;
+  string subscription_id = 2;
+  string error_message = 3;
+}
+
+// UnsubscribeRequest is a request to unsubscribe from a topic
+message UnsubscribeRequest {
+  string subscription_id = 1;
+  string client_id = 2;
+}
+
+// UnsubscribeResponse contains the result of an unsubscription
+message UnsubscribeResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+// PublishRequest is a request to publish a message
+message PublishRequest {
+  string topic = 1;
+  bytes data = 2;
+}
+
+// PublishResponse contains the result of a publish operation
+message PublishResponse {
+  bool success = 1;
+  int32 recipients = 2;
+  string error_message = 3;
+}
+
+// GetConnectionsRequest is a request to get active connections
+message GetConnectionsRequest {
+  string topic = 1;
+}
+
+// Connection contains information about a WebSocket connection
+message Connection {
+  string client_id = 1;
+  string user_id = 2;
+  int64 connected_at = 3;
+  repeated string subscriptions = 4;
+  string ip_address = 5;
+  string user_agent = 6;
+}
+
+// GetConnectionsResponse contains active WebSocket connections
+message GetConnectionsResponse {
+  repeated Connection connections = 1;
+  int32 total_connections = 2;
 }
 

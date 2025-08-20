@@ -6,34 +6,41 @@ require (
 	github.com/ThreeDotsLabs/watermill v1.2.0-rc.11
 	github.com/asim/go-micro/v3 v3.7.1
 	github.com/gin-gonic/gin v1.9.1
-	github.com/golang-jwt/jwt/v5 v5.3.0
-	github.com/google/uuid v1.6.0
-	github.com/gorilla/websocket v1.5.1
-	github.com/jmoiron/sqlx v1.4.0
+	github.com/golang-jwt/jwt/v5 v5.0.0
+	github.com/google/uuid v1.3.0
+	github.com/gorilla/websocket v1.5.0
+	github.com/jmoiron/sqlx v1.3.5
 	github.com/patrickmn/go-cache v2.1.0+incompatible
-	github.com/prometheus/client_golang v1.17.0
-	github.com/spf13/viper v1.20.1
-	github.com/stretchr/testify v1.10.0
-	github.com/ulule/limiter/v3 v3.11.2
-	go.uber.org/zap v1.26.0
-	google.golang.org/grpc v1.67.3
-	google.golang.org/protobuf v1.36.1
-	gorm.io/driver/sqlite v1.5.4
-	gorm.io/gorm v1.25.5
+	github.com/prometheus/client_golang v1.16.0
+	github.com/spf13/viper v1.16.0
+	github.com/stretchr/testify v1.8.4
+	github.com/ulule/limiter/v3 v3.11.1
+	go-micro.dev/v4 v4.10.2
+	go.uber.org/fx v1.20.0
+	go.uber.org/zap v1.25.0
+	google.golang.org/grpc v1.58.2
+	google.golang.org/protobuf v1.31.0
+	gorm.io/driver/sqlite v1.5.3
+	gorm.io/gorm v1.25.4
 )
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/fsnotify/fsnotify v1.8.0 // indirect
-	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
+	github.com/fsnotify/fsnotify v1.6.0 // indirect
+	github.com/hashicorp/hcl v1.0.0 // indirect
+	github.com/magiconair/properties v1.8.7 // indirect
+	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/sagikazarmark/locafero v0.7.0 // indirect
-	github.com/sourcegraph/conc v0.3.0 // indirect
-	github.com/spf13/afero v1.12.0 // indirect
-	github.com/spf13/cast v1.7.1 // indirect
-	github.com/spf13/pflag v1.0.6 // indirect
-	github.com/subosito/gotenv v1.6.0 // indirect
+	github.com/spf13/afero v1.9.5 // indirect
+	github.com/spf13/cast v1.5.1 // indirect
+	github.com/spf13/jwalterweatherman v1.1.0 // indirect
+	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/subosito/gotenv v1.4.2 // indirect
+	go.uber.org/atomic v1.11.0 // indirect
+	go.uber.org/dig v1.17.0 // indirect
+	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
+	gopkg.in/ini.v1 v1.67.0 // indirect
 )
 
 require (
@@ -42,7 +49,6 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20230717121745-296ad89f973d // indirect
 	github.com/chenzhuoyu/iasm v0.9.1 // indirect
->>>>>>> pr-15
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v1.10.1 // indirect

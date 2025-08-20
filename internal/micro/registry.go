@@ -1,7 +1,7 @@
 package micro
 
 import (
-	"time"
+	"context"
 
 	"github.com/abdoElHodaky/tradSys/internal/config"
 	"go-micro.dev/v4/registry"
@@ -9,12 +9,13 @@ import (
 	"go.uber.org/zap"
 )
 
-// RegistryParams contains parameters for creating a registry
+// RegistryParams contains the parameters for creating a registry
 type RegistryParams struct {
 	fx.In
 
-	Config *config.Config
-	Logger *zap.Logger
+	Logger    *zap.Logger
+	Config    *config.Config
+	Lifecycle fx.Lifecycle
 }
 
 // NewRegistry creates a new service registry with fx dependency injection
@@ -26,20 +27,30 @@ func NewRegistry(p RegistryParams) registry.Registry {
 	case "etcd":
 		reg = registry.NewRegistry(
 			registry.Addrs(p.Config.Registry.Addresses...),
-			registry.Timeout(time.Second*5),
 		)
 	case "consul":
 		reg = registry.NewRegistry(
 			registry.Addrs(p.Config.Registry.Addresses...),
-			registry.Timeout(time.Second*5),
 		)
+	case "kubernetes":
+		reg = registry.NewRegistry()
 	default:
 		// Default to mdns for local development
 		reg = registry.NewRegistry()
 	}
 
-	p.Logger.Info("Service registry initialized",
-		zap.String("type", p.Config.Registry.Type))
+	// Add lifecycle hooks
+	p.Lifecycle.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			p.Logger.Info("Service registry initialized",
+				zap.String("type", p.Config.Registry.Type))
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			p.Logger.Info("Service registry stopped")
+			return nil
+		},
+	})
 
 	return reg
 }

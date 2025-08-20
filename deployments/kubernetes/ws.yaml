@@ -1,27 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: orders
+  name: ws
   labels:
-    app: orders
+    app: ws
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: orders
+      app: ws
   template:
     metadata:
       labels:
-        app: orders
+        app: ws
     spec:
       containers:
-      - name: orders
-        image: tradsys/orders:latest
+      - name: ws
+        image: tradsys/ws:latest
         ports:
         - containerPort: 8080
         env:
         - name: SERVICE_NAME
-          value: "orders"
+          value: "ws"
         - name: SERVICE_VERSION
           value: "1.0.0"
         - name: SERVICE_ADDRESS
@@ -32,22 +32,6 @@ spec:
           value: "nats"
         - name: BROKER_ADDRESS
           value: "nats:4222"
-        - name: DB_TYPE
-          value: "postgres"
-        - name: DB_ADDRESS
-          value: "postgres:5432"
-        - name: DB_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: db-credentials
-              key: username
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: db-credentials
-              key: password
-        - name: DB_NAME
-          value: "tradsys"
         - name: TRACING_ENABLED
           value: "true"
         - name: TRACING_TYPE
@@ -85,12 +69,39 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: orders
+  name: ws
 spec:
   selector:
-    app: orders
+    app: ws
   ports:
   - port: 8080
     targetPort: 8080
   type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ws-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+spec:
+  rules:
+  - host: ws.tradsys.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ws
+            port:
+              number: 8080
+  tls:
+  - hosts:
+    - ws.tradsys.com
+    secretName: ws-tls-secret
 

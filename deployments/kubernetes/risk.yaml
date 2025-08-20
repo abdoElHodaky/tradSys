@@ -1,27 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: orders
+  name: risk
   labels:
-    app: orders
+    app: risk
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: orders
+      app: risk
   template:
     metadata:
       labels:
-        app: orders
+        app: risk
     spec:
       containers:
-      - name: orders
-        image: tradsys/orders:latest
+      - name: risk
+        image: tradsys/risk:latest
         ports:
         - containerPort: 8080
         env:
         - name: SERVICE_NAME
-          value: "orders"
+          value: "risk"
         - name: SERVICE_VERSION
           value: "1.0.0"
         - name: SERVICE_ADDRESS
@@ -85,10 +85,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: orders
+  name: risk
 spec:
   selector:
-    app: orders
+    app: risk
   ports:
   - port: 8080
     targetPort: 8080
