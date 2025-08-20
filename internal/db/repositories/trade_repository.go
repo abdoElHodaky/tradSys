@@ -1,0 +1,200 @@
+package repositories
+
+import (
+	"context"
+	"errors"
+	"time"
+
+	"github.com/abdoElHodaky/tradSys/internal/db"
+	"go.uber.org/zap"
+	"gorm.io/gorm"
+)
+
+// TradeRepository represents a repository for trades
+type TradeRepository struct {
+	db     *gorm.DB
+	logger *zap.Logger
+}
+
+// NewTradeRepository creates a new trade repository
+func NewTradeRepository(db *gorm.DB, logger *zap.Logger) *TradeRepository {
+	return &TradeRepository{
+		db:     db,
+		logger: logger,
+	}
+}
+
+// Create creates a new trade
+func (r *TradeRepository) Create(ctx context.Context, trade *db.Trade) error {
+	result := r.db.WithContext(ctx).Create(trade)
+	if result.Error != nil {
+		r.logger.Error("Failed to create trade", zap.Error(result.Error), zap.String("trade_id", trade.ID))
+		return result.Error
+	}
+	return nil
+}
+
+// GetByID gets a trade by ID
+func (r *TradeRepository) GetByID(ctx context.Context, id string) (*db.Trade, error) {
+	var trade db.Trade
+	result := r.db.WithContext(ctx).First(&trade, "id = ?", id)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		r.logger.Error("Failed to get trade by ID", zap.Error(result.Error), zap.String("trade_id", id))
+		return nil, result.Error
+	}
+	return &trade, nil
+}
+
+// GetTradesByOrderID gets trades by order ID
+func (r *TradeRepository) GetTradesByOrderID(ctx context.Context, orderID string) ([]*db.Trade, error) {
+	var trades []*db.Trade
+	result := r.db.WithContext(ctx).
+		Where("order_id = ?", orderID).
+		Order("executed_at DESC").
+		Find(&trades)
+	if result.Error != nil {
+		r.logger.Error("Failed to get trades by order ID", 
+			zap.Error(result.Error), 
+			zap.String("order_id", orderID))
+		return nil, result.Error
+	}
+	return trades, nil
+}
+
+// GetTradesBySymbol gets trades by symbol
+func (r *TradeRepository) GetTradesBySymbol(ctx context.Context, symbol string, limit, offset int) ([]*db.Trade, error) {
+	var trades []*db.Trade
+	result := r.db.WithContext(ctx).
+		Where("symbol = ?", symbol).
+		Order("executed_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&trades)
+	if result.Error != nil {
+		r.logger.Error("Failed to get trades by symbol", 
+			zap.Error(result.Error), 
+			zap.String("symbol", symbol))
+		return nil, result.Error
+	}
+	return trades, nil
+}
+
+// GetTradesByTimeRange gets trades by time range
+func (r *TradeRepository) GetTradesByTimeRange(ctx context.Context, symbol string, start, end time.Time) ([]*db.Trade, error) {
+	var trades []*db.Trade
+	result := r.db.WithContext(ctx).
+		Where("symbol = ? AND executed_at BETWEEN ? AND ?", symbol, start, end).
+		Order("executed_at ASC").
+		Find(&trades)
+	if result.Error != nil {
+		r.logger.Error("Failed to get trades by time range", 
+			zap.Error(result.Error), 
+			zap.String("symbol", symbol),
+			zap.Time("start", start),
+			zap.Time("end", end))
+		return nil, result.Error
+	}
+	return trades, nil
+}
+
+// BatchCreate creates multiple trades
+func (r *TradeRepository) BatchCreate(ctx context.Context, trades []*db.Trade) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, trade := range trades {
+			if err := tx.Create(trade).Error; err != nil {
+				r.logger.Error("Failed to create trade in batch", 
+					zap.Error(err), 
+					zap.String("trade_id", trade.ID))
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// GetVolumeBySymbol gets the trading volume for a symbol in a time range
+func (r *TradeRepository) GetVolumeBySymbol(ctx context.Context, symbol string, start, end time.Time) (float64, error) {
+	var volume float64
+	result := r.db.WithContext(ctx).Model(&db.Trade{}).
+		Select("COALESCE(SUM(quantity), 0)").
+		Where("symbol = ? AND executed_at BETWEEN ? AND ?", symbol, start, end).
+		Scan(&volume)
+	if result.Error != nil {
+		r.logger.Error("Failed to get volume by symbol", 
+			zap.Error(result.Error), 
+			zap.String("symbol", symbol),
+			zap.Time("start", start),
+			zap.Time("end", end))
+		return 0, result.Error
+	}
+	return volume, nil
+}
+
+// GetOHLCBySymbol gets the OHLC data for a symbol in a time range
+func (r *TradeRepository) GetOHLCBySymbol(ctx context.Context, symbol string, start, end time.Time) (float64, float64, float64, float64, error) {
+	type OHLC struct {
+		Open  float64
+		High  float64
+		Low   float64
+		Close float64
+	}
+	
+	var ohlc OHLC
+	
+	// Get the first trade for open price
+	var firstTrade db.Trade
+	if err := r.db.WithContext(ctx).
+		Where("symbol = ? AND executed_at BETWEEN ? AND ?", symbol, start, end).
+		Order("executed_at ASC").
+		First(&firstTrade).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		r.logger.Error("Failed to get first trade for OHLC", 
+			zap.Error(err), 
+			zap.String("symbol", symbol))
+		return 0, 0, 0, 0, err
+	}
+	
+	if firstTrade.ID != "" {
+		ohlc.Open = firstTrade.Price
+	}
+	
+	// Get the last trade for close price
+	var lastTrade db.Trade
+	if err := r.db.WithContext(ctx).
+		Where("symbol = ? AND executed_at BETWEEN ? AND ?", symbol, start, end).
+		Order("executed_at DESC").
+		First(&lastTrade).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		r.logger.Error("Failed to get last trade for OHLC", 
+			zap.Error(err), 
+			zap.String("symbol", symbol))
+		return 0, 0, 0, 0, err
+	}
+	
+	if lastTrade.ID != "" {
+		ohlc.Close = lastTrade.Price
+	}
+	
+	// Get high and low prices
+	var highLow struct {
+		High float64
+		Low  float64
+	}
+	
+	if err := r.db.WithContext(ctx).Model(&db.Trade{}).
+		Select("COALESCE(MAX(price), 0) as high, COALESCE(MIN(price), 0) as low").
+		Where("symbol = ? AND executed_at BETWEEN ? AND ?", symbol, start, end).
+		Scan(&highLow).Error; err != nil {
+		r.logger.Error("Failed to get high/low for OHLC", 
+			zap.Error(err), 
+			zap.String("symbol", symbol))
+		return 0, 0, 0, 0, err
+	}
+	
+	ohlc.High = highLow.High
+	ohlc.Low = highLow.Low
+	
+	return ohlc.Open, ohlc.High, ohlc.Low, ohlc.Close, nil
+}
+
