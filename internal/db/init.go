@@ -24,15 +24,11 @@ func InitializeDatabase(db *gorm.DB, logger *zap.Logger) error {
 	}
 	
 	// Optimize tables after migration
-	tables := []string{"orders", "trades", "positions", "quotes", "ohlcv", "market_depths", 
-//<<<<<<< codegen-bot/fix-order-model-syntax
-		"risk_limits", "circuit_breakers", "risk_checks", "strategies", "strategy_executions", "signals"}
-//=======
-//<<<<<<< codegen-bot/pairs-management-implementation
-		"risk_limits", "circuit_breakers", "risk_checks", "strategies", "strategy_executions", "signals",
-		"pairs", "pair_statistics", "pair_positions"}
-		"risk_limits", "circuit_breakers", "risk_checks", "strategies", "strategy_executions", "signals"
-//>>>>>>> main
+	tables := []string{
+		"orders", "trades", "positions", "quotes", "ohlcv", "market_depths", 
+		"risk_limits", "circuit_breakers", "risk_checks", "strategies", 
+		"strategy_executions", "signals", "pairs", "pair_statistics", "pair_positions",
+	}
 	
 	for _, table := range tables {
 		if err := optimizer.OptimizeTable(table); err != nil {
@@ -100,11 +96,4 @@ func createCommonIndexes(db *gorm.DB, optimizer *query.Optimizer, logger *zap.Lo
 	
 	// Other indexes for remaining tables would be added here
 }
-//<<<<<<< codegen-bot/fix-order-model-syntax
 
-//=======
-//<<<<<<< codegen-bot/pairs-management-implementation
-//=======
-
-//>>>>>>> main
-//>>>>>>> main

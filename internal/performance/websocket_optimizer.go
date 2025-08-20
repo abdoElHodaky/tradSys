@@ -8,228 +8,239 @@ import (
 	"go.uber.org/zap"
 )
 
-// WebSocketOptimizer provides performance optimizations for WebSocket connections
+// WebSocketOptimizer provides optimization for WebSocket connections
 type WebSocketOptimizer struct {
-	logger           *zap.Logger
-	bufferPool       *sync.Pool
-	compressionLevel int
-	writeBufferSize  int
-	readBufferSize   int
-	messageStats     *MessageStats
+	// Configuration
+	compressionLevel       int
+	writeBufferSize        int
+	readBufferSize         int
+	writeDeadline          time.Duration
+	readDeadline           time.Duration
+	pongWait               time.Duration
+	pingPeriod             time.Duration
+	maxMessageSize         int64
+	enableCompression      bool
+	enableBinaryMessages   bool
+	batchingEnabled        bool
+	batchSize              int
+	batchInterval          time.Duration
+	
+	// Logging
+	logger                 *zap.Logger
+	
+	// Connection pool
+	connectionPool         sync.Pool
 }
 
 // WebSocketOptimizerOptions contains options for the WebSocket optimizer
 type WebSocketOptimizerOptions struct {
-	CompressionLevel int
-	WriteBufferSize  int
-	ReadBufferSize   int
-	BufferSize       int
+	CompressionLevel     int
+	WriteBufferSize      int
+	ReadBufferSize       int
+	WriteDeadline        time.Duration
+	ReadDeadline         time.Duration
+	PongWait             time.Duration
+	PingPeriod           time.Duration
+	MaxMessageSize       int64
+	EnableCompression    bool
+	EnableBinaryMessages bool
+	BatchingEnabled      bool
+	BatchSize            int
+	BatchInterval        time.Duration
 }
 
-// MessageStats tracks WebSocket message statistics
-type MessageStats struct {
-	TotalMessages     int64
-	TotalBytes        int64
-	CompressedBytes   int64
-	CompressionRatio  float64
-	AverageLatency    time.Duration
-	MaxLatency        time.Duration
-	MessagesSent      int64
-	MessagesReceived  int64
-	ErrorCount        int64
-	lastCalculated    time.Time
-	mutex             sync.RWMutex
+// DefaultWebSocketOptimizerOptions returns default WebSocket optimizer options
+func DefaultWebSocketOptimizerOptions() WebSocketOptimizerOptions {
+	return WebSocketOptimizerOptions{
+		CompressionLevel:     websocket.DefaultCompressionLevel,
+		WriteBufferSize:      4096,
+		ReadBufferSize:       4096,
+		WriteDeadline:        10 * time.Second,
+		ReadDeadline:         60 * time.Second,
+		PongWait:             60 * time.Second,
+		PingPeriod:           (60 * time.Second * 9) / 10,
+		MaxMessageSize:       512 * 1024, // 512KB
+		EnableCompression:    true,
+		EnableBinaryMessages: true,
+		BatchingEnabled:      true,
+		BatchSize:            10,
+		BatchInterval:        100 * time.Millisecond,
+	}
 }
 
 // NewWebSocketOptimizer creates a new WebSocket optimizer
 func NewWebSocketOptimizer(logger *zap.Logger, options WebSocketOptimizerOptions) *WebSocketOptimizer {
-	// Set default values if not provided
-	if options.CompressionLevel == 0 {
-		options.CompressionLevel = websocket.DefaultCompressionLevel
-	}
-	if options.WriteBufferSize == 0 {
-		options.WriteBufferSize = 4096
-	}
-	if options.ReadBufferSize == 0 {
-		options.ReadBufferSize = 4096
-	}
-	if options.BufferSize == 0 {
-		options.BufferSize = 1024
-	}
-
-	// Create buffer pool
-	bufferPool := &sync.Pool{
-		New: func() interface{} {
-			return make([]byte, options.BufferSize)
+	return &WebSocketOptimizer{
+		compressionLevel:     options.CompressionLevel,
+		writeBufferSize:      options.WriteBufferSize,
+		readBufferSize:       options.ReadBufferSize,
+		writeDeadline:        options.WriteDeadline,
+		readDeadline:         options.ReadDeadline,
+		pongWait:             options.PongWait,
+		pingPeriod:           options.PingPeriod,
+		maxMessageSize:       options.MaxMessageSize,
+		enableCompression:    options.EnableCompression,
+		enableBinaryMessages: options.EnableBinaryMessages,
+		batchingEnabled:      options.BatchingEnabled,
+		batchSize:            options.BatchSize,
+		batchInterval:        options.BatchInterval,
+		logger:               logger,
+		connectionPool: sync.Pool{
+			New: func() interface{} {
+				return &websocket.Conn{}
+			},
 		},
 	}
-
-	return &WebSocketOptimizer{
-		logger:           logger,
-		bufferPool:       bufferPool,
-		compressionLevel: options.CompressionLevel,
-		writeBufferSize:  options.WriteBufferSize,
-		readBufferSize:   options.ReadBufferSize,
-		messageStats:     &MessageStats{lastCalculated: time.Now()},
-	}
 }
 
-// GetBuffer gets a buffer from the pool
-func (o *WebSocketOptimizer) GetBuffer() []byte {
-	return o.bufferPool.Get().([]byte)
-}
-
-// PutBuffer returns a buffer to the pool
-func (o *WebSocketOptimizer) PutBuffer(buffer []byte) {
-	// Clear buffer before returning to pool
-	for i := range buffer {
-		buffer[i] = 0
+// GetUpgrader returns a WebSocket upgrader with optimized settings
+func (o *WebSocketOptimizer) GetUpgrader() *websocket.Upgrader {
+	return &websocket.Upgrader{
+		ReadBufferSize:    o.readBufferSize,
+		WriteBufferSize:   o.writeBufferSize,
+		EnableCompression: o.enableCompression,
+		CheckOrigin:       func(r *websocket.Request) bool { return true }, // Allow all origins
 	}
-	o.bufferPool.Put(buffer)
 }
 
 // OptimizeConnection optimizes a WebSocket connection
 func (o *WebSocketOptimizer) OptimizeConnection(conn *websocket.Conn) {
-	// Set buffer sizes
-	conn.SetReadLimit(int64(o.readBufferSize))
-	conn.SetWriteBuffer(o.writeBufferSize)
-	conn.SetReadBuffer(o.readBufferSize)
+	// Set read limit
+	conn.SetReadLimit(o.maxMessageSize)
 
-	// Enable compression
-	conn.EnableWriteCompression(true)
-	conn.SetCompressionLevel(o.compressionLevel)
-}
+	// Set read deadline
+	conn.SetReadDeadline(time.Now().Add(o.pongWait))
 
-// TrackMessageSent tracks a sent message
-func (o *WebSocketOptimizer) TrackMessageSent(messageType int, messageSize int, compressedSize int, latency time.Duration) {
-	o.messageStats.mutex.Lock()
-	defer o.messageStats.mutex.Unlock()
+	// Set pong handler
+	conn.SetPongHandler(func(string) error {
+		conn.SetReadDeadline(time.Now().Add(o.pongWait))
+		return nil
+	})
 
-	o.messageStats.TotalMessages++
-	o.messageStats.MessagesSent++
-	o.messageStats.TotalBytes += int64(messageSize)
-	o.messageStats.CompressedBytes += int64(compressedSize)
-
-	// Update latency statistics
-	o.messageStats.AverageLatency = (o.messageStats.AverageLatency*time.Duration(o.messageStats.TotalMessages-1) + latency) / time.Duration(o.messageStats.TotalMessages)
-	if latency > o.messageStats.MaxLatency {
-		o.messageStats.MaxLatency = latency
-	}
-
-	// Calculate compression ratio
-	if o.messageStats.TotalBytes > 0 {
-		o.messageStats.CompressionRatio = float64(o.messageStats.CompressedBytes) / float64(o.messageStats.TotalBytes)
+	// Enable compression if requested
+	if o.enableCompression {
+		conn.EnableWriteCompression(true)
+		conn.SetCompressionLevel(o.compressionLevel)
 	}
 }
 
-// TrackMessageReceived tracks a received message
-func (o *WebSocketOptimizer) TrackMessageReceived(messageType int, messageSize int) {
-	o.messageStats.mutex.Lock()
-	defer o.messageStats.mutex.Unlock()
-
-	o.messageStats.TotalMessages++
-	o.messageStats.MessagesReceived++
-	o.messageStats.TotalBytes += int64(messageSize)
+// BatchedWriter provides batched writing for WebSocket connections
+type BatchedWriter struct {
+	conn          *websocket.Conn
+	messages      []interface{}
+	messageType   int
+	batchSize     int
+	batchInterval time.Duration
+	mu            sync.Mutex
+	timer         *time.Timer
+	logger        *zap.Logger
 }
 
-// TrackError tracks an error
-func (o *WebSocketOptimizer) TrackError(err error) {
-	o.messageStats.mutex.Lock()
-	defer o.messageStats.mutex.Unlock()
-
-	o.messageStats.ErrorCount++
-	o.logger.Error("WebSocket error", zap.Error(err))
-}
-
-// GetMessageStats returns the current message statistics
-func (o *WebSocketOptimizer) GetMessageStats() MessageStats {
-	o.messageStats.mutex.RLock()
-	defer o.messageStats.mutex.RUnlock()
-
-	return *o.messageStats
-}
-
-// ResetMessageStats resets the message statistics
-func (o *WebSocketOptimizer) ResetMessageStats() {
-	o.messageStats.mutex.Lock()
-	defer o.messageStats.mutex.Unlock()
-
-	o.messageStats.TotalMessages = 0
-	o.messageStats.TotalBytes = 0
-	o.messageStats.CompressedBytes = 0
-	o.messageStats.CompressionRatio = 0
-	o.messageStats.AverageLatency = 0
-	o.messageStats.MaxLatency = 0
-	o.messageStats.MessagesSent = 0
-	o.messageStats.MessagesReceived = 0
-	o.messageStats.ErrorCount = 0
-	o.messageStats.lastCalculated = time.Now()
-}
-
-// OptimizedWriter is a wrapper for WebSocket connection with optimized writing
-type OptimizedWriter struct {
-	conn      *websocket.Conn
-	optimizer *WebSocketOptimizer
-}
-
-// NewOptimizedWriter creates a new optimized writer
-func (o *WebSocketOptimizer) NewOptimizedWriter(conn *websocket.Conn) *OptimizedWriter {
-	return &OptimizedWriter{
-		conn:      conn,
-		optimizer: o,
-	}
-}
-
-// WriteMessage writes a message to the WebSocket connection with optimization
-func (w *OptimizedWriter) WriteMessage(messageType int, data []byte) error {
-	startTime := time.Now()
-
-	// Get buffer from pool
-	buffer := w.optimizer.GetBuffer()
-	defer w.optimizer.PutBuffer(buffer)
-
-	// Copy data to buffer if it fits
-	var messageData []byte
-	if len(data) <= len(buffer) {
-		copy(buffer, data)
-		messageData = buffer[:len(data)]
-	} else {
-		messageData = data
+// NewBatchedWriter creates a new batched writer
+func (o *WebSocketOptimizer) NewBatchedWriter(conn *websocket.Conn) *BatchedWriter {
+	writer := &BatchedWriter{
+		conn:          conn,
+		messages:      make([]interface{}, 0, o.batchSize),
+		messageType:   websocket.TextMessage,
+		batchSize:     o.batchSize,
+		batchInterval: o.batchInterval,
+		logger:        o.logger,
 	}
 
-	// Write message
-	err := w.conn.WriteMessage(messageType, messageData)
-	if err != nil {
-		w.optimizer.TrackError(err)
-		return err
+	// Set message type based on configuration
+	if o.enableBinaryMessages {
+		writer.messageType = websocket.BinaryMessage
 	}
 
-	// Track message statistics
-	latency := time.Since(startTime)
-	w.optimizer.TrackMessageSent(messageType, len(data), len(messageData), latency)
+	// Start the timer
+	writer.timer = time.AfterFunc(o.batchInterval, writer.Flush)
+
+	return writer
+}
+
+// Write writes a message to the batched writer
+func (w *BatchedWriter) Write(message interface{}) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	// Add the message to the batch
+	w.messages = append(w.messages, message)
+
+	// Flush if the batch is full
+	if len(w.messages) >= w.batchSize {
+		return w.flush()
+	}
 
 	return nil
 }
 
-// WriteJSON writes a JSON message to the WebSocket connection with optimization
-func (w *OptimizedWriter) WriteJSON(v interface{}) error {
-	startTime := time.Now()
+// Flush flushes the batched writer
+func (w *BatchedWriter) Flush() error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
 
-	// Write JSON message
-	err := w.conn.WriteJSON(v)
+	return w.flush()
+}
+
+// flush flushes the batched writer (must be called with lock held)
+func (w *BatchedWriter) flush() error {
+	if len(w.messages) == 0 {
+		return nil
+	}
+
+	// Reset the timer
+	w.timer.Reset(w.batchInterval)
+
+	// Set write deadline
+	w.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+
+	// Write the messages
+	err := w.conn.WriteJSON(w.messages)
 	if err != nil {
-		w.optimizer.TrackError(err)
+		w.logger.Error("Failed to write WebSocket messages",
+			zap.Int("count", len(w.messages)),
+			zap.Error(err))
 		return err
 	}
 
-	// Track message statistics (approximate size)
-	latency := time.Since(startTime)
-	w.optimizer.TrackMessageSent(websocket.TextMessage, 0, 0, latency)
+	// Clear the messages
+	w.messages = w.messages[:0]
 
 	return nil
 }
 
-// Close closes the WebSocket connection
-func (w *OptimizedWriter) Close() error {
-	return w.conn.Close()
+// Close closes the batched writer
+func (w *BatchedWriter) Close() error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	// Stop the timer
+	w.timer.Stop()
+
+	// Flush any remaining messages
+	return w.flush()
 }
+
+// StartPinger starts a pinger for a WebSocket connection
+func (o *WebSocketOptimizer) StartPinger(conn *websocket.Conn, done chan struct{}) {
+	ticker := time.NewTicker(o.pingPeriod)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			// Set write deadline
+			conn.SetWriteDeadline(time.Now().Add(o.writeDeadline))
+
+			// Send ping
+			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				o.logger.Error("Failed to send ping",
+					zap.Error(err))
+				return
+			}
+		case <-done:
+			return
+		}
+	}
+}
+

@@ -8,37 +8,51 @@ import (
 	"go.uber.org/zap"
 )
 
-// AuthMiddleware is a middleware for authentication
-func AuthMiddleware(logger *zap.Logger) gin.HandlerFunc {
+// Middleware provides authentication middleware
+type Middleware struct {
+	jwtService *JWTService
+	logger     *zap.Logger
+}
+
+// NewMiddleware creates a new authentication middleware
+func NewMiddleware(jwtService *JWTService, logger *zap.Logger) *Middleware {
+	return &Middleware{
+		jwtService: jwtService,
+		logger:     logger,
+	}
+}
+
+// JWTAuth is a middleware that validates JWT tokens
+func (m *Middleware) JWTAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get authorization header
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authorization header is required"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is required"})
 			c.Abort()
 			return
 		}
 
-		// Check if the header has the correct format
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header format"})
+		// Check if the Authorization header has the correct format
+		if !strings.HasPrefix(authHeader, "Bearer ") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header must be in the format 'Bearer {token}'"})
 			c.Abort()
 			return
 		}
 
-		// Validate token
-		tokenString := parts[1]
-		claims, err := ValidateToken(tokenString)
+		// Extract the token
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+
+		// Validate the token
+		claims, err := m.jwtService.ValidateToken(tokenString)
 		if err != nil {
-			logger.Error("Failed to validate token", zap.Error(err))
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+			m.logger.Error("Failed to validate token", zap.Error(err))
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			c.Abort()
 			return
 		}
 
-		// Set user information in context
-		c.Set("user_id", claims.UserID)
+		// Set the claims in the context
+		c.Set("userID", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Set("role", claims.Role)
 
@@ -46,27 +60,23 @@ func AuthMiddleware(logger *zap.Logger) gin.HandlerFunc {
 	}
 }
 
-// RoleMiddleware is a middleware for role-based authorization
-func RoleMiddleware(roles ...string) gin.HandlerFunc {
+// RoleAuth is a middleware that checks if the user has the required role
+func (m *Middleware) RoleAuth(requiredRole string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get user role from context
 		role, exists := c.Get("role")
 		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "User role not found"})
 			c.Abort()
 			return
 		}
 
-		// Check if user has required role
-		userRole := role.(string)
-		for _, r := range roles {
-			if r == userRole {
-				c.Next()
-				return
-			}
+		if role != requiredRole {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+			c.Abort()
+			return
 		}
 
-		c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
-		c.Abort()
+		c.Next()
 	}
 }
+

@@ -5,277 +5,199 @@ import (
 	"errors"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/db/models"
-	"github.com/abdoElHodaky/tradSys/internal/db/query"
+	"github.com/abdoElHodaky/tradSys/internal/db"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
-// OrderRepository handles database operations for orders
+// OrderRepository represents a repository for orders
 type OrderRepository struct {
-	db        *gorm.DB
-	logger    *zap.Logger
-	optimizer *query.Optimizer
+	db     *gorm.DB
+	logger *zap.Logger
 }
 
 // NewOrderRepository creates a new order repository
 func NewOrderRepository(db *gorm.DB, logger *zap.Logger) *OrderRepository {
-	repo := &OrderRepository{
-		db:        db,
-		logger:    logger,
-		optimizer: query.NewOptimizer(db, logger),
+	return &OrderRepository{
+		db:     db,
+		logger: logger,
 	}
-	
-	return repo
 }
 
-// Create inserts a new order into the database
-func (r *OrderRepository) Create(ctx context.Context, order *models.Order) error {
+// Create creates a new order
+func (r *OrderRepository) Create(ctx context.Context, order *db.Order) error {
 	result := r.db.WithContext(ctx).Create(order)
 	if result.Error != nil {
-		r.logger.Error("Failed to create order", 
-			zap.Error(result.Error),
-			zap.String("order_id", order.OrderID))
+		r.logger.Error("Failed to create order", zap.Error(result.Error), zap.String("order_id", order.ID))
 		return result.Error
 	}
 	return nil
 }
 
-// FindByID retrieves an order by its ID using the query builder
-func (r *OrderRepository) FindByID(ctx context.Context, orderID string) (*models.Order, error) {
-	var order models.Order
-	
-	builder := query.NewBuilder(r.db, r.logger).
-		Table("orders").
-		Where("order_id = ?", orderID)
-	
-	err := builder.First(&order)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+// GetByID gets an order by ID
+func (r *OrderRepository) GetByID(ctx context.Context, id string) (*db.Order, error) {
+	var order db.Order
+	result := r.db.WithContext(ctx).First(&order, "id = ?", id)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
-		r.logger.Error("Failed to find order",
-			zap.Error(err),
-			zap.String("order_id", orderID))
-		return nil, err
+		r.logger.Error("Failed to get order by ID", zap.Error(result.Error), zap.String("order_id", id))
+		return nil, result.Error
 	}
-	
 	return &order, nil
 }
 
-// Update updates an existing order
-func (r *OrderRepository) Update(ctx context.Context, order *models.Order) error {
+// GetByClientOrderID gets an order by client order ID
+func (r *OrderRepository) GetByClientOrderID(ctx context.Context, userID, clientOrderID string) (*db.Order, error) {
+	var order db.Order
+	result := r.db.WithContext(ctx).First(&order, "user_id = ? AND client_order_id = ?", userID, clientOrderID)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		r.logger.Error("Failed to get order by client order ID", 
+			zap.Error(result.Error), 
+			zap.String("user_id", userID), 
+			zap.String("client_order_id", clientOrderID))
+		return nil, result.Error
+	}
+	return &order, nil
+}
+
+// Update updates an order
+func (r *OrderRepository) Update(ctx context.Context, order *db.Order) error {
 	result := r.db.WithContext(ctx).Save(order)
 	if result.Error != nil {
-		r.logger.Error("Failed to update order", 
-			zap.Error(result.Error),
-			zap.String("order_id", order.OrderID))
+		r.logger.Error("Failed to update order", zap.Error(result.Error), zap.String("order_id", order.ID))
 		return result.Error
 	}
 	return nil
 }
 
-// FindActiveOrdersBySymbol retrieves all active orders for a symbol
-func (r *OrderRepository) FindActiveOrdersBySymbol(ctx context.Context, symbol string) ([]*models.Order, error) {
-	var orders []*models.Order
-	
-	builder := query.NewBuilder(r.db, r.logger).
-		Table("orders").
-		UseIndex("idx_orders_symbol_status").
-		Where("symbol = ?", symbol).
-		Where("status NOT IN (?, ?, ?)", 
-			string(models.OrderStatusFilled), 
-			string(models.OrderStatusCancelled), 
-			string(models.OrderStatusRejected)).
-		OrderBy("created_at DESC")
-	
-	err := builder.Execute(&orders)
-	if err != nil {
-		r.logger.Error("Failed to find active orders",
-			zap.Error(err),
-			zap.String("symbol", symbol))
-		return nil, err
-	}
-	
-	return orders, nil
-}
-
-// FindOrdersByTimeRange finds orders within a time range
-func (r *OrderRepository) FindOrdersByTimeRange(ctx context.Context, symbol string, start, end time.Time) ([]*models.Order, error) {
-	var orders []*models.Order
-	
-	builder := query.NewBuilder(r.db, r.logger).
-		Table("orders").
-		Where("symbol = ?", symbol).
-		Where("created_at BETWEEN ? AND ?", start, end).
-		OrderBy("created_at ASC")
-	
-	// Analyze the query plan before execution
-	query, args := builder.Build()
-	plan, err := r.optimizer.AnalyzeQuery(query, args...)
-	if err == nil {
-		r.logger.Debug("Query execution plan", zap.String("plan", plan))
-	}
-	
-	err = builder.Execute(&orders)
-	if err != nil {
-		r.logger.Error("Failed to find orders by time range",
-			zap.Error(err),
-			zap.String("symbol", symbol),
-			zap.Time("start", start),
-			zap.Time("end", end))
-		return nil, err
-	}
-	
-	return orders, nil
-}
-
-// CreateTrade inserts a new trade into the database
-func (r *OrderRepository) CreateTrade(ctx context.Context, trade *models.Trade) error {
-	result := r.db.WithContext(ctx).Create(trade)
+// UpdateStatus updates an order's status
+func (r *OrderRepository) UpdateStatus(ctx context.Context, id, status string) error {
+	result := r.db.WithContext(ctx).Model(&db.Order{}).Where("id = ?", id).Update("status", status)
 	if result.Error != nil {
-		r.logger.Error("Failed to create trade", 
-			zap.Error(result.Error),
-			zap.String("trade_id", trade.TradeID))
+		r.logger.Error("Failed to update order status", 
+			zap.Error(result.Error), 
+			zap.String("order_id", id), 
+			zap.String("status", status))
 		return result.Error
 	}
 	return nil
 }
 
-// FindTradesByOrderID retrieves all trades for an order
-func (r *OrderRepository) FindTradesByOrderID(ctx context.Context, orderID string) ([]*models.Trade, error) {
-	var trades []*models.Trade
-	
-	builder := query.NewBuilder(r.db, r.logger).
-		Table("trades").
-		UseIndex("idx_trades_order_id").
-		Where("order_id = ?", orderID).
-		OrderBy("timestamp ASC")
-	
-	err := builder.Execute(&trades)
-	if err != nil {
-		r.logger.Error("Failed to find trades",
-			zap.Error(err),
-			zap.String("order_id", orderID))
-		return nil, err
+// GetOrdersByUserID gets orders by user ID
+func (r *OrderRepository) GetOrdersByUserID(ctx context.Context, userID string, limit, offset int) ([]*db.Order, error) {
+	var orders []*db.Order
+	result := r.db.WithContext(ctx).
+		Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&orders)
+	if result.Error != nil {
+		r.logger.Error("Failed to get orders by user ID", 
+			zap.Error(result.Error), 
+			zap.String("user_id", userID))
+		return nil, result.Error
 	}
-	
-	return trades, nil
+	return orders, nil
 }
 
-// GetOrderStatistics gets statistics about orders
-func (r *OrderRepository) GetOrderStatistics(ctx context.Context, symbol string) (map[string]interface{}, error) {
-	var result map[string]interface{}
-	
-	builder := query.NewBuilder(r.db, r.logger).
-		Table("orders").
-		Select(
-			"COUNT(*) as total_orders",
-			"SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as filled_orders",
-			"SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as cancelled_orders",
-			"AVG(CASE WHEN status = ? THEN price ELSE 0 END) as avg_fill_price",
-		).
+// GetOrdersBySymbol gets orders by symbol
+func (r *OrderRepository) GetOrdersBySymbol(ctx context.Context, symbol string, limit, offset int) ([]*db.Order, error) {
+	var orders []*db.Order
+	result := r.db.WithContext(ctx).
 		Where("symbol = ?", symbol).
-		Where("created_at > ?", time.Now().Add(-24*time.Hour))
-	
-	// Add parameters for the CASE statements
-	// Create a new builder with the CASE statement parameters
-	newBuilder := query.NewBuilder(r.db, r.logger).
-		Table(builder.GetTable()).
-		Select(builder.GetFields()...)
-	
-	// Add the CASE statement parameters first
-	newBuilder.Where("symbol = ?", symbol)
-	newBuilder.Where("created_at > ?", time.Now().Add(-24*time.Hour))
-	
-	// Replace the builder with the new one
-	builder = newBuilder
-	
-	err := builder.First(&result)
-	if err != nil {
-		r.logger.Error("Failed to get order statistics",
-			zap.Error(err),
+		Order("created_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&orders)
+	if result.Error != nil {
+		r.logger.Error("Failed to get orders by symbol", 
+			zap.Error(result.Error), 
 			zap.String("symbol", symbol))
-		return nil, err
+		return nil, result.Error
 	}
-	
-	return result, nil
+	return orders, nil
 }
 
-// GetPosition gets the current position for a symbol
-func (r *OrderRepository) GetPosition(ctx context.Context, symbol, accountID string) (*models.Position, error) {
-	var position models.Position
-	
-	builder := query.NewBuilder(r.db, r.logger).
-		Table("positions").
-		Where("symbol = ?", symbol).
-		Where("account_id = ?", accountID)
-	
-	err := builder.First(&position)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// Return an empty position if not found
-			return &models.Position{
-				Symbol:       symbol,
-				AccountID:    accountID,
-				Quantity:     0,
-				AveragePrice: 0,
-				LastUpdated:  time.Now(),
-			}, nil
-		}
-		
-		r.logger.Error("Failed to get position",
-			zap.Error(err),
-			zap.String("symbol", symbol),
-			zap.String("account_id", accountID))
-		return nil, err
+// GetActiveOrdersByUserID gets active orders by user ID
+func (r *OrderRepository) GetActiveOrdersByUserID(ctx context.Context, userID string) ([]*db.Order, error) {
+	var orders []*db.Order
+	result := r.db.WithContext(ctx).
+		Where("user_id = ? AND status IN ?", userID, []string{"new", "partially_filled"}).
+		Order("created_at DESC").
+		Find(&orders)
+	if result.Error != nil {
+		r.logger.Error("Failed to get active orders by user ID", 
+			zap.Error(result.Error), 
+			zap.String("user_id", userID))
+		return nil, result.Error
 	}
-	
-	return &position, nil
+	return orders, nil
 }
 
-// UpdatePosition updates a position
-func (r *OrderRepository) UpdatePosition(ctx context.Context, position *models.Position) error {
-	// Use a transaction to ensure atomicity
-	tx := r.db.WithContext(ctx).Begin()
-	if tx.Error != nil {
-		return tx.Error
+// GetExpiredOrders gets expired orders
+func (r *OrderRepository) GetExpiredOrders(ctx context.Context, now time.Time) ([]*db.Order, error) {
+	var orders []*db.Order
+	result := r.db.WithContext(ctx).
+		Where("status IN ? AND expires_at <= ? AND expires_at IS NOT NULL", 
+			[]string{"new", "partially_filled"}, now).
+		Find(&orders)
+	if result.Error != nil {
+		r.logger.Error("Failed to get expired orders", zap.Error(result.Error))
+		return nil, result.Error
 	}
-	
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-	
-	// Try to update existing position
-	result := tx.Model(&models.Position{}).
-		Where("symbol = ? AND account_id = ?", position.Symbol, position.AccountID).
-		Updates(map[string]interface{}{
-			"quantity":       position.Quantity,
-			"average_price":  position.AveragePrice,
-			"unrealized_pnl": position.UnrealizedPnL,
-			"realized_pnl":   position.RealizedPnL,
-			"last_updated":   position.LastUpdated,
-			"updated_at":     time.Now(),
-		})
-	
-	// If no record was updated, create a new one
-	if result.RowsAffected == 0 {
-		if err := tx.Create(position).Error; err != nil {
-			tx.Rollback()
-			r.logger.Error("Failed to create position", 
-				zap.Error(err),
-				zap.String("symbol", position.Symbol))
-			return err
-		}
-	} else if result.Error != nil {
-		tx.Rollback()
-		r.logger.Error("Failed to update position", 
-			zap.Error(result.Error),
-			zap.String("symbol", position.Symbol))
-		return result.Error
-	}
-	
-	return tx.Commit().Error
+	return orders, nil
 }
+
+// BatchUpdate updates multiple orders
+func (r *OrderRepository) BatchUpdate(ctx context.Context, orders []*db.Order) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, order := range orders {
+			if err := tx.Save(order).Error; err != nil {
+				r.logger.Error("Failed to update order in batch", 
+					zap.Error(err), 
+					zap.String("order_id", order.ID))
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// CountOrdersByUserID counts orders by user ID
+func (r *OrderRepository) CountOrdersByUserID(ctx context.Context, userID string) (int64, error) {
+	var count int64
+	result := r.db.WithContext(ctx).Model(&db.Order{}).Where("user_id = ?", userID).Count(&count)
+	if result.Error != nil {
+		r.logger.Error("Failed to count orders by user ID", 
+			zap.Error(result.Error), 
+			zap.String("user_id", userID))
+		return 0, result.Error
+	}
+	return count, nil
+}
+
+// GetOrdersWithTrades gets orders with their trades
+func (r *OrderRepository) GetOrdersWithTrades(ctx context.Context, userID string, limit, offset int) ([]*db.Order, error) {
+	var orders []*db.Order
+	result := r.db.WithContext(ctx).
+		Preload("Trades").
+		Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&orders)
+	if result.Error != nil {
+		r.logger.Error("Failed to get orders with trades", 
+			zap.Error(result.Error), 
+			zap.String("user_id", userID))
+		return nil, result.Error
+	}
+	return orders, nil
+}
+

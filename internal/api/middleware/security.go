@@ -5,199 +5,158 @@ import (
 	"strings"
 	"time"
 
+	"github.com/abdoElHodaky/tradSys/internal/auth"
 	"github.com/gin-gonic/gin"
 	"github.com/ulule/limiter/v3"
 	"github.com/ulule/limiter/v3/drivers/store/memory"
 	"go.uber.org/zap"
 )
 
-// SecurityMiddleware contains security middleware functions
+// SecurityMiddleware provides security-related middleware functions
 type SecurityMiddleware struct {
-	logger *zap.Logger
-	store  limiter.Store
-	rate   limiter.Rate
+	jwtService *auth.JWTService
+	logger     *zap.Logger
+	rateLimiter *limiter.Limiter
 }
 
 // NewSecurityMiddleware creates a new security middleware
-func NewSecurityMiddleware(logger *zap.Logger) *SecurityMiddleware {
+func NewSecurityMiddleware(jwtService *auth.JWTService, logger *zap.Logger) *SecurityMiddleware {
 	// Create a rate limiter with 100 requests per minute
 	rate := limiter.Rate{
 		Period: 1 * time.Minute,
 		Limit:  100,
 	}
-
-	// Create a memory store for rate limiting
 	store := memory.NewStore()
+	rateLimiter := limiter.New(store, rate)
 
 	return &SecurityMiddleware{
-		logger: logger,
-		store:  store,
-		rate:   rate,
+		jwtService: jwtService,
+		logger:     logger,
+		rateLimiter: rateLimiter,
 	}
 }
 
-// RateLimiter is a middleware for rate limiting
-func (m *SecurityMiddleware) RateLimiter() gin.HandlerFunc {
+// JWTAuth is a middleware that validates JWT tokens
+func (m *SecurityMiddleware) JWTAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get IP address
-		ip := c.ClientIP()
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is required"})
+			c.Abort()
+			return
+		}
 
-		// Create limiter for this IP
-		limiterCtx, err := limiter.New(m.store, m.rate)
+		// Check if the Authorization header has the correct format
+		if !strings.HasPrefix(authHeader, "Bearer ") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header must be in the format 'Bearer {token}'"})
+			c.Abort()
+			return
+		}
+
+		// Extract the token
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+
+		// Validate the token
+		claims, err := m.jwtService.ValidateToken(tokenString)
 		if err != nil {
-			m.logger.Error("Failed to create rate limiter", zap.Error(err))
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			m.logger.Error("Failed to validate token", zap.Error(err))
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+			c.Abort()
 			return
 		}
 
-		// Get context for this IP
-		limiterCtx.Key = ip
-
-		// Try to get limiter from store
-		context, err := m.store.Get(c.Request.Context(), limiterCtx.Key)
-		if err != nil {
-			m.logger.Error("Failed to get rate limiter from store", zap.Error(err))
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-			return
-		}
-
-		// Check if rate limit is exceeded
-		if context.Reached {
-			m.logger.Warn("Rate limit exceeded", zap.String("ip", ip))
-			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "Rate limit exceeded"})
-			return
-		}
-
-		// Increment rate limiter
-		if _, err := m.store.Increment(c.Request.Context(), limiterCtx.Key, 1); err != nil {
-			m.logger.Error("Failed to increment rate limiter", zap.Error(err))
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-			return
-		}
-
-		// Set rate limit headers
-		c.Header("X-RateLimit-Limit", "100")
-		c.Header("X-RateLimit-Remaining", "100")
-		c.Header("X-RateLimit-Reset", "60")
+		// Set the claims in the context
+		c.Set("userID", claims.UserID)
+		c.Set("username", claims.Username)
+		c.Set("role", claims.Role)
 
 		c.Next()
 	}
 }
 
-// SecurityHeaders adds security headers to the response
+// RoleAuth is a middleware that checks if the user has the required role
+func (m *SecurityMiddleware) RoleAuth(requiredRole string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role, exists := c.Get("role")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "User role not found"})
+			c.Abort()
+			return
+		}
+
+		if role != requiredRole {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}
+
+// RateLimiter is a middleware that limits the number of requests
+func (m *SecurityMiddleware) RateLimiter() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get the IP address from the request
+		ip := c.ClientIP()
+
+		// Create a context with the request
+		ctx := c.Request.Context()
+
+		// Check if the request is allowed
+		limiterCtx, err := m.rateLimiter.Get(ctx, ip)
+		if err != nil {
+			m.logger.Error("Failed to get rate limiter context", zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			c.Abort()
+			return
+		}
+
+		// Set the rate limit headers
+		c.Header("X-RateLimit-Limit", limiterCtx.Limit.String())
+		c.Header("X-RateLimit-Remaining", limiterCtx.Remaining.String())
+		c.Header("X-RateLimit-Reset", limiterCtx.Reset.String())
+
+		// Check if the request is over the limit
+		if limiterCtx.Reached {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "Rate limit exceeded"})
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}
+
+// CORS is a middleware that handles CORS
+func (m *SecurityMiddleware) CORS() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	}
+}
+
+// SecurityHeaders is a middleware that adds security headers
 func (m *SecurityMiddleware) SecurityHeaders() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Add security headers
-		c.Header("X-Content-Type-Options", "nosniff")
-		c.Header("X-Frame-Options", "DENY")
-		c.Header("X-XSS-Protection", "1; mode=block")
-		c.Header("Content-Security-Policy", "default-src 'self'")
-		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
-		c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		c.Writer.Header().Set("X-Content-Type-Options", "nosniff")
+		c.Writer.Header().Set("X-Frame-Options", "DENY")
+		c.Writer.Header().Set("X-XSS-Protection", "1; mode=block")
+		c.Writer.Header().Set("Content-Security-Policy", "default-src 'self'")
+		c.Writer.Header().Set("Referrer-Policy", "no-referrer-when-downgrade")
+		c.Writer.Header().Set("Feature-Policy", "camera 'none'; microphone 'none'; geolocation 'none'")
 
 		c.Next()
 	}
 }
 
-// CORS adds CORS headers to the response
-func (m *SecurityMiddleware) CORS() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// Add CORS headers
-		c.Header("Access-Control-Allow-Origin", "*")
-		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-		c.Header("Access-Control-Expose-Headers", "Content-Length")
-		c.Header("Access-Control-Allow-Credentials", "true")
-
-		// Handle preflight requests
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(http.StatusNoContent)
-			return
-		}
-
-		c.Next()
-	}
-}
-
-// RequestLogger logs request information
-func (m *SecurityMiddleware) RequestLogger() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// Start timer
-		start := time.Now()
-
-		// Process request
-		c.Next()
-
-		// Calculate latency
-		latency := time.Since(start)
-
-		// Log request
-		m.logger.Info("Request",
-			zap.String("method", c.Request.Method),
-			zap.String("path", c.Request.URL.Path),
-			zap.Int("status", c.Writer.Status()),
-			zap.Duration("latency", latency),
-			zap.String("ip", c.ClientIP()),
-			zap.String("user_agent", c.Request.UserAgent()),
-		)
-	}
-}
-
-// RecoverPanic recovers from panics
-func (m *SecurityMiddleware) RecoverPanic() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		defer func() {
-			if err := recover(); err != nil {
-				// Log error
-				m.logger.Error("Panic recovered",
-					zap.Any("error", err),
-					zap.String("method", c.Request.Method),
-					zap.String("path", c.Request.URL.Path),
-					zap.String("ip", c.ClientIP()),
-				)
-
-				// Return error response
-				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-			}
-		}()
-
-		c.Next()
-	}
-}
-
-// ContentTypeValidator validates the Content-Type header
-func (m *SecurityMiddleware) ContentTypeValidator() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// Skip for GET, HEAD, OPTIONS requests
-		if c.Request.Method == "GET" || c.Request.Method == "HEAD" || c.Request.Method == "OPTIONS" {
-			c.Next()
-			return
-		}
-
-		// Check Content-Type header
-		contentType := c.GetHeader("Content-Type")
-		if contentType == "" {
-			c.AbortWithStatusJSON(http.StatusUnsupportedMediaType, gin.H{"error": "Content-Type header is required"})
-			return
-		}
-
-		// Check if Content-Type is application/json
-		if !strings.Contains(contentType, "application/json") {
-			c.AbortWithStatusJSON(http.StatusUnsupportedMediaType, gin.H{"error": "Content-Type must be application/json"})
-			return
-		}
-
-		c.Next()
-	}
-}
-
-// RegisterMiddleware registers all security middleware
-func (m *SecurityMiddleware) RegisterMiddleware(router *gin.Engine) {
-	// Add middleware
-	router.Use(m.RecoverPanic())
-	router.Use(m.RequestLogger())
-	router.Use(m.SecurityHeaders())
-	router.Use(m.CORS())
-	router.Use(m.RateLimiter())
-	router.Use(m.ContentTypeValidator())
-}

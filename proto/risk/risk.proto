@@ -1,69 +1,298 @@
 syntax = "proto3";
+
 package risk;
+
 option go_package = "github.com/abdoElHodaky/tradSys/proto/risk";
 
-import "proto/orders/orders.proto";
-
-message RiskCheckRequest {
-  orders.Order order = 1;
-}
-
-message RiskCheckResponse {
-  bool approved = 1;
-  string reason = 2;
-}
-
-message PositionRequest {
-  string symbol = 1;
-  string account_id = 2;
-}
-
-message Position {
-  string symbol = 1;
-  string account_id = 2;
-  double quantity = 3;
-  double average_price = 4;
-  double unrealized_pnl = 5;
-  double realized_pnl = 6;
-  int64 timestamp = 7;
-}
-
-message PositionList {
-  repeated Position positions = 1;
-}
-
-message RiskLimitRequest {
-  string account_id = 1;
-  string symbol = 2;
-}
-
-message RiskLimit {
-  string account_id = 1;
-  string symbol = 2;
-  double max_position = 3;
-  double max_order_size = 4;
-  double max_daily_loss = 5;
-  double current_daily_loss = 6;
-  bool active = 7;
-}
-
-message CircuitBreakerRequest {
-  string symbol = 1;
-}
-
-message CircuitBreakerStatus {
-  string symbol = 1;
-  bool triggered = 2;
-  string reason = 3;
-  int64 trigger_time = 4;
-  int64 reset_time = 5;
-}
-
+// RiskService provides risk management functionality
 service RiskService {
-  rpc CheckOrderRisk(RiskCheckRequest) returns (RiskCheckResponse);
-  rpc GetPosition(PositionRequest) returns (Position);
-  rpc GetAllPositions(PositionRequest) returns (PositionList);
-  rpc GetRiskLimits(RiskLimitRequest) returns (RiskLimit);
-  rpc GetCircuitBreakerStatus(CircuitBreakerRequest) returns (CircuitBreakerStatus);
+  // GetAccountRisk gets risk metrics for an account
+  rpc GetAccountRisk(AccountRiskRequest) returns (AccountRiskResponse);
+  
+  // GetPositionRisk gets risk metrics for a position
+  rpc GetPositionRisk(PositionRiskRequest) returns (PositionRiskResponse);
+  
+  // GetOrderRisk gets risk metrics for an order
+  rpc GetOrderRisk(OrderRiskRequest) returns (OrderRiskResponse);
+  
+  // ValidateOrder validates an order against risk rules
+  rpc ValidateOrder(ValidateOrderRequest) returns (ValidateOrderResponse);
+  
+  // UpdateRiskLimits updates risk limits for an account
+  rpc UpdateRiskLimits(UpdateRiskLimitsRequest) returns (UpdateRiskLimitsResponse);
+}
+
+// AccountRiskRequest represents a request for account risk metrics
+message AccountRiskRequest {
+  // Account ID to get risk metrics for
+  string account_id = 1;
+}
+
+// AccountRiskResponse represents a response with account risk metrics
+message AccountRiskResponse {
+  // Account ID of the risk metrics
+  string account_id = 1;
+  
+  // Total value of the account
+  double total_value = 2;
+  
+  // Available margin of the account
+  double available_margin = 3;
+  
+  // Used margin of the account
+  double used_margin = 4;
+  
+  // Margin level of the account
+  double margin_level = 5;
+  
+  // Margin call level of the account
+  double margin_call_level = 6;
+  
+  // Liquidation level of the account
+  double liquidation_level = 7;
+  
+  // Daily profit and loss of the account
+  double daily_pnl = 8;
+  
+  // Total profit and loss of the account
+  double total_pnl = 9;
+  
+  // Risk level of the account
+  RiskLevel risk_level = 10;
+  
+  // Risk limits of the account
+  RiskLimits risk_limits = 11;
+  
+  // Positions of the account
+  repeated Position positions = 12;
+}
+
+// PositionRiskRequest represents a request for position risk metrics
+message PositionRiskRequest {
+  // Account ID of the position
+  string account_id = 1;
+  
+  // Symbol of the position
+  string symbol = 2;
+}
+
+// PositionRiskResponse represents a response with position risk metrics
+message PositionRiskResponse {
+  // Account ID of the position
+  string account_id = 1;
+  
+  // Symbol of the position
+  string symbol = 2;
+  
+  // Size of the position
+  double size = 3;
+  
+  // Entry price of the position
+  double entry_price = 4;
+  
+  // Current price of the position
+  double current_price = 5;
+  
+  // Liquidation price of the position
+  double liquidation_price = 6;
+  
+  // Unrealized profit and loss of the position
+  double unrealized_pnl = 7;
+  
+  // Realized profit and loss of the position
+  double realized_pnl = 8;
+  
+  // Initial margin of the position
+  double initial_margin = 9;
+  
+  // Maintenance margin of the position
+  double maintenance_margin = 10;
+  
+  // Risk level of the position
+  RiskLevel risk_level = 11;
+}
+
+// OrderRiskRequest represents a request for order risk metrics
+message OrderRiskRequest {
+  // Account ID of the order
+  string account_id = 1;
+  
+  // Symbol of the order
+  string symbol = 2;
+  
+  // Side of the order
+  OrderSide side = 3;
+  
+  // Type of the order
+  OrderType type = 4;
+  
+  // Quantity of the order
+  double quantity = 5;
+  
+  // Price of the order
+  double price = 6;
+}
+
+// OrderRiskResponse represents a response with order risk metrics
+message OrderRiskResponse {
+  // Account ID of the order
+  string account_id = 1;
+  
+  // Symbol of the order
+  string symbol = 2;
+  
+  // Side of the order
+  OrderSide side = 3;
+  
+  // Type of the order
+  OrderType type = 4;
+  
+  // Quantity of the order
+  double quantity = 5;
+  
+  // Price of the order
+  double price = 6;
+  
+  // Required margin for the order
+  double required_margin = 7;
+  
+  // Available margin after the order
+  double available_margin_after = 8;
+  
+  // Margin level after the order
+  double margin_level_after = 9;
+  
+  // Risk level of the order
+  RiskLevel risk_level = 10;
+  
+  // Is the order allowed
+  bool is_allowed = 11;
+  
+  // Rejection reason if the order is not allowed
+  string rejection_reason = 12;
+}
+
+// ValidateOrderRequest represents a request to validate an order
+message ValidateOrderRequest {
+  // Account ID of the order
+  string account_id = 1;
+  
+  // Symbol of the order
+  string symbol = 2;
+  
+  // Side of the order
+  OrderSide side = 3;
+  
+  // Type of the order
+  OrderType type = 4;
+  
+  // Quantity of the order
+  double quantity = 5;
+  
+  // Price of the order
+  double price = 6;
+}
+
+// ValidateOrderResponse represents a response with order validation
+message ValidateOrderResponse {
+  // Is the order valid
+  bool is_valid = 1;
+  
+  // Rejection reason if the order is not valid
+  string rejection_reason = 2;
+  
+  // Risk metrics for the order
+  OrderRiskResponse risk_metrics = 3;
+}
+
+// UpdateRiskLimitsRequest represents a request to update risk limits
+message UpdateRiskLimitsRequest {
+  // Account ID to update risk limits for
+  string account_id = 1;
+  
+  // Risk limits to update
+  RiskLimits risk_limits = 2;
+}
+
+// UpdateRiskLimitsResponse represents a response with updated risk limits
+message UpdateRiskLimitsResponse {
+  // Account ID of the updated risk limits
+  string account_id = 1;
+  
+  // Updated risk limits
+  RiskLimits risk_limits = 2;
+}
+
+// RiskLevel represents the risk level
+enum RiskLevel {
+  LOW = 0;
+  MEDIUM = 1;
+  HIGH = 2;
+  CRITICAL = 3;
+}
+
+// OrderSide represents the side of an order
+enum OrderSide {
+  BUY = 0;
+  SELL = 1;
+}
+
+// OrderType represents the type of an order
+enum OrderType {
+  MARKET = 0;
+  LIMIT = 1;
+  STOP = 2;
+  STOP_LIMIT = 3;
+}
+
+// RiskLimits represents risk limits for an account
+message RiskLimits {
+  // Maximum position size
+  double max_position_size = 1;
+  
+  // Maximum order size
+  double max_order_size = 2;
+  
+  // Maximum leverage
+  double max_leverage = 3;
+  
+  // Maximum daily loss
+  double max_daily_loss = 4;
+  
+  // Maximum total loss
+  double max_total_loss = 5;
+  
+  // Minimum margin level
+  double min_margin_level = 6;
+  
+  // Margin call level
+  double margin_call_level = 7;
+  
+  // Liquidation level
+  double liquidation_level = 8;
+}
+
+// Position represents a trading position
+message Position {
+  // Symbol of the position
+  string symbol = 1;
+  
+  // Size of the position
+  double size = 2;
+  
+  // Entry price of the position
+  double entry_price = 3;
+  
+  // Current price of the position
+  double current_price = 4;
+  
+  // Liquidation price of the position
+  double liquidation_price = 5;
+  
+  // Unrealized profit and loss of the position
+  double unrealized_pnl = 6;
+  
+  // Realized profit and loss of the position
+  double realized_pnl = 7;
 }
 

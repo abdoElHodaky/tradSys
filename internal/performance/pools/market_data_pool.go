@@ -6,13 +6,12 @@ import (
 	"github.com/abdoElHodaky/tradSys/proto/marketdata"
 )
 
-// MarketDataPool provides a pool of MarketDataResponse objects
-// to reduce garbage collection pressure in high-frequency scenarios
+// MarketDataPool provides a pool of market data responses
 type MarketDataPool struct {
 	pool sync.Pool
 }
 
-// NewMarketDataPool creates a new market data object pool
+// NewMarketDataPool creates a new market data pool
 func NewMarketDataPool() *MarketDataPool {
 	return &MarketDataPool{
 		pool: sync.Pool{
@@ -23,25 +22,56 @@ func NewMarketDataPool() *MarketDataPool {
 	}
 }
 
-// Get retrieves a MarketDataResponse from the pool
+// Get gets a market data response from the pool
 func (p *MarketDataPool) Get() *marketdata.MarketDataResponse {
 	return p.pool.Get().(*marketdata.MarketDataResponse)
 }
 
-// Put returns a MarketDataResponse to the pool after resetting its fields
-func (p *MarketDataPool) Put(data *marketdata.MarketDataResponse) {
-	// Reset fields to zero values to prevent data leakage
-	data.Symbol = ""
-	data.Price = 0
-	data.Volume = 0
-	data.Timestamp = 0
-	data.Exchange = ""
-	data.Bid = 0
-	data.Ask = 0
-	data.BidSize = 0
-	data.AskSize = 0
-	// Add any other fields that need to be reset
+// Put puts a market data response back into the pool
+func (p *MarketDataPool) Put(response *marketdata.MarketDataResponse) {
+	// Reset the response
+	response.Symbol = ""
+	response.Price = 0
+	response.Volume = 0
+	response.Bid = 0
+	response.Ask = 0
+	response.High = 0
+	response.Low = 0
+	response.Open = 0
+	response.Close = 0
+	response.Timestamp = 0
+	response.Interval = ""
 
-	p.pool.Put(data)
+	// Put the response back into the pool
+	p.pool.Put(response)
+}
+
+// NewMarketDataResponse creates a new market data response
+func (p *MarketDataPool) NewMarketDataResponse(
+	symbol string,
+	price float64,
+	volume float64,
+	bid float64,
+	ask float64,
+	high float64,
+	low float64,
+	open float64,
+	close float64,
+	timestamp int64,
+	interval string,
+) *marketdata.MarketDataResponse {
+	response := p.Get()
+	response.Symbol = symbol
+	response.Price = price
+	response.Volume = volume
+	response.Bid = bid
+	response.Ask = ask
+	response.High = high
+	response.Low = low
+	response.Open = open
+	response.Close = close
+	response.Timestamp = timestamp
+	response.Interval = interval
+	return response
 }
 
