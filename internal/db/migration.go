@@ -24,15 +24,9 @@ func MigrateSchema(db *gorm.DB, logger *zap.Logger) error {
 		&models.Strategy{},
 		&models.StrategyExecution{},
 		&models.Signal{},
-//<<<<<<< codegen-bot/fix-order-model-syntax
-//=======
-//<<<<<<< codegen-bot/pairs-management-implementation
 		&models.Pair{},
 		&models.PairStatistics{},
 		&models.PairPosition{},
-//=======
-//>>>>>>> main
-//>>>>>>> main
 	}
 
 	// Run migrations
@@ -45,11 +39,4 @@ func MigrateSchema(db *gorm.DB, logger *zap.Logger) error {
 	logger.Info("Database migration completed successfully")
 	return nil
 }
-//<<<<<<< codegen-bot/fix-order-model-syntax
 
-//=======
-//<<<<<<< codegen-bot/pairs-management-implementation
-//=======
-
-//>>>>>>> main
-//>>>>>>> main

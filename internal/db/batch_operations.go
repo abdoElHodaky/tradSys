@@ -2,13 +2,11 @@ package db
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
 
@@ -487,3 +485,4 @@ func (b *BatchOperations) ResetMetrics() {
 
 	b.logger.Info("Batch metrics reset")
 }
+
