@@ -2,217 +2,226 @@ package marketdata
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/db/models"
-	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
-	pb "github.com/abdoElHodaky/tradSys/proto/marketdata"
 	"go.uber.org/zap"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
-// Service implements the MarketDataService gRPC interface
+// Common errors
+var (
+	ErrInvalidCommand = errors.New("invalid command")
+	ErrInvalidQuery   = errors.New("invalid query")
+	ErrSourceNotFound = errors.New("market data source not found")
+)
+
+// MarketData represents market data for a symbol
+type MarketData struct {
+	Symbol    string
+	Price     float64
+	Volume    float64
+	Timestamp time.Time
+}
+
+// Service provides market data functionality
 type Service struct {
-	pb.UnimplementedMarketDataServiceServer
-	logger     *zap.Logger
-	quotes     map[string]*pb.Quote
-	mu         sync.RWMutex
-	repository *repositories.MarketDataRepository
-	subscribers map[string]map[pb.MarketDataService_SubscribeQuotesServer]bool
-	subMu       sync.RWMutex
+	logger  *zap.Logger
+	sources map[string]DataSource
+	mu      sync.RWMutex
+}
+
+// DataSource represents a market data source
+type DataSource interface {
+	GetData(ctx context.Context, symbol string, timeRange string) ([]MarketData, error)
+	Start(ctx context.Context) error
+	Stop(ctx context.Context) error
 }
 
 // NewService creates a new market data service
-func NewService(logger *zap.Logger, repository *repositories.MarketDataRepository) *Service {
-	service := &Service{
-		logger:      logger,
-		quotes:      make(map[string]*pb.Quote),
-		repository:  repository,
-		subscribers: make(map[string]map[pb.MarketDataService_SubscribeQuotesServer]bool),
+func NewService(params ServiceParams) *Service {
+	return &Service{
+		logger:  params.Logger,
+		sources: make(map[string]DataSource),
 	}
-	
-	// Start background tasks
-	go service.persistQuotesPeriodically()
-	
-	return service
 }
 
-// GetQuote returns the latest quote for a symbol
-func (s *Service) GetQuote(ctx context.Context, req *pb.MarketDataRequest) (*pb.Quote, error) {
-	// Try to get from memory first for lowest latency
-	s.mu.RLock()
-	key := req.Symbol + ":" + req.Exchange
-	quote, ok := s.quotes[key]
-	s.mu.RUnlock()
-	
-	if ok {
-		return quote, nil
-	}
-	
-	// If not in memory, try to get from database
-	dbQuote, err := s.repository.GetLatestQuote(ctx, req.Symbol, req.Exchange)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "database error: %v", err)
-	}
-	
-	if dbQuote == nil {
-		return nil, status.Errorf(codes.NotFound, "quote not found for %s:%s", req.Symbol, req.Exchange)
-	}
-	
-	// Convert database model to protobuf
-	protoQuote := &pb.Quote{
-		Symbol:    dbQuote.Symbol,
-		Bid:       dbQuote.Bid,
-		Ask:       dbQuote.Ask,
-		BidSize:   dbQuote.BidSize,
-		AskSize:   dbQuote.AskSize,
-		Timestamp: dbQuote.Timestamp.UnixNano(),
-		Exchange:  dbQuote.Exchange,
-	}
-	
-	// Cache in memory for future requests
+// AddMarketDataSource adds a market data source
+func (s *Service) AddMarketDataSource(ctx context.Context, source string, config map[string]interface{}) error {
 	s.mu.Lock()
-	s.quotes[key] = protoQuote
-	s.mu.Unlock()
+	defer s.mu.Unlock()
 	
-	return protoQuote, nil
-}
-
-// SubscribeQuotes streams quotes for a requested symbol
-func (s *Service) SubscribeQuotes(req *pb.MarketDataRequest, stream pb.MarketDataService_SubscribeQuotesServer) error {
-	key := req.Symbol + ":" + req.Exchange
-	
-	// Register subscriber
-	s.subMu.Lock()
-	if _, exists := s.subscribers[key]; !exists {
-		s.subscribers[key] = make(map[pb.MarketDataService_SubscribeQuotesServer]bool)
-	}
-	s.subscribers[key][stream] = true
-	s.subMu.Unlock()
-	
-	s.logger.Info("Client subscribed to quotes",
-		zap.String("symbol", req.Symbol),
-		zap.String("exchange", req.Exchange))
-	
-	// Send initial quote if available
-	s.mu.RLock()
-	quote, ok := s.quotes[key]
-	s.mu.RUnlock()
-	
-	if ok {
-		if err := stream.Send(quote); err != nil {
-			s.logger.Error("Failed to send initial quote",
-				zap.Error(err),
-				zap.String("symbol", req.Symbol))
-		}
+	// Check if the source already exists
+	if _, exists := s.sources[source]; exists {
+		s.logger.Info("Market data source already exists", zap.String("source", source))
+		return nil
 	}
 	
-	// Keep the stream open until client disconnects
-	<-stream.Context().Done()
-	
-	// Unregister subscriber
-	s.subMu.Lock()
-	if subs, exists := s.subscribers[key]; exists {
-		delete(subs, stream)
-		if len(subs) == 0 {
-			delete(s.subscribers, key)
-		}
+	// Create a new data source based on the source type
+	var dataSource DataSource
+	switch source {
+	case "websocket":
+		dataSource = NewWebSocketDataSource(config, s.logger)
+	case "rest":
+		dataSource = NewRESTDataSource(config, s.logger)
+	default:
+		s.logger.Error("Unknown market data source type", zap.String("source", source))
+		return errors.New("unknown market data source type")
 	}
-	s.subMu.Unlock()
 	
-	s.logger.Info("Client unsubscribed from quotes",
-		zap.String("symbol", req.Symbol),
-		zap.String("exchange", req.Exchange))
+	// Start the data source
+	if err := dataSource.Start(ctx); err != nil {
+		s.logger.Error("Failed to start market data source", zap.String("source", source), zap.Error(err))
+		return err
+	}
+	
+	// Add the data source to the map
+	s.sources[source] = dataSource
+	s.logger.Info("Added market data source", zap.String("source", source))
 	
 	return nil
 }
 
-// GetHistoricalData retrieves historical market data
-func (s *Service) GetHistoricalData(ctx context.Context, req *pb.HistoricalDataRequest) (*pb.QuoteList, error) {
-	startTime := time.Unix(0, req.StartTime)
-	endTime := time.Unix(0, req.EndTime)
-	
-	// Get historical data from database
-	quotes, err := s.repository.GetQuoteHistory(ctx, req.Symbol, req.Exchange, startTime, endTime, int(req.Limit))
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "database error: %v", err)
-	}
-	
-	// Convert to protobuf
-	protoQuotes := make([]*pb.Quote, 0, len(quotes))
-	for _, q := range quotes {
-		protoQuotes = append(protoQuotes, &pb.Quote{
-			Symbol:    q.Symbol,
-			Bid:       q.Bid,
-			Ask:       q.Ask,
-			BidSize:   q.BidSize,
-			AskSize:   q.AskSize,
-			Timestamp: q.Timestamp.UnixNano(),
-			Exchange:  q.Exchange,
-		})
-	}
-	
-	return &pb.QuoteList{Quotes: protoQuotes}, nil
-}
-
-// UpdateQuote updates the quote for a symbol and notifies subscribers
-func (s *Service) UpdateQuote(quote *pb.Quote) {
-	key := quote.Symbol + ":" + quote.Exchange
-	
-	// Update in-memory cache
+// RemoveMarketDataSource removes a market data source
+func (s *Service) RemoveMarketDataSource(ctx context.Context, source string) error {
 	s.mu.Lock()
-	s.quotes[key] = quote
-	s.mu.Unlock()
+	defer s.mu.Unlock()
 	
-	// Notify subscribers
-	s.subMu.RLock()
-	if subs, exists := s.subscribers[key]; exists {
-		for stream := range subs {
-			if err := stream.Send(quote); err != nil {
-				s.logger.Error("Failed to send quote update",
-					zap.Error(err),
-					zap.String("symbol", quote.Symbol))
-				// We'll clean up dead streams in the next subscription request
-			}
-		}
+	// Check if the source exists
+	dataSource, exists := s.sources[source]
+	if !exists {
+		s.logger.Warn("Market data source not found", zap.String("source", source))
+		return ErrSourceNotFound
 	}
-	s.subMu.RUnlock()
+	
+	// Stop the data source
+	if err := dataSource.Stop(ctx); err != nil {
+		s.logger.Error("Failed to stop market data source", zap.String("source", source), zap.Error(err))
+		return err
+	}
+	
+	// Remove the data source from the map
+	delete(s.sources, source)
+	s.logger.Info("Removed market data source", zap.String("source", source))
+	
+	return nil
 }
 
-// persistQuotesPeriodically periodically persists quotes to the database
-func (s *Service) persistQuotesPeriodically() {
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
+// GetMarketData gets market data for a symbol
+func (s *Service) GetMarketData(ctx context.Context, symbol string, timeRange string) ([]MarketData, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	
-	for range ticker.C {
-		s.mu.RLock()
-		quotes := make([]*pb.Quote, 0, len(s.quotes))
-		for _, quote := range s.quotes {
-			quotes = append(quotes, quote)
-		}
-		s.mu.RUnlock()
-		
-		for _, quote := range quotes {
-			dbQuote := &models.Quote{
-				Symbol:    quote.Symbol,
-				Exchange:  quote.Exchange,
-				Bid:       quote.Bid,
-				Ask:       quote.Ask,
-				BidSize:   quote.BidSize,
-				AskSize:   quote.AskSize,
-				Timestamp: time.Unix(0, quote.Timestamp),
-			}
-			
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			if err := s.repository.SaveQuote(ctx, dbQuote); err != nil {
-				s.logger.Error("Failed to persist quote",
-					zap.Error(err),
-					zap.String("symbol", quote.Symbol))
-			}
-			cancel()
-		}
+	// Check if there are any sources
+	if len(s.sources) == 0 {
+		s.logger.Warn("No market data sources available")
+		return nil, errors.New("no market data sources available")
 	}
+	
+	// Get data from all sources
+	var allData []MarketData
+	for sourceName, source := range s.sources {
+		data, err := source.GetData(ctx, symbol, timeRange)
+		if err != nil {
+			s.logger.Warn("Failed to get market data from source", 
+				zap.String("source", sourceName), 
+				zap.String("symbol", symbol), 
+				zap.Error(err))
+			continue
+		}
+		
+		allData = append(allData, data...)
+	}
+	
+	// Sort data by timestamp (newest first)
+	// In a real implementation, we would sort the data here
+	
+	return allData, nil
+}
+
+// WebSocketDataSource implements DataSource using WebSockets
+type WebSocketDataSource struct {
+	config map[string]interface{}
+	logger *zap.Logger
+	// Add WebSocket connection and other fields
+}
+
+// NewWebSocketDataSource creates a new WebSocket data source
+func NewWebSocketDataSource(config map[string]interface{}, logger *zap.Logger) *WebSocketDataSource {
+	return &WebSocketDataSource{
+		config: config,
+		logger: logger,
+	}
+}
+
+// GetData gets market data from the WebSocket data source
+func (ds *WebSocketDataSource) GetData(ctx context.Context, symbol string, timeRange string) ([]MarketData, error) {
+	// In a real implementation, this would get data from the WebSocket connection
+	// For now, return some dummy data
+	return []MarketData{
+		{
+			Symbol:    symbol,
+			Price:     100.0,
+			Volume:    1000.0,
+			Timestamp: time.Now(),
+		},
+	}, nil
+}
+
+// Start starts the WebSocket data source
+func (ds *WebSocketDataSource) Start(ctx context.Context) error {
+	// In a real implementation, this would establish the WebSocket connection
+	ds.logger.Info("Starting WebSocket data source")
+	return nil
+}
+
+// Stop stops the WebSocket data source
+func (ds *WebSocketDataSource) Stop(ctx context.Context) error {
+	// In a real implementation, this would close the WebSocket connection
+	ds.logger.Info("Stopping WebSocket data source")
+	return nil
+}
+
+// RESTDataSource implements DataSource using REST APIs
+type RESTDataSource struct {
+	config map[string]interface{}
+	logger *zap.Logger
+	// Add HTTP client and other fields
+}
+
+// NewRESTDataSource creates a new REST data source
+func NewRESTDataSource(config map[string]interface{}, logger *zap.Logger) *RESTDataSource {
+	return &RESTDataSource{
+		config: config,
+		logger: logger,
+	}
+}
+
+// GetData gets market data from the REST data source
+func (ds *RESTDataSource) GetData(ctx context.Context, symbol string, timeRange string) ([]MarketData, error) {
+	// In a real implementation, this would make HTTP requests to get data
+	// For now, return some dummy data
+	return []MarketData{
+		{
+			Symbol:    symbol,
+			Price:     100.0,
+			Volume:    1000.0,
+			Timestamp: time.Now(),
+		},
+	}, nil
+}
+
+// Start starts the REST data source
+func (ds *RESTDataSource) Start(ctx context.Context) error {
+	// In a real implementation, this would initialize the HTTP client
+	ds.logger.Info("Starting REST data source")
+	return nil
+}
+
+// Stop stops the REST data source
+func (ds *RESTDataSource) Stop(ctx context.Context) error {
+	// In a real implementation, this would clean up the HTTP client
+	ds.logger.Info("Stopping REST data source")
+	return nil
 }
 

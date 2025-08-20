@@ -1,117 +1,249 @@
 syntax = "proto3";
+
 package orders;
+
 option go_package = "github.com/abdoElHodaky/tradSys/proto/orders";
 
-enum OrderType {
-  MARKET = 0;
-  LIMIT = 1;
-  STOP = 2;
-  STOP_LIMIT = 3;
+// OrderService provides order functionality
+service OrderService {
+  // CreateOrder creates a new order
+  rpc CreateOrder(CreateOrderRequest) returns (OrderResponse);
+  
+  // GetOrder gets an order by ID
+  rpc GetOrder(GetOrderRequest) returns (OrderResponse);
+  
+  // CancelOrder cancels an order
+  rpc CancelOrder(CancelOrderRequest) returns (OrderResponse);
+  
+  // GetOrders gets orders for a user
+  rpc GetOrders(GetOrdersRequest) returns (GetOrdersResponse);
+  
+  // StreamOrders streams orders for a user
+  rpc StreamOrders(StreamOrdersRequest) returns (stream OrderResponse);
 }
 
+// OrderSide represents the side of an order
 enum OrderSide {
   BUY = 0;
   SELL = 1;
 }
 
+// OrderType represents the type of an order
+enum OrderType {
+  MARKET = 0;
+  LIMIT = 1;
+  STOP = 2;
+  STOP_LIMIT = 3;
+  TRAILING = 4;
+  IOC_ORDER = 5;
+  FOK_ORDER = 6;
+  CONDITIONAL = 7;
+}
+
+// OrderStatus represents the status of an order
 enum OrderStatus {
   NEW = 0;
-  ACCEPTED = 1;
-  REJECTED = 2;
-  FILLED = 3;
-  PARTIAL = 4;
-  CANCELLED = 5;
+  PARTIAL = 1;
+  FILLED = 2;
+  CANCELLED = 3;
+  REJECTED = 4;
+  EXPIRED = 5;
+  PENDING = 6;
+  PROCESSING = 7;
 }
 
-message Order {
-  string order_id = 1;
-  string symbol = 2;
-  OrderType type = 3;
+// TimeInForce represents the time in force of an order
+enum TimeInForce {
+  GTC = 0;
+  IOC = 1;
+  FOK = 2;
+  DAY = 3;
+  GTD = 4;
+}
+
+// CreateOrderRequest represents a request to create an order
+message CreateOrderRequest {
+  // User ID of the order
+  string user_id = 1;
+  
+  // Account ID of the order
+  string account_id = 2;
+  
+  // Symbol of the order
+  string symbol = 3;
+  
+  // Side of the order
   OrderSide side = 4;
-  double quantity = 5;
-  double price = 6;
-  string client_id = 7;
-  int64 timestamp = 8;
-  OrderStatus status = 9;
-  double filled_quantity = 10;
-  double average_price = 11;
-  string exchange = 12;
-  string notes = 13;
-//<<<<<<< codegen-bot/fix-order-model-syntax
-  double stop_loss = 14;
-  double take_profit = 15;
-  string strategy = 16;
-//=======
-//<<<<<<< codegen-bot/pairs-management-implementation
-  double stop_loss = 14;
-  double take_profit = 15;
-  string strategy = 16;
-///=======
-//>>>>>>> main
-//>>>>>>> main
+  
+  // Type of the order
+  OrderType type = 5;
+  
+  // Quantity of the order
+  double quantity = 6;
+  
+  // Price of the order
+  double price = 7;
+  
+  // Stop price of the order
+  double stop_price = 8;
+  
+  // Trailing offset of the order
+  double trailing_offset = 9;
+  
+  // Time in force of the order
+  TimeInForce time_in_force = 10;
+  
+  // Client order ID of the order
+  string client_order_id = 11;
+  
+  // Stop loss price of the order
+  double stop_loss = 12;
+  
+  // Take profit price of the order
+  double take_profit = 13;
+  
+  // Expiry time of the order
+  int64 expires_at = 14;
+  
+  // Notes for the order
+  string notes = 15;
 }
 
-message OrderRequest {
-  string symbol = 1;
-  OrderType type = 2;
-  OrderSide side = 3;
-  double quantity = 4;
-  double price = 5;
-  string client_id = 6;
-  string exchange = 7;
-//<<<<<<< codegen-bot/fix-order-model-syntax
-  double stop_loss = 8;
-  double take_profit = 9;
-  string strategy = 10;
-//=======
-//<<<<<<< codegen-bot/pairs-management-implementation
-  double stop_loss = 8;
-  double take_profit = 9;
-  string strategy = 10;
-//=======
-//>>>>>>> main
-//>>>>>>> main
+// GetOrderRequest represents a request to get an order
+message GetOrderRequest {
+  // ID of the order
+  string id = 1;
+  
+  // User ID of the order
+  string user_id = 2;
 }
 
+// CancelOrderRequest represents a request to cancel an order
+message CancelOrderRequest {
+  // ID of the order
+  string id = 1;
+  
+  // User ID of the order
+  string user_id = 2;
+}
+
+// GetOrdersRequest represents a request to get orders
+message GetOrdersRequest {
+  // User ID of the orders
+  string user_id = 1;
+  
+  // Account ID of the orders
+  string account_id = 2;
+  
+  // Symbol of the orders
+  string symbol = 3;
+  
+  // Side of the orders
+  OrderSide side = 4;
+  
+  // Status of the orders
+  OrderStatus status = 5;
+  
+  // Start time for the orders
+  int64 start_time = 6;
+  
+  // End time for the orders
+  int64 end_time = 7;
+  
+  // Limit for the number of orders
+  int32 limit = 8;
+  
+  // Offset for pagination
+  int32 offset = 9;
+}
+
+// GetOrdersResponse represents a response with orders
+message GetOrdersResponse {
+  // Orders in the response
+  repeated OrderResponse orders = 1;
+  
+  // Total number of orders
+  int32 total = 2;
+}
+
+// StreamOrdersRequest represents a request to stream orders
+message StreamOrdersRequest {
+  // User ID of the orders
+  string user_id = 1;
+  
+  // Account ID of the orders
+  string account_id = 2;
+  
+  // Symbol of the orders
+  string symbol = 3;
+}
+
+// OrderResponse represents an order response
 message OrderResponse {
-  string order_id = 1;
-  OrderStatus status = 2;
-  string message = 3;
-  Order order = 4;
+  // ID of the order
+  string id = 1;
+  
+  // User ID of the order
+  string user_id = 2;
+  
+  // Account ID of the order
+  string account_id = 3;
+  
+  // Symbol of the order
+  string symbol = 4;
+  
+  // Side of the order
+  OrderSide side = 5;
+  
+  // Type of the order
+  OrderType type = 6;
+  
+  // Quantity of the order
+  double quantity = 7;
+  
+  // Price of the order
+  double price = 8;
+  
+  // Stop price of the order
+  double stop_price = 9;
+  
+  // Trailing offset of the order
+  double trailing_offset = 10;
+  
+  // Time in force of the order
+  TimeInForce time_in_force = 11;
+  
+  // Status of the order
+  OrderStatus status = 12;
+  
+  // Filled quantity of the order
+  double filled_qty = 13;
+  
+  // Average price of the order
+  double avg_price = 14;
+  
+  // Client order ID of the order
+  string client_order_id = 15;
+  
+  // Exchange order ID of the order
+  string exchange_order_id = 16;
+  
+  // Stop loss price of the order
+  double stop_loss = 17;
+  
+  // Take profit price of the order
+  double take_profit = 18;
+  
+  // Notes for the order
+  string notes = 19;
+  
+  // Created time of the order
+  int64 created_at = 20;
+  
+  // Updated time of the order
+  int64 updated_at = 21;
+  
+  // Expiry time of the order
+  int64 expires_at = 22;
 }
 
-message OrderCancelRequest {
-  string order_id = 1;
-  string client_id = 2;
-}
-
-message OrderStatusRequest {
-  string order_id = 1;
-}
-
-message OrderListRequest {
-  string symbol = 1;
-  OrderStatus status = 2;
-  string client_id = 3;
-  int64 start_time = 4;
-  int64 end_time = 5;
-}
-
-message OrderList {
-  repeated Order orders = 1;
-}
-
-service OrderService {
-  rpc PlaceOrder(OrderRequest) returns (OrderResponse);
-  rpc CancelOrder(OrderCancelRequest) returns (OrderResponse);
-  rpc GetOrderStatus(OrderStatusRequest) returns (OrderResponse);
-  rpc GetOrders(OrderListRequest) returns (OrderList);
-  rpc SubscribeOrderUpdates(OrderStatusRequest) returns (stream OrderResponse);
-}
-//<<<<<<< codegen-bot/fix-order-model-syntax
-//=======
-//<<<<<<< codegen-bot/pairs-management-implementation
-//=======
-
-//>>>>>>> main
-//>>>>>>> main
