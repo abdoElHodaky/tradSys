@@ -22,14 +22,32 @@ spec:
         env:
         - name: SERVICE_NAME
           value: "marketdata"
+        - name: SERVICE_VERSION
+          value: "1.0.0"
         - name: SERVICE_ADDRESS
           value: ":8080"
         - name: REGISTRY_TYPE
           value: "kubernetes"
         - name: BROKER_TYPE
           value: "nats"
-        - name: BROKER_ADDRESSES
+        - name: BROKER_ADDRESS
           value: "nats:4222"
+        - name: DB_TYPE
+          value: "postgres"
+        - name: DB_ADDRESS
+          value: "postgres:5432"
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: password
+        - name: DB_NAME
+          value: "tradsys"
         - name: TRACING_ENABLED
           value: "true"
         - name: TRACING_TYPE
@@ -38,18 +56,29 @@ spec:
           value: "jaeger-agent:6831"
         - name: METRICS_ENABLED
           value: "true"
-        - name: RESILIENCE_CIRCUIT_BREAKER_ENABLED
+        - name: METRICS_ADDRESS
+          value: ":9090"
+        - name: CIRCUIT_BREAKER_ENABLED
           value: "true"
+        - name: RATE_LIMITING_ENABLED
+          value: "true"
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
         livenessProbe:
           httpGet:
             path: /health
-            port: 8081
-          initialDelaySeconds: 3
-          periodSeconds: 3
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
         readinessProbe:
           httpGet:
-            path: /ready
-            port: 8081
+            path: /health
+            port: 8080
           initialDelaySeconds: 5
           periodSeconds: 5
 ---
@@ -63,4 +92,5 @@ spec:
   ports:
   - port: 8080
     targetPort: 8080
+  type: ClusterIP
 

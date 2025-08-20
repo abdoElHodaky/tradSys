@@ -1,37 +1,72 @@
 syntax = "proto3";
+
 package marketdata;
+
 option go_package = "github.com/abdoElHodaky/tradSys/proto/marketdata";
 
+// MarketDataService provides market data operations
+service MarketDataService {
+  // GetMarketData returns current market data for a symbol
+  rpc GetMarketData(MarketDataRequest) returns (MarketDataResponse) {}
+  
+  // StreamMarketData streams real-time market data for a symbol
+  rpc StreamMarketData(MarketDataRequest) returns (stream MarketDataResponse) {}
+  
+  // GetHistoricalData returns historical market data for a symbol
+  rpc GetHistoricalData(HistoricalDataRequest) returns (HistoricalDataResponse) {}
+  
+  // GetSymbols returns available trading symbols
+  rpc GetSymbols(SymbolsRequest) returns (SymbolsResponse) {}
+}
+
+// MarketDataRequest is a request for market data
 message MarketDataRequest {
   string symbol = 1;
-  string exchange = 2;
+  string interval = 2;
 }
 
-message Quote {
+// MarketDataResponse contains market data information
+message MarketDataResponse {
   string symbol = 1;
-  double bid = 2;
-  double ask = 3;
-  int64 timestamp = 4;
-  string exchange = 5;
-  double bid_size = 6;
-  double ask_size = 7;
+  string interval = 2;
+  double price = 3;
+  double volume = 4;
+  int64 timestamp = 5;
 }
 
+// HistoricalDataRequest is a request for historical market data
 message HistoricalDataRequest {
   string symbol = 1;
-  string exchange = 2;
+  string interval = 2;
   int64 start_time = 3;
   int64 end_time = 4;
-  int32 limit = 5;
 }
 
-message QuoteList {
-  repeated Quote quotes = 1;
+// HistoricalDataResponse contains historical market data
+message HistoricalDataResponse {
+  string symbol = 1;
+  string interval = 2;
+  repeated MarketDataResponse data = 3;
 }
 
-service MarketDataService {
-  rpc GetQuote(MarketDataRequest) returns (Quote);
-  rpc SubscribeQuotes(MarketDataRequest) returns (stream Quote);
-  rpc GetHistoricalData(HistoricalDataRequest) returns (QuoteList);
+// SymbolsRequest is a request for available trading symbols
+message SymbolsRequest {
+  string filter = 1;
+}
+
+// SymbolsResponse contains available trading symbols
+message SymbolsResponse {
+  repeated Symbol symbols = 1;
+}
+
+// Symbol contains information about a trading symbol
+message Symbol {
+  string name = 1;
+  string base_currency = 2;
+  string quote_currency = 3;
+  double price_increment = 4;
+  double quantity_increment = 5;
+  double min_order_size = 6;
+  double max_order_size = 7;
 }
 

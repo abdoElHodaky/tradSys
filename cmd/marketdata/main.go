@@ -2,49 +2,43 @@ package main
 
 import (
 	"github.com/abdoElHodaky/tradSys/internal/config"
-	"github.com/abdoElHodaky/tradSys/internal/events"
+	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"github.com/abdoElHodaky/tradSys/internal/marketdata"
 	"github.com/abdoElHodaky/tradSys/internal/micro"
 	"github.com/abdoElHodaky/tradSys/proto/marketdata"
+	"go-micro.dev/v4"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
 func main() {
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+
 	app := fx.New(
-		// Provide core components
-		fx.Provide(func() (*zap.Logger, error) {
-			return zap.NewProduction()
-		}),
-
-		// Include modules
-		fx.Options(
-			config.Module,
-			micro.Module,
-			micro.RegistryModule,
-			events.BrokerModule,
-			marketdata.Module,
-		),
-
-		// Configure service mesh
-		fx.Invoke(func(service *micro.Service, config *config.Config, logger *zap.Logger) {
-			meshOpts := micro.MeshOptions{
-				EnableTracing:       config.Tracing.Enabled,
-				EnableMetrics:       config.Metrics.Enabled,
-				EnableCircuitBreaker: config.Resilience.CircuitBreakerEnabled,
-				EnableRateLimiting:  config.Resilience.RateLimitingEnabled,
-			}
-			micro.ConfigureMesh(service.Service, meshOpts, logger)
-		}),
-
-		// Register service handlers
-		fx.Invoke(func(service *micro.Service, handler *marketdata.Handler, logger *zap.Logger) {
-			if err := marketdata.RegisterMarketDataServiceHandler(service.Server(), handler); err != nil {
-				logger.Fatal("Failed to register handler", zap.Error(err))
-			}
-		}),
+		fx.Supply(logger),
+		config.Module,
+		micro.Module,
+		repositories.MarketDataRepositoryModule,
+		marketdata.Module,
+		marketdata.ServiceModule,
+		fx.Invoke(registerMarketDataHandler),
 	)
 
 	app.Run()
+}
+
+func registerMarketDataHandler(
+	lc fx.Lifecycle,
+	logger *zap.Logger,
+	service *micro.Service,
+	handler *marketdata.Handler,
+) {
+	// Register the handler with the service
+	if err := marketdata.RegisterMarketDataServiceHandler(service.Server(), handler); err != nil {
+		logger.Fatal("Failed to register handler", zap.Error(err))
+	}
+
+	logger.Info("Market data service registered")
 }
 

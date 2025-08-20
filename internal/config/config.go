@@ -9,10 +9,23 @@ import (
 type Config struct {
 	// Service configuration
 	Service struct {
-		Name    string `json:"name"`
-		Version string `json:"version"`
-		Address string `json:"address"`
+		Name        string `json:"name"`
+		Version     string `json:"version"`
+		Address     string `json:"address"`
+		Environment string `json:"environment"`
 	} `json:"service"`
+
+	// Gateway configuration
+	Gateway struct {
+		Address            string `json:"address"`
+		ReadTimeout        int    `json:"readTimeout"`
+		WriteTimeout       int    `json:"writeTimeout"`
+		MaxHeaderBytes     int    `json:"maxHeaderBytes"`
+		RateLimitRequests  int    `json:"rateLimitRequests"`
+		RateLimitBurst     int    `json:"rateLimitBurst"`
+		CircuitBreakerThreshold int `json:"circuitBreakerThreshold"`
+		CircuitBreakerTimeout   int `json:"circuitBreakerTimeout"`
+	} `json:"gateway"`
 
 	// Registry configuration
 	Registry struct {
@@ -53,6 +66,13 @@ type Config struct {
 		CircuitBreakerEnabled bool `json:"circuitBreakerEnabled"`
 		RateLimitingEnabled   bool `json:"rateLimitingEnabled"`
 	} `json:"resilience"`
+
+	// Auth configuration
+	Auth struct {
+		JWTSecret     string `json:"jwtSecret"`
+		TokenExpiry   int    `json:"tokenExpiry"`
+		RefreshExpiry int    `json:"refreshExpiry"`
+	} `json:"auth"`
 }
 
 // NewConfig creates a new configuration with default values
@@ -64,6 +84,16 @@ func NewConfig(logger *zap.Logger) (*Config, error) {
 	cfg.Service.Name = "tradsys"
 	cfg.Service.Version = "1.0.0"
 	cfg.Service.Address = ":8080"
+	cfg.Service.Environment = "development"
+
+	cfg.Gateway.Address = ":8000"
+	cfg.Gateway.ReadTimeout = 5000
+	cfg.Gateway.WriteTimeout = 10000
+	cfg.Gateway.MaxHeaderBytes = 1 << 20 // 1MB
+	cfg.Gateway.RateLimitRequests = 100
+	cfg.Gateway.RateLimitBurst = 200
+	cfg.Gateway.CircuitBreakerThreshold = 5
+	cfg.Gateway.CircuitBreakerTimeout = 30
 
 	cfg.Registry.Type = "mdns"
 	cfg.Registry.Addresses = []string{}
@@ -86,6 +116,10 @@ func NewConfig(logger *zap.Logger) (*Config, error) {
 
 	cfg.Resilience.CircuitBreakerEnabled = false
 	cfg.Resilience.RateLimitingEnabled = false
+
+	cfg.Auth.JWTSecret = "default-jwt-secret-change-in-production"
+	cfg.Auth.TokenExpiry = 3600
+	cfg.Auth.RefreshExpiry = 86400
 
 	logger.Info("Configuration initialized with default values")
 

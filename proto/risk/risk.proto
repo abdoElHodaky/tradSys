@@ -1,69 +1,94 @@
 syntax = "proto3";
+
 package risk;
+
 option go_package = "github.com/abdoElHodaky/tradSys/proto/risk";
 
-import "proto/orders/orders.proto";
-
-message RiskCheckRequest {
-  orders.Order order = 1;
+// RiskService provides risk management operations
+service RiskService {
+  // ValidateOrder validates an order against risk parameters
+  rpc ValidateOrder(ValidateOrderRequest) returns (ValidateOrderResponse) {}
+  
+  // GetPositions returns current positions
+  rpc GetPositions(GetPositionsRequest) returns (GetPositionsResponse) {}
+  
+  // GetRiskLimits returns risk limits for a symbol
+  rpc GetRiskLimits(GetRiskLimitsRequest) returns (GetRiskLimitsResponse) {}
+  
+  // UpdateRiskLimits updates risk limits for a symbol
+  rpc UpdateRiskLimits(UpdateRiskLimitsRequest) returns (GetRiskLimitsResponse) {}
 }
 
-message RiskCheckResponse {
-  bool approved = 1;
-  string reason = 2;
+// OrderSide represents the side of an order
+enum OrderSide {
+  BUY = 0;
+  SELL = 1;
 }
 
-message PositionRequest {
+// ValidateOrderRequest is a request to validate an order
+message ValidateOrderRequest {
   string symbol = 1;
-  string account_id = 2;
+  OrderSide side = 2;
+  double quantity = 3;
+  double price = 4;
+  string account_id = 5;
 }
 
+// ValidateOrderResponse contains the result of order validation
+message ValidateOrderResponse {
+  bool valid = 1;
+  string reason = 2;
+  double max_allowed_quantity = 3;
+  double max_allowed_notional = 4;
+}
+
+// GetPositionsRequest is a request to get current positions
+message GetPositionsRequest {
+  string account_id = 1;
+  string symbol = 2;
+}
+
+// Position contains information about a position
 message Position {
   string symbol = 1;
-  string account_id = 2;
-  double quantity = 3;
-  double average_price = 4;
-  double unrealized_pnl = 5;
-  double realized_pnl = 6;
-  int64 timestamp = 7;
+  double quantity = 2;
+  double average_price = 3;
+  double unrealized_pnl = 4;
+  double realized_pnl = 5;
+  int64 updated_at = 6;
 }
 
-message PositionList {
+// GetPositionsResponse contains current positions
+message GetPositionsResponse {
   repeated Position positions = 1;
 }
 
-message RiskLimitRequest {
-  string account_id = 1;
-  string symbol = 2;
-}
-
-message RiskLimit {
-  string account_id = 1;
-  string symbol = 2;
-  double max_position = 3;
-  double max_order_size = 4;
-  double max_daily_loss = 5;
-  double current_daily_loss = 6;
-  bool active = 7;
-}
-
-message CircuitBreakerRequest {
+// GetRiskLimitsRequest is a request to get risk limits
+message GetRiskLimitsRequest {
   string symbol = 1;
+  string account_id = 2;
 }
 
-message CircuitBreakerStatus {
+// RiskLimits contains risk limits for a symbol
+message RiskLimits {
   string symbol = 1;
-  bool triggered = 2;
-  string reason = 3;
-  int64 trigger_time = 4;
-  int64 reset_time = 5;
+  double max_position_size = 2;
+  double max_notional_value = 3;
+  double max_leverage = 4;
+  double max_daily_volume = 5;
+  double max_daily_trades = 6;
+  double max_drawdown_percent = 7;
 }
 
-service RiskService {
-  rpc CheckOrderRisk(RiskCheckRequest) returns (RiskCheckResponse);
-  rpc GetPosition(PositionRequest) returns (Position);
-  rpc GetAllPositions(PositionRequest) returns (PositionList);
-  rpc GetRiskLimits(RiskLimitRequest) returns (RiskLimit);
-  rpc GetCircuitBreakerStatus(CircuitBreakerRequest) returns (CircuitBreakerStatus);
+// GetRiskLimitsResponse contains risk limits
+message GetRiskLimitsResponse {
+  RiskLimits limits = 1;
+}
+
+// UpdateRiskLimitsRequest is a request to update risk limits
+message UpdateRiskLimitsRequest {
+  string symbol = 1;
+  string account_id = 2;
+  RiskLimits limits = 3;
 }
 

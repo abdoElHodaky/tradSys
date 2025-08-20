@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/abdoElHodaky/tradSys/proto/ws"
+	"github.com/google/uuid"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -13,92 +14,91 @@ type HandlerParams struct {
 	fx.In
 
 	Logger *zap.Logger
+	Server *Server `optional:"true"`
 }
 
 // Handler implements the WebSocketService handler
 type Handler struct {
 	ws.UnimplementedWebSocketServiceServer
 	logger *zap.Logger
-	// In a real implementation, we would have a connection manager here
-	// connectionManager *ConnectionManager
+	server *Server
 }
 
 // NewHandler creates a new WebSocket handler with fx dependency injection
 func NewHandler(p HandlerParams) *Handler {
 	return &Handler{
 		logger: p.Logger,
+		server: p.Server,
 	}
 }
 
 // Subscribe implements the WebSocketService.Subscribe method
-func (h *Handler) Subscribe(ctx context.Context, req *ws.WebSocketRequest, rsp *ws.WebSocketResponse) error {
+func (h *Handler) Subscribe(ctx context.Context, req *ws.SubscribeRequest, rsp *ws.SubscribeResponse) error {
 	h.logger.Info("Subscribe called",
-		zap.String("channel", req.Channel),
+		zap.String("topic", req.Topic),
 		zap.String("client_id", req.ClientId))
 
 	// Implementation would go here
-	// For now, just return a success response
-	rsp.Type = "subscribe_success"
-	rsp.Channel = req.Channel
-	rsp.Status = 200
+	// For now, just return a placeholder response
+	rsp.Success = true
+	rsp.SubscriptionId = uuid.New().String()
 
 	return nil
 }
 
 // Unsubscribe implements the WebSocketService.Unsubscribe method
-func (h *Handler) Unsubscribe(ctx context.Context, req *ws.WebSocketRequest, rsp *ws.WebSocketResponse) error {
+func (h *Handler) Unsubscribe(ctx context.Context, req *ws.UnsubscribeRequest, rsp *ws.UnsubscribeResponse) error {
 	h.logger.Info("Unsubscribe called",
-		zap.String("channel", req.Channel),
+		zap.String("subscription_id", req.SubscriptionId),
 		zap.String("client_id", req.ClientId))
 
 	// Implementation would go here
-	// For now, just return a success response
-	rsp.Type = "unsubscribe_success"
-	rsp.Channel = req.Channel
-	rsp.Status = 200
+	// For now, just return a placeholder response
+	rsp.Success = true
 
 	return nil
 }
 
-// Send implements the WebSocketService.Send method
-func (h *Handler) Send(ctx context.Context, req *ws.WebSocketMessage, rsp *ws.WebSocketResponse) error {
-	h.logger.Info("Send called",
-		zap.String("channel", req.Channel),
-		zap.String("sender", req.Sender),
-		zap.Int("recipients", len(req.Recipients)))
+// Publish implements the WebSocketService.Publish method
+func (h *Handler) Publish(ctx context.Context, req *ws.PublishRequest, rsp *ws.PublishResponse) error {
+	h.logger.Info("Publish called",
+		zap.String("topic", req.Topic),
+		zap.Int("data_size", len(req.Data)))
 
 	// Implementation would go here
-	// For now, just return a success response
-	rsp.Type = "send_success"
-	rsp.Channel = req.Channel
-	rsp.Status = 200
+	// For now, just return a placeholder response
+	rsp.Success = true
+	rsp.Recipients = 10
 
 	return nil
 }
 
-// Receive implements the WebSocketService.Receive method
-func (h *Handler) Receive(ctx context.Context, req *ws.WebSocketRequest, stream ws.WebSocketService_ReceiveStream) error {
-	h.logger.Info("Receive called",
-		zap.String("channel", req.Channel),
-		zap.String("client_id", req.ClientId))
+// GetConnections implements the WebSocketService.GetConnections method
+func (h *Handler) GetConnections(ctx context.Context, req *ws.GetConnectionsRequest, rsp *ws.GetConnectionsResponse) error {
+	h.logger.Info("GetConnections called",
+		zap.String("topic", req.Topic))
 
 	// Implementation would go here
-	// For now, just send a placeholder message
-	msg := &ws.WebSocketMessage{
-		Type:      "message",
-		Payload:   []byte(`{"event": "test"}`),
-		Timestamp: 1625097600000,
-		Sequence:  1,
-		Channel:   req.Channel,
-		Sender:    "system",
+	// For now, just return placeholder connections
+	rsp.Connections = []*ws.Connection{
+		{
+			ClientId:      uuid.New().String(),
+			UserId:        "user1",
+			ConnectedAt:   1625097600000,
+			Subscriptions: []string{"marketdata.BTC-USD", "orders.updates"},
+			IpAddress:     "192.168.1.1",
+			UserAgent:     "Mozilla/5.0",
+		},
+		{
+			ClientId:      uuid.New().String(),
+			UserId:        "user2",
+			ConnectedAt:   1625097660000,
+			Subscriptions: []string{"marketdata.ETH-USD"},
+			IpAddress:     "192.168.1.2",
+			UserAgent:     "Chrome/91.0.4472.124",
+		},
 	}
-
-	if err := stream.Send(msg); err != nil {
-		return err
-	}
-
-	// In a real implementation, we would continue sending messages
-	// until the context is canceled or the stream is closed
+	rsp.TotalConnections = int32(len(rsp.Connections))
 
 	return nil
 }

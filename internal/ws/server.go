@@ -1,285 +1,189 @@
 package ws
 
 import (
-	"encoding/json"
-	"fmt"
+	"context"
 	"net/http"
 	"sync"
-	"time"
 
+	"github.com/abdoElHodaky/tradSys/internal/config"
 	"github.com/gorilla/websocket"
+	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
-// Message represents a WebSocket message
-type Message struct {
-	Type    string      `json:"type"`
-	Channel string      `json:"channel"`
-	Symbol  string      `json:"symbol,omitempty"`
-	Data    interface{} `json:"data"`
+// ServerParams contains the parameters for creating a WebSocket server
+type ServerParams struct {
+	fx.In
+
+	Logger    *zap.Logger
+	Config    *config.Config
+	Lifecycle fx.Lifecycle
 }
 
-// Connection represents a WebSocket connection
-type Connection struct {
-	conn      *websocket.Conn
-	send      chan []byte
-	server    *Server
-	symbol    string
-	channels  map[string]bool
-	closeOnce sync.Once
-	mu        sync.RWMutex
-}
-
-// Server manages WebSocket connections
+// Server represents a WebSocket server
 type Server struct {
 	logger     *zap.Logger
+	config     *config.Config
 	upgrader   websocket.Upgrader
-	clients    map[*Connection]bool
-	register   chan *Connection
-	unregister chan *Connection
-	broadcast  chan *Message
-	mu         sync.RWMutex
+	clients    map[string]*Client
+	clientsMux sync.RWMutex
 }
 
-// NewServer creates a new WebSocket server
-func NewServer(logger *zap.Logger) *Server {
-	return &Server{
-		logger: logger,
+// Client represents a WebSocket client connection
+type Client struct {
+	ID           string
+	UserID       string
+	Conn         *websocket.Conn
+	Subscriptions map[string]bool
+	Send         chan []byte
+}
+
+// NewServer creates a new WebSocket server with fx dependency injection
+func NewServer(p ServerParams) *Server {
+	server := &Server{
+		logger: p.Logger,
+		config: p.Config,
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
 			CheckOrigin: func(r *http.Request) bool {
-				return true // In production, implement proper origin checks
+				return true // In production, this should be more restrictive
 			},
 		},
-		clients:    make(map[*Connection]bool),
-		register:   make(chan *Connection),
-		unregister: make(chan *Connection),
-		broadcast:  make(chan *Message),
+		clients: make(map[string]*Client),
 	}
+
+	p.Lifecycle.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			p.Logger.Info("WebSocket server initialized")
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			p.Logger.Info("Stopping WebSocket server")
+			server.closeAllConnections()
+			return nil
+		},
+	})
+
+	return server
 }
 
-// Run starts the WebSocket server
-func (s *Server) Run() {
-	for {
-		select {
-		case client := <-s.register:
-			s.mu.Lock()
-			s.clients[client] = true
-			s.mu.Unlock()
-			s.logger.Info("Client registered",
-				zap.String("remote_addr", client.conn.RemoteAddr().String()))
+// closeAllConnections closes all WebSocket connections
+func (s *Server) closeAllConnections() {
+	s.clientsMux.Lock()
+	defer s.clientsMux.Unlock()
 
-		case client := <-s.unregister:
-			s.mu.Lock()
-			if _, ok := s.clients[client]; ok {
-				delete(s.clients, client)
-				close(client.send)
-			}
-			s.mu.Unlock()
-			s.logger.Info("Client unregistered",
-				zap.String("remote_addr", client.conn.RemoteAddr().String()))
-
-		case message := <-s.broadcast:
-			s.mu.RLock()
-			for client := range s.clients {
-				// Check if client is subscribed to this channel and symbol
-				client.mu.RLock()
-				subscribed := client.channels[message.Channel]
-				if message.Symbol != "" {
-					subscribed = subscribed && (client.symbol == "" || client.symbol == message.Symbol)
-				}
-				client.mu.RUnlock()
-
-				if subscribed {
-					// Serialize the message
-					data, err := json.Marshal(message)
-					if err != nil {
-						s.logger.Error("Failed to marshal message", zap.Error(err))
-						continue
-					}
-
-					select {
-					case client.send <- data:
-					default:
-						s.mu.RUnlock()
-						s.unregister <- client
-						s.mu.RLock()
-					}
-				}
-			}
-			s.mu.RUnlock()
+	for id, client := range s.clients {
+		if client.Conn != nil {
+			client.Conn.Close()
 		}
+		delete(s.clients, id)
 	}
 }
 
-// ServeWs handles WebSocket requests from clients
-func (s *Server) ServeWs(w http.ResponseWriter, r *http.Request) {
+// HandleWebSocket handles a WebSocket connection
+func (s *Server) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		s.logger.Error("Failed to upgrade connection", zap.Error(err))
 		return
 	}
 
-	client := &Connection{
-		conn:     conn,
-		send:     make(chan []byte, 256),
-		server:   s,
-		symbol:   r.URL.Query().Get("symbol"),
-		channels: make(map[string]bool),
+	// Create a new client
+	client := &Client{
+		ID:            r.URL.Query().Get("client_id"),
+		UserID:        r.URL.Query().Get("user_id"),
+		Conn:          conn,
+		Subscriptions: make(map[string]bool),
+		Send:          make(chan []byte, 256),
 	}
 
-	// Subscribe to default channels
-	client.channels["heartbeat"] = true
+	// Register the client
+	s.clientsMux.Lock()
+	s.clients[client.ID] = client
+	s.clientsMux.Unlock()
 
-	s.register <- client
+	s.logger.Info("New WebSocket connection",
+		zap.String("client_id", client.ID),
+		zap.String("user_id", client.UserID),
+		zap.String("remote_addr", r.RemoteAddr))
 
 	// Start goroutines for reading and writing
-	go client.writePump()
-	go client.readPump()
+	go s.readPump(client)
+	go s.writePump(client)
 }
 
-// writePump pumps messages from the hub to the websocket connection
-func (c *Connection) writePump() {
-	ticker := time.NewTicker(30 * time.Second)
+// readPump pumps messages from the WebSocket connection to the hub
+func (s *Server) readPump(client *Client) {
 	defer func() {
-		ticker.Stop()
-		c.closeOnce.Do(func() {
-			c.conn.Close()
-		})
+		s.clientsMux.Lock()
+		delete(s.clients, client.ID)
+		s.clientsMux.Unlock()
+		client.Conn.Close()
+		close(client.Send)
 	}()
 
 	for {
-		select {
-		case message, ok := <-c.send:
-			if !ok {
-				// The hub closed the channel
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
-				return
-			}
-
-			c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-			if err := c.conn.WriteMessage(websocket.TextMessage, message); err != nil {
-				c.server.logger.Error("Failed to write message", zap.Error(err))
-				return
-			}
-
-		case <-ticker.C:
-			c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				c.server.logger.Error("Failed to write ping", zap.Error(err))
-				return
-			}
-
-			// Send heartbeat
-			heartbeat := Message{
-				Type:    "heartbeat",
-				Channel: "heartbeat",
-				Data:    time.Now().Unix(),
-			}
-			data, err := json.Marshal(heartbeat)
-			if err != nil {
-				c.server.logger.Error("Failed to marshal heartbeat", zap.Error(err))
-				continue
-			}
-
-			if err := c.conn.WriteMessage(websocket.TextMessage, data); err != nil {
-				c.server.logger.Error("Failed to write heartbeat", zap.Error(err))
-				return
-			}
-		}
-	}
-}
-
-// readPump pumps messages from the websocket connection to the hub
-func (c *Connection) readPump() {
-	defer func() {
-		c.server.unregister <- c
-		c.closeOnce.Do(func() {
-			c.conn.Close()
-		})
-	}()
-
-	c.conn.SetReadLimit(512 * 1024) // 512KB
-	c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-	c.conn.SetPongHandler(func(string) error {
-		c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-		return nil
-	})
-
-	for {
-		_, message, err := c.conn.ReadMessage()
+		_, message, err := client.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				c.server.logger.Error("Unexpected close error", zap.Error(err))
+				s.logger.Error("WebSocket read error", zap.Error(err))
 			}
 			break
 		}
 
 		// Process the message
-		var msg Message
-		if err := json.Unmarshal(message, &msg); err != nil {
-			c.server.logger.Error("Failed to unmarshal message", zap.Error(err))
-			continue
-		}
+		s.logger.Debug("Received WebSocket message",
+			zap.String("client_id", client.ID),
+			zap.Int("message_size", len(message)))
 
-		// Handle subscription messages
-		if msg.Type == "subscribe" {
-			channel, ok := msg.Data.(string)
+		// In a real implementation, you would parse and handle the message here
+	}
+}
+
+// writePump pumps messages from the hub to the WebSocket connection
+func (s *Server) writePump(client *Client) {
+	defer client.Conn.Close()
+
+	for {
+		select {
+		case message, ok := <-client.Send:
 			if !ok {
-				c.server.logger.Error("Invalid subscription data", zap.Any("data", msg.Data))
-				continue
+				// The hub closed the channel
+				client.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
 			}
 
-			c.mu.Lock()
-			c.channels[channel] = true
-			c.mu.Unlock()
-
-			// Send confirmation
-			confirmation := Message{
-				Type:    "subscribed",
-				Channel: channel,
-				Symbol:  c.symbol,
-				Data:    fmt.Sprintf("Subscribed to %s", channel),
+			if err := client.Conn.WriteMessage(websocket.TextMessage, message); err != nil {
+				s.logger.Error("WebSocket write error", zap.Error(err))
+				return
 			}
-			data, err := json.Marshal(confirmation)
-			if err != nil {
-				c.server.logger.Error("Failed to marshal confirmation", zap.Error(err))
-				continue
-			}
-
-			c.send <- data
-		} else if msg.Type == "unsubscribe" {
-			channel, ok := msg.Data.(string)
-			if !ok {
-				c.server.logger.Error("Invalid unsubscription data", zap.Any("data", msg.Data))
-				continue
-			}
-
-			c.mu.Lock()
-			delete(c.channels, channel)
-			c.mu.Unlock()
-
-			// Send confirmation
-			confirmation := Message{
-				Type:    "unsubscribed",
-				Channel: channel,
-				Symbol:  c.symbol,
-				Data:    fmt.Sprintf("Unsubscribed from %s", channel),
-			}
-			data, err := json.Marshal(confirmation)
-			if err != nil {
-				c.server.logger.Error("Failed to marshal confirmation", zap.Error(err))
-				continue
-			}
-
-			c.send <- data
 		}
 	}
 }
 
-// Broadcast sends a message to all subscribed clients
-func (s *Server) Broadcast(message *Message) {
-	s.broadcast <- message
+// Broadcast sends a message to all clients subscribed to a topic
+func (s *Server) Broadcast(topic string, message []byte) int {
+	s.clientsMux.RLock()
+	defer s.clientsMux.RUnlock()
+
+	count := 0
+	for _, client := range s.clients {
+		if client.Subscriptions[topic] {
+			select {
+			case client.Send <- message:
+				count++
+			default:
+				// Client's send buffer is full, skip this client
+			}
+		}
+	}
+
+	return count
 }
+
+// ServerModule provides the WebSocket server module for fx
+var ServerModule = fx.Options(
+	fx.Provide(NewServer),
+)
 

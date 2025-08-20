@@ -1,0 +1,128 @@
+name: CD
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  docker:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: abdoelhodaky/tradsys
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: Build and push Gateway image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./build/gateway/Dockerfile
+          push: true
+          tags: abdoelhodaky/tradsys-gateway:${{ steps.meta.outputs.version }},abdoelhodaky/tradsys-gateway:latest
+          platforms: linux/amd64,linux/arm64
+
+      - name: Build and push Market Data image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: abdoelhodaky/tradsys-marketdata:${{ steps.meta.outputs.version }},abdoelhodaky/tradsys-marketdata:latest
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            SERVICE=marketdata
+
+      - name: Build and push Order Service image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: abdoelhodaky/tradsys-orders:${{ steps.meta.outputs.version }},abdoelhodaky/tradsys-orders:latest
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            SERVICE=orders
+
+      - name: Build and push Risk Service image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: abdoelhodaky/tradsys-risk:${{ steps.meta.outputs.version }},abdoelhodaky/tradsys-risk:latest
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            SERVICE=risk
+
+      - name: Build and push WebSocket Service image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: abdoelhodaky/tradsys-ws:${{ steps.meta.outputs.version }},abdoelhodaky/tradsys-ws:latest
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            SERVICE=ws
+
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: docker
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Update Kubernetes manifests
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          sed -i "s|image: abdoelhodaky/tradsys-gateway:.*|image: abdoelhodaky/tradsys-gateway:${VERSION}|g" deployments/kubernetes/gateway.yaml
+          sed -i "s|image: abdoelhodaky/tradsys-marketdata:.*|image: abdoelhodaky/tradsys-marketdata:${VERSION}|g" deployments/kubernetes/marketdata.yaml
+          sed -i "s|image: abdoelhodaky/tradsys-orders:.*|image: abdoelhodaky/tradsys-orders:${VERSION}|g" deployments/kubernetes/orders.yaml
+          sed -i "s|image: abdoelhodaky/tradsys-risk:.*|image: abdoelhodaky/tradsys-risk:${VERSION}|g" deployments/kubernetes/risk.yaml
+          sed -i "s|image: abdoelhodaky/tradsys-ws:.*|image: abdoelhodaky/tradsys-ws:${VERSION}|g" deployments/kubernetes/ws.yaml
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f deployments/kubernetes/
+          kubectl rollout status deployment/api-gateway
+          kubectl rollout status deployment/marketdata
+          kubectl rollout status deployment/orders
+          kubectl rollout status deployment/risk
+          kubectl rollout status deployment/ws
+

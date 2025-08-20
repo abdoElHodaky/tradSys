@@ -1,7 +1,25 @@
 syntax = "proto3";
+
 package orders;
+
 option go_package = "github.com/abdoElHodaky/tradSys/proto/orders";
 
+// OrderService provides order management operations
+service OrderService {
+  // CreateOrder creates a new order
+  rpc CreateOrder(CreateOrderRequest) returns (OrderResponse) {}
+  
+  // GetOrder returns an order by ID
+  rpc GetOrder(GetOrderRequest) returns (OrderResponse) {}
+  
+  // CancelOrder cancels an existing order
+  rpc CancelOrder(CancelOrderRequest) returns (OrderResponse) {}
+  
+  // GetOrders returns a list of orders
+  rpc GetOrders(GetOrdersRequest) returns (GetOrdersResponse) {}
+}
+
+// OrderType represents the type of order
 enum OrderType {
   MARKET = 0;
   LIMIT = 1;
@@ -9,109 +27,70 @@ enum OrderType {
   STOP_LIMIT = 3;
 }
 
+// OrderSide represents the side of an order
 enum OrderSide {
   BUY = 0;
   SELL = 1;
 }
 
+// OrderStatus represents the status of an order
 enum OrderStatus {
-  NEW = 0;
-  ACCEPTED = 1;
-  REJECTED = 2;
-  FILLED = 3;
-  PARTIAL = 4;
-  CANCELLED = 5;
+  PENDING = 0;
+  OPEN = 1;
+  FILLED = 2;
+  PARTIALLY_FILLED = 3;
+  CANCELED = 4;
+  REJECTED = 5;
 }
 
-message Order {
-  string order_id = 1;
-  string symbol = 2;
-  OrderType type = 3;
-  OrderSide side = 4;
-  double quantity = 5;
-  double price = 6;
-  string client_id = 7;
-  int64 timestamp = 8;
-  OrderStatus status = 9;
-  double filled_quantity = 10;
-  double average_price = 11;
-  string exchange = 12;
-  string notes = 13;
-//<<<<<<< codegen-bot/fix-order-model-syntax
-  double stop_loss = 14;
-  double take_profit = 15;
-  string strategy = 16;
-//=======
-//<<<<<<< codegen-bot/pairs-management-implementation
-  double stop_loss = 14;
-  double take_profit = 15;
-  string strategy = 16;
-///=======
-//>>>>>>> main
-//>>>>>>> main
-}
-
-message OrderRequest {
+// CreateOrderRequest is a request to create a new order
+message CreateOrderRequest {
   string symbol = 1;
   OrderType type = 2;
   OrderSide side = 3;
   double quantity = 4;
   double price = 5;
-  string client_id = 6;
-  string exchange = 7;
-//<<<<<<< codegen-bot/fix-order-model-syntax
-  double stop_loss = 8;
-  double take_profit = 9;
-  string strategy = 10;
-//=======
-//<<<<<<< codegen-bot/pairs-management-implementation
-  double stop_loss = 8;
-  double take_profit = 9;
-  string strategy = 10;
-//=======
-//>>>>>>> main
-//>>>>>>> main
+  double stop_price = 6;
+  string client_order_id = 7;
 }
 
-message OrderResponse {
-  string order_id = 1;
-  OrderStatus status = 2;
-  string message = 3;
-  Order order = 4;
-}
-
-message OrderCancelRequest {
-  string order_id = 1;
-  string client_id = 2;
-}
-
-message OrderStatusRequest {
+// GetOrderRequest is a request to get an order by ID
+message GetOrderRequest {
   string order_id = 1;
 }
 
-message OrderListRequest {
+// CancelOrderRequest is a request to cancel an order
+message CancelOrderRequest {
+  string order_id = 1;
+}
+
+// GetOrdersRequest is a request to get a list of orders
+message GetOrdersRequest {
   string symbol = 1;
   OrderStatus status = 2;
-  string client_id = 3;
-  int64 start_time = 4;
-  int64 end_time = 5;
+  int64 start_time = 3;
+  int64 end_time = 4;
+  int32 limit = 5;
 }
 
-message OrderList {
-  repeated Order orders = 1;
+// OrderResponse contains information about an order
+message OrderResponse {
+  string order_id = 1;
+  string symbol = 2;
+  OrderType type = 3;
+  OrderSide side = 4;
+  OrderStatus status = 5;
+  double quantity = 6;
+  double filled_quantity = 7;
+  double price = 8;
+  double stop_price = 9;
+  int64 created_at = 10;
+  int64 updated_at = 11;
+  string client_order_id = 12;
 }
 
-service OrderService {
-  rpc PlaceOrder(OrderRequest) returns (OrderResponse);
-  rpc CancelOrder(OrderCancelRequest) returns (OrderResponse);
-  rpc GetOrderStatus(OrderStatusRequest) returns (OrderResponse);
-  rpc GetOrders(OrderListRequest) returns (OrderList);
-  rpc SubscribeOrderUpdates(OrderStatusRequest) returns (stream OrderResponse);
+// GetOrdersResponse contains a list of orders
+message GetOrdersResponse {
+  repeated OrderResponse orders = 1;
 }
-//<<<<<<< codegen-bot/fix-order-model-syntax
-//=======
-//<<<<<<< codegen-bot/pairs-management-implementation
-//=======
 
-//>>>>>>> main
-//>>>>>>> main

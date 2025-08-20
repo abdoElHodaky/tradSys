@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/abdoElHodaky/tradSys/internal/config"
-	"github.com/abdoElHodaky/tradSys/internal/events"
+	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"github.com/abdoElHodaky/tradSys/internal/micro"
 	"github.com/abdoElHodaky/tradSys/internal/orders"
 	"github.com/abdoElHodaky/tradSys/proto/orders"
@@ -11,40 +11,33 @@ import (
 )
 
 func main() {
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+
 	app := fx.New(
-		// Provide core components
-		fx.Provide(func() (*zap.Logger, error) {
-			return zap.NewProduction()
-		}),
-
-		// Include modules
-		fx.Options(
-			config.Module,
-			micro.Module,
-			micro.RegistryModule,
-			events.BrokerModule,
-			orders.Module,
-		),
-
-		// Configure service mesh
-		fx.Invoke(func(service *micro.Service, config *config.Config, logger *zap.Logger) {
-			meshOpts := micro.MeshOptions{
-				EnableTracing:       config.Tracing.Enabled,
-				EnableMetrics:       config.Metrics.Enabled,
-				EnableCircuitBreaker: config.Resilience.CircuitBreakerEnabled,
-				EnableRateLimiting:  config.Resilience.RateLimitingEnabled,
-			}
-			micro.ConfigureMesh(service.Service, meshOpts, logger)
-		}),
-
-		// Register service handlers
-		fx.Invoke(func(service *micro.Service, handler *orders.Handler, logger *zap.Logger) {
-			if err := orders.RegisterOrderServiceHandler(service.Server(), handler); err != nil {
-				logger.Fatal("Failed to register handler", zap.Error(err))
-			}
-		}),
+		fx.Supply(logger),
+		config.Module,
+		micro.Module,
+		repositories.OrderRepositoryModule,
+		orders.Module,
+		orders.ServiceModule,
+		fx.Invoke(registerOrderHandler),
 	)
 
 	app.Run()
+}
+
+func registerOrderHandler(
+	lc fx.Lifecycle,
+	logger *zap.Logger,
+	service *micro.Service,
+	handler *orders.Handler,
+) {
+	// Register the handler with the service
+	if err := orders.RegisterOrderServiceHandler(service.Server(), handler); err != nil {
+		logger.Fatal("Failed to register handler", zap.Error(err))
+	}
+
+	logger.Info("Order service registered")
 }
 

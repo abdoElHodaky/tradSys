@@ -2,187 +2,218 @@ package repositories
 
 import (
 	"context"
-	"errors"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/db/models"
-	"github.com/abdoElHodaky/tradSys/internal/db/query"
+	"github.com/jmoiron/sqlx"
+	"go.uber.org/fx"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
-// RiskRepository handles database operations for risk management
+// RiskRepositoryParams contains the parameters for creating a risk repository
+type RiskRepositoryParams struct {
+	fx.In
+
+	Logger *zap.Logger
+	DB     *sqlx.DB `optional:"true"`
+}
+
+// RiskRepository provides database operations for risk management
 type RiskRepository struct {
-	db        *gorm.DB
-	logger    *zap.Logger
-	optimizer *query.Optimizer
+	logger *zap.Logger
+	db     *sqlx.DB
 }
 
-// NewRiskRepository creates a new risk repository
-func NewRiskRepository(db *gorm.DB, logger *zap.Logger) *RiskRepository {
-	repo := &RiskRepository{
-		db:        db,
-		logger:    logger,
-		optimizer: query.NewOptimizer(db, logger),
-	}
-	
-	return repo
+// Position represents a position in the database
+type Position struct {
+	ID           int64     `db:"id"`
+	AccountID    string    `db:"account_id"`
+	Symbol       string    `db:"symbol"`
+	Quantity     float64   `db:"quantity"`
+	AveragePrice float64   `db:"average_price"`
+	UnrealizedPnl float64  `db:"unrealized_pnl"`
+	RealizedPnl  float64   `db:"realized_pnl"`
+	CreatedAt    time.Time `db:"created_at"`
+	UpdatedAt    time.Time `db:"updated_at"`
 }
 
-// GetRiskLimit retrieves risk limits for an account and symbol
-func (r *RiskRepository) GetRiskLimit(ctx context.Context, accountID, symbol string) (*models.RiskLimit, error) {
-	var limit models.RiskLimit
-	
-	builder := query.NewBuilder(r.db, r.logger).
-		Table("risk_limits").
-		Where("account_id = ?", accountID)
-	
-	if symbol != "" {
-		builder.Where("symbol = ?", symbol)
-	} else {
-		// Get default risk limit (empty symbol)
-		builder.Where("symbol = ''")
+// RiskLimit represents risk limits in the database
+type RiskLimit struct {
+	ID                 int64     `db:"id"`
+	AccountID          string    `db:"account_id"`
+	Symbol             string    `db:"symbol"`
+	MaxPositionSize    float64   `db:"max_position_size"`
+	MaxNotionalValue   float64   `db:"max_notional_value"`
+	MaxLeverage        float64   `db:"max_leverage"`
+	MaxDailyVolume     float64   `db:"max_daily_volume"`
+	MaxDailyTrades     int       `db:"max_daily_trades"`
+	MaxDrawdownPercent float64   `db:"max_drawdown_percent"`
+	CreatedAt          time.Time `db:"created_at"`
+	UpdatedAt          time.Time `db:"updated_at"`
+}
+
+// NewRiskRepository creates a new risk repository with fx dependency injection
+func NewRiskRepository(p RiskRepositoryParams) *RiskRepository {
+	return &RiskRepository{
+		logger: p.Logger,
+		db:     p.DB,
 	}
-	
-	err := builder.First(&limit)
+}
+
+// GetPosition retrieves a position by account ID and symbol
+func (r *RiskRepository) GetPosition(ctx context.Context, accountID, symbol string) (*Position, error) {
+	if r.db == nil {
+		r.logger.Warn("Database connection not available")
+		return nil, nil
+	}
+
+	query := `
+		SELECT id, account_id, symbol, quantity, average_price, unrealized_pnl, realized_pnl, created_at, updated_at
+		FROM positions
+		WHERE account_id = $1 AND symbol = $2
+	`
+
+	var position Position
+	err := r.db.GetContext(ctx, &position, query, accountID, symbol)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// Return default risk limits if not found
-			return &models.RiskLimit{
-				AccountID:       accountID,
-				Symbol:          symbol,
-				MaxPosition:     1000,
-				MaxOrderSize:    100,
-				MaxDailyLoss:    1000,
-				CurrentDailyLoss: 0,
-				Active:          true,
-			}, nil
-		}
-		
-		r.logger.Error("Failed to get risk limit",
-			zap.Error(err),
+		r.logger.Error("Failed to get position",
 			zap.String("account_id", accountID),
-			zap.String("symbol", symbol))
+			zap.String("symbol", symbol),
+			zap.Error(err))
 		return nil, err
 	}
-	
-	return &limit, nil
+
+	return &position, nil
 }
 
-// UpdateRiskLimit updates a risk limit
-func (r *RiskRepository) UpdateRiskLimit(ctx context.Context, limit *models.RiskLimit) error {
-	result := r.db.WithContext(ctx).Save(limit)
-	if result.Error != nil {
-		r.logger.Error("Failed to update risk limit", 
-			zap.Error(result.Error),
-			zap.String("account_id", limit.AccountID),
-			zap.String("symbol", limit.Symbol))
-		return result.Error
+// GetPositions retrieves positions by account ID
+func (r *RiskRepository) GetPositions(ctx context.Context, accountID string) ([]*Position, error) {
+	if r.db == nil {
+		r.logger.Warn("Database connection not available")
+		return nil, nil
 	}
+
+	query := `
+		SELECT id, account_id, symbol, quantity, average_price, unrealized_pnl, realized_pnl, created_at, updated_at
+		FROM positions
+		WHERE account_id = $1
+	`
+
+	var positions []*Position
+	err := r.db.SelectContext(ctx, &positions, query, accountID)
+	if err != nil {
+		r.logger.Error("Failed to get positions",
+			zap.String("account_id", accountID),
+			zap.Error(err))
+		return nil, err
+	}
+
+	return positions, nil
+}
+
+// UpdatePosition updates a position
+func (r *RiskRepository) UpdatePosition(ctx context.Context, position *Position) error {
+	if r.db == nil {
+		r.logger.Warn("Database connection not available")
+		return nil
+	}
+
+	query := `
+		UPDATE positions
+		SET quantity = $1, average_price = $2, unrealized_pnl = $3, realized_pnl = $4, updated_at = $5
+		WHERE account_id = $6 AND symbol = $7
+	`
+
+	position.UpdatedAt = time.Now()
+
+	_, err := r.db.ExecContext(ctx, query,
+		position.Quantity,
+		position.AveragePrice,
+		position.UnrealizedPnl,
+		position.RealizedPnl,
+		position.UpdatedAt,
+		position.AccountID,
+		position.Symbol,
+	)
+
+	if err != nil {
+		r.logger.Error("Failed to update position",
+			zap.String("account_id", position.AccountID),
+			zap.String("symbol", position.Symbol),
+			zap.Error(err))
+		return err
+	}
+
 	return nil
 }
 
-// CreateRiskCheck records a risk check
-func (r *RiskRepository) CreateRiskCheck(ctx context.Context, check *models.RiskCheck) error {
-	result := r.db.WithContext(ctx).Create(check)
-	if result.Error != nil {
-		r.logger.Error("Failed to create risk check", 
-			zap.Error(result.Error),
-			zap.String("order_id", check.OrderID))
-		return result.Error
+// GetRiskLimits retrieves risk limits by account ID and symbol
+func (r *RiskRepository) GetRiskLimits(ctx context.Context, accountID, symbol string) (*RiskLimit, error) {
+	if r.db == nil {
+		r.logger.Warn("Database connection not available")
+		return nil, nil
 	}
+
+	query := `
+		SELECT id, account_id, symbol, max_position_size, max_notional_value, max_leverage,
+			max_daily_volume, max_daily_trades, max_drawdown_percent, created_at, updated_at
+		FROM risk_limits
+		WHERE account_id = $1 AND symbol = $2
+	`
+
+	var limits RiskLimit
+	err := r.db.GetContext(ctx, &limits, query, accountID, symbol)
+	if err != nil {
+		r.logger.Error("Failed to get risk limits",
+			zap.String("account_id", accountID),
+			zap.String("symbol", symbol),
+			zap.Error(err))
+		return nil, err
+	}
+
+	return &limits, nil
+}
+
+// UpdateRiskLimits updates risk limits
+func (r *RiskRepository) UpdateRiskLimits(ctx context.Context, limits *RiskLimit) error {
+	if r.db == nil {
+		r.logger.Warn("Database connection not available")
+		return nil
+	}
+
+	query := `
+		UPDATE risk_limits
+		SET max_position_size = $1, max_notional_value = $2, max_leverage = $3,
+			max_daily_volume = $4, max_daily_trades = $5, max_drawdown_percent = $6, updated_at = $7
+		WHERE account_id = $8 AND symbol = $9
+	`
+
+	limits.UpdatedAt = time.Now()
+
+	_, err := r.db.ExecContext(ctx, query,
+		limits.MaxPositionSize,
+		limits.MaxNotionalValue,
+		limits.MaxLeverage,
+		limits.MaxDailyVolume,
+		limits.MaxDailyTrades,
+		limits.MaxDrawdownPercent,
+		limits.UpdatedAt,
+		limits.AccountID,
+		limits.Symbol,
+	)
+
+	if err != nil {
+		r.logger.Error("Failed to update risk limits",
+			zap.String("account_id", limits.AccountID),
+			zap.String("symbol", limits.Symbol),
+			zap.Error(err))
+		return err
+	}
+
 	return nil
 }
 
-// GetCircuitBreaker retrieves circuit breaker status for a symbol
-func (r *RiskRepository) GetCircuitBreaker(ctx context.Context, symbol string) (*models.CircuitBreaker, error) {
-	var breaker models.CircuitBreaker
-	
-	builder := query.NewBuilder(r.db, r.logger).
-		Table("circuit_breakers").
-		Where("symbol = ?", symbol)
-	
-	err := builder.First(&breaker)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// Return a new circuit breaker if not found
-			return &models.CircuitBreaker{
-				Symbol:    symbol,
-				Triggered: false,
-			}, nil
-		}
-		
-		r.logger.Error("Failed to get circuit breaker",
-			zap.Error(err),
-			zap.String("symbol", symbol))
-		return nil, err
-	}
-	
-	return &breaker, nil
-}
-
-// UpdateCircuitBreaker updates a circuit breaker
-func (r *RiskRepository) UpdateCircuitBreaker(ctx context.Context, breaker *models.CircuitBreaker) error {
-	// Use a transaction to ensure atomicity
-	tx := r.db.WithContext(ctx).Begin()
-	if tx.Error != nil {
-		return tx.Error
-	}
-	
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-	
-	// Try to update existing circuit breaker
-	result := tx.Model(&models.CircuitBreaker{}).
-		Where("symbol = ?", breaker.Symbol).
-		Updates(map[string]interface{}{
-			"triggered":     breaker.Triggered,
-			"reason":        breaker.Reason,
-			"trigger_time":  breaker.TriggerTime,
-			"reset_time":    breaker.ResetTime,
-			"updated_at":    time.Now(),
-		})
-	
-	// If no record was updated, create a new one
-	if result.RowsAffected == 0 {
-		if err := tx.Create(breaker).Error; err != nil {
-			tx.Rollback()
-			r.logger.Error("Failed to create circuit breaker", 
-				zap.Error(err),
-				zap.String("symbol", breaker.Symbol))
-			return err
-		}
-	} else if result.Error != nil {
-		tx.Rollback()
-		r.logger.Error("Failed to update circuit breaker", 
-			zap.Error(result.Error),
-			zap.String("symbol", breaker.Symbol))
-		return result.Error
-	}
-	
-	return tx.Commit().Error
-}
-
-// GetRiskChecks retrieves risk checks for an order
-func (r *RiskRepository) GetRiskChecks(ctx context.Context, orderID string) ([]*models.RiskCheck, error) {
-	var checks []*models.RiskCheck
-	
-	builder := query.NewBuilder(r.db, r.logger).
-		Table("risk_checks").
-		Where("order_id = ?", orderID).
-		OrderBy("check_time DESC")
-	
-	err := builder.Execute(&checks)
-	if err != nil {
-		r.logger.Error("Failed to get risk checks",
-			zap.Error(err),
-			zap.String("order_id", orderID))
-		return nil, err
-	}
-	
-	return checks, nil
-}
+// RiskRepositoryModule provides the risk repository module for fx
+var RiskRepositoryModule = fx.Options(
+	fx.Provide(NewRiskRepository),
+)
 
