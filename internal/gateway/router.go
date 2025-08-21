@@ -51,10 +51,22 @@ func (r *Router) registerHealthRoutes() {
 
 // registerAuthRoutes registers authentication routes
 func (r *Router) registerAuthRoutes(authMiddleware *auth.Middleware) {
-	auth := r.engine.Group("/auth")
+	authGroup := r.engine.Group("/auth")
 	{
-		auth.POST("/login", authMiddleware.LoginHandler)
-		auth.POST("/refresh", authMiddleware.RefreshHandler)
+		// These routes are implemented in the user handler
+		authGroup.POST("/register", func(c *gin.Context) {
+			c.JSON(200, gin.H{
+				"message": "Registration endpoint is available at /api/auth/register",
+			})
+		})
+		
+		authGroup.POST("/login", func(c *gin.Context) {
+			c.JSON(200, gin.H{
+				"message": "Login endpoint is available at /api/auth/login",
+			})
+		})
+		
+		authGroup.POST("/refresh", authMiddleware.RefreshHandler)
 	}
 }
 
@@ -88,6 +100,8 @@ func (r *Router) registerAPIRoutes(authMiddleware *auth.Middleware) {
 	{
 		risk.GET("/positions", forwardToService("risk", "/positions"))
 		risk.GET("/limits", forwardToService("risk", "/limits"))
+		risk.POST("/limits", forwardToService("risk", "/limits"))
+		risk.DELETE("/limits/:id", forwardToService("risk", "/limits/:id"))
 		risk.POST("/validate", forwardToService("risk", "/validate"))
 	}
 
@@ -146,4 +160,3 @@ func forwardToService(serviceName, path string) gin.HandlerFunc {
 		})
 	}
 }
-
