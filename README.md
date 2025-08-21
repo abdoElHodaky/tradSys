@@ -1,6 +1,6 @@
-# High-Frequency Trading Platform
+# TradSys - High-Frequency Trading Platform
 
-A high-performance trading platform built with Go, Gin, and WebSockets for real-time market data and order execution.
+A high-performance trading platform built with Go, Gin, and fx dependency injection for real-time market data and order execution.
 
 ## Architecture
 
@@ -15,13 +15,83 @@ The platform follows a microservices architecture with the following components:
 ## Technology Stack
 
 - **Backend Framework**: Go with Gin
+- **Dependency Injection**: Uber's fx framework
 - **Communication**: gRPC for internal services, WebSockets for client communication
 - **Service Mesh**: go-micro for service discovery and resilience
 - **Event Streaming**: NATS for asynchronous messaging
-- **Database**: PostgreSQL for persistent storage
+- **Database**: PostgreSQL with GORM for persistent storage
 - **Caching**: In-memory caching with go-cache
 - **Observability**: Distributed tracing with Jaeger, metrics with Prometheus
 - **Deployment**: Kubernetes for orchestration
+
+## Key Components
+
+### Authentication API
+
+The Authentication API provides secure user authentication and authorization:
+
+- JWT-based authentication with token refresh
+- Role-based access control
+- Secure password hashing
+- Context propagation for user identification
+- API endpoints:
+  - POST /api/auth/login - Authenticate a user
+  - POST /api/auth/refresh - Refresh an access token
+  - POST /api/auth/register - Register a new user
+
+### Order Management API
+
+The Order Management API handles all order-related operations:
+
+- Full CRUD operations for orders
+- Database integration with GORM
+- Order validation and execution
+- Transaction support
+- API endpoints:
+  - GET /api/orders - List orders with filtering
+  - POST /api/orders - Create a new order
+  - GET /api/orders/:id - Get a specific order
+  - DELETE /api/orders/:id - Cancel an order
+
+### Risk Management API
+
+The Risk Management API provides risk control and position management:
+
+- Position tracking and management
+- Risk limit creation and enforcement
+- Order validation against risk parameters
+- Circuit breaker functionality
+- API endpoints:
+  - GET /api/risk/positions - Get user positions
+  - GET /api/risk/limits - Get user risk limits
+  - POST /api/risk/limits - Create or update risk limits
+  - DELETE /api/risk/limits/:id - Delete a risk limit
+  - POST /api/risk/validate - Validate an order against risk limits
+
+## Dependency Injection with fx
+
+The platform uses Uber's fx framework for dependency injection, providing:
+
+- Modular code organization
+- Simplified testing
+- Automatic dependency resolution
+- Lifecycle management
+- Clean separation of concerns
+
+Example of a module definition:
+
+```go
+// Module provides the risk service module for fx
+var Module = fx.Options(
+    // Provide the risk repository
+    fx.Provide(func(db *gorm.DB, logger *zap.Logger) *repositories.RiskRepository {
+        return repositories.NewRiskRepository(db, logger)
+    }),
+    
+    // Provide the risk service
+    fx.Provide(NewService),
+)
+```
 
 ## Features
 
@@ -70,13 +140,9 @@ The platform follows a microservices architecture with the following components:
    go mod download
    ```
 
-2. Run a specific service:
+2. Run the application:
    ```bash
-   go run cmd/gateway/main.go
-   go run cmd/marketdata/main.go
-   go run cmd/orders/main.go
-   go run cmd/risk/main.go
-   go run cmd/ws/main.go
+   go run cmd/main.go
    ```
 
 3. Run tests:
@@ -86,7 +152,46 @@ The platform follows a microservices architecture with the following components:
 
 ## API Documentation
 
-The API documentation is available at http://localhost:8000/swagger/index.html when running the API Gateway.
+The API documentation is available at http://localhost:8000/docs/swagger-ui/index.html when running the application.
+
+## Project Structure
+
+```
+tradSys/
+├── cmd/                    # Application entry points
+│   └── main.go             # Main application entry point
+├── internal/               # Internal packages
+│   ├── api/                # API handlers and routes
+│   │   ├── handlers/       # HTTP handlers
+│   │   └── module.go       # API module definition
+│   ├── auth/               # Authentication
+│   │   ├── middleware.go   # Authentication middleware
+│   │   └── module.go       # Auth module definition
+│   ├── config/             # Configuration
+│   ├── db/                 # Database
+│   │   ├── models.go       # Database models
+│   │   ├── module.go       # Database module definition
+│   │   └── repositories/   # Database repositories
+│   ├── gateway/            # API Gateway
+│   ├── orders/             # Order management
+│   │   ├── interface.go    # Service interface
+│   │   ├── module.go       # Order module definition
+│   │   └── service.go      # Order service implementation
+│   └── risk/               # Risk management
+│       ├── interface.go    # Service interface
+│       ├── module.go       # Risk module definition
+│       └── service.go      # Risk service implementation
+├── proto/                  # Protocol Buffers definitions
+│   ├── auth/               # Auth service protos
+│   ├── orders/             # Order service protos
+│   └── risk/               # Risk service protos
+├── docs/                   # Documentation
+│   ├── swagger-ui/         # Swagger UI
+│   └── swagger.yaml        # OpenAPI specification
+├── scripts/                # Utility scripts
+├── docker-compose.yml      # Docker Compose configuration
+└── README.md               # Project documentation
+```
 
 ## Monitoring
 
