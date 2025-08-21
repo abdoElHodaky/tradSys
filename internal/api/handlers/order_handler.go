@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/abdoElHodaky/tradSys/internal/orders"
 	"github.com/abdoElHodaky/tradSys/proto/orders"
@@ -110,9 +112,22 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 		return
 	}
 
+	// Create a context with user ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	
+	// Add user ID to context
+	ctx := context.WithValue(c.Request.Context(), "user_id", userID.(string))
+	
+	// Add client IP to context for audit purposes
+	ctx = context.WithValue(ctx, "client_ip", c.ClientIP())
+
 	// Create order
 	order, err := h.service.CreateOrder(
-		c.Request.Context(),
+		ctx,
 		req.Symbol,
 		orderType,
 		orderSide,
@@ -123,7 +138,18 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	)
 	if err != nil {
 		h.logger.Error("Failed to create order", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create order"})
+		
+		// Return appropriate error message based on the error
+		if err.Error() == "client order ID already exists" {
+			c.JSON(http.StatusConflict, gin.H{"error": "Client order ID already exists"})
+		} else if err.Error() == "symbol is required" || 
+			err.Error() == "quantity must be greater than 0" ||
+			err.Error() == "price must be greater than 0 for limit orders" ||
+			err.Error() == "stop price must be greater than 0 for stop orders" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create order"})
+		}
 		return
 	}
 
@@ -140,10 +166,29 @@ func (h *OrderHandler) GetOrder(c *gin.Context) {
 		return
 	}
 
-	order, err := h.service.GetOrder(c.Request.Context(), orderID)
+	// Create a context with user ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	
+	// Add user ID to context
+	ctx := context.WithValue(c.Request.Context(), "user_id", userID.(string))
+	
+	// Add client IP to context for audit purposes
+	ctx = context.WithValue(ctx, "client_ip", c.ClientIP())
+
+	order, err := h.service.GetOrder(ctx, orderID)
 	if err != nil {
 		h.logger.Error("Failed to get order", zap.Error(err), zap.String("order_id", orderID))
-		c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
+		
+		// Don't expose internal errors to the client
+		if err.Error() == "order not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get order"})
+		}
 		return
 	}
 
@@ -159,10 +204,31 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 		return
 	}
 
-	order, err := h.service.CancelOrder(c.Request.Context(), orderID)
+	// Create a context with user ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	
+	// Add user ID to context
+	ctx := context.WithValue(c.Request.Context(), "user_id", userID.(string))
+	
+	// Add client IP to context for audit purposes
+	ctx = context.WithValue(ctx, "client_ip", c.ClientIP())
+
+	order, err := h.service.CancelOrder(ctx, orderID)
 	if err != nil {
 		h.logger.Error("Failed to cancel order", zap.Error(err), zap.String("order_id", orderID))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel order"})
+		
+		// Return appropriate error message based on the error
+		if err.Error() == "order not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
+		} else if strings.HasPrefix(err.Error(), "order cannot be canceled: status is") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel order"})
+		}
 		return
 	}
 
@@ -180,12 +246,12 @@ func (h *OrderHandler) GetOrders(c *gin.Context) {
 	switch statusStr {
 	case "pending":
 		status = orders.OrderStatus_PENDING
-	case "open":
+	case "open", "new", "partially_filled":
 		status = orders.OrderStatus_OPEN
 	case "filled":
 		status = orders.OrderStatus_FILLED
 	case "canceled":
-		status = orders.OrderStatus_CANCELED
+		status = orders.OrderStatus_CANCELLED
 	case "rejected":
 		status = orders.OrderStatus_REJECTED
 	default:
@@ -199,8 +265,21 @@ func (h *OrderHandler) GetOrders(c *gin.Context) {
 		limit = 100
 	}
 
+	// Create a context with user ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	
+	// Add user ID to context
+	ctx := context.WithValue(c.Request.Context(), "user_id", userID.(string))
+	
+	// Add client IP to context for audit purposes
+	ctx = context.WithValue(ctx, "client_ip", c.ClientIP())
+
 	orderList, err := h.service.GetOrders(
-		c.Request.Context(),
+		ctx,
 		symbol,
 		status,
 		startTime,
@@ -217,6 +296,11 @@ func (h *OrderHandler) GetOrders(c *gin.Context) {
 	var response []OrderResponse
 	for _, order := range orderList {
 		response = append(response, mapOrderResponse(order))
+	}
+
+	// Return empty array instead of null if no orders found
+	if response == nil {
+		response = []OrderResponse{}
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -273,4 +357,3 @@ func mapOrderResponse(order *orders.OrderResponse) OrderResponse {
 		ClientOrderID:  order.ClientOrderId,
 	}
 }
-
