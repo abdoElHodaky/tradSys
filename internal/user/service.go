@@ -104,8 +104,16 @@ func (s *Service) LoginUser(ctx context.Context, usernameOrEmail, password strin
 		s.logger.Warn("Failed to update last login", zap.Error(err), zap.String("user_id", user.ID))
 	}
 
+	// Create JWT service
+	jwtConfig := auth.JWTConfig{
+		SecretKey:     "your-secret-key", // In production, use environment variable
+		TokenDuration: 24 * time.Hour,
+		Issuer:        "tradsys-api",
+	}
+	jwtService := auth.NewJWTService(jwtConfig)
+	
 	// Generate JWT token
-	token, err := auth.GenerateToken(user.ID, user.Username, user.Role)
+	token, err := jwtService.GenerateToken(user.ID, user.Username, user.Role)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate token: %w", err)
 	}

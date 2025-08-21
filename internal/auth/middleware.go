@@ -52,7 +52,7 @@ func (m *Middleware) JWTAuth() gin.HandlerFunc {
 		}
 
 		// Set the claims in the context
-		c.Set("userID", claims.UserID)
+		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Set("role", claims.Role)
 
@@ -80,3 +80,64 @@ func (m *Middleware) RoleAuth(requiredRole string) gin.HandlerFunc {
 	}
 }
 
+// RefreshHandler handles token refresh requests
+func (m *Middleware) RefreshHandler(c *gin.Context) {
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is required"})
+		return
+	}
+
+	// Check if the Authorization header has the correct format
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header must be in the format 'Bearer {token}'"})
+		return
+	}
+
+	// Extract the token
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+
+	// Refresh the token
+	newToken, err := m.jwtService.RefreshToken(tokenString)
+	if err != nil {
+		m.logger.Error("Failed to refresh token", zap.Error(err))
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"token": newToken,
+	})
+}
+
+// AuthRequired is a middleware that requires authentication
+func (m *Middleware) AuthRequired() gin.HandlerFunc {
+	return m.JWTAuth()
+}
+
+// AdminRequired is a middleware that requires admin role
+func (m *Middleware) AdminRequired() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// First check authentication
+		m.JWTAuth()(c)
+		if c.IsAborted() {
+			return
+		}
+
+		// Then check role
+		role, exists := c.Get("role")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "User role not found"})
+			c.Abort()
+			return
+		}
+
+		if role != "admin" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}
