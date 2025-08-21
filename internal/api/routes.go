@@ -19,6 +19,9 @@ func RegisterRoutes(
 	positionRepo *repositories.PairPositionRepository,
 	strategyManager *strategy.StrategyManager,
 ) {
+	// Register Swagger documentation routes
+	RegisterSwaggerRoutes(router)
+	
 	// API version group
 	v1 := router.Group("/api/v1")
 	
