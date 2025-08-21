@@ -2,6 +2,7 @@ package resilience
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/sony/gobreaker"
@@ -9,331 +10,494 @@ import (
 	"go.uber.org/zap"
 )
 
-// CircuitBreakerModule provides the optimized circuit breaker components
-// following Fx's modular design pattern
-var CircuitBreakerModule = fx.Options(
-	// Provide the circuit breaker factory
-	fx.Provide(NewCircuitBreakerFactory),
-	
-	// Provide the default circuit breaker configuration
-	fx.Provide(NewDefaultCircuitBreakerConfig),
-	
-	// Provide the circuit breaker metrics collector
-	fx.Provide(NewCircuitBreakerMetrics),
-	
-	// Register lifecycle hooks
-	fx.Invoke(registerCircuitBreakerHooks),
-)
-
-// CircuitBreakerConfig contains configuration for the circuit breaker
-type CircuitBreakerConfig struct {
-	// Name is the name of the circuit breaker
-	Name string
-	
-	// MaxRequests is the maximum number of requests allowed to pass through
-	// when the CircuitBreaker is half-open
-	MaxRequests uint32
-	
-	// Interval is the cyclic period of the closed state
-	// for CircuitBreaker to clear the internal Counts
-	Interval time.Duration
-	
-	// Timeout is the period of the open state,
-	// after which the state of CircuitBreaker becomes half-open
-	Timeout time.Duration
-	
-	// ReadyToTrip is called with a copy of Counts whenever a request fails in the closed state
-	// If ReadyToTrip returns true, CircuitBreaker will be placed into the open state
-	ReadyToTrip func(counts gobreaker.Counts) bool
-	
-	// OnStateChange is called whenever the state of CircuitBreaker changes
-	OnStateChange func(name string, from gobreaker.State, to gobreaker.State)
-}
-
-// NewDefaultCircuitBreakerConfig returns the default circuit breaker configuration
-// This follows Fx's pattern of providing default configurations as injectable dependencies
-func NewDefaultCircuitBreakerConfig() *CircuitBreakerConfig {
-	return &CircuitBreakerConfig{
-		Name:        "default",
-		MaxRequests: 1,
-		Interval:    0, // disabled
-		Timeout:     5 * time.Second,
-		ReadyToTrip: func(counts gobreaker.Counts) bool {
-			// Trip when the consecutive failures is more than 5
-			return counts.ConsecutiveFailures > 5
-		},
-		OnStateChange: nil,
-	}
-}
-
-// CircuitBreakerMetrics collects metrics for circuit breakers
-// Following Fx's pattern of separating concerns
-type CircuitBreakerMetrics struct {
-	logger *zap.Logger
-}
-
-// NewCircuitBreakerMetrics creates a new circuit breaker metrics collector
-func NewCircuitBreakerMetrics(logger *zap.Logger) *CircuitBreakerMetrics {
-	return &CircuitBreakerMetrics{
-		logger: logger,
-	}
-}
-
-// RecordStateChange records a state change for a circuit breaker
-func (m *CircuitBreakerMetrics) RecordStateChange(name string, from, to gobreaker.State) {
-	m.logger.Info("Circuit breaker state changed",
-		zap.String("name", name),
-		zap.String("from", stateToString(from)),
-		zap.String("to", stateToString(to)))
-}
-
-// RecordSuccess records a successful execution for a circuit breaker
-func (m *CircuitBreakerMetrics) RecordSuccess(name string, duration time.Duration) {
-	m.logger.Debug("Circuit breaker execution succeeded",
-		zap.String("name", name),
-		zap.Duration("duration", duration))
-}
-
-// RecordFailure records a failed execution for a circuit breaker
-func (m *CircuitBreakerMetrics) RecordFailure(name string, duration time.Duration, err error) {
-	m.logger.Debug("Circuit breaker execution failed",
-		zap.String("name", name),
-		zap.Duration("duration", duration),
-		zap.Error(err))
+// CircuitBreakerResult represents the result of a circuit breaker execution
+type CircuitBreakerResult struct {
+	Value interface{}
+	Error error
 }
 
 // CircuitBreakerFactory creates and manages circuit breakers
-// This is the main service that will be injected into other components
 type CircuitBreakerFactory struct {
-	logger    *zap.Logger
-	metrics   *CircuitBreakerMetrics
-	config    *CircuitBreakerConfig
-	breakers  map[string]*gobreaker.CircuitBreaker
-	configs   map[string]CircuitBreakerConfig
+	logger     *zap.Logger
+	breakers   map[string]*gobreaker.CircuitBreaker
+	settings   map[string]gobreaker.Settings
+	mu         sync.RWMutex
+	metrics    *CircuitBreakerMetrics
 }
 
-// CircuitBreakerResult wraps the result of a circuit breaker execution
-// to provide more context about the execution
-type CircuitBreakerResult struct {
-	Value      interface{}
-	Error      error
-	Duration   time.Duration
-	BreakerName string
-	State      gobreaker.State
+// CircuitBreakerParams contains parameters for creating a CircuitBreakerFactory
+type CircuitBreakerParams struct {
+	fx.In
+
+	Logger *zap.Logger
 }
 
-// NewCircuitBreakerFactory creates a new circuit breaker factory
-// Following Fx's dependency injection pattern
-func NewCircuitBreakerFactory(
-	logger *zap.Logger,
-	metrics *CircuitBreakerMetrics,
-	config *CircuitBreakerConfig,
-) *CircuitBreakerFactory {
+// NewCircuitBreakerFactory creates a new CircuitBreakerFactory
+func NewCircuitBreakerFactory(params CircuitBreakerParams) *CircuitBreakerFactory {
+	metrics := NewCircuitBreakerMetrics()
+	
 	return &CircuitBreakerFactory{
-		logger:   logger,
-		metrics:  metrics,
-		config:   config,
+		logger:   params.Logger,
 		breakers: make(map[string]*gobreaker.CircuitBreaker),
-		configs:  make(map[string]CircuitBreakerConfig),
+		settings: make(map[string]gobreaker.Settings),
+		metrics:  metrics,
 	}
 }
 
-// CreateCircuitBreaker creates a new circuit breaker with the given name and default configuration
-func (f *CircuitBreakerFactory) CreateCircuitBreaker(name string) *gobreaker.CircuitBreaker {
-	config := *f.config
-	config.Name = name
-	return f.CreateCustomCircuitBreaker(config)
-}
-
-// CreateCustomCircuitBreaker creates a new circuit breaker with custom configuration
-func (f *CircuitBreakerFactory) CreateCustomCircuitBreaker(config CircuitBreakerConfig) *gobreaker.CircuitBreaker {
-	// Store the configuration
-	f.configs[config.Name] = config
-	
-	// Create the circuit breaker settings
-	settings := gobreaker.Settings{
-		Name:        config.Name,
-		MaxRequests: config.MaxRequests,
-		Interval:    config.Interval,
-		Timeout:     config.Timeout,
-		ReadyToTrip: config.ReadyToTrip,
+// DefaultSettings returns the default circuit breaker settings
+func DefaultSettings(name string, logger *zap.Logger, metrics *CircuitBreakerMetrics) gobreaker.Settings {
+	return gobreaker.Settings{
+		Name:        name,
+		MaxRequests: 5,
+		Interval:    30 * time.Second,
+		Timeout:     60 * time.Second,
+		ReadyToTrip: func(counts gobreaker.Counts) bool {
+			failureRatio := float64(counts.TotalFailures) / float64(counts.Requests)
+			return counts.Requests >= 10 && failureRatio >= 0.5
+		},
 		OnStateChange: func(name string, from gobreaker.State, to gobreaker.State) {
-			// Record metrics
-			f.metrics.RecordStateChange(name, from, to)
+			logger.Info("Circuit breaker state changed",
+				zap.String("name", name),
+				zap.String("from", from.String()),
+				zap.String("to", to.String()))
 			
-			// Call the user-defined state change handler if provided
-			if config.OnStateChange != nil {
-				config.OnStateChange(name, from, to)
-			}
+			metrics.RecordStateChange(name, from.String(), to.String())
 		},
 	}
-	
-	// Create the circuit breaker
-	breaker := gobreaker.NewCircuitBreaker(settings)
-	
-	// Store the circuit breaker
-	f.breakers[config.Name] = breaker
-	
-	f.logger.Info("Created circuit breaker", zap.String("name", config.Name))
-	
-	return breaker
 }
 
-// GetCircuitBreaker gets a circuit breaker by name
-func (f *CircuitBreakerFactory) GetCircuitBreaker(name string) (*gobreaker.CircuitBreaker, bool) {
-	breaker, ok := f.breakers[name]
-	return breaker, ok
-}
-
-// GetOrCreateCircuitBreaker gets a circuit breaker by name or creates it if it doesn't exist
-func (f *CircuitBreakerFactory) GetOrCreateCircuitBreaker(name string) *gobreaker.CircuitBreaker {
-	breaker, ok := f.GetCircuitBreaker(name)
-	if !ok {
-		// Create a new circuit breaker if it doesn't exist
-		breaker = f.CreateCircuitBreaker(name)
+// GetCircuitBreaker gets or creates a circuit breaker with the given name
+func (f *CircuitBreakerFactory) GetCircuitBreaker(name string) *gobreaker.CircuitBreaker {
+	f.mu.RLock()
+	cb, exists := f.breakers[name]
+	f.mu.RUnlock()
+	
+	if exists {
+		return cb
 	}
-	return breaker
+	
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	
+	// Check again in case another goroutine created it while we were waiting for the lock
+	if cb, exists = f.breakers[name]; exists {
+		return cb
+	}
+	
+	// Create a new circuit breaker with default settings
+	settings := DefaultSettings(name, f.logger, f.metrics)
+	cb = gobreaker.NewCircuitBreaker(settings)
+	f.breakers[name] = cb
+	f.settings[name] = settings
+	
+	return cb
 }
 
-// GetAllCircuitBreakers returns all circuit breakers
-func (f *CircuitBreakerFactory) GetAllCircuitBreakers() map[string]*gobreaker.CircuitBreaker {
-	return f.breakers
+// GetCircuitBreakerWithSettings gets or creates a circuit breaker with custom settings
+func (f *CircuitBreakerFactory) GetCircuitBreakerWithSettings(name string, settings gobreaker.Settings) *gobreaker.CircuitBreaker {
+	f.mu.RLock()
+	cb, exists := f.breakers[name]
+	f.mu.RUnlock()
+	
+	if exists {
+		// Check if settings have changed
+		f.mu.RLock()
+		currentSettings := f.settings[name]
+		f.mu.RUnlock()
+		
+		// If settings are the same, return the existing circuit breaker
+		if currentSettings.MaxRequests == settings.MaxRequests &&
+			currentSettings.Interval == settings.Interval &&
+			currentSettings.Timeout == settings.Timeout {
+			return cb
+		}
+		
+		// Settings have changed, create a new circuit breaker
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		
+		// Ensure OnStateChange is set to record metrics
+		if settings.OnStateChange == nil {
+			settings.OnStateChange = func(name string, from gobreaker.State, to gobreaker.State) {
+				f.logger.Info("Circuit breaker state changed",
+					zap.String("name", name),
+					zap.String("from", from.String()),
+					zap.String("to", to.String()))
+				
+				f.metrics.RecordStateChange(name, from.String(), to.String())
+			}
+		}
+		
+		cb = gobreaker.NewCircuitBreaker(settings)
+		f.breakers[name] = cb
+		f.settings[name] = settings
+		
+		return cb
+	}
+	
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	
+	// Check again in case another goroutine created it while we were waiting for the lock
+	if cb, exists = f.breakers[name]; exists {
+		return cb
+	}
+	
+	// Ensure OnStateChange is set to record metrics
+	if settings.OnStateChange == nil {
+		settings.OnStateChange = func(name string, from gobreaker.State, to gobreaker.State) {
+			f.logger.Info("Circuit breaker state changed",
+				zap.String("name", name),
+				zap.String("from", from.String()),
+				zap.String("to", to.String()))
+			
+			f.metrics.RecordStateChange(name, from.String(), to.String())
+		}
+	}
+	
+	// Create a new circuit breaker with custom settings
+	cb = gobreaker.NewCircuitBreaker(settings)
+	f.breakers[name] = cb
+	f.settings[name] = settings
+	
+	return cb
 }
 
-// Execute executes the given function with the specified circuit breaker
-func (f *CircuitBreakerFactory) Execute(name string, fn func() (interface{}, error)) *CircuitBreakerResult {
-	breaker := f.GetOrCreateCircuitBreaker(name)
+// Execute executes a function with circuit breaker protection
+func (f *CircuitBreakerFactory) Execute(name string, fn func() (interface{}, error)) CircuitBreakerResult {
+	cb := f.GetCircuitBreaker(name)
 	
 	startTime := time.Now()
-	value, err := breaker.Execute(fn)
+	result, err := cb.Execute(fn)
 	duration := time.Since(startTime)
 	
-	result := &CircuitBreakerResult{
-		Value:       value,
-		Error:       err,
-		Duration:    duration,
-		BreakerName: name,
-		State:       breaker.State(),
-	}
+	f.metrics.RecordExecution(name, err == nil, duration)
 	
-	// Record metrics
-	if err != nil {
-		f.metrics.RecordFailure(name, duration, err)
-	} else {
-		f.metrics.RecordSuccess(name, duration)
+	return CircuitBreakerResult{
+		Value: result,
+		Error: err,
 	}
-	
-	return result
 }
 
-// ExecuteWithFallback executes the given function with the specified circuit breaker and fallback
+// ExecuteWithContext executes a function with circuit breaker protection and context
+func (f *CircuitBreakerFactory) ExecuteWithContext(ctx context.Context, name string, fn func(ctx context.Context) (interface{}, error)) CircuitBreakerResult {
+	cb := f.GetCircuitBreaker(name)
+	
+	startTime := time.Now()
+	result, err := cb.Execute(func() (interface{}, error) {
+		return fn(ctx)
+	})
+	duration := time.Since(startTime)
+	
+	f.metrics.RecordExecution(name, err == nil, duration)
+	
+	return CircuitBreakerResult{
+		Value: result,
+		Error: err,
+	}
+}
+
+// ExecuteWithFallback executes a function with circuit breaker protection and fallback
 func (f *CircuitBreakerFactory) ExecuteWithFallback(
 	name string,
 	fn func() (interface{}, error),
-	fallback func(error) (interface{}, error),
-) *CircuitBreakerResult {
-	result := f.Execute(name, fn)
+	fallback func(err error) (interface{}, error),
+) CircuitBreakerResult {
+	cb := f.GetCircuitBreaker(name)
 	
-	// Apply fallback if needed
-	if result.Error != nil && fallback != nil {
-		startTime := time.Now()
-		value, err := fallback(result.Error)
-		fallbackDuration := time.Since(startTime)
+	startTime := time.Now()
+	result, err := cb.Execute(fn)
+	duration := time.Since(startTime)
+	
+	f.metrics.RecordExecution(name, err == nil, duration)
+	
+	if err != nil && fallback != nil {
+		fallbackStartTime := time.Now()
+		fallbackResult, fallbackErr := fallback(err)
+		fallbackDuration := time.Since(fallbackStartTime)
 		
-		// Update the result
-		result.Value = value
-		result.Error = err
-		result.Duration += fallbackDuration
+		f.metrics.RecordFallback(name, fallbackErr == nil, fallbackDuration)
 		
-		f.logger.Debug("Circuit breaker fallback executed",
-			zap.String("name", name),
-			zap.Duration("fallback_duration", fallbackDuration),
-			zap.Error(err))
+		return CircuitBreakerResult{
+			Value: fallbackResult,
+			Error: fallbackErr,
+		}
 	}
 	
-	return result
+	return CircuitBreakerResult{
+		Value: result,
+		Error: err,
+	}
 }
 
-// ExecuteContext executes the given function with the specified circuit breaker and context
-// This allows for context-aware circuit breaking, following Fx's context propagation pattern
-func (f *CircuitBreakerFactory) ExecuteContext(
-	ctx context.Context,
-	name string,
-	fn func(ctx context.Context) (interface{}, error),
-) *CircuitBreakerResult {
-	return f.Execute(name, func() (interface{}, error) {
-		return fn(ctx)
-	})
-}
-
-// ExecuteContextWithFallback executes the given function with context, circuit breaker, and fallback
-func (f *CircuitBreakerFactory) ExecuteContextWithFallback(
-	ctx context.Context,
-	name string,
-	fn func(ctx context.Context) (interface{}, error),
-	fallback func(ctx context.Context, err error) (interface{}, error),
-) *CircuitBreakerResult {
-	result := f.ExecuteContext(ctx, name, fn)
+// GetState returns the current state of a circuit breaker
+func (f *CircuitBreakerFactory) GetState(name string) gobreaker.State {
+	f.mu.RLock()
+	cb, exists := f.breakers[name]
+	f.mu.RUnlock()
 	
-	// Apply fallback if needed
-	if result.Error != nil && fallback != nil {
-		startTime := time.Now()
-		value, err := fallback(ctx, result.Error)
-		fallbackDuration := time.Since(startTime)
-		
-		// Update the result
-		result.Value = value
-		result.Error = err
-		result.Duration += fallbackDuration
-		
-		f.logger.Debug("Circuit breaker fallback executed with context",
-			zap.String("name", name),
-			zap.Duration("fallback_duration", fallbackDuration),
-			zap.Error(err))
+	if !exists {
+		return gobreaker.StateClosed
 	}
 	
-	return result
+	return cb.State()
 }
 
-// registerCircuitBreakerHooks registers lifecycle hooks for the circuit breaker components
-// This follows Fx's lifecycle management pattern
-func registerCircuitBreakerHooks(
-	lc fx.Lifecycle,
-	logger *zap.Logger,
-	factory *CircuitBreakerFactory,
-) {
-	lc.Append(fx.Hook{
-		OnStart: func(ctx context.Context) error {
-			logger.Info("Starting circuit breaker components")
-			return nil
-		},
-		OnStop: func(ctx context.Context) error {
-			logger.Info("Stopping circuit breaker components")
-			
-			// Log statistics for all circuit breakers
-			for name, breaker := range factory.breakers {
-				state := stateToString(breaker.State())
-				logger.Info("Circuit breaker statistics",
-					zap.String("name", name),
-					zap.String("state", state))
-			}
-			
-			return nil
-		},
-	})
+// GetMetrics returns the circuit breaker metrics
+func (f *CircuitBreakerFactory) GetMetrics() *CircuitBreakerMetrics {
+	return f.metrics
 }
 
-// stateToString converts a circuit breaker state to a string
-func stateToString(state gobreaker.State) string {
-	switch state {
-	case gobreaker.StateClosed:
-		return "closed"
-	case gobreaker.StateHalfOpen:
-		return "half-open"
-	case gobreaker.StateOpen:
-		return "open"
-	default:
-		return "unknown"
+// Reset resets all circuit breakers
+func (f *CircuitBreakerFactory) Reset() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	
+	f.breakers = make(map[string]*gobreaker.CircuitBreaker)
+	f.settings = make(map[string]gobreaker.Settings)
+	f.metrics.Reset()
+}
+
+// CircuitBreakerMetrics collects metrics for circuit breakers
+type CircuitBreakerMetrics struct {
+	mu sync.RWMutex
+	
+	// Execution metrics
+	executions     map[string]int64
+	successes      map[string]int64
+	failures       map[string]int64
+	
+	// Latency metrics
+	executionTimes map[string][]time.Duration
+	
+	// Fallback metrics
+	fallbacks           map[string]int64
+	fallbackSuccesses   map[string]int64
+	fallbackFailures    map[string]int64
+	fallbackTimes       map[string][]time.Duration
+	
+	// State change metrics
+	stateChanges map[string]map[string]map[string]int64 // name -> from -> to -> count
+}
+
+// NewCircuitBreakerMetrics creates a new CircuitBreakerMetrics
+func NewCircuitBreakerMetrics() *CircuitBreakerMetrics {
+	return &CircuitBreakerMetrics{
+		executions:     make(map[string]int64),
+		successes:      make(map[string]int64),
+		failures:       make(map[string]int64),
+		executionTimes: make(map[string][]time.Duration),
+		fallbacks:      make(map[string]int64),
+		fallbackSuccesses: make(map[string]int64),
+		fallbackFailures:  make(map[string]int64),
+		fallbackTimes:     make(map[string][]time.Duration),
+		stateChanges:      make(map[string]map[string]map[string]int64),
 	}
+}
+
+// RecordExecution records an execution of a circuit breaker
+func (m *CircuitBreakerMetrics) RecordExecution(name string, success bool, duration time.Duration) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	m.executions[name]++
+	if success {
+		m.successes[name]++
+	} else {
+		m.failures[name]++
+	}
+	
+	if _, ok := m.executionTimes[name]; !ok {
+		m.executionTimes[name] = make([]time.Duration, 0, 100)
+	}
+	
+	m.executionTimes[name] = append(m.executionTimes[name], duration)
+	
+	// Keep only the last 100 execution times
+	if len(m.executionTimes[name]) > 100 {
+		m.executionTimes[name] = m.executionTimes[name][1:]
+	}
+}
+
+// RecordFallback records a fallback execution of a circuit breaker
+func (m *CircuitBreakerMetrics) RecordFallback(name string, success bool, duration time.Duration) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	m.fallbacks[name]++
+	if success {
+		m.fallbackSuccesses[name]++
+	} else {
+		m.fallbackFailures[name]++
+	}
+	
+	if _, ok := m.fallbackTimes[name]; !ok {
+		m.fallbackTimes[name] = make([]time.Duration, 0, 100)
+	}
+	
+	m.fallbackTimes[name] = append(m.fallbackTimes[name], duration)
+	
+	// Keep only the last 100 fallback times
+	if len(m.fallbackTimes[name]) > 100 {
+		m.fallbackTimes[name] = m.fallbackTimes[name][1:]
+	}
+}
+
+// RecordStateChange records a state change of a circuit breaker
+func (m *CircuitBreakerMetrics) RecordStateChange(name, from, to string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	if _, ok := m.stateChanges[name]; !ok {
+		m.stateChanges[name] = make(map[string]map[string]int64)
+	}
+	
+	if _, ok := m.stateChanges[name][from]; !ok {
+		m.stateChanges[name][from] = make(map[string]int64)
+	}
+	
+	m.stateChanges[name][from][to]++
+}
+
+// GetExecutionCount returns the number of executions for a circuit breaker
+func (m *CircuitBreakerMetrics) GetExecutionCount(name string) int64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	return m.executions[name]
+}
+
+// GetSuccessCount returns the number of successful executions for a circuit breaker
+func (m *CircuitBreakerMetrics) GetSuccessCount(name string) int64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	return m.successes[name]
+}
+
+// GetFailureCount returns the number of failed executions for a circuit breaker
+func (m *CircuitBreakerMetrics) GetFailureCount(name string) int64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	return m.failures[name]
+}
+
+// GetSuccessRate returns the success rate for a circuit breaker
+func (m *CircuitBreakerMetrics) GetSuccessRate(name string) float64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	executions := m.executions[name]
+	if executions == 0 {
+		return 0
+	}
+	
+	return float64(m.successes[name]) / float64(executions)
+}
+
+// GetAverageExecutionTime returns the average execution time for a circuit breaker
+func (m *CircuitBreakerMetrics) GetAverageExecutionTime(name string) time.Duration {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	times, ok := m.executionTimes[name]
+	if !ok || len(times) == 0 {
+		return 0
+	}
+	
+	var sum time.Duration
+	for _, t := range times {
+		sum += t
+	}
+	
+	return sum / time.Duration(len(times))
+}
+
+// GetFallbackCount returns the number of fallbacks for a circuit breaker
+func (m *CircuitBreakerMetrics) GetFallbackCount(name string) int64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	return m.fallbacks[name]
+}
+
+// GetFallbackSuccessCount returns the number of successful fallbacks for a circuit breaker
+func (m *CircuitBreakerMetrics) GetFallbackSuccessCount(name string) int64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	return m.fallbackSuccesses[name]
+}
+
+// GetFallbackFailureCount returns the number of failed fallbacks for a circuit breaker
+func (m *CircuitBreakerMetrics) GetFallbackFailureCount(name string) int64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	return m.fallbackFailures[name]
+}
+
+// GetFallbackSuccessRate returns the fallback success rate for a circuit breaker
+func (m *CircuitBreakerMetrics) GetFallbackSuccessRate(name string) float64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	fallbacks := m.fallbacks[name]
+	if fallbacks == 0 {
+		return 0
+	}
+	
+	return float64(m.fallbackSuccesses[name]) / float64(fallbacks)
+}
+
+// GetAverageFallbackTime returns the average fallback time for a circuit breaker
+func (m *CircuitBreakerMetrics) GetAverageFallbackTime(name string) time.Duration {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	times, ok := m.fallbackTimes[name]
+	if !ok || len(times) == 0 {
+		return 0
+	}
+	
+	var sum time.Duration
+	for _, t := range times {
+		sum += t
+	}
+	
+	return sum / time.Duration(len(times))
+}
+
+// GetStateChangeCount returns the number of state changes for a circuit breaker
+func (m *CircuitBreakerMetrics) GetStateChangeCount(name, from, to string) int64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	if _, ok := m.stateChanges[name]; !ok {
+		return 0
+	}
+	
+	if _, ok := m.stateChanges[name][from]; !ok {
+		return 0
+	}
+	
+	return m.stateChanges[name][from][to]
+}
+
+// Reset resets all metrics
+func (m *CircuitBreakerMetrics) Reset() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	m.executions = make(map[string]int64)
+	m.successes = make(map[string]int64)
+	m.failures = make(map[string]int64)
+	m.executionTimes = make(map[string][]time.Duration)
+	m.fallbacks = make(map[string]int64)
+	m.fallbackSuccesses = make(map[string]int64)
+	m.fallbackFailures = make(map[string]int64)
+	m.fallbackTimes = make(map[string][]time.Duration)
+	m.stateChanges = make(map[string]map[string]map[string]int64)
 }
 

@@ -1,133 +1,165 @@
-# Resilience Package
+# Circuit Breaker for Go with Fx Integration
 
-This package provides resilience patterns for the TradSys platform, optimized to follow Fx benefits and best practices.
+This package provides a circuit breaker implementation for Go applications using Uber's Fx dependency injection framework. It is built on top of the [sony/gobreaker](https://github.com/sony/gobreaker) package and adds the following features:
 
-## Circuit Breaker
+- Integration with Uber's Fx dependency injection framework
+- Comprehensive metrics collection
+- Fallback support
+- Context-aware execution
+- Customizable settings
+- Lifecycle management
 
-The circuit breaker pattern is implemented using the `github.com/sony/gobreaker` package, which is a well-established and maintained library for circuit breaking in Go.
+## Usage
 
-### Key Features
-
-- **Fx Integration**: Fully integrated with Uber's Fx dependency injection framework
-- **Lifecycle Management**: Proper resource initialization and cleanup
-- **Metrics Collection**: Built-in metrics collection for circuit breaker events
-- **Context Support**: Context-aware circuit breaking
-- **Fallback Support**: Support for fallback functions
-- **Customizable**: Highly configurable circuit breaker behavior
-
-### Usage
-
-#### Basic Usage
+### Basic Usage
 
 ```go
-// In your Fx application
+// Create a circuit breaker factory
+factory := resilience.NewCircuitBreakerFactory(resilience.CircuitBreakerParams{
+    Logger: logger,
+})
+
+// Execute a function with circuit breaker protection
+result := factory.Execute("example", func() (interface{}, error) {
+    // Your code here
+    return "success", nil
+})
+
+if result.Error != nil {
+    logger.Error("Execution failed", zap.Error(result.Error))
+} else {
+    logger.Info("Execution succeeded", zap.Any("result", result.Value))
+}
+```
+
+### With Context
+
+```go
+ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+defer cancel()
+
+result := factory.ExecuteWithContext(ctx, "example-with-context", func(ctx context.Context) (interface{}, error) {
+    // Your code here with context
+    select {
+    case <-time.After(500 * time.Millisecond):
+        return "success", nil
+    case <-ctx.Done():
+        return nil, ctx.Err()
+    }
+})
+```
+
+### With Fallback
+
+```go
+result := factory.ExecuteWithFallback(
+    "example-with-fallback",
+    func() (interface{}, error) {
+        // Your code here
+        return nil, errors.New("operation failed")
+    },
+    func(err error) (interface{}, error) {
+        // Fallback operation
+        logger.Warn("Fallback triggered", zap.Error(err))
+        return "fallback result", nil
+    },
+)
+```
+
+### With Custom Settings
+
+```go
+customSettings := gobreaker.Settings{
+    Name:        "custom-example",
+    MaxRequests: 3,
+    Interval:    5 * time.Second,
+    Timeout:     10 * time.Second,
+    ReadyToTrip: func(counts gobreaker.Counts) bool {
+        return counts.ConsecutiveFailures >= 2
+    },
+}
+
+customCB := factory.GetCircuitBreakerWithSettings("custom-example", customSettings)
+
+// Use the custom circuit breaker
+result, err := customCB.Execute(func() (interface{}, error) {
+    // Your code here
+    return "custom success", nil
+})
+```
+
+### Getting Metrics
+
+```go
+metrics := factory.GetMetrics()
+
+logger.Info("Circuit breaker metrics",
+    zap.Int64("executions", metrics.GetExecutionCount("example")),
+    zap.Int64("successes", metrics.GetSuccessCount("example")),
+    zap.Int64("failures", metrics.GetFailureCount("example")),
+    zap.Float64("success_rate", metrics.GetSuccessRate("example")),
+    zap.Duration("avg_execution_time", metrics.GetAverageExecutionTime("example")),
+    zap.Int64("fallbacks", metrics.GetFallbackCount("example-with-fallback")),
+    zap.Float64("fallback_success_rate", metrics.GetFallbackSuccessRate("example-with-fallback")))
+```
+
+## Fx Integration
+
+To use the circuit breaker with Uber's Fx, you can use the provided module:
+
+```go
 app := fx.New(
+    fx.Provide(
+        // Provide a logger
+        func() *zap.Logger {
+            logger, _ := zap.NewDevelopment()
+            return logger
+        },
+    ),
+    
     // Include the resilience module
     resilience.Module,
     
-    // Provide your services
-    fx.Provide(
-        NewMyService,
-    ),
+    // Use the circuit breaker in your components
+    fx.Invoke(func(cb *resilience.CircuitBreakerFactory) {
+        // Use the circuit breaker
+    }),
 )
-
-// In your service
-type MyService struct {
-    circuitBreaker *resilience.CircuitBreakerFactory
-}
-
-func NewMyService(circuitBreaker *resilience.CircuitBreakerFactory) *MyService {
-    return &MyService{
-        circuitBreaker: circuitBreaker,
-    }
-}
-
-func (s *MyService) CallExternalService() (interface{}, error) {
-    result := s.circuitBreaker.Execute("external-service", func() (interface{}, error) {
-        // Call external service
-        return callExternalService()
-    })
-    
-    return result.Value, result.Error
-}
 ```
 
-#### With Fallback
+## Features
 
-```go
-func (s *MyService) CallExternalServiceWithFallback() (interface{}, error) {
-    result := s.circuitBreaker.ExecuteWithFallback(
-        "external-service",
-        func() (interface{}, error) {
-            // Call external service
-            return callExternalService()
-        },
-        func(err error) (interface{}, error) {
-            // Fallback logic
-            return getFromCache(), nil
-        },
-    )
-    
-    return result.Value, result.Error
-}
-```
+### Circuit Breaker States
 
-#### With Context
+The circuit breaker has three states:
 
-```go
-func (s *MyService) CallExternalServiceWithContext(ctx context.Context) (interface{}, error) {
-    result := s.circuitBreaker.ExecuteContext(
-        ctx,
-        "external-service",
-        func(ctx context.Context) (interface{}, error) {
-            // Call external service with context
-            return callExternalServiceWithContext(ctx)
-        },
-    )
-    
-    return result.Value, result.Error
-}
-```
+- **Closed**: The circuit breaker is closed and allows requests to pass through.
+- **Open**: The circuit breaker is open and blocks all requests, returning an error immediately.
+- **Half-Open**: The circuit breaker allows a limited number of requests to pass through to test if the service is healthy again.
 
-#### Custom Configuration
+### Metrics
 
-```go
-func (s *MyService) SetupCustomCircuitBreaker() {
-    config := resilience.CircuitBreakerConfig{
-        Name:        "custom-breaker",
-        MaxRequests: 2,
-        Interval:    time.Minute,
-        Timeout:     10 * time.Second,
-        ReadyToTrip: func(counts gobreaker.Counts) bool {
-            // Trip when error rate is over 50% with at least 5 requests
-            failureRatio := float64(counts.TotalFailures) / float64(counts.Requests)
-            return counts.Requests >= 5 && failureRatio >= 0.5
-        },
-        OnStateChange: func(name string, from, to gobreaker.State) {
-            // Custom state change handler
-            log.Printf("Circuit breaker %s changed from %s to %s", name, from, to)
-        },
-    }
-    
-    s.circuitBreaker.CreateCustomCircuitBreaker(config)
-}
-```
+The circuit breaker collects the following metrics:
 
-## Benefits Over Previous Implementation
+- **Executions**: The number of executions for a circuit breaker.
+- **Successes**: The number of successful executions for a circuit breaker.
+- **Failures**: The number of failed executions for a circuit breaker.
+- **Success Rate**: The success rate for a circuit breaker.
+- **Average Execution Time**: The average execution time for a circuit breaker.
+- **Fallbacks**: The number of fallbacks for a circuit breaker.
+- **Fallback Successes**: The number of successful fallbacks for a circuit breaker.
+- **Fallback Failures**: The number of failed fallbacks for a circuit breaker.
+- **Fallback Success Rate**: The fallback success rate for a circuit breaker.
+- **Average Fallback Time**: The average fallback time for a circuit breaker.
+- **State Changes**: The number of state changes for a circuit breaker.
 
-1. **Better Dependency Injection**: Follows Fx's dependency injection pattern more closely
-2. **Separation of Concerns**: Separates metrics collection from circuit breaker logic
-3. **Context Support**: Adds support for context propagation
-4. **Richer Results**: Returns more detailed results from circuit breaker executions
-5. **Better Fallback Support**: Improved fallback function support
-6. **More Configurable**: More configuration options for circuit breakers
-7. **Better Metrics**: More detailed metrics collection
-8. **Better Documentation**: More comprehensive documentation and examples
+### Lifecycle Management
 
-## Future Improvements
+The circuit breaker factory is integrated with Fx's lifecycle management. When the application stops, it logs the circuit breaker metrics for all circuit breakers.
 
-- Add support for more resilience patterns (retry, timeout, bulkhead, etc.)
-- Add support for distributed circuit breaking
-- Add support for more metrics backends (Prometheus, etc.)
-- Add support for more sophisticated fallback strategies
+## Dependencies
+
+- [github.com/sony/gobreaker](https://github.com/sony/gobreaker): The underlying circuit breaker implementation.
+- [go.uber.org/fx](https://github.com/uber-go/fx): Dependency injection framework.
+- [go.uber.org/zap](https://github.com/uber-go/zap): Logging framework.
 

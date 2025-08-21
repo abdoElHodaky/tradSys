@@ -9,117 +9,100 @@ import (
 	"go.uber.org/zap"
 )
 
-// This file provides example usage of the circuit breaker components
-// It is not meant to be used in production, but rather to demonstrate
-// how to use the circuit breaker components in a way that follows Fx benefits
-
-// ExampleService demonstrates how to use the circuit breaker in a service
-type ExampleService struct {
-	logger            *zap.Logger
-	circuitBreaker    *CircuitBreakerFactory
-	externalAPIClient *ExternalAPIClient
-}
-
-// NewExampleService creates a new example service
-// This follows Fx's dependency injection pattern
-func NewExampleService(
-	logger *zap.Logger,
-	circuitBreaker *CircuitBreakerFactory,
-	externalAPIClient *ExternalAPIClient,
-) *ExampleService {
-	return &ExampleService{
-		logger:            logger,
-		circuitBreaker:    circuitBreaker,
-		externalAPIClient: externalAPIClient,
+// ExampleUsage demonstrates how to use the circuit breaker
+func ExampleUsage(logger *zap.Logger) {
+	// Create a circuit breaker factory
+	factory := NewCircuitBreakerFactory(CircuitBreakerParams{
+		Logger: logger,
+	})
+	
+	// Example 1: Basic usage
+	result := factory.Execute("example", func() (interface{}, error) {
+		// Simulate a successful operation
+		return "success", nil
+	})
+	
+	if result.Error != nil {
+		logger.Error("Execution failed", zap.Error(result.Error))
+	} else {
+		logger.Info("Execution succeeded", zap.Any("result", result.Value))
 	}
-}
-
-// GetUserData demonstrates how to use the circuit breaker to protect an external API call
-func (s *ExampleService) GetUserData(ctx context.Context, userID string) (interface{}, error) {
-	// Create a custom circuit breaker for this specific API
-	cbConfig := CircuitBreakerConfig{
-		Name:        "get-user-data",
-		MaxRequests: 2,
-		Interval:    time.Minute,
-		Timeout:     10 * time.Second,
-		ReadyToTrip: func(counts gobreaker.Counts) bool {
-			// Trip when error rate is over 50% with at least 5 requests
-			failureRatio := float64(counts.TotalFailures) / float64(counts.Requests)
-			return counts.Requests >= 5 && failureRatio >= 0.5
-		},
+	
+	// Example 2: With context
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	
+	result = factory.ExecuteWithContext(ctx, "example-with-context", func(ctx context.Context) (interface{}, error) {
+		// Simulate a long-running operation
+		select {
+		case <-time.After(500 * time.Millisecond):
+			return "success", nil
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	})
+	
+	if result.Error != nil {
+		logger.Error("Execution with context failed", zap.Error(result.Error))
+	} else {
+		logger.Info("Execution with context succeeded", zap.Any("result", result.Value))
 	}
-	s.circuitBreaker.CreateCustomCircuitBreaker(cbConfig)
-
-	// Execute the API call with the circuit breaker and fallback
-	result := s.circuitBreaker.ExecuteContextWithFallback(
-		ctx,
-		"get-user-data",
-		func(ctx context.Context) (interface{}, error) {
-			// This is the primary function that will be protected by the circuit breaker
-			return s.externalAPIClient.GetUserData(ctx, userID)
+	
+	// Example 3: With fallback
+	result = factory.ExecuteWithFallback(
+		"example-with-fallback",
+		func() (interface{}, error) {
+			// Simulate a failing operation
+			return nil, errors.New("operation failed")
 		},
-		func(ctx context.Context, err error) (interface{}, error) {
-			// This is the fallback function that will be called if the primary function fails
-			s.logger.Warn("Falling back to cached user data",
-				zap.String("user_id", userID),
-				zap.Error(err))
-			
-			// Return cached data or a default value
-			return map[string]interface{}{
-				"user_id": userID,
-				"name":    "Unknown",
-				"email":   "unknown@example.com",
-				"cached":  true,
-			}, nil
+		func(err error) (interface{}, error) {
+			// Fallback operation
+			logger.Warn("Fallback triggered", zap.Error(err))
+			return "fallback result", nil
 		},
 	)
-
-	// Check the result
+	
 	if result.Error != nil {
-		s.logger.Error("Failed to get user data",
-			zap.String("user_id", userID),
-			zap.Error(result.Error))
-		return nil, result.Error
+		logger.Error("Execution with fallback failed", zap.Error(result.Error))
+	} else {
+		logger.Info("Execution with fallback succeeded", zap.Any("result", result.Value))
 	}
-
-	s.logger.Info("Successfully got user data",
-		zap.String("user_id", userID),
-		zap.Duration("duration", result.Duration),
-		zap.String("breaker_state", stateToString(result.State)))
-
-	return result.Value, nil
-}
-
-// ExternalAPIClient is a mock external API client
-type ExternalAPIClient struct {
-	logger *zap.Logger
-}
-
-// NewExternalAPIClient creates a new external API client
-func NewExternalAPIClient(logger *zap.Logger) *ExternalAPIClient {
-	return &ExternalAPIClient{
-		logger: logger,
+	
+	// Example 4: With custom settings
+	customSettings := gobreaker.Settings{
+		Name:        "custom-example",
+		MaxRequests: 3,
+		Interval:    5 * time.Second,
+		Timeout:     10 * time.Second,
+		ReadyToTrip: func(counts gobreaker.Counts) bool {
+			return counts.ConsecutiveFailures >= 2
+		},
 	}
-}
-
-// GetUserData simulates an external API call to get user data
-func (c *ExternalAPIClient) GetUserData(ctx context.Context, userID string) (interface{}, error) {
-	// Simulate a slow or failing API call
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case <-time.After(100 * time.Millisecond):
-		// Simulate a random failure
-		if time.Now().UnixNano()%5 == 0 {
-			return nil, errors.New("external API error")
-		}
-
-		// Return mock user data
-		return map[string]interface{}{
-			"user_id": userID,
-			"name":    "John Doe",
-			"email":   "john.doe@example.com",
-		}, nil
+	
+	customCB := factory.GetCircuitBreakerWithSettings("custom-example", customSettings)
+	
+	// Use the custom circuit breaker
+	result, err := customCB.Execute(func() (interface{}, error) {
+		// Simulate a successful operation
+		return "custom success", nil
+	})
+	
+	if err != nil {
+		logger.Error("Custom execution failed", zap.Error(err))
+	} else {
+		logger.Info("Custom execution succeeded", zap.Any("result", result))
 	}
+	
+	// Example 5: Get metrics
+	metrics := factory.GetMetrics()
+	
+	logger.Info("Circuit breaker metrics",
+		zap.Int64("executions", metrics.GetExecutionCount("example")),
+		zap.Int64("successes", metrics.GetSuccessCount("example")),
+		zap.Int64("failures", metrics.GetFailureCount("example")),
+		zap.Float64("success_rate", metrics.GetSuccessRate("example")),
+		zap.Duration("avg_execution_time", metrics.GetAverageExecutionTime("example")),
+		zap.Int64("fallbacks", metrics.GetFallbackCount("example-with-fallback")),
+		zap.Float64("fallback_success_rate", metrics.GetFallbackSuccessRate("example-with-fallback")))
 }
 
