@@ -2,6 +2,7 @@ package workerpool
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -10,378 +11,351 @@ import (
 	"go.uber.org/zap"
 )
 
-// WorkerPoolModule provides the optimized worker pool components
-// following Fx's modular design pattern
-var WorkerPoolModule = fx.Options(
-	// Provide the worker pool factory
-	fx.Provide(NewWorkerPoolFactory),
-	
-	// Provide the default worker pool configuration
-	fx.Provide(NewDefaultWorkerPoolConfig),
-	
-	// Provide the worker pool metrics collector
-	fx.Provide(NewWorkerPoolMetrics),
-	
-	// Register lifecycle hooks
-	fx.Invoke(registerWorkerPoolHooks),
+// Common errors
+var (
+	ErrPoolClosed      = errors.New("worker pool is closed")
+	ErrPoolOverloaded  = errors.New("worker pool is overloaded")
+	ErrTaskPanicked    = errors.New("task panicked during execution")
+	ErrTaskTimeout     = errors.New("task timed out")
+	ErrInvalidPoolSize = errors.New("invalid pool size")
 )
 
-// WorkerPoolConfig contains configuration for worker pools
-type WorkerPoolConfig struct {
-	// DefaultSize is the default number of workers in the pool
-	DefaultSize int
-	
-	// DefaultQueueSize is the default size of the task queue
-	DefaultQueueSize int
-	
-	// ExpiryDuration is the duration after which idle workers are cleaned up
-	ExpiryDuration time.Duration
-	
-	// PreAlloc determines whether to pre-allocate memory for workers
-	PreAlloc bool
-	
-	// MaxBlockingTasks is the maximum number of tasks that can be blocked on submission
-	// 0 means no limit
-	MaxBlockingTasks int
-	
-	// Nonblocking determines whether to return immediately when submitting a task
-	// to a full pool
-	Nonblocking bool
-	
-	// PanicHandler is called when a panic occurs in a worker
-	PanicHandler func(interface{})
+// WorkerPoolFactory creates and manages worker pools
+type WorkerPoolFactory struct {
+	logger      *zap.Logger
+	pools       map[string]*ants.Pool
+	poolOptions map[string]*ants.Options
+	metrics     *WorkerPoolMetrics
+	mu          sync.RWMutex
 }
 
-// NewDefaultWorkerPoolConfig returns the default worker pool configuration
-// This follows Fx's pattern of providing default configurations as injectable dependencies
-func NewDefaultWorkerPoolConfig() *WorkerPoolConfig {
-	return &WorkerPoolConfig{
-		DefaultSize:      10,
-		DefaultQueueSize: 100,
-		ExpiryDuration:   time.Minute,
-		PreAlloc:         false,
-		MaxBlockingTasks: 0,
-		Nonblocking:      false,
+// WorkerPoolParams contains parameters for creating a WorkerPoolFactory
+type WorkerPoolParams struct {
+	fx.In
+
+	Logger *zap.Logger
+}
+
+// NewWorkerPoolFactory creates a new WorkerPoolFactory
+func NewWorkerPoolFactory(params WorkerPoolParams) *WorkerPoolFactory {
+	metrics := NewWorkerPoolMetrics()
+	
+	return &WorkerPoolFactory{
+		logger:      params.Logger,
+		pools:       make(map[string]*ants.Pool),
+		poolOptions: make(map[string]*ants.Options),
+		metrics:     metrics,
+	}
+}
+
+// DefaultOptions returns the default worker pool options
+func DefaultOptions() *ants.Options {
+	return &ants.Options{
+		ExpiryDuration: 10 * time.Minute,
+		PreAlloc:       true,
+		MaxBlockingTasks: 1000,
+		Nonblocking:    false,
 		PanicHandler: func(i interface{}) {
-			// Default panic handler just recovers silently
+			// Panic handler will be set in GetWorkerPool
 		},
 	}
 }
 
-// WorkerPoolMetrics collects metrics for worker pools
-// Following Fx's pattern of separating concerns
-type WorkerPoolMetrics struct {
-	logger *zap.Logger
-	mu     sync.RWMutex
-	stats  map[string]*PoolStats
-}
-
-// PoolStats contains statistics for a worker pool
-type PoolStats struct {
-	Name          string
-	RunningWorkers int
-	FreeWorkers    int
-	Capacity       int
-	TasksSubmitted int64
-	TasksCompleted int64
-	TasksFailed    int64
-}
-
-// NewWorkerPoolMetrics creates a new worker pool metrics collector
-func NewWorkerPoolMetrics(logger *zap.Logger) *WorkerPoolMetrics {
-	return &WorkerPoolMetrics{
-		logger: logger,
-		stats:  make(map[string]*PoolStats),
-	}
-}
-
-// RecordTaskSubmitted records a task submission for a worker pool
-func (m *WorkerPoolMetrics) RecordTaskSubmitted(name string) {
-	m.mu.RLock()
-	stats, ok := m.stats[name]
-	m.mu.RUnlock()
-	
-	if !ok {
-		m.mu.Lock()
-		stats, ok = m.stats[name]
-		if !ok {
-			stats = &PoolStats{Name: name}
-			m.stats[name] = stats
-		}
-		m.mu.Unlock()
+// GetWorkerPool gets or creates a worker pool with the given name
+func (f *WorkerPoolFactory) GetWorkerPool(name string, size int) (*ants.Pool, error) {
+	if size <= 0 {
+		return nil, ErrInvalidPoolSize
 	}
 	
-	stats.TasksSubmitted++
-}
-
-// RecordTaskCompleted records a task completion for a worker pool
-func (m *WorkerPoolMetrics) RecordTaskCompleted(name string) {
-	m.mu.RLock()
-	stats, ok := m.stats[name]
-	m.mu.RUnlock()
-	
-	if !ok {
-		return
-	}
-	
-	stats.TasksCompleted++
-}
-
-// RecordTaskFailed records a task failure for a worker pool
-func (m *WorkerPoolMetrics) RecordTaskFailed(name string, err error) {
-	m.mu.RLock()
-	stats, ok := m.stats[name]
-	m.mu.RUnlock()
-	
-	if !ok {
-		return
-	}
-	
-	stats.TasksFailed++
-	
-	m.logger.Debug("Worker pool task failed",
-		zap.String("pool", name),
-		zap.Error(err))
-}
-
-// UpdatePoolStats updates the statistics for a worker pool
-func (m *WorkerPoolMetrics) UpdatePoolStats(name string, pool *ants.Pool) {
-	m.mu.RLock()
-	stats, ok := m.stats[name]
-	m.mu.RUnlock()
-	
-	if !ok {
-		m.mu.Lock()
-		stats, ok = m.stats[name]
-		if !ok {
-			stats = &PoolStats{Name: name}
-			m.stats[name] = stats
-		}
-		m.mu.Unlock()
-	}
-	
-	stats.RunningWorkers = pool.Running()
-	stats.FreeWorkers = pool.Free()
-	stats.Capacity = pool.Cap()
-}
-
-// GetAllStats returns statistics for all worker pools
-func (m *WorkerPoolMetrics) GetAllStats() map[string]*PoolStats {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	
-	// Create a copy to avoid race conditions
-	result := make(map[string]*PoolStats, len(m.stats))
-	for name, stats := range m.stats {
-		statsCopy := *stats
-		result[name] = &statsCopy
-	}
-	
-	return result
-}
-
-// WorkerPoolFactory creates and manages worker pools
-// This is the main service that will be injected into other components
-type WorkerPoolFactory struct {
-	logger   *zap.Logger
-	metrics  *WorkerPoolMetrics
-	config   *WorkerPoolConfig
-	pools    map[string]*ants.Pool
-	poolsMu  sync.RWMutex
-}
-
-// NewWorkerPoolFactory creates a new worker pool factory
-// Following Fx's dependency injection pattern
-func NewWorkerPoolFactory(
-	logger *zap.Logger,
-	metrics *WorkerPoolMetrics,
-	config *WorkerPoolConfig,
-) *WorkerPoolFactory {
-	return &WorkerPoolFactory{
-		logger:  logger,
-		metrics: metrics,
-		config:  config,
-		pools:   make(map[string]*ants.Pool),
-	}
-}
-
-// CreateWorkerPool creates a new worker pool with the given name and default configuration
-func (f *WorkerPoolFactory) CreateWorkerPool(name string) (*ants.Pool, error) {
-	// Check if pool already exists
-	f.poolsMu.RLock()
+	f.mu.RLock()
 	pool, exists := f.pools[name]
-	f.poolsMu.RUnlock()
+	f.mu.RUnlock()
 	
 	if exists {
 		return pool, nil
 	}
 	
-	// Create options from default config
-	options := ants.Options{
-		ExpiryDuration: f.config.ExpiryDuration,
-		PreAlloc:       f.config.PreAlloc,
-		MaxBlockingTasks: f.config.MaxBlockingTasks,
-		Nonblocking:    f.config.Nonblocking,
-		PanicHandler:   f.config.PanicHandler,
-		Logger:         f.logger,
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	
+	// Check again in case another goroutine created it while we were waiting for the lock
+	if pool, exists = f.pools[name]; exists {
+		return pool, nil
 	}
 	
-	// Create the pool
-	pool, err := ants.NewPool(f.config.DefaultSize, ants.WithOptions(options))
+	// Create a new worker pool with default options
+	options := DefaultOptions()
+	
+	// Set panic handler to record metrics
+	options.PanicHandler = func(i interface{}) {
+		f.logger.Error("Worker pool task panicked",
+			zap.String("pool", name),
+			zap.Any("panic", i))
+		
+		f.metrics.RecordPanic(name)
+	}
+	
+	pool, err := ants.NewPool(size, ants.WithOptions(*options))
 	if err != nil {
-		f.logger.Error("Failed to create worker pool",
-			zap.String("name", name),
-			zap.Error(err))
 		return nil, err
 	}
 	
-	// Store the pool
-	f.poolsMu.Lock()
 	f.pools[name] = pool
-	f.poolsMu.Unlock()
+	f.poolOptions[name] = options
 	
 	f.logger.Info("Created worker pool",
-		zap.String("name", name),
-		zap.Int("size", f.config.DefaultSize))
-	
-	return pool, nil
-}
-
-// CreateCustomWorkerPool creates a new worker pool with custom options
-func (f *WorkerPoolFactory) CreateCustomWorkerPool(name string, size int, options ants.Options) (*ants.Pool, error) {
-	// Check if pool already exists
-	f.poolsMu.RLock()
-	pool, exists := f.pools[name]
-	f.poolsMu.RUnlock()
-	
-	if exists {
-		return pool, nil
-	}
-	
-	// Create the pool
-	pool, err := ants.NewPool(size, ants.WithOptions(options))
-	if err != nil {
-		f.logger.Error("Failed to create custom worker pool",
-			zap.String("name", name),
-			zap.Error(err))
-		return nil, err
-	}
-	
-	// Store the pool
-	f.poolsMu.Lock()
-	f.pools[name] = pool
-	f.poolsMu.Unlock()
-	
-	f.logger.Info("Created custom worker pool",
 		zap.String("name", name),
 		zap.Int("size", size))
 	
 	return pool, nil
 }
 
-// GetWorkerPool gets a worker pool by name
-func (f *WorkerPoolFactory) GetWorkerPool(name string) (*ants.Pool, bool) {
-	f.poolsMu.RLock()
-	defer f.poolsMu.RUnlock()
-	
-	pool, ok := f.pools[name]
-	return pool, ok
-}
-
-// GetOrCreateWorkerPool gets a worker pool by name or creates it if it doesn't exist
-func (f *WorkerPoolFactory) GetOrCreateWorkerPool(name string) (*ants.Pool, error) {
-	// Check if pool already exists
-	f.poolsMu.RLock()
-	pool, exists := f.pools[name]
-	f.poolsMu.RUnlock()
-	
-	if exists {
-		return pool, nil
+// GetWorkerPoolWithOptions gets or creates a worker pool with custom options
+func (f *WorkerPoolFactory) GetWorkerPoolWithOptions(name string, size int, options *ants.Options) (*ants.Pool, error) {
+	if size <= 0 {
+		return nil, ErrInvalidPoolSize
 	}
 	
-	// Create a new pool
-	return f.CreateWorkerPool(name)
+	f.mu.RLock()
+	pool, exists := f.pools[name]
+	f.mu.RUnlock()
+	
+	if exists {
+		// Check if options have changed
+		f.mu.RLock()
+		currentOptions := f.poolOptions[name]
+		f.mu.RUnlock()
+		
+		// If options are the same, return the existing pool
+		if currentOptions.ExpiryDuration == options.ExpiryDuration &&
+			currentOptions.PreAlloc == options.PreAlloc &&
+			currentOptions.MaxBlockingTasks == options.MaxBlockingTasks &&
+			currentOptions.Nonblocking == options.Nonblocking {
+			return pool, nil
+		}
+		
+		// Options have changed, release the old pool and create a new one
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		
+		// Check again in case another goroutine released it while we were waiting for the lock
+		if pool, exists = f.pools[name]; exists {
+			pool.Release()
+			delete(f.pools, name)
+		}
+	} else {
+		f.mu.Lock()
+		defer f.mu.Unlock()
+	}
+	
+	// Set panic handler to record metrics
+	if options.PanicHandler == nil {
+		options.PanicHandler = func(i interface{}) {
+			f.logger.Error("Worker pool task panicked",
+				zap.String("pool", name),
+				zap.Any("panic", i))
+			
+			f.metrics.RecordPanic(name)
+		}
+	}
+	
+	// Create a new worker pool with custom options
+	pool, err := ants.NewPool(size, ants.WithOptions(*options))
+	if err != nil {
+		return nil, err
+	}
+	
+	f.pools[name] = pool
+	f.poolOptions[name] = options
+	
+	f.logger.Info("Created worker pool with custom options",
+		zap.String("name", name),
+		zap.Int("size", size))
+	
+	return pool, nil
 }
 
-// Submit submits a task to the specified worker pool
+// Submit submits a task to a worker pool
 func (f *WorkerPoolFactory) Submit(poolName string, task func()) error {
-	// Get or create the pool
-	pool, err := f.GetOrCreateWorkerPool(poolName)
+	// Get or create a worker pool with default size (number of CPUs)
+	pool, err := f.GetWorkerPool(poolName, ants.DefaultAntsPoolSize)
 	if err != nil {
 		return err
 	}
 	
-	// Record metrics
-	f.metrics.RecordTaskSubmitted(poolName)
+	startTime := time.Now()
 	
-	// Submit the task
-	return pool.Submit(func() {
+	// Submit the task to the pool
+	err = pool.Submit(func() {
 		defer func() {
 			if r := recover(); r != nil {
-				if f.config.PanicHandler != nil {
-					f.config.PanicHandler(r)
-				}
-				f.metrics.RecordTaskFailed(poolName, nil)
-			} else {
-				f.metrics.RecordTaskCompleted(poolName)
+				f.logger.Error("Task panicked",
+					zap.String("pool", poolName),
+					zap.Any("panic", r))
+				
+				f.metrics.RecordPanic(poolName)
 			}
+			
+			f.metrics.RecordExecution(poolName, err == nil, time.Since(startTime))
 		}()
 		
 		task()
 	})
+	
+	if err != nil {
+		if errors.Is(err, ants.ErrPoolClosed) {
+			return ErrPoolClosed
+		}
+		if errors.Is(err, ants.ErrPoolOverload) {
+			f.metrics.RecordRejection(poolName)
+			return ErrPoolOverloaded
+		}
+		return err
+	}
+	
+	return nil
 }
 
-// SubmitTask submits a task that returns an error to the specified worker pool
+// SubmitTask submits a task that returns an error to a worker pool
 func (f *WorkerPoolFactory) SubmitTask(poolName string, task func() error) error {
-	// Get or create the pool
-	pool, err := f.GetOrCreateWorkerPool(poolName)
+	// Get or create a worker pool with default size (number of CPUs)
+	pool, err := f.GetWorkerPool(poolName, ants.DefaultAntsPoolSize)
 	if err != nil {
 		return err
 	}
 	
-	// Record metrics
-	f.metrics.RecordTaskSubmitted(poolName)
+	startTime := time.Now()
 	
-	// Submit the task
-	return pool.Submit(func() {
+	// Submit the task to the pool
+	err = pool.Submit(func() {
 		defer func() {
 			if r := recover(); r != nil {
-				if f.config.PanicHandler != nil {
-					f.config.PanicHandler(r)
-				}
-				f.metrics.RecordTaskFailed(poolName, nil)
+				f.logger.Error("Task panicked",
+					zap.String("pool", poolName),
+					zap.Any("panic", r))
+				
+				f.metrics.RecordPanic(poolName)
 			}
+			
+			f.metrics.RecordExecution(poolName, err == nil, time.Since(startTime))
 		}()
 		
-		err := task()
-		if err != nil {
-			f.metrics.RecordTaskFailed(poolName, err)
-		} else {
-			f.metrics.RecordTaskCompleted(poolName)
+		taskErr := task()
+		if taskErr != nil {
+			f.logger.Error("Task failed",
+				zap.String("pool", poolName),
+				zap.Error(taskErr))
+			
+			f.metrics.RecordFailure(poolName)
 		}
 	})
-}
-
-// Release releases a worker pool by name
-func (f *WorkerPoolFactory) Release(name string) {
-	f.poolsMu.Lock()
-	defer f.poolsMu.Unlock()
 	
-	pool, ok := f.pools[name]
-	if !ok {
-		return
+	if err != nil {
+		if errors.Is(err, ants.ErrPoolClosed) {
+			return ErrPoolClosed
+		}
+		if errors.Is(err, ants.ErrPoolOverload) {
+			f.metrics.RecordRejection(poolName)
+			return ErrPoolOverloaded
+		}
+		return err
 	}
 	
-	pool.Release()
-	delete(f.pools, name)
-	
-	f.logger.Info("Released worker pool", zap.String("name", name))
+	return nil
 }
 
-// ReleaseAll releases all worker pools
-func (f *WorkerPoolFactory) ReleaseAll() {
-	f.poolsMu.Lock()
-	defer f.poolsMu.Unlock()
+// SubmitWithTimeout submits a task with a timeout to a worker pool
+func (f *WorkerPoolFactory) SubmitWithTimeout(poolName string, task func(), timeout time.Duration) error {
+	// Get or create a worker pool with default size (number of CPUs)
+	pool, err := f.GetWorkerPool(poolName, ants.DefaultAntsPoolSize)
+	if err != nil {
+		return err
+	}
+	
+	startTime := time.Now()
+	
+	// Create a context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	
+	// Create a channel to signal task completion
+	done := make(chan struct{})
+	
+	// Submit the task to the pool
+	err = pool.Submit(func() {
+		defer func() {
+			if r := recover(); r != nil {
+				f.logger.Error("Task panicked",
+					zap.String("pool", poolName),
+					zap.Any("panic", r))
+				
+				f.metrics.RecordPanic(poolName)
+			}
+			
+			close(done)
+		}()
+		
+		task()
+	})
+	
+	if err != nil {
+		if errors.Is(err, ants.ErrPoolClosed) {
+			return ErrPoolClosed
+		}
+		if errors.Is(err, ants.ErrPoolOverload) {
+			f.metrics.RecordRejection(poolName)
+			return ErrPoolOverloaded
+		}
+		return err
+	}
+	
+	// Wait for task completion or timeout
+	select {
+	case <-done:
+		f.metrics.RecordExecution(poolName, true, time.Since(startTime))
+		return nil
+	case <-ctx.Done():
+		f.metrics.RecordTimeout(poolName)
+		return ErrTaskTimeout
+	}
+}
+
+// ReleasePool releases a worker pool
+func (f *WorkerPoolFactory) ReleasePool(name string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	
+	if pool, exists := f.pools[name]; exists {
+		pool.Release()
+		delete(f.pools, name)
+		delete(f.poolOptions, name)
+		
+		f.logger.Info("Released worker pool", zap.String("name", name))
+	}
+}
+
+// GetPoolStats returns statistics for a worker pool
+func (f *WorkerPoolFactory) GetPoolStats(name string) (running int, capacity int, ok bool) {
+	f.mu.RLock()
+	pool, exists := f.pools[name]
+	f.mu.RUnlock()
+	
+	if !exists {
+		return 0, 0, false
+	}
+	
+	return pool.Running(), pool.Cap(), true
+}
+
+// GetMetrics returns the worker pool metrics
+func (f *WorkerPoolFactory) GetMetrics() *WorkerPoolMetrics {
+	return f.metrics
+}
+
+// Release releases all worker pools
+func (f *WorkerPoolFactory) Release() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	
 	for name, pool := range f.pools {
 		pool.Release()
@@ -389,53 +363,184 @@ func (f *WorkerPoolFactory) ReleaseAll() {
 	}
 	
 	f.pools = make(map[string]*ants.Pool)
+	f.poolOptions = make(map[string]*ants.Options)
 }
 
-// GetStats returns statistics for all worker pools
-func (f *WorkerPoolFactory) GetStats() map[string]*PoolStats {
-	f.poolsMu.RLock()
-	defer f.poolsMu.RUnlock()
+// WorkerPoolMetrics collects metrics for worker pools
+type WorkerPoolMetrics struct {
+	mu sync.RWMutex
 	
-	// Update stats for all pools
-	for name, pool := range f.pools {
-		f.metrics.UpdatePoolStats(name, pool)
+	// Execution metrics
+	executions map[string]int64
+	successes  map[string]int64
+	failures   map[string]int64
+	rejections map[string]int64
+	timeouts   map[string]int64
+	panics     map[string]int64
+	
+	// Latency metrics
+	executionTimes map[string][]time.Duration
+}
+
+// NewWorkerPoolMetrics creates a new WorkerPoolMetrics
+func NewWorkerPoolMetrics() *WorkerPoolMetrics {
+	return &WorkerPoolMetrics{
+		executions:     make(map[string]int64),
+		successes:      make(map[string]int64),
+		failures:       make(map[string]int64),
+		rejections:     make(map[string]int64),
+		timeouts:       make(map[string]int64),
+		panics:         make(map[string]int64),
+		executionTimes: make(map[string][]time.Duration),
+	}
+}
+
+// RecordExecution records an execution of a worker pool task
+func (m *WorkerPoolMetrics) RecordExecution(poolName string, success bool, duration time.Duration) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	m.executions[poolName]++
+	if success {
+		m.successes[poolName]++
+	} else {
+		m.failures[poolName]++
 	}
 	
-	return f.metrics.GetAllStats()
+	if _, ok := m.executionTimes[poolName]; !ok {
+		m.executionTimes[poolName] = make([]time.Duration, 0, 100)
+	}
+	
+	m.executionTimes[poolName] = append(m.executionTimes[poolName], duration)
+	
+	// Keep only the last 100 execution times
+	if len(m.executionTimes[poolName]) > 100 {
+		m.executionTimes[poolName] = m.executionTimes[poolName][1:]
+	}
 }
 
-// registerWorkerPoolHooks registers lifecycle hooks for the worker pool components
-// This follows Fx's lifecycle management pattern
-func registerWorkerPoolHooks(
-	lc fx.Lifecycle,
-	logger *zap.Logger,
-	factory *WorkerPoolFactory,
-) {
-	lc.Append(fx.Hook{
-		OnStart: func(ctx context.Context) error {
-			logger.Info("Starting worker pool components")
-			return nil
-		},
-		OnStop: func(ctx context.Context) error {
-			logger.Info("Stopping worker pool components")
-			
-			// Log statistics for all worker pools
-			stats := factory.GetStats()
-			for name, stat := range stats {
-				logger.Info("Worker pool statistics",
-					zap.String("name", name),
-					zap.Int("running_workers", stat.RunningWorkers),
-					zap.Int("free_workers", stat.FreeWorkers),
-					zap.Int64("tasks_submitted", stat.TasksSubmitted),
-					zap.Int64("tasks_completed", stat.TasksCompleted),
-					zap.Int64("tasks_failed", stat.TasksFailed))
-			}
-			
-			// Release all worker pools
-			factory.ReleaseAll()
-			
-			return nil
-		},
-	})
+// RecordFailure records a failure of a worker pool task
+func (m *WorkerPoolMetrics) RecordFailure(poolName string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	m.failures[poolName]++
+}
+
+// RecordRejection records a rejection of a worker pool task
+func (m *WorkerPoolMetrics) RecordRejection(poolName string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	m.rejections[poolName]++
+}
+
+// RecordTimeout records a timeout of a worker pool task
+func (m *WorkerPoolMetrics) RecordTimeout(poolName string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	m.timeouts[poolName]++
+}
+
+// RecordPanic records a panic of a worker pool task
+func (m *WorkerPoolMetrics) RecordPanic(poolName string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	m.panics[poolName]++
+}
+
+// GetExecutionCount returns the number of executions for a worker pool
+func (m *WorkerPoolMetrics) GetExecutionCount(poolName string) int64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	return m.executions[poolName]
+}
+
+// GetSuccessCount returns the number of successful executions for a worker pool
+func (m *WorkerPoolMetrics) GetSuccessCount(poolName string) int64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	return m.successes[poolName]
+}
+
+// GetFailureCount returns the number of failed executions for a worker pool
+func (m *WorkerPoolMetrics) GetFailureCount(poolName string) int64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	return m.failures[poolName]
+}
+
+// GetRejectionCount returns the number of rejected tasks for a worker pool
+func (m *WorkerPoolMetrics) GetRejectionCount(poolName string) int64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	return m.rejections[poolName]
+}
+
+// GetTimeoutCount returns the number of timed out tasks for a worker pool
+func (m *WorkerPoolMetrics) GetTimeoutCount(poolName string) int64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	return m.timeouts[poolName]
+}
+
+// GetPanicCount returns the number of panicked tasks for a worker pool
+func (m *WorkerPoolMetrics) GetPanicCount(poolName string) int64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	return m.panics[poolName]
+}
+
+// GetSuccessRate returns the success rate for a worker pool
+func (m *WorkerPoolMetrics) GetSuccessRate(poolName string) float64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	executions := m.executions[poolName]
+	if executions == 0 {
+		return 0
+	}
+	
+	return float64(m.successes[poolName]) / float64(executions)
+}
+
+// GetAverageExecutionTime returns the average execution time for a worker pool
+func (m *WorkerPoolMetrics) GetAverageExecutionTime(poolName string) time.Duration {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	times, ok := m.executionTimes[poolName]
+	if !ok || len(times) == 0 {
+		return 0
+	}
+	
+	var sum time.Duration
+	for _, t := range times {
+		sum += t
+	}
+	
+	return sum / time.Duration(len(times))
+}
+
+// Reset resets all metrics
+func (m *WorkerPoolMetrics) Reset() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	m.executions = make(map[string]int64)
+	m.successes = make(map[string]int64)
+	m.failures = make(map[string]int64)
+	m.rejections = make(map[string]int64)
+	m.timeouts = make(map[string]int64)
+	m.panics = make(map[string]int64)
+	m.executionTimes = make(map[string][]time.Duration)
 }
 

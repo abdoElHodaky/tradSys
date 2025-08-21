@@ -1,133 +1,184 @@
-# Worker Pool Package
+# Worker Pool for Go with Fx Integration
 
-This package provides an optimized worker pool implementation for the TradSys platform, using the high-performance `github.com/panjf2000/ants/v2` package while ensuring it follows Fx benefits and best practices.
+This package provides a high-performance worker pool implementation for Go applications using Uber's Fx dependency injection framework. It is built on top of the [panjf2000/ants](https://github.com/panjf2000/ants) package and adds the following features:
 
-## Key Features
-
-- **Fx Integration**: Fully integrated with Uber's Fx dependency injection framework
-- **Lifecycle Management**: Proper resource initialization and cleanup
-- **Metrics Collection**: Built-in metrics collection for worker pool events
-- **High Performance**: Uses the battle-tested `ants` library for optimal performance
-- **Customizable**: Highly configurable worker pool behavior
-- **Panic Recovery**: Built-in panic recovery for worker tasks
-- **Statistics**: Comprehensive statistics for monitoring and debugging
+- Integration with Uber's Fx dependency injection framework
+- Comprehensive metrics collection
+- Timeout support
+- Error handling
+- Panic recovery
+- Lifecycle management
 
 ## Usage
 
 ### Basic Usage
 
 ```go
-// In your Fx application
-app := fx.New(
-    // Include the worker pool module
-    workerpool.Module,
-    
-    // Provide your services
-    fx.Provide(
-        NewMyService,
-    ),
-)
+// Create a worker pool factory
+factory := workerpool.NewWorkerPoolFactory(workerpool.WorkerPoolParams{
+    Logger: logger,
+})
 
-// In your service
-type MyService struct {
-    workerPool *workerpool.WorkerPoolFactory
-}
+// Submit a task to a worker pool
+err := factory.Submit("example", func() {
+    // Your code here
+    time.Sleep(100 * time.Millisecond)
+    logger.Info("Task completed")
+})
 
-func NewMyService(workerPool *workerpool.WorkerPoolFactory) *MyService {
-    return &MyService{
-        workerPool: workerPool,
-    }
-}
-
-func (s *MyService) ProcessItems(items []string) error {
-    for _, item := range items {
-        item := item // Capture loop variable
-        err := s.workerPool.Submit("my-pool", func() {
-            // Process the item
-            processItem(item)
-        })
-        if err != nil {
-            return err
-        }
-    }
-    return nil
+if err != nil {
+    logger.Error("Failed to submit task", zap.Error(err))
 }
 ```
 
 ### With Error Handling
 
 ```go
-func (s *MyService) ProcessItemsWithErrorHandling(items []string) error {
-    for _, item := range items {
-        item := item // Capture loop variable
-        err := s.workerPool.SubmitTask("my-pool", func() error {
-            // Process the item
-            return processItem(item)
-        })
-        if err != nil {
-            return err
-        }
-    }
-    return nil
-}
-```
-
-### Custom Pool Configuration
-
-```go
-func (s *MyService) SetupCustomWorkerPool() (*ants.Pool, error) {
-    options := ants.Options{
-        ExpiryDuration: time.Minute,
-        PreAlloc:       true,
-        Nonblocking:    true,
-        PanicHandler: func(i interface{}) {
-            // Custom panic handler
-            log.Printf("Worker panic: %v", i)
-        },
-    }
+err := factory.SubmitTask("example-with-error", func() error {
+    // Your code here
+    time.Sleep(100 * time.Millisecond)
     
-    return s.workerPool.CreateCustomWorkerPool("custom-pool", 50, options)
+    // Return an error if the task fails
+    return errors.New("task failed")
+})
+
+if err != nil {
+    logger.Error("Failed to submit task", zap.Error(err))
 }
 ```
 
-### Getting Pool Statistics
+### With Timeout
 
 ```go
-func (s *MyService) LogPoolStatistics() {
-    stats := s.workerPool.GetStats()
-    for name, stat := range stats {
-        log.Printf("Pool %s: Running=%d, Free=%d, Submitted=%d, Completed=%d, Failed=%d",
-            name, stat.RunningWorkers, stat.FreeWorkers, 
-            stat.TasksSubmitted, stat.TasksCompleted, stat.TasksFailed)
+err := factory.SubmitWithTimeout("example-with-timeout", func() {
+    // Your code here
+    time.Sleep(200 * time.Millisecond)
+    logger.Info("Task completed (but may have timed out)")
+}, 100*time.Millisecond)
+
+if err != nil {
+    logger.Error("Task timed out", zap.Error(err))
+}
+```
+
+### With Custom Options
+
+```go
+options := ants.Options{
+    ExpiryDuration: 5 * time.Minute,
+    PreAlloc:       true,
+    MaxBlockingTasks: 100,
+    Nonblocking:    true,
+}
+
+pool, err := factory.GetWorkerPoolWithOptions("custom-example", 10, &options)
+if err != nil {
+    logger.Error("Failed to create worker pool", zap.Error(err))
+} else {
+    // Use the pool directly
+    err = pool.Submit(func() {
+        // Your code here
+        time.Sleep(100 * time.Millisecond)
+        logger.Info("Custom pool task completed")
+    })
+    
+    if err != nil {
+        logger.Error("Failed to submit task to custom pool", zap.Error(err))
     }
 }
 ```
 
-## Benefits Over Previous Implementation
+### Getting Metrics
 
-1. **Higher Performance**: Uses the highly optimized `ants` library which outperforms manual worker pool implementations
-2. **Better Dependency Injection**: Follows Fx's dependency injection pattern more closely
-3. **Separation of Concerns**: Separates metrics collection from worker pool logic
-4. **Better Error Handling**: Improved error handling and panic recovery
-5. **More Configurable**: More configuration options for worker pools
-6. **Better Metrics**: More detailed metrics collection
-7. **Better Documentation**: More comprehensive documentation and examples
-8. **Memory Efficiency**: More efficient memory usage with worker reuse and cleanup
+```go
+metrics := factory.GetMetrics()
 
-## Performance Comparison
+logger.Info("Worker pool metrics",
+    zap.Int64("executions", metrics.GetExecutionCount("example")),
+    zap.Int64("successes", metrics.GetSuccessCount("example")),
+    zap.Int64("failures", metrics.GetFailureCount("example")),
+    zap.Float64("success_rate", metrics.GetSuccessRate("example")),
+    zap.Duration("avg_execution_time", metrics.GetAverageExecutionTime("example")))
+```
 
-The `ants` library used in this implementation has been benchmarked against other worker pool implementations and shows significant performance advantages:
+### Getting Pool Stats
 
-- Lower memory usage due to worker reuse
-- Higher throughput for task processing
-- Better scalability under high load
-- Lower latency for task execution
+```go
+running, capacity, ok := factory.GetPoolStats("example")
+if ok {
+    logger.Info("Worker pool stats",
+        zap.String("name", "example"),
+        zap.Int("running", running),
+        zap.Int("capacity", capacity))
+}
+```
 
-## Future Improvements
+### Releasing Pools
 
-- Add support for prioritized task queues
-- Add support for task cancellation
-- Add support for task timeouts
-- Add support for more sophisticated scheduling strategies
-- Add support for Prometheus metrics integration
+```go
+// Release a specific pool
+factory.ReleasePool("example")
+
+// Release all pools
+factory.Release()
+```
+
+## Fx Integration
+
+To use the worker pool with Uber's Fx, you can use the provided module:
+
+```go
+app := fx.New(
+    fx.Provide(
+        // Provide a logger
+        func() *zap.Logger {
+            logger, _ := zap.NewDevelopment()
+            return logger
+        },
+    ),
+    
+    // Include the worker pool module
+    workerpool.Module,
+    
+    // Use the worker pool in your components
+    fx.Invoke(func(wp *workerpool.WorkerPoolFactory) {
+        // Use the worker pool
+    }),
+)
+```
+
+## Features
+
+### Worker Pool Options
+
+The worker pool supports the following options:
+
+- **ExpiryDuration**: The duration after which idle workers are cleaned up.
+- **PreAlloc**: Whether to pre-allocate memory for workers.
+- **MaxBlockingTasks**: The maximum number of tasks that can be blocked waiting for a worker.
+- **Nonblocking**: Whether to return an error immediately if the pool is full.
+- **PanicHandler**: A function to handle panics in worker tasks.
+
+### Metrics
+
+The worker pool collects the following metrics:
+
+- **Executions**: The number of executions for a worker pool.
+- **Successes**: The number of successful executions for a worker pool.
+- **Failures**: The number of failed executions for a worker pool.
+- **Rejections**: The number of rejected tasks for a worker pool.
+- **Timeouts**: The number of timed out tasks for a worker pool.
+- **Panics**: The number of panicked tasks for a worker pool.
+- **Success Rate**: The success rate for a worker pool.
+- **Average Execution Time**: The average execution time for a worker pool.
+
+### Lifecycle Management
+
+The worker pool factory is integrated with Fx's lifecycle management. When the application stops, it logs the worker pool metrics for all worker pools and releases them.
+
+## Dependencies
+
+- [github.com/panjf2000/ants/v2](https://github.com/panjf2000/ants): The underlying worker pool implementation.
+- [go.uber.org/fx](https://github.com/uber-go/fx): Dependency injection framework.
+- [go.uber.org/zap](https://github.com/uber-go/zap): Logging framework.
 

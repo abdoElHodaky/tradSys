@@ -1,7 +1,6 @@
 package workerpool
 
 import (
-	"context"
 	"errors"
 	"time"
 
@@ -9,155 +8,98 @@ import (
 	"go.uber.org/zap"
 )
 
-// This file provides example usage of the worker pool components
-// It is not meant to be used in production, but rather to demonstrate
-// how to use the worker pool components in a way that follows Fx benefits
-
-// ExampleService demonstrates how to use the worker pool in a service
-type ExampleService struct {
-	logger      *zap.Logger
-	workerPool  *WorkerPoolFactory
-}
-
-// NewExampleService creates a new example service
-// This follows Fx's dependency injection pattern
-func NewExampleService(
-	logger *zap.Logger,
-	workerPool *WorkerPoolFactory,
-) *ExampleService {
-	return &ExampleService{
-		logger:     logger,
-		workerPool: workerPool,
-	}
-}
-
-// ProcessItems demonstrates how to use the worker pool to process items in parallel
-func (s *ExampleService) ProcessItems(ctx context.Context, items []string) error {
-	// Create a worker pool for this specific operation
-	poolName := "process-items"
+// ExampleUsage demonstrates how to use the worker pool
+func ExampleUsage(logger *zap.Logger) {
+	// Create a worker pool factory
+	factory := NewWorkerPoolFactory(WorkerPoolParams{
+		Logger: logger,
+	})
 	
-	// Create a custom worker pool with specific options if needed
-	options := ants.Options{
-		ExpiryDuration: time.Minute,
-		PreAlloc:       true,
-		PanicHandler: func(i interface{}) {
-			s.logger.Error("Panic in worker",
-				zap.Any("panic", i))
-		},
-	}
+	// Example 1: Basic usage
+	err := factory.Submit("example", func() {
+		// Simulate work
+		time.Sleep(100 * time.Millisecond)
+		logger.Info("Task completed")
+	})
 	
-	pool, err := s.workerPool.CreateCustomWorkerPool(poolName, 20, options)
 	if err != nil {
-		return err
+		logger.Error("Failed to submit task", zap.Error(err))
 	}
 	
-	// Create a wait group to wait for all tasks to complete
-	var errCount int32
-	var completed = make(chan struct{})
-	
-	// Create a context with timeout
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-	
-	// Process items in parallel
-	go func() {
-		for i, item := range items {
-			// Capture loop variables
-			i := i
-			item := item
-			
-			// Submit task to worker pool
-			err := s.workerPool.SubmitTask(poolName, func() error {
-				// Check if context is cancelled
-				if ctx.Err() != nil {
-					return ctx.Err()
-				}
-				
-				s.logger.Debug("Processing item",
-					zap.Int("index", i),
-					zap.String("item", item))
-				
-				// Simulate processing
-				time.Sleep(100 * time.Millisecond)
-				
-				// Return success or error
-				if i%10 == 0 {
-					return errors.New("simulated error")
-				}
-				
-				return nil
-			})
-			
-			if err != nil {
-				s.logger.Error("Failed to submit task",
-					zap.Error(err))
-			}
-		}
+	// Example 2: With error handling
+	err = factory.SubmitTask("example-with-error", func() error {
+		// Simulate work
+		time.Sleep(100 * time.Millisecond)
 		
-		// Signal that all tasks have been submitted
-		close(completed)
-	}()
+		// Simulate an error
+		return errors.New("task failed")
+	})
 	
-	// Wait for all tasks to complete or context to be cancelled
-	select {
-	case <-completed:
-		// All tasks have been submitted
-		s.logger.Info("All tasks submitted")
-	case <-ctx.Done():
-		// Context cancelled
-		return ctx.Err()
+	if err != nil {
+		logger.Error("Failed to submit task", zap.Error(err))
 	}
 	
-	// Get statistics
-	stats := s.workerPool.GetStats()[poolName]
-	if stats != nil {
-		s.logger.Info("Processing completed",
-			zap.Int64("submitted", stats.TasksSubmitted),
-			zap.Int64("completed", stats.TasksCompleted),
-			zap.Int64("failed", stats.TasksFailed))
+	// Example 3: With timeout
+	err = factory.SubmitWithTimeout("example-with-timeout", func() {
+		// Simulate work that takes longer than the timeout
+		time.Sleep(200 * time.Millisecond)
+		logger.Info("Task completed (but may have timed out)")
+	}, 100*time.Millisecond)
+	
+	if err != nil {
+		logger.Error("Task timed out", zap.Error(err))
 	}
 	
-	return nil
-}
-
-// BatchProcessData demonstrates how to use the worker pool for batch processing
-func (s *ExampleService) BatchProcessData(data [][]byte) error {
-	// Use the default worker pool
-	poolName := "batch-processor"
+	// Example 4: With custom options
+	options := ants.Options{
+		ExpiryDuration: 5 * time.Minute,
+		PreAlloc:       true,
+		MaxBlockingTasks: 100,
+		Nonblocking:    true,
+	}
 	
-	// Process data in batches
-	for i, batch := range data {
-		// Capture loop variables
-		i := i
-		batch := batch
-		
-		// Submit task to worker pool
-		err := s.workerPool.Submit(poolName, func() {
-			s.logger.Debug("Processing batch",
-				zap.Int("batch", i),
-				zap.Int("size", len(batch)))
-			
-			// Simulate processing
-			time.Sleep(50 * time.Millisecond)
+	pool, err := factory.GetWorkerPoolWithOptions("custom-example", 10, &options)
+	if err != nil {
+		logger.Error("Failed to create worker pool", zap.Error(err))
+	} else {
+		// Use the pool directly
+		err = pool.Submit(func() {
+			// Simulate work
+			time.Sleep(100 * time.Millisecond)
+			logger.Info("Custom pool task completed")
 		})
 		
 		if err != nil {
-			s.logger.Error("Failed to submit batch",
-				zap.Int("batch", i),
-				zap.Error(err))
-			return err
+			logger.Error("Failed to submit task to custom pool", zap.Error(err))
 		}
 	}
 	
-	return nil
-}
-
-// ScheduleTask demonstrates how to schedule a task with the worker pool
-func (s *ExampleService) ScheduleTask(task func() error) error {
-	// Use a dedicated worker pool for scheduled tasks
-	poolName := "scheduler"
+	// Example 5: Get metrics
+	metrics := factory.GetMetrics()
 	
-	// Submit the task
-	return s.workerPool.SubmitTask(poolName, task)
+	logger.Info("Worker pool metrics",
+		zap.Int64("executions", metrics.GetExecutionCount("example")),
+		zap.Int64("successes", metrics.GetSuccessCount("example")),
+		zap.Int64("failures", metrics.GetFailureCount("example")),
+		zap.Float64("success_rate", metrics.GetSuccessRate("example")),
+		zap.Duration("avg_execution_time", metrics.GetAverageExecutionTime("example")))
+	
+	// Example 6: Get pool stats
+	running, capacity, ok := factory.GetPoolStats("example")
+	if ok {
+		logger.Info("Worker pool stats",
+			zap.String("name", "example"),
+			zap.Int("running", running),
+			zap.Int("capacity", capacity))
+	}
+	
+	// Wait for tasks to complete
+	time.Sleep(300 * time.Millisecond)
+	
+	// Release a specific pool
+	factory.ReleasePool("example")
+	
+	// Release all pools
+	factory.Release()
 }
 
