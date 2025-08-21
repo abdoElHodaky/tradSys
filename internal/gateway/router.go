@@ -100,6 +100,8 @@ func (r *Router) registerAPIRoutes(authMiddleware *auth.Middleware) {
 	{
 		risk.GET("/positions", forwardToService("risk", "/positions"))
 		risk.GET("/limits", forwardToService("risk", "/limits"))
+		risk.POST("/limits", forwardToService("risk", "/limits"))
+		risk.DELETE("/limits/:id", forwardToService("risk", "/limits/:id"))
 		risk.POST("/validate", forwardToService("risk", "/validate"))
 	}
 
