@@ -17,6 +17,8 @@ type PluginLoader struct {
 	plugins   map[string]ExchangeConnectorPlugin
 	logger    *zap.Logger
 	mu        sync.RWMutex
+	// Track plugins being loaded to prevent concurrent loading of the same plugin
+	loadingPlugins sync.Map
 }
 
 // NewPluginLoader creates a new plugin loader
@@ -30,9 +32,6 @@ func NewPluginLoader(pluginDir string, logger *zap.Logger) *PluginLoader {
 
 // LoadPlugins loads all plugins from the plugin directory
 func (l *PluginLoader) LoadPlugins() error {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
 	// Check if the plugin directory exists
 	if _, err := os.Stat(l.pluginDir); os.IsNotExist(err) {
 		l.logger.Warn("Plugin directory does not exist", zap.String("directory", l.pluginDir))
@@ -46,7 +45,8 @@ func (l *PluginLoader) LoadPlugins() error {
 	}
 
 	for _, file := range files {
-		if err := l.loadPlugin(file); err != nil {
+		// Use a separate function to ensure deferred mutex unlock happens properly
+		if err := l.loadPluginFile(file); err != nil {
 			l.logger.Error("Failed to load plugin", zap.String("file", file), zap.Error(err))
 			continue
 		}
@@ -56,7 +56,23 @@ func (l *PluginLoader) LoadPlugins() error {
 	return nil
 }
 
-// loadPlugin loads a single plugin
+// loadPluginFile loads a single plugin file with proper locking
+func (l *PluginLoader) loadPluginFile(path string) error {
+	// Use a loading marker to prevent concurrent loading of the same plugin
+	if _, loaded := l.loadingPlugins.LoadOrStore(path, true); loaded {
+		// Another goroutine is already loading this plugin
+		return fmt.Errorf("plugin %s is already being loaded", path)
+	}
+	defer l.loadingPlugins.Delete(path)
+
+	// Acquire write lock for the entire loading process
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	return l.loadPlugin(path)
+}
+
+// loadPlugin loads a single plugin (must be called with lock held)
 func (l *PluginLoader) loadPlugin(path string) error {
 	// Open the plugin
 	p, err := plugin.Open(path)
@@ -75,6 +91,11 @@ func (l *PluginLoader) loadPlugin(path string) error {
 		return fmt.Errorf("plugin info is not of type *PluginInfo")
 	}
 
+	// Check if this plugin is already loaded
+	if _, exists := l.plugins[info.ExchangeName]; exists {
+		return fmt.Errorf("plugin for exchange %s is already loaded", info.ExchangeName)
+	}
+
 	// Look up the create connector function
 	createSymbol, err := p.Lookup(CreateConnectorSymbol)
 	if err != nil {
@@ -90,6 +111,7 @@ func (l *PluginLoader) loadPlugin(path string) error {
 	plugin := &pluginWrapper{
 		info:       info,
 		createFunc: createFunc,
+		path:       path,
 	}
 
 	// Register the plugin
@@ -99,7 +121,8 @@ func (l *PluginLoader) loadPlugin(path string) error {
 		zap.String("name", info.Name),
 		zap.String("version", info.Version),
 		zap.String("author", info.Author),
-		zap.String("exchange", info.ExchangeName))
+		zap.String("exchange", info.ExchangeName),
+		zap.String("path", path))
 
 	return nil
 }
@@ -126,10 +149,37 @@ func (l *PluginLoader) GetAvailablePlugins() []PluginInfo {
 	return plugins
 }
 
+// UnloadPlugin unloads a plugin by exchange name
+func (l *PluginLoader) UnloadPlugin(exchangeName string) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	plugin, ok := l.plugins[exchangeName]
+	if !ok {
+		return fmt.Errorf("plugin for exchange %s is not loaded", exchangeName)
+	}
+
+	// Call cleanup if the plugin implements it
+	if cleanable, ok := plugin.(CleanupablePlugin); ok {
+		if err := cleanable.Cleanup(); err != nil {
+			l.logger.Warn("Error cleaning up plugin",
+				zap.String("exchange", exchangeName),
+				zap.Error(err))
+		}
+	}
+
+	// Remove the plugin from the registry
+	delete(l.plugins, exchangeName)
+
+	l.logger.Info("Unloaded exchange connector plugin", zap.String("exchange", exchangeName))
+	return nil
+}
+
 // pluginWrapper implements the ExchangeConnectorPlugin interface
 type pluginWrapper struct {
 	info       *PluginInfo
 	createFunc func(connectors.ExchangeConfig, *zap.Logger) (connectors.ExchangeConnector, error)
+	path       string
 }
 
 // GetExchangeName returns the name of the exchange
@@ -139,6 +189,35 @@ func (p *pluginWrapper) GetExchangeName() string {
 
 // CreateConnector creates an exchange connector
 func (p *pluginWrapper) CreateConnector(config connectors.ExchangeConfig, logger *zap.Logger) (connectors.ExchangeConnector, error) {
-	return p.createFunc(config, logger)
+	// Use panic recovery to prevent plugin failures from crashing the application
+	var connector connectors.ExchangeConnector
+	var err error
+
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				err = fmt.Errorf("panic in plugin %s: %v", p.info.Name, r)
+				logger.Error("Panic in plugin",
+					zap.String("plugin", p.info.Name),
+					zap.String("exchange", p.info.ExchangeName),
+					zap.Any("panic", r))
+			}
+		}()
+
+		connector, err = p.createFunc(config, logger)
+	}()
+
+	return connector, err
+}
+
+// Cleanup performs cleanup for the plugin
+func (p *pluginWrapper) Cleanup() error {
+	// No cleanup needed for this plugin wrapper
+	return nil
+}
+
+// CleanupablePlugin defines a plugin that can be cleaned up
+type CleanupablePlugin interface {
+	Cleanup() error
 }
 

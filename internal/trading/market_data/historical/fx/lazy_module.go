@@ -11,8 +11,6 @@ import (
 var LazyHistoricalDataModule = fx.Options(
 	// Provide lazily loaded historical data components
 	provideLazyHistoricalDataService,
-	provideLazyHistoricalDataLoader,
-	provideLazyHistoricalDataAnalyzer,
 	
 	// Register lifecycle hooks
 	fx.Invoke(registerLazyHistoricalDataHooks),
@@ -22,35 +20,9 @@ var LazyHistoricalDataModule = fx.Options(
 func provideLazyHistoricalDataService(logger *zap.Logger, metrics *lazy.LazyLoadingMetrics) *lazy.LazyProvider {
 	return lazy.NewLazyProvider(
 		"historical-data-service",
-		func(config *historical.HistoricalDataConfig, logger *zap.Logger) (*historical.HistoricalDataService, error) {
+		func(config *historical.Config, logger *zap.Logger) (*historical.Service, error) {
 			logger.Info("Lazily initializing historical data service")
-			return historical.NewHistoricalDataService(config, logger)
-		},
-		logger,
-		metrics,
-	)
-}
-
-// provideLazyHistoricalDataLoader provides a lazily loaded historical data loader
-func provideLazyHistoricalDataLoader(logger *zap.Logger, metrics *lazy.LazyLoadingMetrics) *lazy.LazyProvider {
-	return lazy.NewLazyProvider(
-		"historical-data-loader",
-		func(config *historical.HistoricalDataConfig, logger *zap.Logger) (*historical.HistoricalDataLoader, error) {
-			logger.Info("Lazily initializing historical data loader")
-			return historical.NewHistoricalDataLoader(config, logger)
-		},
-		logger,
-		metrics,
-	)
-}
-
-// provideLazyHistoricalDataAnalyzer provides a lazily loaded historical data analyzer
-func provideLazyHistoricalDataAnalyzer(logger *zap.Logger, metrics *lazy.LazyLoadingMetrics) *lazy.LazyProvider {
-	return lazy.NewLazyProvider(
-		"historical-data-analyzer",
-		func(logger *zap.Logger) (*historical.HistoricalDataAnalyzer, error) {
-			logger.Info("Lazily initializing historical data analyzer")
-			return historical.NewHistoricalDataAnalyzer(logger)
+			return historical.NewService(*config, logger)
 		},
 		logger,
 		metrics,
@@ -62,36 +34,40 @@ func registerLazyHistoricalDataHooks(
 	lc fx.Lifecycle,
 	logger *zap.Logger,
 	historicalDataServiceProvider *lazy.LazyProvider,
-	historicalDataLoaderProvider *lazy.LazyProvider,
-	historicalDataAnalyzerProvider *lazy.LazyProvider,
 ) {
 	logger.Info("Registering lazy historical data component hooks")
+	
+	// Register shutdown hook to clean up resources
+	lc.Append(fx.Hook{
+		OnStop: func(ctx context.Context) error {
+			// Only clean up if the service was initialized
+			if !historicalDataServiceProvider.IsInitialized() {
+				return nil
+			}
+			
+			// Get the service
+			instance, err := historicalDataServiceProvider.Get()
+			if err != nil {
+				logger.Error("Failed to get historical data service during shutdown", zap.Error(err))
+				return err
+			}
+			
+			// Clean up resources
+			service := instance.(*historical.Service)
+			service.ClearCache()
+			
+			logger.Info("Historical data service resources cleaned up")
+			return nil
+		},
+	})
 }
 
 // GetHistoricalDataService gets the historical data service, initializing it if necessary
-func GetHistoricalDataService(provider *lazy.LazyProvider) (*historical.HistoricalDataService, error) {
+func GetHistoricalDataService(provider *lazy.LazyProvider) (*historical.Service, error) {
 	instance, err := provider.Get()
 	if err != nil {
 		return nil, err
 	}
-	return instance.(*historical.HistoricalDataService), nil
-}
-
-// GetHistoricalDataLoader gets the historical data loader, initializing it if necessary
-func GetHistoricalDataLoader(provider *lazy.LazyProvider) (*historical.HistoricalDataLoader, error) {
-	instance, err := provider.Get()
-	if err != nil {
-		return nil, err
-	}
-	return instance.(*historical.HistoricalDataLoader), nil
-}
-
-// GetHistoricalDataAnalyzer gets the historical data analyzer, initializing it if necessary
-func GetHistoricalDataAnalyzer(provider *lazy.LazyProvider) (*historical.HistoricalDataAnalyzer, error) {
-	instance, err := provider.Get()
-	if err != nil {
-		return nil, err
-	}
-	return instance.(*historical.HistoricalDataAnalyzer), nil
+	return instance.(*historical.Service), nil
 }
 
