@@ -29,6 +29,13 @@ type AdaptivePluginLoader struct {
 	// Concurrency control
 	maxConcurrent       int
 	loadSemaphore       chan struct{}
+	workerPool          *WorkerPool
+	
+	// Backpressure management
+	backpressureEnabled bool
+	maxQueuedTasks      int
+	currentLoad         int64
+	loadMu              sync.RWMutex
 	
 	// Resource monitoring
 	memoryMonitor       *MemoryMonitor
@@ -66,12 +73,22 @@ func NewAdaptivePluginLoader(
 	// Default to number of CPUs for concurrent loads
 	maxConcurrent := runtime.NumCPU()
 	
+	// Create worker pool
+	workerPool := NewWorkerPool(maxConcurrent, maxConcurrent*10, logger)
+	
+	// Calculate default max queued tasks based on system resources
+	maxQueuedTasks := maxConcurrent * 20
+	
 	return &AdaptivePluginLoader{
 		logger:              logger,
 		pluginDirs:          pluginDirs,
 		loadedPlugins:       make(map[string]*LoadedPlugin),
 		maxConcurrent:       maxConcurrent,
 		loadSemaphore:       make(chan struct{}, maxConcurrent),
+		workerPool:          workerPool,
+		backpressureEnabled: true,
+		maxQueuedTasks:      maxQueuedTasks,
+		currentLoad:         0,
 		memoryMonitor:       NewMemoryMonitor(logger),
 		loadTimeout:         30 * time.Second,
 		scanInterval:        5 * time.Minute,
@@ -156,6 +173,12 @@ func (l *AdaptivePluginLoader) StartPluginScanner(ctx context.Context, scanInter
 		return fmt.Errorf("plugin scanner already running")
 	}
 	
+	// Start the worker pool if not already running
+	if l.workerPool != nil && atomic.LoadInt32(&l.workerPool.running) == 0 {
+		l.workerPool.Start()
+		l.logger.Info("Started worker pool for plugin operations")
+	}
+	
 	l.scannerRunning = true
 	l.scanInterval = scanInterval
 	l.baseScanInterval = scanInterval
@@ -172,9 +195,26 @@ func (l *AdaptivePluginLoader) StartPluginScanner(ctx context.Context, scanInter
 		for {
 			select {
 			case <-ticker.C:
-				// Scan for new plugins
-				if err := l.scanForNewPlugins(ctx); err != nil {
-					l.logger.Error("Failed to scan for new plugins", zap.Error(err))
+				// Create a scan task with priority
+				scanTask := NewTask("plugin_scan", func() error {
+					return l.scanForNewPlugins(ctx)
+				}).WithPriority(5) // Higher priority for scanning
+				
+				// Submit the task to the worker pool
+				if l.workerPool != nil {
+					if err := l.workerPool.Submit(scanTask); err != nil {
+						l.logger.Error("Failed to submit scan task to worker pool", zap.Error(err))
+						
+						// Fall back to direct execution if submission fails
+						if err := l.scanForNewPlugins(ctx); err != nil {
+							l.logger.Error("Failed to scan for new plugins", zap.Error(err))
+						}
+					}
+				} else {
+					// Direct execution if worker pool is not available
+					if err := l.scanForNewPlugins(ctx); err != nil {
+						l.logger.Error("Failed to scan for new plugins", zap.Error(err))
+					}
 				}
 				
 				// Adjust scan interval if adaptive scanning is enabled
@@ -224,11 +264,34 @@ func (l *AdaptivePluginLoader) StopPluginScanner() {
 	if l.scannerRunning {
 		close(l.scannerStopCh)
 		l.scannerStopCh = make(chan struct{})
+		l.scannerRunning = false
+	}
+	
+	// Stop the worker pool if it's running
+	if l.workerPool != nil && atomic.LoadInt32(&l.workerPool.running) == 1 {
+		l.workerPool.Stop()
+		l.logger.Info("Stopped worker pool for plugin operations")
 	}
 }
 
 // scanForNewPlugins scans for new plugins
 func (l *AdaptivePluginLoader) scanForNewPlugins(ctx context.Context) error {
+	// Check if we should apply backpressure
+	if l.backpressureEnabled {
+		// Check current load
+		l.loadMu.RLock()
+		currentLoad := l.currentLoad
+		l.loadMu.RUnlock()
+		
+		// If we're under heavy load, skip this scan
+		if currentLoad > int64(l.maxQueuedTasks) {
+			l.logger.Warn("Skipping plugin scan due to high system load",
+				zap.Int64("current_load", currentLoad),
+				zap.Int("max_queued_tasks", l.maxQueuedTasks))
+			return nil
+		}
+	}
+	
 	// Find all plugin files
 	pluginFiles, err := l.FindPluginFiles()
 	if err != nil {
@@ -252,6 +315,38 @@ func (l *AdaptivePluginLoader) scanForNewPlugins(ctx context.Context) error {
 	// Log new plugins found
 	if len(newFiles) > 0 {
 		l.logger.Info("Found new plugins", zap.Int("count", len(newFiles)))
+		
+		// Load new plugins using worker pool
+		if l.workerPool != nil && len(newFiles) > 0 {
+			for _, file := range newFiles {
+				// Create a load task with file-specific context
+				fileCtx, cancel := context.WithTimeout(ctx, l.loadTimeout)
+				loadTask := NewTask(fmt.Sprintf("load_plugin_%s", filepath.Base(file)), func() error {
+					defer cancel()
+					// Increase load counter
+					l.loadMu.Lock()
+					l.currentLoad++
+					l.loadMu.Unlock()
+					
+					// Load the plugin
+					err := l.LoadPlugin(fileCtx, file)
+					
+					// Decrease load counter
+					l.loadMu.Lock()
+					l.currentLoad--
+					l.loadMu.Unlock()
+					
+					return err
+				}).WithContext(fileCtx)
+				
+				// Submit the task to the worker pool
+				if err := l.workerPool.Submit(loadTask); err != nil {
+					l.logger.Error("Failed to submit plugin load task to worker pool",
+						zap.String("file", file),
+						zap.Error(err))
+				}
+			}
+		}
 	}
 	
 	return nil
