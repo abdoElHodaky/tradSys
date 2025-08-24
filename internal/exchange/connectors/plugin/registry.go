@@ -4,246 +4,258 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/abdoElHodaky/tradSys/internal/exchange/connectors"
+	"github.com/abdoElHodaky/tradSys/internal/plugin"
 	"go.uber.org/zap"
 )
 
-// ConnectorRegistry manages exchange connectors
-type ConnectorRegistry struct {
-	logger     *zap.Logger
-	loader     *PluginLoader
-	connectors map[string]connectors.ExchangeConnector
-	mu         sync.RWMutex
-	// Track connector usage for cleanup
-	lastUsed map[string]time.Time
-	// Track connector health
-	health map[string]bool
+// Registry is a registry for exchange connector plugins
+type Registry struct {
+	logger         *zap.Logger
+	plugins        map[string]ExchangeConnectorPlugin
+	pluginRegistry *plugin.EnhancedPluginRegistry
+	mu             sync.RWMutex
+	coreVersion    string
 }
 
-// NewConnectorRegistry creates a new connector registry
-func NewConnectorRegistry(pluginDir string, logger *zap.Logger) *ConnectorRegistry {
-	return &ConnectorRegistry{
-		logger:     logger,
-		loader:     NewPluginLoader(pluginDir, logger),
-		connectors: make(map[string]connectors.ExchangeConnector),
-		lastUsed:   make(map[string]time.Time),
-		health:     make(map[string]bool),
+// NewRegistry creates a new registry
+func NewRegistry(logger *zap.Logger, coreVersion string) *Registry {
+	return &Registry{
+		logger:         logger,
+		plugins:        make(map[string]ExchangeConnectorPlugin),
+		pluginRegistry: plugin.NewEnhancedPluginRegistry(logger, coreVersion),
+		coreVersion:    coreVersion,
 	}
 }
 
-// Initialize initializes the connector registry
-func (r *ConnectorRegistry) Initialize() error {
-	// Load plugins
-	if err := r.loader.LoadPlugins(); err != nil {
-		return fmt.Errorf("failed to load plugins: %w", err)
-	}
-	
-	// Start the cleanup goroutine
-	go r.cleanupUnusedConnectors()
-	
-	return nil
-}
-
-// GetConnector gets or creates an exchange connector
-func (r *ConnectorRegistry) GetConnector(exchangeName string, config connectors.ExchangeConfig) (connectors.ExchangeConnector, error) {
-	r.mu.RLock()
-	connector, exists := r.connectors[exchangeName]
-	if exists {
-		// Update last used time
-		r.lastUsed[exchangeName] = time.Now()
-		r.mu.RUnlock()
-		return connector, nil
-	}
-	r.mu.RUnlock()
-	
+// RegisterPlugin registers a plugin
+func (r *Registry) RegisterPlugin(plugin ExchangeConnectorPlugin) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	
-	// Check again in case another goroutine created it while we were waiting for the lock
-	if connector, exists = r.connectors[exchangeName]; exists {
-		r.lastUsed[exchangeName] = time.Now()
-		return connector, nil
+	info := plugin.GetPluginInfo()
+	
+	// Check if plugin already exists
+	if _, ok := r.plugins[info.ExchangeName]; ok {
+		return fmt.Errorf("plugin already registered for exchange: %s", info.ExchangeName)
 	}
 	
-	// Get the plugin
-	plugin, ok := r.loader.GetPlugin(exchangeName)
-	if !ok {
-		return nil, fmt.Errorf("exchange connector plugin not found: %s", exchangeName)
+	// Validate core version compatibility
+	if err := r.validateCoreVersionCompatibility(info); err != nil {
+		return fmt.Errorf("core version compatibility check failed: %w", err)
 	}
 	
-	// Create the connector with panic recovery
-	var err error
-	func() {
-		defer func() {
-			if r := recover(); r != nil {
-				err = fmt.Errorf("panic while creating connector: %v", r)
-				r.logger.Error("Panic while creating connector",
-					zap.String("exchange", exchangeName),
-					zap.Any("panic", r))
-			}
-		}()
-		
-		// Create the connector
-		connector, err = plugin.CreateConnector(config, r.logger)
-	}()
+	// Register plugin
+	r.plugins[info.ExchangeName] = plugin
 	
+	// Register with plugin registry
+	err := r.pluginRegistry.RegisterPlugin(
+		"exchange-connector",
+		info.ExchangeName,
+		plugin,
+		&plugin.PluginInfo{
+			Name:           info.Name,
+			Version:        info.Version,
+			Author:         info.Author,
+			Description:    info.Description,
+			Type:           "exchange-connector",
+			MinCoreVersion: info.MinCoreVersion,
+			MaxCoreVersion: info.MaxCoreVersion,
+			Dependencies:   []plugin.PluginDependency{},
+		},
+	)
 	if err != nil {
-		r.health[exchangeName] = false
-		return nil, fmt.Errorf("failed to create exchange connector: %w", err)
+		return fmt.Errorf("failed to register with plugin registry: %w", err)
 	}
 	
-	// Initialize the connector
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	
-	if err := connector.Initialize(ctx); err != nil {
-		r.health[exchangeName] = false
-		return nil, fmt.Errorf("failed to initialize exchange connector: %w", err)
-	}
-	
-	// Store the connector
-	r.connectors[exchangeName] = connector
-	r.lastUsed[exchangeName] = time.Now()
-	r.health[exchangeName] = true
-	
-	r.logger.Info("Created exchange connector", zap.String("exchange", exchangeName))
-	
-	return connector, nil
-}
-
-// ListAvailableExchanges lists available exchanges
-func (r *ConnectorRegistry) ListAvailableExchanges() []string {
-	plugins := r.loader.GetAvailablePlugins()
-	
-	exchanges := make([]string, 0, len(plugins))
-	for _, plugin := range plugins {
-		exchanges = append(exchanges, plugin.ExchangeName)
-	}
-	
-	return exchanges
-}
-
-// GetConnectorInfo gets information about a connector
-func (r *ConnectorRegistry) GetConnectorInfo(exchangeName string) (*PluginInfo, bool) {
-	plugin, ok := r.loader.GetPlugin(exchangeName)
-	if !ok {
-		return nil, false
-	}
-	
-	info := plugin.(*pluginWrapper).info
-	return info, true
-}
-
-// CloseConnector closes a connector and removes it from the registry
-func (r *ConnectorRegistry) CloseConnector(exchangeName string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	
-	connector, exists := r.connectors[exchangeName]
-	if !exists {
-		return fmt.Errorf("connector for exchange %s not found", exchangeName)
-	}
-	
-	// Close the connector
-	if err := connector.Close(); err != nil {
-		r.logger.Warn("Error closing connector",
-			zap.String("exchange", exchangeName),
-			zap.Error(err))
-	}
-	
-	// Remove the connector from the registry
-	delete(r.connectors, exchangeName)
-	delete(r.lastUsed, exchangeName)
-	delete(r.health, exchangeName)
-	
-	r.logger.Info("Closed exchange connector", zap.String("exchange", exchangeName))
+	r.logger.Info("Registered exchange connector plugin",
+		zap.String("exchange", info.ExchangeName),
+		zap.String("name", info.Name),
+		zap.String("version", info.Version))
 	
 	return nil
 }
 
-// GetConnectorHealth gets the health status of a connector
-func (r *ConnectorRegistry) GetConnectorHealth(exchangeName string) bool {
+// GetPlugin gets a plugin by exchange name
+func (r *Registry) GetPlugin(exchangeName string) (ExchangeConnectorPlugin, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	
-	return r.health[exchangeName]
+	plugin, ok := r.plugins[exchangeName]
+	if !ok {
+		return nil, fmt.Errorf("plugin not found for exchange: %s", exchangeName)
+	}
+	
+	return plugin, nil
 }
 
-// SetConnectorHealth sets the health status of a connector
-func (r *ConnectorRegistry) SetConnectorHealth(exchangeName string, healthy bool) {
+// ListPlugins lists all plugins
+func (r *Registry) ListPlugins() []ExchangeConnectorPlugin {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	
+	plugins := make([]ExchangeConnectorPlugin, 0, len(r.plugins))
+	for _, plugin := range r.plugins {
+		plugins = append(plugins, plugin)
+	}
+	
+	return plugins
+}
+
+// UnregisterPlugin unregisters a plugin
+func (r *Registry) UnregisterPlugin(exchangeName string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	
-	r.health[exchangeName] = healthy
-}
-
-// cleanupUnusedConnectors periodically cleans up unused connectors
-func (r *ConnectorRegistry) cleanupUnusedConnectors() {
-	ticker := time.NewTicker(30 * time.Minute)
-	defer ticker.Stop()
-	
-	for range ticker.C {
-		r.mu.Lock()
-		
-		now := time.Now()
-		for exchangeName, lastUsed := range r.lastUsed {
-			// If the connector hasn't been used in the last hour, close it
-			if now.Sub(lastUsed) > time.Hour {
-				connector, exists := r.connectors[exchangeName]
-				if exists {
-					r.logger.Info("Closing unused connector",
-						zap.String("exchange", exchangeName),
-						zap.Duration("unused_for", now.Sub(lastUsed)))
-					
-					// Close the connector
-					if err := connector.Close(); err != nil {
-						r.logger.Warn("Error closing connector",
-							zap.String("exchange", exchangeName),
-							zap.Error(err))
-					}
-					
-					// Remove the connector from the registry
-					delete(r.connectors, exchangeName)
-					delete(r.lastUsed, exchangeName)
-					delete(r.health, exchangeName)
-				}
-			}
-		}
-		
-		r.mu.Unlock()
-	}
-}
-
-// Shutdown shuts down the registry and all connectors
-func (r *ConnectorRegistry) Shutdown() error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	
-	var errs []error
-	
-	// Close all connectors
-	for exchangeName, connector := range r.connectors {
-		r.logger.Info("Closing connector during shutdown", zap.String("exchange", exchangeName))
-		
-		if err := connector.Close(); err != nil {
-			r.logger.Warn("Error closing connector",
-				zap.String("exchange", exchangeName),
-				zap.Error(err))
-			errs = append(errs, fmt.Errorf("failed to close connector %s: %w", exchangeName, err))
-		}
+	// Check if plugin exists
+	if _, ok := r.plugins[exchangeName]; !ok {
+		return fmt.Errorf("plugin not found for exchange: %s", exchangeName)
 	}
 	
-	// Clear the registry
-	r.connectors = make(map[string]connectors.ExchangeConnector)
-	r.lastUsed = make(map[string]time.Time)
-	r.health = make(map[string]bool)
+	// Unregister from plugin registry
+	err := r.pluginRegistry.UnregisterPlugin("exchange-connector", exchangeName)
+	if err != nil {
+		return fmt.Errorf("failed to unregister from plugin registry: %w", err)
+	}
 	
-	if len(errs) > 0 {
-		return fmt.Errorf("errors shutting down registry: %v", errs)
+	// Remove from plugins map
+	delete(r.plugins, exchangeName)
+	
+	r.logger.Info("Unregistered exchange connector plugin",
+		zap.String("exchange", exchangeName))
+	
+	return nil
+}
+
+// CreateConnector creates an exchange connector
+func (r *Registry) CreateConnector(
+	exchangeName string,
+	config connectors.ExchangeConfig,
+	logger *zap.Logger,
+) (connectors.ExchangeConnector, error) {
+	plugin, err := r.GetPlugin(exchangeName)
+	if err != nil {
+		return nil, err
+	}
+	
+	return plugin.CreateConnector(config, logger)
+}
+
+// Initialize initializes all plugins
+func (r *Registry) Initialize(ctx context.Context) error {
+	r.mu.RLock()
+	plugins := make([]ExchangeConnectorPlugin, 0, len(r.plugins))
+	for _, plugin := range r.plugins {
+		plugins = append(plugins, plugin)
+	}
+	r.mu.RUnlock()
+	
+	// Initialize plugins
+	for _, plugin := range plugins {
+		info := plugin.GetPluginInfo()
+		r.logger.Info("Initializing exchange connector plugin",
+			zap.String("exchange", info.ExchangeName),
+			zap.String("name", info.Name))
+		
+		if err := plugin.Initialize(ctx); err != nil {
+			return fmt.Errorf("failed to initialize plugin %s: %w", info.Name, err)
+		}
 	}
 	
 	return nil
+}
+
+// Shutdown shuts down all plugins
+func (r *Registry) Shutdown(ctx context.Context) error {
+	r.mu.RLock()
+	plugins := make([]ExchangeConnectorPlugin, 0, len(r.plugins))
+	for _, plugin := range r.plugins {
+		plugins = append(plugins, plugin)
+	}
+	r.mu.RUnlock()
+	
+	// Shutdown plugins
+	for _, plugin := range plugins {
+		info := plugin.GetPluginInfo()
+		r.logger.Info("Shutting down exchange connector plugin",
+			zap.String("exchange", info.ExchangeName),
+			zap.String("name", info.Name))
+		
+		if err := plugin.Shutdown(ctx); err != nil {
+			r.logger.Error("Failed to shutdown plugin",
+				zap.String("exchange", info.ExchangeName),
+				zap.String("name", info.Name),
+				zap.Error(err))
+			// Continue shutting down other plugins
+		}
+	}
+	
+	return nil
+}
+
+// validateCoreVersionCompatibility validates that a plugin is compatible with the core version
+func (r *Registry) validateCoreVersionCompatibility(info *PluginInfo) error {
+	// If no constraints are specified, assume compatibility
+	if info.MinCoreVersion == "" && info.MaxCoreVersion == "" {
+		return nil
+	}
+	
+	// Parse core version
+	coreVer, err := semver.NewVersion(r.coreVersion)
+	if err != nil {
+		return fmt.Errorf("invalid core version: %w", err)
+	}
+	
+	// Check minimum core version
+	if info.MinCoreVersion != "" {
+		minVer, err := semver.NewVersion(info.MinCoreVersion)
+		if err != nil {
+			return fmt.Errorf("invalid minimum core version: %w", err)
+		}
+		
+		if coreVer.LessThan(minVer) {
+			return fmt.Errorf("core version %s is less than minimum required version %s",
+				r.coreVersion, info.MinCoreVersion)
+		}
+	}
+	
+	// Check maximum core version
+	if info.MaxCoreVersion != "" {
+		maxVer, err := semver.NewVersion(info.MaxCoreVersion)
+		if err != nil {
+			return fmt.Errorf("invalid maximum core version: %w", err)
+		}
+		
+		if coreVer.GreaterThan(maxVer) {
+			return fmt.Errorf("core version %s is greater than maximum supported version %s",
+				r.coreVersion, info.MaxCoreVersion)
+		}
+	}
+	
+	return nil
+}
+
+// SetCoreVersion sets the core version
+func (r *Registry) SetCoreVersion(version string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	
+	r.coreVersion = version
+	r.pluginRegistry.SetCoreVersion(version)
+}
+
+// GetCoreVersion gets the core version
+func (r *Registry) GetCoreVersion() string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	
+	return r.coreVersion
+}
+
+// ValidateAllPlugins validates all plugins
+func (r *Registry) ValidateAllPlugins() error {
+	return r.pluginRegistry.ValidateAllPlugins()
 }
 
