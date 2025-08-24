@@ -19,17 +19,33 @@ type AdaptivePluginLoader struct {
 	logger              *zap.Logger
 	pluginDirs          []string
 	loadedPlugins       map[string]*LoadedPlugin
-	mu                  sync.RWMutex
+	
+	// Fine-grained locking for different operations
+	configMu            sync.RWMutex // For configuration changes
+	pluginMu            sync.RWMutex // For plugin operations
+	scannerMu           sync.Mutex   // For scanner operations
+	dirsMu              sync.RWMutex // For directory operations
+	
+	// Concurrency control
 	maxConcurrent       int
 	loadSemaphore       chan struct{}
+	
+	// Resource monitoring
 	memoryMonitor       *MemoryMonitor
+	
+	// Configuration
 	loadTimeout         time.Duration
 	scanInterval        time.Duration
 	baseScanInterval    time.Duration
 	adaptiveScanEnabled bool
+	
+	// Scanner state
 	scannerRunning      bool
 	scannerStopCh       chan struct{}
-	dirsMu              sync.RWMutex
+	
+	// Deadlock detection
+	lockTimeouts        map[string]time.Duration
+	deadlockDetection   bool
 }
 
 // LoadedPlugin represents a loaded plugin
@@ -62,11 +78,14 @@ func NewAdaptivePluginLoader(
 		baseScanInterval:    5 * time.Minute,
 		adaptiveScanEnabled: false,
 		scannerStopCh:       make(chan struct{}),
+		lockTimeouts:        make(map[string]time.Duration),
+		deadlockDetection:   true,
 	}
 }
 
 // FindPluginFiles finds all plugin files in the configured directories
 func (l *AdaptivePluginLoader) FindPluginFiles() ([]string, error) {
+	// Use directory-specific lock
 	l.dirsMu.RLock()
 	dirs := make([]string, len(l.pluginDirs))
 	copy(dirs, l.pluginDirs)
@@ -120,16 +139,28 @@ func (l *AdaptivePluginLoader) findPluginFilesInDir(dir string) ([]string, error
 
 // StartPluginScanner starts a background scanner for plugin changes
 func (l *AdaptivePluginLoader) StartPluginScanner(ctx context.Context, scanInterval time.Duration) error {
-	l.mu.Lock()
+	// Use scanner-specific lock
+	if !l.acquireLock(&l.scannerMu, "scannerMu", 5*time.Second) {
+		return fmt.Errorf("failed to acquire scanner lock (potential deadlock)")
+	}
+	
+	// Use config lock for configuration changes
+	if !l.acquireLock(&l.configMu, "configMu", 5*time.Second) {
+		l.scannerMu.Unlock()
+		return fmt.Errorf("failed to acquire config lock (potential deadlock)")
+	}
+	
 	if l.scannerRunning {
-		l.mu.Unlock()
+		l.configMu.Unlock()
+		l.scannerMu.Unlock()
 		return fmt.Errorf("plugin scanner already running")
 	}
 	
 	l.scannerRunning = true
 	l.scanInterval = scanInterval
 	l.baseScanInterval = scanInterval
-	l.mu.Unlock()
+	l.configMu.Unlock()
+	l.scannerMu.Unlock()
 	
 	// Start the scanner in a goroutine
 	go func() {
@@ -147,7 +178,11 @@ func (l *AdaptivePluginLoader) StartPluginScanner(ctx context.Context, scanInter
 				}
 				
 				// Adjust scan interval if adaptive scanning is enabled
-				if l.adaptiveScanEnabled {
+				l.configMu.RLock()
+				adaptiveEnabled := l.adaptiveScanEnabled
+				l.configMu.RUnlock()
+				
+				if adaptiveEnabled {
 					nextInterval = l.getNextScanInterval()
 					ticker.Reset(nextInterval)
 					l.logger.Debug("Adjusted scan interval", 
@@ -155,14 +190,20 @@ func (l *AdaptivePluginLoader) StartPluginScanner(ctx context.Context, scanInter
 						zap.Bool("memory_pressure", l.memoryMonitor.IsUnderMemoryPressure()))
 				}
 			case <-l.scannerStopCh:
-				l.mu.Lock()
+				if !l.acquireLock(&l.scannerMu, "scannerMu", 5*time.Second) {
+					l.logger.Error("Failed to acquire scanner lock during shutdown (potential deadlock)")
+					return
+				}
 				l.scannerRunning = false
-				l.mu.Unlock()
+				l.scannerMu.Unlock()
 				return
 			case <-ctx.Done():
-				l.mu.Lock()
+				if !l.acquireLock(&l.scannerMu, "scannerMu", 5*time.Second) {
+					l.logger.Error("Failed to acquire scanner lock during context cancellation (potential deadlock)")
+					return
+				}
 				l.scannerRunning = false
-				l.mu.Unlock()
+				l.scannerMu.Unlock()
 				return
 			}
 		}
@@ -173,8 +214,12 @@ func (l *AdaptivePluginLoader) StartPluginScanner(ctx context.Context, scanInter
 
 // StopPluginScanner stops the background plugin scanner
 func (l *AdaptivePluginLoader) StopPluginScanner() {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+	// Use scanner-specific lock with deadlock detection
+	if !l.acquireLock(&l.scannerMu, "scannerMu", 5*time.Second) {
+		l.logger.Error("Failed to acquire scanner lock during stop (potential deadlock)")
+		return
+	}
+	defer l.scannerMu.Unlock()
 	
 	if l.scannerRunning {
 		close(l.scannerStopCh)
@@ -190,8 +235,10 @@ func (l *AdaptivePluginLoader) scanForNewPlugins(ctx context.Context) error {
 		return fmt.Errorf("failed to find plugin files: %w", err)
 	}
 	
-	// Check for new plugins
-	l.mu.Lock()
+	// Check for new plugins - use plugin-specific lock
+	if !l.acquireLockRO(&l.pluginMu, "pluginMu", 5*time.Second) {
+		return fmt.Errorf("failed to acquire plugin lock (potential deadlock)")
+	}
 	
 	var newFiles []string
 	for _, file := range pluginFiles {
@@ -200,7 +247,7 @@ func (l *AdaptivePluginLoader) scanForNewPlugins(ctx context.Context) error {
 		}
 	}
 	
-	l.mu.Unlock()
+	l.pluginMu.RUnlock()
 	
 	// Log new plugins found
 	if len(newFiles) > 0 {
@@ -253,8 +300,12 @@ func (l *AdaptivePluginLoader) GetPluginDirectories() []string {
 
 // SetMaxConcurrentLoads sets the maximum number of concurrent plugin loads
 func (l *AdaptivePluginLoader) SetMaxConcurrentLoads(max int) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+	// Use config-specific lock with deadlock detection
+	if !l.acquireLock(&l.configMu, "configMu", 5*time.Second) {
+		l.logger.Error("Failed to acquire config lock (potential deadlock)")
+		return
+	}
+	defer l.configMu.Unlock()
 	
 	// Create a new semaphore with the new size
 	oldSemaphore := l.loadSemaphore
@@ -267,16 +318,24 @@ func (l *AdaptivePluginLoader) SetMaxConcurrentLoads(max int) {
 
 // SetLoadTimeout sets the timeout for plugin loading
 func (l *AdaptivePluginLoader) SetLoadTimeout(timeout time.Duration) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+	// Use config-specific lock with deadlock detection
+	if !l.acquireLock(&l.configMu, "configMu", 5*time.Second) {
+		l.logger.Error("Failed to acquire config lock (potential deadlock)")
+		return
+	}
+	defer l.configMu.Unlock()
 	
 	l.loadTimeout = timeout
 }
 
 // SetScanInterval sets the interval for plugin scanning
 func (l *AdaptivePluginLoader) SetScanInterval(interval time.Duration) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+	// Use config-specific lock with deadlock detection
+	if !l.acquireLock(&l.configMu, "configMu", 5*time.Second) {
+		l.logger.Error("Failed to acquire config lock (potential deadlock)")
+		return
+	}
+	defer l.configMu.Unlock()
 	
 	l.scanInterval = interval
 	l.baseScanInterval = interval
@@ -285,8 +344,12 @@ func (l *AdaptivePluginLoader) SetScanInterval(interval time.Duration) {
 
 // SetAdaptiveScanInterval enables adaptive scan intervals with the given base interval
 func (l *AdaptivePluginLoader) SetAdaptiveScanInterval(baseInterval time.Duration) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+	// Use config-specific lock with deadlock detection
+	if !l.acquireLock(&l.configMu, "configMu", 5*time.Second) {
+		l.logger.Error("Failed to acquire config lock (potential deadlock)")
+		return
+	}
+	defer l.configMu.Unlock()
 	
 	l.baseScanInterval = baseInterval
 	l.scanInterval = baseInterval
@@ -295,14 +358,25 @@ func (l *AdaptivePluginLoader) SetAdaptiveScanInterval(baseInterval time.Duratio
 
 // getNextScanInterval calculates the next scan interval based on system load
 func (l *AdaptivePluginLoader) getNextScanInterval() time.Duration {
-	if !l.adaptiveScanEnabled {
-		return l.scanInterval
+	// Use config-specific lock with deadlock detection
+	if !l.acquireLockRO(&l.configMu, "configMu", 5*time.Second) {
+		l.logger.Error("Failed to acquire config lock (potential deadlock)")
+		return 5 * time.Minute // Default fallback
 	}
+	
+	if !l.adaptiveScanEnabled {
+		interval := l.scanInterval
+		l.configMu.RUnlock()
+		return interval
+	}
+	
+	baseInterval := l.baseScanInterval
+	l.configMu.RUnlock()
 	
 	// Check memory pressure
 	if l.memoryMonitor.IsUnderMemoryPressure() {
 		// Increase interval under memory pressure (3x longer)
-		return l.baseScanInterval * 3
+		return baseInterval * 3
 	}
 	
 	// Check CPU load (simplified for now)
@@ -311,17 +385,21 @@ func (l *AdaptivePluginLoader) getNextScanInterval() time.Duration {
 	
 	if load > 0.7 { // 70% CPU usage
 		// Increase interval under high CPU load (2x longer)
-		return l.baseScanInterval * 2
+		return baseInterval * 2
 	}
 	
 	// Normal conditions - use base interval
-	return l.baseScanInterval
+	return baseInterval
 }
 
 // GetLoadedPlugins returns the loaded plugins
 func (l *AdaptivePluginLoader) GetLoadedPlugins() []*LoadedPlugin {
-	l.mu.RLock()
-	defer l.mu.RUnlock()
+	// Use plugin-specific lock with deadlock detection
+	if !l.acquireLockRO(&l.pluginMu, "pluginMu", 5*time.Second) {
+		l.logger.Error("Failed to acquire plugin lock (potential deadlock)")
+		return nil
+	}
+	defer l.pluginMu.RUnlock()
 	
 	plugins := make([]*LoadedPlugin, 0, len(l.loadedPlugins))
 	for _, plugin := range l.loadedPlugins {
@@ -333,16 +411,24 @@ func (l *AdaptivePluginLoader) GetLoadedPlugins() []*LoadedPlugin {
 
 // GetLoadedPluginCount returns the number of loaded plugins
 func (l *AdaptivePluginLoader) GetLoadedPluginCount() int {
-	l.mu.RLock()
-	defer l.mu.RUnlock()
+	// Use plugin-specific lock with deadlock detection
+	if !l.acquireLockRO(&l.pluginMu, "pluginMu", 5*time.Second) {
+		l.logger.Error("Failed to acquire plugin lock (potential deadlock)")
+		return 0
+	}
+	defer l.pluginMu.RUnlock()
 	
 	return len(l.loadedPlugins)
 }
 
 // GetTotalMemoryUsage returns the total memory usage of all loaded plugins
 func (l *AdaptivePluginLoader) GetTotalMemoryUsage() int64 {
-	l.mu.RLock()
-	defer l.mu.RUnlock()
+	// Use plugin-specific lock with deadlock detection
+	if !l.acquireLockRO(&l.pluginMu, "pluginMu", 5*time.Second) {
+		l.logger.Error("Failed to acquire plugin lock (potential deadlock)")
+		return 0
+	}
+	defer l.pluginMu.RUnlock()
 	
 	var total int64
 	for _, plugin := range l.loadedPlugins {
@@ -390,6 +476,96 @@ func (m *MemoryMonitor) GetAvailableMemory() int64 {
 	if time.Since(m.lastCheck) < m.cacheDuration {
 		// Use cached value if recent enough
 		available := m.cachedAvailable
+
+// Deadlock detection and lock acquisition helpers
+
+// acquireLock attempts to acquire a mutex with a timeout to prevent deadlocks
+func (l *AdaptivePluginLoader) acquireLock(mu *sync.Mutex, name string, timeout time.Duration) bool {
+	if !l.deadlockDetection {
+		mu.Lock()
+		return true
+	}
+	
+	// Create a channel to signal when the lock is acquired
+	done := make(chan struct{}, 1)
+	
+	// Try to acquire the lock in a goroutine
+	go func() {
+		mu.Lock()
+		done <- struct{}{}
+	}()
+	
+	// Wait for the lock with timeout
+	select {
+	case <-done:
+		return true
+	case <-time.After(timeout):
+		l.logger.Warn("Potential deadlock detected",
+			zap.String("lock", name),
+			zap.Duration("timeout", timeout))
+		return false
+	}
+}
+
+// acquireLockRO attempts to acquire a read lock with a timeout to prevent deadlocks
+func (l *AdaptivePluginLoader) acquireLockRO(mu *sync.RWMutex, name string, timeout time.Duration) bool {
+	if !l.deadlockDetection {
+		mu.RLock()
+		return true
+	}
+	
+	// Create a channel to signal when the lock is acquired
+	done := make(chan struct{}, 1)
+	
+	// Try to acquire the lock in a goroutine
+	go func() {
+		mu.RLock()
+		done <- struct{}{}
+	}()
+	
+	// Wait for the lock with timeout
+	select {
+	case <-done:
+		return true
+	case <-time.After(timeout):
+		l.logger.Warn("Potential deadlock detected",
+			zap.String("lock", name),
+			zap.String("mode", "read"),
+			zap.Duration("timeout", timeout))
+		return false
+	}
+}
+
+// SetDeadlockDetection enables or disables deadlock detection
+func (l *AdaptivePluginLoader) SetDeadlockDetection(enabled bool) {
+	// Use config-specific lock with direct locking (to avoid recursion)
+	l.configMu.Lock()
+	defer l.configMu.Unlock()
+	
+	l.deadlockDetection = enabled
+}
+
+// SetLockTimeout sets the timeout for a specific lock
+func (l *AdaptivePluginLoader) SetLockTimeout(lockName string, timeout time.Duration) {
+	// Use config-specific lock with direct locking (to avoid recursion)
+	l.configMu.Lock()
+	defer l.configMu.Unlock()
+	
+	l.lockTimeouts[lockName] = timeout
+}
+
+// GetLockTimeout gets the timeout for a specific lock
+func (l *AdaptivePluginLoader) GetLockTimeout(lockName string) time.Duration {
+	// Use config-specific lock with direct locking (to avoid recursion)
+	l.configMu.RLock()
+	defer l.configMu.RUnlock()
+	
+	timeout, ok := l.lockTimeouts[lockName]
+	if !ok {
+		return 5 * time.Second // Default timeout
+	}
+	return timeout
+}
 		m.mu.RUnlock()
 		return available
 	}
