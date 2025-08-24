@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sync"
+	"syscall"
 	"time"
 
 	"go.uber.org/zap"
@@ -15,18 +16,20 @@ import (
 // AdaptivePluginLoader is an enhanced plugin loader that addresses
 // conflicts and bottlenecks identified in the analysis.
 type AdaptivePluginLoader struct {
-	logger         *zap.Logger
-	pluginDirs     []string
-	loadedPlugins  map[string]*LoadedPlugin
-	mu             sync.RWMutex
-	maxConcurrent  int
-	loadSemaphore  chan struct{}
-	memoryMonitor  *MemoryMonitor
-	loadTimeout    time.Duration
-	scanInterval   time.Duration
-	scannerRunning bool
-	scannerStopCh  chan struct{}
-	dirsMu         sync.RWMutex
+	logger              *zap.Logger
+	pluginDirs          []string
+	loadedPlugins       map[string]*LoadedPlugin
+	mu                  sync.RWMutex
+	maxConcurrent       int
+	loadSemaphore       chan struct{}
+	memoryMonitor       *MemoryMonitor
+	loadTimeout         time.Duration
+	scanInterval        time.Duration
+	baseScanInterval    time.Duration
+	adaptiveScanEnabled bool
+	scannerRunning      bool
+	scannerStopCh       chan struct{}
+	dirsMu              sync.RWMutex
 }
 
 // LoadedPlugin represents a loaded plugin
@@ -48,15 +51,17 @@ func NewAdaptivePluginLoader(
 	maxConcurrent := runtime.NumCPU()
 	
 	return &AdaptivePluginLoader{
-		logger:        logger,
-		pluginDirs:    pluginDirs,
-		loadedPlugins: make(map[string]*LoadedPlugin),
-		maxConcurrent: maxConcurrent,
-		loadSemaphore: make(chan struct{}, maxConcurrent),
-		memoryMonitor: NewMemoryMonitor(logger),
-		loadTimeout:   30 * time.Second,
-		scanInterval:  5 * time.Minute,
-		scannerStopCh: make(chan struct{}),
+		logger:              logger,
+		pluginDirs:          pluginDirs,
+		loadedPlugins:       make(map[string]*LoadedPlugin),
+		maxConcurrent:       maxConcurrent,
+		loadSemaphore:       make(chan struct{}, maxConcurrent),
+		memoryMonitor:       NewMemoryMonitor(logger),
+		loadTimeout:         30 * time.Second,
+		scanInterval:        5 * time.Minute,
+		baseScanInterval:    5 * time.Minute,
+		adaptiveScanEnabled: false,
+		scannerStopCh:       make(chan struct{}),
 	}
 }
 
@@ -123,11 +128,14 @@ func (l *AdaptivePluginLoader) StartPluginScanner(ctx context.Context, scanInter
 	
 	l.scannerRunning = true
 	l.scanInterval = scanInterval
+	l.baseScanInterval = scanInterval
 	l.mu.Unlock()
 	
 	// Start the scanner in a goroutine
 	go func() {
-		ticker := time.NewTicker(scanInterval)
+		// Initial scan interval
+		nextInterval := scanInterval
+		ticker := time.NewTicker(nextInterval)
 		defer ticker.Stop()
 		
 		for {
@@ -136,6 +144,15 @@ func (l *AdaptivePluginLoader) StartPluginScanner(ctx context.Context, scanInter
 				// Scan for new plugins
 				if err := l.scanForNewPlugins(ctx); err != nil {
 					l.logger.Error("Failed to scan for new plugins", zap.Error(err))
+				}
+				
+				// Adjust scan interval if adaptive scanning is enabled
+				if l.adaptiveScanEnabled {
+					nextInterval = l.getNextScanInterval()
+					ticker.Reset(nextInterval)
+					l.logger.Debug("Adjusted scan interval", 
+						zap.Duration("interval", nextInterval),
+						zap.Bool("memory_pressure", l.memoryMonitor.IsUnderMemoryPressure()))
 				}
 			case <-l.scannerStopCh:
 				l.mu.Lock()
@@ -262,6 +279,43 @@ func (l *AdaptivePluginLoader) SetScanInterval(interval time.Duration) {
 	defer l.mu.Unlock()
 	
 	l.scanInterval = interval
+	l.baseScanInterval = interval
+	l.adaptiveScanEnabled = false
+}
+
+// SetAdaptiveScanInterval enables adaptive scan intervals with the given base interval
+func (l *AdaptivePluginLoader) SetAdaptiveScanInterval(baseInterval time.Duration) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	
+	l.baseScanInterval = baseInterval
+	l.scanInterval = baseInterval
+	l.adaptiveScanEnabled = true
+}
+
+// getNextScanInterval calculates the next scan interval based on system load
+func (l *AdaptivePluginLoader) getNextScanInterval() time.Duration {
+	if !l.adaptiveScanEnabled {
+		return l.scanInterval
+	}
+	
+	// Check memory pressure
+	if l.memoryMonitor.IsUnderMemoryPressure() {
+		// Increase interval under memory pressure (3x longer)
+		return l.baseScanInterval * 3
+	}
+	
+	// Check CPU load (simplified for now)
+	// In a real implementation, this would use OS-specific APIs to get CPU load
+	var load float64 = 0.5 // Placeholder
+	
+	if load > 0.7 { // 70% CPU usage
+		// Increase interval under high CPU load (2x longer)
+		return l.baseScanInterval * 2
+	}
+	
+	// Normal conditions - use base interval
+	return l.baseScanInterval
 }
 
 // GetLoadedPlugins returns the loaded plugins
@@ -301,12 +355,25 @@ func (l *AdaptivePluginLoader) GetTotalMemoryUsage() int64 {
 // MemoryMonitor monitors memory usage
 type MemoryMonitor struct {
 	logger *zap.Logger
+	// Memory pressure threshold (percentage of total memory)
+	pressureThreshold float64
+	// Last memory check time
+	lastCheck time.Time
+	// Cache duration for memory stats
+	cacheDuration time.Duration
+	// Cached memory stats
+	cachedAvailable int64
+	cachedTotal     int64
+	mu              sync.RWMutex
 }
 
 // NewMemoryMonitor creates a new memory monitor
 func NewMemoryMonitor(logger *zap.Logger) *MemoryMonitor {
 	return &MemoryMonitor{
-		logger: logger,
+		logger:           logger,
+		pressureThreshold: 0.1, // 10% available memory threshold
+		cacheDuration:    5 * time.Second,
+		lastCheck:        time.Time{}, // Zero time
 	}
 }
 
@@ -319,9 +386,58 @@ func (m *MemoryMonitor) GetCurrentMemoryUsage() int64 {
 
 // GetAvailableMemory returns the available memory
 func (m *MemoryMonitor) GetAvailableMemory() int64 {
-	// This is a placeholder for a real implementation
-	// In a real system, this would use OS-specific APIs to get available memory
-	return 8 * 1024 * 1024 * 1024 // 8GB
+	m.mu.RLock()
+	if time.Since(m.lastCheck) < m.cacheDuration {
+		// Use cached value if recent enough
+		available := m.cachedAvailable
+		m.mu.RUnlock()
+		return available
+	}
+	m.mu.RUnlock()
+	
+	// Need to refresh the cache
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	// Check again in case another goroutine updated while we were waiting for the lock
+	if time.Since(m.lastCheck) < m.cacheDuration {
+		return m.cachedAvailable
+	}
+	
+	// Get system memory info
+	var info syscall.Sysinfo_t
+	err := syscall.Sysinfo(&info)
+	if err != nil {
+		m.logger.Error("Failed to get system info", zap.Error(err))
+		// Fallback to a reasonable default if we can't get system info
+		return 8 * 1024 * 1024 * 1024 // 8GB
+	}
+	
+	// Update cache
+	m.cachedAvailable = int64(info.Freeram)
+	m.cachedTotal = int64(info.Totalram)
+	m.lastCheck = time.Now()
+	
+	return m.cachedAvailable
+}
+
+// GetTotalSystemMemory returns the total system memory
+func (m *MemoryMonitor) GetTotalSystemMemory() int64 {
+	m.mu.RLock()
+	if time.Since(m.lastCheck) < m.cacheDuration {
+		// Use cached value if recent enough
+		total := m.cachedTotal
+		m.mu.RUnlock()
+		return total
+	}
+	m.mu.RUnlock()
+	
+	// Need to refresh the cache - GetAvailableMemory also updates total
+	m.GetAvailableMemory()
+	
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.cachedTotal
 }
 
 // IsMemoryAvailable checks if enough memory is available
@@ -330,3 +446,33 @@ func (m *MemoryMonitor) IsMemoryAvailable(required int64) bool {
 	return available >= required
 }
 
+// IsUnderMemoryPressure checks if the system is under memory pressure
+func (m *MemoryMonitor) IsUnderMemoryPressure() bool {
+	available := m.GetAvailableMemory()
+	total := m.GetTotalSystemMemory()
+	
+	// Under pressure if available memory is less than threshold percentage of total
+	return available < int64(float64(total)*m.pressureThreshold)
+}
+
+// SetPressureThreshold sets the memory pressure threshold
+func (m *MemoryMonitor) SetPressureThreshold(threshold float64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	if threshold <= 0 || threshold >= 1 {
+		m.logger.Warn("Invalid memory pressure threshold, must be between 0 and 1", 
+			zap.Float64("threshold", threshold))
+		return
+	}
+	
+	m.pressureThreshold = threshold
+}
+
+// SetCacheDuration sets the cache duration for memory stats
+func (m *MemoryMonitor) SetCacheDuration(duration time.Duration) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	m.cacheDuration = duration
+}

@@ -156,3 +156,26 @@ func (r *StrategyPluginRegistry) GetPluginByFile(filePath string) (StrategyPlugi
 	return plugin, ok
 }
 
+// GetPluginByFile gets a plugin wrapper by file path without bool return
+// This is a convenience method for cleanup operations
+func (r *StrategyPluginRegistry) GetPluginByFile(filePath string) *StrategyPluginWrapper {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	
+	strategyType, ok := r.fileMap[filePath]
+	if !ok {
+		return nil
+	}
+	
+	plugin, ok := r.plugins[strategyType]
+	if !ok {
+		return nil
+	}
+	
+	// If it's a wrapper, return it
+	if wrapper, ok := plugin.(*StrategyPluginWrapper); ok {
+		return wrapper
+	}
+	
+	return nil
+}

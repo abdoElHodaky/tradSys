@@ -139,14 +139,27 @@ func (l *StrategyPluginLoader) ReloadPlugin(file string) error {
 	defer l.mu.Unlock()
 	
 	// Check if the plugin is loaded
-	if _, ok := l.loadedPlugins[file]; ok {
+	if plug, ok := l.loadedPlugins[file]; ok {
+		// Get the plugin wrapper from registry
+		wrapper := l.registry.GetPluginByFile(file)
+		if wrapper != nil {
+			// Perform cleanup
+			if err := wrapper.Cleanup(); err != nil {
+				l.logger.Warn("Error during plugin cleanup",
+					zap.String("file", file),
+					zap.Error(err))
+			}
+		}
+		
 		// Unregister the plugin
-		// Note: This is a simplistic approach. In a real implementation,
-		// we would need to handle active strategies created by this plugin.
 		l.registry.UnregisterPluginByFile(file)
 		
 		// Remove from loaded plugins
 		delete(l.loadedPlugins, file)
+		
+		// Suggest garbage collection
+		plug = nil
+		runtime.GC()
 	}
 	
 	// Load the plugin
@@ -185,7 +198,9 @@ func (l *StrategyPluginLoader) AddPluginDirectory(dir string) {
 type StrategyPluginWrapper struct {
 	Info       *PluginInfo
 	CreateFunc func(strategy.StrategyConfig, *zap.Logger) (strategy.Strategy, error)
+	CleanupFunc func() error
 	FilePath   string
+	mu         sync.Mutex
 }
 
 // GetStrategyType returns the type of strategy provided by this plugin
@@ -195,6 +210,36 @@ func (w *StrategyPluginWrapper) GetStrategyType() string {
 
 // CreateStrategy creates a strategy instance
 func (w *StrategyPluginWrapper) CreateStrategy(config strategy.StrategyConfig, logger *zap.Logger) (strategy.Strategy, error) {
-	return w.CreateFunc(config, logger)
+	// Wrap the call with panic recovery
+	var strat strategy.Strategy
+	var err error
+	
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				err = fmt.Errorf("panic in plugin %s: %v", w.Info.Name, r)
+			}
+		}()
+		strat, err = w.CreateFunc(config, logger)
+	}()
+	
+	return strat, err
 }
 
+// Cleanup performs cleanup for this plugin
+func (w *StrategyPluginWrapper) Cleanup() error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	
+	if w.CleanupFunc != nil {
+		if err := w.CleanupFunc(); err != nil {
+			return fmt.Errorf("plugin cleanup error: %w", err)
+		}
+	}
+	
+	// Clear references to help GC
+	w.CreateFunc = nil
+	w.CleanupFunc = nil
+	
+	return nil
+}
