@@ -7,35 +7,34 @@ import (
 	"plugin"
 	"sync"
 
-	"github.com/abdoElHodaky/tradSys/internal/strategy"
 	"go.uber.org/zap"
 )
 
-// StrategyPluginLoader loads strategy plugins
-type StrategyPluginLoader struct {
-	logger       *zap.Logger
-	pluginDirs   []string
-	registry     *StrategyPluginRegistry
+// ValidatorPluginLoader loads validator plugins
+type ValidatorPluginLoader struct {
+	logger        *zap.Logger
+	pluginDirs    []string
+	registry      *ValidatorPluginRegistry
 	loadedPlugins map[string]*plugin.Plugin
-	mu           sync.RWMutex
+	mu            sync.RWMutex
 }
 
-// NewStrategyPluginLoader creates a new strategy plugin loader
-func NewStrategyPluginLoader(
+// NewValidatorPluginLoader creates a new validator plugin loader
+func NewValidatorPluginLoader(
 	logger *zap.Logger,
-	registry *StrategyPluginRegistry,
+	registry *ValidatorPluginRegistry,
 	pluginDirs []string,
-) *StrategyPluginLoader {
-	return &StrategyPluginLoader{
-		logger:       logger,
-		pluginDirs:   pluginDirs,
-		registry:     registry,
+) *ValidatorPluginLoader {
+	return &ValidatorPluginLoader{
+		logger:        logger,
+		pluginDirs:    pluginDirs,
+		registry:      registry,
 		loadedPlugins: make(map[string]*plugin.Plugin),
 	}
 }
 
 // LoadPlugins loads all plugins from the configured directories
-func (l *StrategyPluginLoader) LoadPlugins() error {
+func (l *ValidatorPluginLoader) LoadPlugins() error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	
@@ -51,7 +50,7 @@ func (l *StrategyPluginLoader) LoadPlugins() error {
 }
 
 // loadPluginsFromDir loads all plugins from a directory
-func (l *StrategyPluginLoader) loadPluginsFromDir(dir string) error {
+func (l *ValidatorPluginLoader) loadPluginsFromDir(dir string) error {
 	// Check if the directory exists
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return fmt.Errorf("plugin directory does not exist: %s", dir)
@@ -63,12 +62,12 @@ func (l *StrategyPluginLoader) loadPluginsFromDir(dir string) error {
 		return fmt.Errorf("failed to list plugin files: %w", err)
 	}
 	
-	l.logger.Info("Found plugin files", zap.Strings("files", files))
+	l.logger.Info("Found validator plugin files", zap.Strings("files", files))
 	
 	// Load each plugin
 	for _, file := range files {
 		if err := l.LoadPlugin(file); err != nil {
-			l.logger.Error("Failed to load plugin",
+			l.logger.Error("Failed to load validator plugin",
 				zap.String("file", file),
 				zap.Error(err))
 		}
@@ -78,8 +77,8 @@ func (l *StrategyPluginLoader) loadPluginsFromDir(dir string) error {
 }
 
 // LoadPlugin loads a plugin from a file
-func (l *StrategyPluginLoader) LoadPlugin(file string) error {
-	l.logger.Info("Loading plugin", zap.String("file", file))
+func (l *ValidatorPluginLoader) LoadPlugin(file string) error {
+	l.logger.Info("Loading validator plugin", zap.String("file", file))
 	
 	// Open the plugin
 	plug, err := plugin.Open(file)
@@ -99,50 +98,48 @@ func (l *StrategyPluginLoader) LoadPlugin(file string) error {
 		return fmt.Errorf("plugin info is not of type *PluginInfo")
 	}
 	
-	// Look up the create strategy function
-	createSymbol, err := plug.Lookup(CreateStrategySymbol)
+	// Look up the create validator function
+	createSymbol, err := plug.Lookup(CreateValidatorSymbol)
 	if err != nil {
-		return fmt.Errorf("plugin does not export %s symbol: %w", CreateStrategySymbol, err)
+		return fmt.Errorf("plugin does not export %s symbol: %w", CreateValidatorSymbol, err)
 	}
 	
 	// Assert that the symbol is a function with the correct signature
-	createFunc, ok := createSymbol.(func(strategy.StrategyConfig, *zap.Logger) (strategy.Strategy, error))
+	createFunc, ok := createSymbol.(func(ValidatorConfig, *zap.Logger) (RiskValidator, error))
 	if !ok {
-		return fmt.Errorf("create strategy function has incorrect signature")
+		return fmt.Errorf("create validator function has incorrect signature")
 	}
 	
 	// Create a plugin wrapper
-	wrapper := &StrategyPluginWrapper{
-		Info:         info,
-		CreateFunc:   createFunc,
-		FilePath:     file,
+	wrapper := &ValidatorPluginWrapper{
+		Info:       info,
+		CreateFunc: createFunc,
+		FilePath:   file,
 	}
 	
 	// Register the plugin
-	l.registry.RegisterPlugin(info.StrategyType, wrapper)
+	l.registry.RegisterPlugin(info.ValidatorType, wrapper)
 	
 	// Store the loaded plugin
 	l.loadedPlugins[file] = plug
 	
-	l.logger.Info("Loaded plugin",
+	l.logger.Info("Loaded validator plugin",
 		zap.String("name", info.Name),
 		zap.String("version", info.Version),
-		zap.String("strategy_type", info.StrategyType),
+		zap.String("validator_type", info.ValidatorType),
 	)
 	
 	return nil
 }
 
 // ReloadPlugin reloads a plugin from a file
-func (l *StrategyPluginLoader) ReloadPlugin(file string) error {
+func (l *ValidatorPluginLoader) ReloadPlugin(file string) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	
 	// Check if the plugin is loaded
 	if _, ok := l.loadedPlugins[file]; ok {
 		// Unregister the plugin
-		// Note: This is a simplistic approach. In a real implementation,
-		// we would need to handle active strategies created by this plugin.
 		l.registry.UnregisterPluginByFile(file)
 		
 		// Remove from loaded plugins
@@ -154,7 +151,7 @@ func (l *StrategyPluginLoader) ReloadPlugin(file string) error {
 }
 
 // GetLoadedPlugins returns the loaded plugins
-func (l *StrategyPluginLoader) GetLoadedPlugins() []string {
+func (l *ValidatorPluginLoader) GetLoadedPlugins() []string {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 	
@@ -167,7 +164,7 @@ func (l *StrategyPluginLoader) GetLoadedPlugins() []string {
 }
 
 // AddPluginDirectory adds a plugin directory
-func (l *StrategyPluginLoader) AddPluginDirectory(dir string) {
+func (l *ValidatorPluginLoader) AddPluginDirectory(dir string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	
@@ -181,20 +178,20 @@ func (l *StrategyPluginLoader) AddPluginDirectory(dir string) {
 	l.pluginDirs = append(l.pluginDirs, dir)
 }
 
-// StrategyPluginWrapper wraps a strategy plugin
-type StrategyPluginWrapper struct {
+// ValidatorPluginWrapper wraps a validator plugin
+type ValidatorPluginWrapper struct {
 	Info       *PluginInfo
-	CreateFunc func(strategy.StrategyConfig, *zap.Logger) (strategy.Strategy, error)
+	CreateFunc func(ValidatorConfig, *zap.Logger) (RiskValidator, error)
 	FilePath   string
 }
 
-// GetStrategyType returns the type of strategy provided by this plugin
-func (w *StrategyPluginWrapper) GetStrategyType() string {
-	return w.Info.StrategyType
+// GetValidatorType returns the type of validator provided by this plugin
+func (w *ValidatorPluginWrapper) GetValidatorType() string {
+	return w.Info.ValidatorType
 }
 
-// CreateStrategy creates a strategy instance
-func (w *StrategyPluginWrapper) CreateStrategy(config strategy.StrategyConfig, logger *zap.Logger) (strategy.Strategy, error) {
+// CreateValidator creates a validator instance
+func (w *ValidatorPluginWrapper) CreateValidator(config ValidatorConfig, logger *zap.Logger) (RiskValidator, error) {
 	return w.CreateFunc(config, logger)
 }
 
