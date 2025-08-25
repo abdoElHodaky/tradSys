@@ -1,11 +1,18 @@
 package plugin
 
 import (
-	"context"
-
 	"github.com/abdoElHodaky/tradSys/internal/exchange/connectors"
 	"go.uber.org/zap"
 )
+
+// ExchangeConnectorPlugin defines the interface for an exchange connector plugin
+type ExchangeConnectorPlugin interface {
+	// GetExchangeName returns the name of the exchange
+	GetExchangeName() string
+	
+	// CreateConnector creates an exchange connector
+	CreateConnector(config connectors.ExchangeConfig, logger *zap.Logger) (connectors.ExchangeConnector, error)
+}
 
 // PluginInfo contains information about a plugin
 type PluginInfo struct {
@@ -24,91 +31,36 @@ type PluginInfo struct {
 	// ExchangeName is the name of the exchange
 	ExchangeName string `json:"exchange_name"`
 	
-	// APIVersion is the version of the exchange API
+	// APIVersion is the API version the plugin is compatible with
 	APIVersion string `json:"api_version"`
 	
-	// MinCoreVersion is the minimum core version required by this plugin
+	// MinCoreVersion is the minimum core version the plugin is compatible with
 	MinCoreVersion string `json:"min_core_version"`
 	
-	// MaxCoreVersion is the maximum core version supported by this plugin
+	// MaxCoreVersion is the maximum core version the plugin is compatible with
+	// An empty string means compatible with any future version
 	MaxCoreVersion string `json:"max_core_version"`
 	
-	// Dependencies is a list of other plugins that this plugin depends on
+	// Dependencies is a list of other plugins this plugin depends on
 	Dependencies []string `json:"dependencies"`
 }
 
-// ExchangeConnectorPlugin is the interface for exchange connector plugins
-type ExchangeConnectorPlugin interface {
-	// GetPluginInfo returns information about the plugin
-	GetPluginInfo() *PluginInfo
+// PluginSymbols defines the symbols that must be exported by a plugin
+const (
+	// PluginInfoSymbol is the name of the exported plugin info symbol
+	PluginInfoSymbol = "PluginInfo"
 	
-	// CreateConnector creates an exchange connector
-	CreateConnector(config connectors.ExchangeConfig, logger *zap.Logger) (connectors.ExchangeConnector, error)
+	// CreateConnectorSymbol is the name of the exported function to create a connector
+	CreateConnectorSymbol = "CreateConnector"
 	
-	// Initialize initializes the plugin
-	Initialize(ctx context.Context) error
+	// InitializePluginSymbol is the name of the exported function to initialize the plugin
+	InitializePluginSymbol = "InitializePlugin"
 	
-	// Shutdown shuts down the plugin
-	Shutdown(ctx context.Context) error
-}
+	// ShutdownPluginSymbol is the name of the exported function to shutdown the plugin
+	ShutdownPluginSymbol = "ShutdownPlugin"
+)
 
-// ExchangeConnectorPluginFactory is a factory for creating exchange connector plugins
-type ExchangeConnectorPluginFactory interface {
-	// CreatePlugin creates a plugin
-	CreatePlugin() (ExchangeConnectorPlugin, error)
-}
-
-// ExchangeConnectorPluginRegistry is a registry for exchange connector plugins
-type ExchangeConnectorPluginRegistry interface {
-	// RegisterPlugin registers a plugin
-	RegisterPlugin(plugin ExchangeConnectorPlugin) error
-	
-	// GetPlugin gets a plugin by exchange name
-	GetPlugin(exchangeName string) (ExchangeConnectorPlugin, error)
-	
-	// ListPlugins lists all plugins
-	ListPlugins() []ExchangeConnectorPlugin
-	
-	// UnregisterPlugin unregisters a plugin
-	UnregisterPlugin(exchangeName string) error
-}
-
-// ExchangeConnectorPluginLoader is a loader for exchange connector plugins
-type ExchangeConnectorPluginLoader interface {
-	// LoadPlugin loads a plugin from a file
-	LoadPlugin(filePath string) (ExchangeConnectorPlugin, error)
-	
-	// LoadPlugins loads all plugins from a directory
-	LoadPlugins(dirPath string) ([]ExchangeConnectorPlugin, error)
-}
-
-// ExchangeConnectorPluginManager manages exchange connector plugins
-type ExchangeConnectorPluginManager interface {
-	// RegisterPlugin registers a plugin
-	RegisterPlugin(plugin ExchangeConnectorPlugin) error
-	
-	// GetPlugin gets a plugin by exchange name
-	GetPlugin(exchangeName string) (ExchangeConnectorPlugin, error)
-	
-	// ListPlugins lists all plugins
-	ListPlugins() []ExchangeConnectorPlugin
-	
-	// UnregisterPlugin unregisters a plugin
-	UnregisterPlugin(exchangeName string) error
-	
-	// LoadPlugin loads a plugin from a file
-	LoadPlugin(filePath string) (ExchangeConnectorPlugin, error)
-	
-	// LoadPlugins loads all plugins from a directory
-	LoadPlugins(dirPath string) ([]ExchangeConnectorPlugin, error)
-	
-	// CreateConnector creates an exchange connector
-	CreateConnector(exchangeName string, config connectors.ExchangeConfig, logger *zap.Logger) (connectors.ExchangeConnector, error)
-	
-	// Initialize initializes all plugins
-	Initialize(ctx context.Context) error
-	
-	// Shutdown shuts down all plugins
-	Shutdown(ctx context.Context) error
-}
+// CoreVersion is the current core version of the application
+// This should be updated when making breaking changes to the plugin API
+const CoreVersion = "1.0.0"
 
