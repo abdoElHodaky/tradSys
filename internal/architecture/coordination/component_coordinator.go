@@ -7,114 +7,111 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/architecture/fx/lazy"
-	"github.com/abdoElHodaky/tradSys/internal/metrics"
 	"go.uber.org/zap"
 )
 
-// ComponentCoordinator provides a unified coordination layer for component initialization,
-// resource management, and lifecycle control to resolve conflicts between different
-// mitigation systems.
-type ComponentCoordinator struct {
-	// Component registry
-	components     map[string]*ComponentInfo
-	componentsMu   sync.RWMutex
-	
-	// Resource management
-	memoryManager  *MemoryManager
-	
-	// Initialization coordination
-	initManager    *lazy.InitializationManager
-	
-	// Timeout management
-	timeoutManager *TimeoutManager
-	
-	// Metrics collection
-	metricsCollector *metrics.Collector
-	
-	// Logging
-	logger         *zap.Logger
-	
-	// Configuration
-	config         CoordinatorConfig
-}
-
-// ComponentInfo contains information about a registered component
+// ComponentInfo contains information about a component
 type ComponentInfo struct {
-	// Component identity
-	Name           string
-	Type           string
+	// Component name
+	Name string
 	
-	// Component state
-	Provider       *lazy.EnhancedLazyProvider
-	IsInitialized  bool
-	LastAccess     time.Time
+	// Component type
+	Type string
 	
-	// Resource usage
-	MemoryUsage    int64
-	CPUUsage       float64
+	// Component provider
+	Provider *lazy.EnhancedLazyProvider
 	
 	// Dependencies
-	Dependencies   []string
+	Dependencies []string
 	
-	// Configuration
-	Priority       int
-	Timeout        time.Duration
+	// Whether the component is initialized
+	Initialized bool
 	
-	// Metrics
-	InitTime       time.Duration
-	AccessCount    int64
+	// Memory usage
+	MemoryUsage int64
+	
+	// Priority (lower is higher priority)
+	Priority int
+	
+	// Last access time
+	LastAccess time.Time
 }
 
 // CoordinatorConfig contains configuration for the component coordinator
 type CoordinatorConfig struct {
-	// Memory management
-	TotalMemoryLimit    int64
-	ComponentMemoryLimit int64
+	// Memory manager configuration
+	MemoryConfig MemoryManagerConfig
 	
-	// Initialization
-	DefaultTimeout      time.Duration
-	DefaultPriority     int
+	// Timeout manager configuration
+	TimeoutConfig TimeoutManagerConfig
 	
-	// Resource management
-	EnableMemoryTracking bool
-	EnableCPUTracking    bool
+	// Automatic unloading enabled
+	AutoUnloadEnabled bool
 	
-	// Metrics
-	MetricsEnabled      bool
-	MetricsSampleRate   float64
+	// Minimum idle time before a component can be unloaded (seconds)
+	MinIdleTime int
+	
+	// Check interval for automatic unloading (seconds)
+	CheckInterval int
 }
 
-// DefaultCoordinatorConfig returns the default configuration
+// DefaultCoordinatorConfig returns the default coordinator configuration
 func DefaultCoordinatorConfig() CoordinatorConfig {
 	return CoordinatorConfig{
-		TotalMemoryLimit:     1024 * 1024 * 1024 * 4, // 4GB
-		ComponentMemoryLimit: 1024 * 1024 * 512,      // 512MB
-		DefaultTimeout:       30 * time.Second,
-		DefaultPriority:      50,
-		EnableMemoryTracking: true,
-		EnableCPUTracking:    true,
-		MetricsEnabled:       true,
-		MetricsSampleRate:    0.1, // 10% sampling
+		MemoryConfig:      DefaultMemoryManagerConfig(),
+		TimeoutConfig:     DefaultTimeoutManagerConfig(),
+		AutoUnloadEnabled: true,
+		MinIdleTime:       300, // 5 minutes
+		CheckInterval:     60,  // 1 minute
 	}
+}
+
+// ComponentCoordinator coordinates component initialization and resource management
+type ComponentCoordinator struct {
+	// Component registry
+	components map[string]*ComponentInfo
+	
+	// Resource management
+	memoryManager *MemoryManager
+	
+	// Timeout management
+	timeoutManager *TimeoutManager
+	
+	// Configuration
+	config CoordinatorConfig
+	
+	// Mutex for thread safety
+	mu sync.RWMutex
+	
+	// Logger
+	logger *zap.Logger
 }
 
 // NewComponentCoordinator creates a new component coordinator
 func NewComponentCoordinator(config CoordinatorConfig, logger *zap.Logger) *ComponentCoordinator {
-	if logger == nil {
-		logger, _ = zap.NewProduction()
+	// Create the memory manager
+	memoryManager := NewMemoryManager(config.MemoryConfig, logger)
+	
+	// Create the timeout manager
+	timeoutManager := NewTimeoutManager(config.TimeoutConfig, logger)
+	
+	coordinator := &ComponentCoordinator{
+		components:     make(map[string]*ComponentInfo),
+		memoryManager:  memoryManager,
+		timeoutManager: timeoutManager,
+		config:         config,
+		logger:         logger,
 	}
 	
-	metricsCollector := metrics.NewCollector("component_coordinator", metrics.WithSampleRate(config.MetricsSampleRate))
+	// Set the unload callback
+	memoryManager.SetUnloadCallback(coordinator.unloadComponent)
 	
-	return &ComponentCoordinator{
-		components:       make(map[string]*ComponentInfo),
-		memoryManager:    NewMemoryManager(config.TotalMemoryLimit, logger),
-		initManager:      lazy.NewInitializationManager(logger),
-		timeoutManager:   NewTimeoutManager(logger),
-		metricsCollector: metricsCollector,
-		logger:           logger,
-		config:           config,
+	// Start the automatic unloader if enabled
+	if config.AutoUnloadEnabled {
+		memoryManager.StartAutoUnloader(context.Background())
 	}
+	
+	return coordinator
 }
 
 // RegisterComponent registers a component with the coordinator
@@ -124,161 +121,157 @@ func (c *ComponentCoordinator) RegisterComponent(
 	provider *lazy.EnhancedLazyProvider,
 	dependencies []string,
 ) error {
-	c.componentsMu.Lock()
-	defer c.componentsMu.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	
+	// Check if the component is already registered
 	if _, exists := c.components[name]; exists {
 		return fmt.Errorf("component %s already registered", name)
 	}
 	
-	// Create component info
+	// Create the component info
 	info := &ComponentInfo{
 		Name:         name,
 		Type:         componentType,
 		Provider:     provider,
-		IsInitialized: false,
-		LastAccess:   time.Now(),
-		MemoryUsage:  provider.GetMemoryEstimate(),
 		Dependencies: dependencies,
+		Initialized:  false,
+		MemoryUsage:  provider.GetMemoryEstimate(),
 		Priority:     provider.GetPriority(),
-		Timeout:      c.config.DefaultTimeout,
-		AccessCount:  0,
+		LastAccess:   time.Now(),
 	}
 	
-	// Register with memory manager
-	if c.config.EnableMemoryTracking {
-		c.memoryManager.RegisterComponent(name, provider.GetMemoryEstimate())
-	}
-	
-	// Register with initialization manager
-	c.initManager.RegisterComponent(name, provider, dependencies)
-	
-	// Store component info
+	// Register the component
 	c.components[name] = info
 	
-	c.logger.Info("Component registered", 
-		zap.String("component", name),
-		zap.String("type", componentType),
-		zap.Int("priority", provider.GetPriority()),
-		zap.Int64("memory_estimate", provider.GetMemoryEstimate()),
-	)
+	// Register with the memory manager
+	c.memoryManager.RegisterComponent(name, componentType, info.MemoryUsage, info.Priority)
+	
+	// Register with the timeout manager
+	c.timeoutManager.RegisterComponent(name, provider.GetTimeout())
 	
 	return nil
 }
 
 // GetComponent gets a component, initializing it if necessary
 func (c *ComponentCoordinator) GetComponent(ctx context.Context, name string) (interface{}, error) {
-	// Check if component exists
-	c.componentsMu.RLock()
-	info, exists := c.components[name]
-	c.componentsMu.RUnlock()
-	
-	if !exists {
-		return nil, fmt.Errorf("component %s not registered", name)
-	}
-	
-	// Create a context with timeout
-	timeoutCtx, cancel := context.WithTimeout(ctx, info.Timeout)
-	defer cancel()
-	
-	// Check if memory is available
-	if c.config.EnableMemoryTracking {
-		if !c.memoryManager.CanAllocate(name, info.MemoryUsage) {
-			// Try to free memory
-			freed, err := c.memoryManager.FreeMemory(info.MemoryUsage)
-			if err != nil || !freed {
-				return nil, fmt.Errorf("insufficient memory to initialize component %s: %w", name, err)
-			}
-		}
-	}
-	
-	// Get the component through the initialization manager
-	startTime := time.Now()
-	instance, err := c.initManager.GetComponent(timeoutCtx, name)
-	initTime := time.Since(startTime)
-	
+	// Get the component info
+	info, err := c.GetComponentInfo(name)
 	if err != nil {
-		c.logger.Error("Failed to initialize component",
-			zap.String("component", name),
-			zap.Error(err),
-			zap.Duration("init_time", initTime),
-		)
-		
-		if c.config.MetricsEnabled {
-			c.metricsCollector.RecordError("component_init_error", map[string]string{
-				"component": name,
-				"error":     err.Error(),
-			})
-		}
-		
 		return nil, err
 	}
 	
-	// Update component info
-	c.componentsMu.Lock()
-	info.IsInitialized = true
-	info.LastAccess = time.Now()
-	info.InitTime = initTime
-	info.AccessCount++
-	c.componentsMu.Unlock()
-	
-	// Record metrics
-	if c.config.MetricsEnabled {
-		c.metricsCollector.RecordLatency("component_init_time", initTime, map[string]string{
-			"component": name,
-		})
-		c.metricsCollector.Increment("component_access_count", map[string]string{
-			"component": name,
-		})
+	// Check if the component is already initialized
+	if info.Initialized {
+		// Mark the component as accessed
+		c.memoryManager.MarkComponentAccessed(name)
+		c.memoryManager.MarkComponentInUse(name, true)
+		
+		// Get the component
+		component, err := info.Provider.Get()
+		if err != nil {
+			return nil, err
+		}
+		
+		// Mark the component as not in use
+		c.memoryManager.MarkComponentInUse(name, false)
+		
+		return component, nil
 	}
 	
-	c.logger.Debug("Component initialized",
-		zap.String("component", name),
-		zap.Duration("init_time", initTime),
-	)
-	
-	return instance, nil
+	// Initialize the component
+	return c.initializeComponent(ctx, info)
 }
 
-// InitializeComponents initializes components in dependency order
-func (c *ComponentCoordinator) InitializeComponents(ctx context.Context, componentNames []string) error {
-	return c.initManager.InitializeComponents(ctx, componentNames)
+// initializeComponent initializes a component
+func (c *ComponentCoordinator) initializeComponent(ctx context.Context, info *ComponentInfo) (interface{}, error) {
+	// Create a timeout context
+	timeoutCtx, cancel := c.timeoutManager.GetTimeoutContext(ctx, info.Name)
+	defer cancel()
+	
+	// Check if memory can be allocated
+	if !c.memoryManager.CanAllocate(info.Name, info.MemoryUsage) {
+		// Try to free memory
+		freed, err := c.memoryManager.FreeMemory(ctx, info.MemoryUsage)
+		if err != nil || !freed {
+			return nil, fmt.Errorf("insufficient memory to initialize component %s", info.Name)
+		}
+	}
+	
+	// Allocate memory
+	err := c.memoryManager.AllocateMemory(info.Name, info.MemoryUsage)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Mark the component as in use
+	c.memoryManager.MarkComponentInUse(info.Name, true)
+	
+	// Initialize the component
+	component, err := info.Provider.Initialize(timeoutCtx)
+	if err != nil {
+		// Mark the component as not in use
+		c.memoryManager.MarkComponentInUse(info.Name, false)
+		return nil, err
+	}
+	
+	// Mark the component as initialized
+	c.mu.Lock()
+	info.Initialized = true
+	c.mu.Unlock()
+	
+	// Mark the component as not in use
+	c.memoryManager.MarkComponentInUse(info.Name, false)
+	
+	return component, nil
 }
 
 // ShutdownComponent shuts down a component
 func (c *ComponentCoordinator) ShutdownComponent(ctx context.Context, name string) error {
-	c.componentsMu.Lock()
-	defer c.componentsMu.Unlock()
-	
-	info, exists := c.components[name]
-	if !exists {
-		return fmt.Errorf("component %s not registered", name)
+	// Get the component info
+	info, err := c.GetComponentInfo(name)
+	if err != nil {
+		return err
 	}
 	
-	if !info.IsInitialized {
-		return nil // Already shut down
+	// Check if the component is initialized
+	if !info.Initialized {
+		return nil
 	}
 	
-	// Reset the provider
-	info.Provider.Reset()
+	// Create a timeout context
+	timeoutCtx, cancel := c.timeoutManager.GetTimeoutContext(ctx, info.Name)
+	defer cancel()
 	
-	// Update component info
-	info.IsInitialized = false
-	
-	// Release memory
-	if c.config.EnableMemoryTracking {
-		c.memoryManager.ReleaseMemory(name)
+	// Shutdown the component
+	err = info.Provider.Shutdown(timeoutCtx)
+	if err != nil {
+		return err
 	}
 	
-	c.logger.Info("Component shut down", zap.String("component", name))
+	// Mark the component as not initialized
+	c.mu.Lock()
+	info.Initialized = false
+	c.mu.Unlock()
+	
+	// Unregister from the memory manager
+	c.memoryManager.UnregisterComponent(name)
+	
+	// Re-register with the memory manager with zero usage
+	c.memoryManager.RegisterComponent(name, info.Type, 0, info.Priority)
 	
 	return nil
 }
 
+// unloadComponent unloads a component (used as a callback for the memory manager)
+func (c *ComponentCoordinator) unloadComponent(ctx context.Context, name string) error {
+	return c.ShutdownComponent(ctx, name)
+}
+
 // GetComponentInfo gets information about a component
 func (c *ComponentCoordinator) GetComponentInfo(name string) (*ComponentInfo, error) {
-	c.componentsMu.RLock()
-	defer c.componentsMu.RUnlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	
 	info, exists := c.components[name]
 	if !exists {
@@ -290,30 +283,48 @@ func (c *ComponentCoordinator) GetComponentInfo(name string) (*ComponentInfo, er
 
 // ListComponents lists all registered components
 func (c *ComponentCoordinator) ListComponents() []*ComponentInfo {
-	c.componentsMu.RLock()
-	defer c.componentsMu.RUnlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	
-	components := make([]*ComponentInfo, 0, len(c.components))
+	result := make([]*ComponentInfo, 0, len(c.components))
 	for _, info := range c.components {
-		components = append(components, info)
+		result = append(result, info)
 	}
 	
-	return components
+	return result
 }
 
-// GetMemoryUsage gets the current memory usage
-func (c *ComponentCoordinator) GetMemoryUsage() int64 {
-	if c.config.EnableMemoryTracking {
-		return c.memoryManager.GetTotalUsage()
-	}
-	return 0
+// GetMemoryManager gets the memory manager
+func (c *ComponentCoordinator) GetMemoryManager() *MemoryManager {
+	return c.memoryManager
 }
 
-// GetMemoryLimit gets the memory limit
-func (c *ComponentCoordinator) GetMemoryLimit() int64 {
-	if c.config.EnableMemoryTracking {
-		return c.memoryManager.GetTotalLimit()
+// GetTimeoutManager gets the timeout manager
+func (c *ComponentCoordinator) GetTimeoutManager() *TimeoutManager {
+	return c.timeoutManager
+}
+
+// Shutdown shuts down the coordinator and all components
+func (c *ComponentCoordinator) Shutdown(ctx context.Context) error {
+	// Stop the automatic unloader
+	c.memoryManager.StopAutoUnloader()
+	
+	// Get all components
+	components := c.ListComponents()
+	
+	// Shutdown all components
+	var lastErr error
+	for _, info := range components {
+		err := c.ShutdownComponent(ctx, info.Name)
+		if err != nil {
+			lastErr = err
+			c.logger.Error("Failed to shutdown component",
+				zap.String("component", info.Name),
+				zap.Error(err),
+			)
+		}
 	}
-	return 0
+	
+	return lastErr
 }
 
