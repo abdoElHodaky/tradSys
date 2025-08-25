@@ -2,27 +2,13 @@ package plugin
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/fx/lazy"
 	"github.com/abdoElHodaky/tradSys/internal/trading/matching"
 	"go.uber.org/zap"
 )
-
-// Manager manages matching algorithm plugins
-type Manager struct {
-	logger            *zap.Logger
-	registry          *Registry
-	loader            *Loader
-	metrics           *lazy.AdaptiveMetrics
-	contextPropagator *lazy.ContextPropagator
-	algorithmCache    map[string]matching.MatchingAlgorithm
-	cacheMu           sync.RWMutex
-	coreVersion       string
-	performanceData   map[string]*PerformanceData
-	performanceMu     sync.RWMutex
-}
 
 // PerformanceData contains performance data for a matching algorithm
 type PerformanceData struct {
@@ -50,39 +36,47 @@ type PerformanceData struct {
 	// CPUUsage is the CPU usage (0-100)
 	CPUUsage int `json:"cpu_usage"`
 	
-	// LastUpdated is the time when the performance data was last updated
+	// LastUpdated is the time the performance data was last updated
 	LastUpdated time.Time `json:"last_updated"`
 	
-	// SampleCount is the number of samples used to calculate the performance data
+	// SampleCount is the number of samples used to calculate the averages
 	SampleCount int `json:"sample_count"`
+}
+
+// Manager is a manager for matching algorithm plugins
+type Manager struct {
+	logger         *zap.Logger
+	registry       *Registry
+	loader         *Loader
+	performanceData map[string]*PerformanceData
+	performanceMu  sync.RWMutex
 }
 
 // NewManager creates a new manager
 func NewManager(
 	logger *zap.Logger,
-	metrics *lazy.AdaptiveMetrics,
-	contextPropagator *lazy.ContextPropagator,
-	pluginDirs []string,
-	coreVersion string,
+	registry *Registry,
+	loader *Loader,
 ) *Manager {
-	registry := NewRegistry(logger, coreVersion)
-	loader := NewLoader(logger, registry, pluginDirs)
-	
 	return &Manager{
-		logger:            logger,
-		registry:          registry,
-		loader:            loader,
-		metrics:           metrics,
-		contextPropagator: contextPropagator,
-		algorithmCache:    make(map[string]matching.MatchingAlgorithm),
-		coreVersion:       coreVersion,
-		performanceData:   make(map[string]*PerformanceData),
+		logger:         logger,
+		registry:       registry,
+		loader:         loader,
+		performanceData: make(map[string]*PerformanceData),
 	}
 }
 
 // RegisterPlugin registers a plugin
 func (m *Manager) RegisterPlugin(plugin MatchingAlgorithmPlugin) error {
-	return m.registry.RegisterPlugin(plugin)
+	err := m.registry.RegisterPlugin(plugin)
+	if err != nil {
+		return err
+	}
+	
+	// Initialize performance data
+	m.initializePerformanceData(plugin.GetPluginInfo())
+	
+	return nil
 }
 
 // GetPlugin gets a plugin by algorithm type
@@ -97,32 +91,45 @@ func (m *Manager) ListPlugins() []MatchingAlgorithmPlugin {
 
 // UnregisterPlugin unregisters a plugin
 func (m *Manager) UnregisterPlugin(algorithmType string) error {
-	// Remove from cache
-	m.cacheMu.Lock()
-	delete(m.algorithmCache, algorithmType)
-	m.cacheMu.Unlock()
+	err := m.registry.UnregisterPlugin(algorithmType)
+	if err != nil {
+		return err
+	}
 	
 	// Remove performance data
 	m.performanceMu.Lock()
 	delete(m.performanceData, algorithmType)
 	m.performanceMu.Unlock()
 	
-	return m.registry.UnregisterPlugin(algorithmType)
+	return nil
 }
 
 // LoadPlugin loads a plugin from a file
 func (m *Manager) LoadPlugin(filePath string) (MatchingAlgorithmPlugin, error) {
-	return m.loader.LoadPlugin(filePath)
+	plugin, err := m.loader.LoadPlugin(filePath)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Initialize performance data
+	m.initializePerformanceData(plugin.GetPluginInfo())
+	
+	return plugin, nil
 }
 
 // LoadPlugins loads all plugins from a directory
 func (m *Manager) LoadPlugins(dirPath string) ([]MatchingAlgorithmPlugin, error) {
-	return m.loader.LoadPlugins(dirPath)
-}
-
-// LoadAllPlugins loads all plugins from all configured directories
-func (m *Manager) LoadAllPlugins() ([]MatchingAlgorithmPlugin, error) {
-	return m.loader.LoadAllPlugins()
+	plugins, err := m.loader.LoadPlugins(dirPath)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Initialize performance data for all plugins
+	for _, plugin := range plugins {
+		m.initializePerformanceData(plugin.GetPluginInfo())
+	}
+	
+	return plugins, nil
 }
 
 // CreateAlgorithm creates a matching algorithm
@@ -131,97 +138,17 @@ func (m *Manager) CreateAlgorithm(
 	config matching.AlgorithmConfig,
 	logger *zap.Logger,
 ) (matching.MatchingAlgorithm, error) {
-	// Check cache first
-	m.cacheMu.RLock()
-	algorithm, ok := m.algorithmCache[algorithmType]
-	m.cacheMu.RUnlock()
-	
-	if ok {
-		return algorithm, nil
-	}
-	
-	// Create new algorithm
-	algorithm, err := m.registry.CreateAlgorithm(algorithmType, config, logger)
-	if err != nil {
-		return nil, err
-	}
-	
-	// Add to cache
-	m.cacheMu.Lock()
-	m.algorithmCache[algorithmType] = algorithm
-	m.cacheMu.Unlock()
-	
-	// Initialize performance data
-	m.initializePerformanceData(algorithmType)
-	
-	return algorithm, nil
-}
-
-// CreateAlgorithmWithContext creates a matching algorithm with context
-func (m *Manager) CreateAlgorithmWithContext(
-	ctx context.Context,
-	algorithmType string,
-	config matching.AlgorithmConfig,
-	logger *zap.Logger,
-) (matching.MatchingAlgorithm, error) {
-	// Create a channel for the result
-	resultCh := make(chan struct {
-		algorithm matching.MatchingAlgorithm
-		err       error
-	})
-	
-	// Create algorithm in a goroutine
-	go func() {
-		algorithm, err := m.CreateAlgorithm(algorithmType, config, logger)
-		resultCh <- struct {
-			algorithm matching.MatchingAlgorithm
-			err       error
-		}{algorithm, err}
-	}()
-	
-	// Wait for the result or context cancellation
-	select {
-	case result := <-resultCh:
-		return result.algorithm, result.err
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	}
+	return m.registry.CreateAlgorithm(algorithmType, config, logger)
 }
 
 // Initialize initializes all plugins
 func (m *Manager) Initialize(ctx context.Context) error {
-	// Load all plugins
-	plugins, err := m.LoadAllPluginsWithContext(ctx)
-	if err != nil {
-		m.logger.Error("Failed to load all plugins", zap.Error(err))
-		// Continue with initialization of already loaded plugins
-	}
-	
-	m.logger.Info("Loaded matching algorithm plugins", zap.Int("count", len(plugins)))
-	
-	// Initialize all plugins
 	return m.registry.Initialize(ctx)
 }
 
 // Shutdown shuts down all plugins
 func (m *Manager) Shutdown(ctx context.Context) error {
-	// Clear algorithm cache
-	m.cacheMu.Lock()
-	m.algorithmCache = make(map[string]matching.MatchingAlgorithm)
-	m.cacheMu.Unlock()
-	
-	// Clear performance data
-	m.performanceMu.Lock()
-	m.performanceData = make(map[string]*PerformanceData)
-	m.performanceMu.Unlock()
-	
-	// Shutdown all plugins
 	return m.registry.Shutdown(ctx)
-}
-
-// LoadAllPluginsWithContext loads all plugins with context
-func (m *Manager) LoadAllPluginsWithContext(ctx context.Context) ([]MatchingAlgorithmPlugin, error) {
-	return m.loader.LoadAllPluginsWithContext(ctx)
 }
 
 // AddPluginDirectory adds a plugin directory
@@ -239,84 +166,18 @@ func (m *Manager) GetPluginDirectories() []string {
 	return m.loader.GetPluginDirectories()
 }
 
-// StartBackgroundScanner starts a background scanner for new plugins
-func (m *Manager) StartBackgroundScanner(ctx context.Context, scanInterval time.Duration) error {
-	return m.loader.StartBackgroundScanner(ctx, scanInterval)
-}
-
-// StopBackgroundScanner stops the background scanner
-func (m *Manager) StopBackgroundScanner() {
-	m.loader.StopBackgroundScanner()
-}
-
-// SetCoreVersion sets the core version
-func (m *Manager) SetCoreVersion(version string) {
-	m.coreVersion = version
-	m.registry.SetCoreVersion(version)
-}
-
-// GetCoreVersion gets the core version
-func (m *Manager) GetCoreVersion() string {
-	return m.coreVersion
-}
-
-// ValidateAllPlugins validates all plugins
-func (m *Manager) ValidateAllPlugins() error {
-	return m.registry.ValidateAllPlugins()
-}
-
-// GetAlgorithmCache gets the algorithm cache
-func (m *Manager) GetAlgorithmCache() map[string]matching.MatchingAlgorithm {
-	m.cacheMu.RLock()
-	defer m.cacheMu.RUnlock()
-	
-	cache := make(map[string]matching.MatchingAlgorithm, len(m.algorithmCache))
-	for k, v := range m.algorithmCache {
-		cache[k] = v
-	}
-	
-	return cache
-}
-
-// ClearAlgorithmCache clears the algorithm cache
-func (m *Manager) ClearAlgorithmCache() {
-	m.cacheMu.Lock()
-	defer m.cacheMu.Unlock()
-	
-	m.algorithmCache = make(map[string]matching.MatchingAlgorithm)
-}
-
-// RemoveFromAlgorithmCache removes an algorithm from the cache
-func (m *Manager) RemoveFromAlgorithmCache(algorithmType string) {
-	m.cacheMu.Lock()
-	defer m.cacheMu.Unlock()
-	
-	delete(m.algorithmCache, algorithmType)
-}
-
-// initializePerformanceData initializes performance data for an algorithm
-func (m *Manager) initializePerformanceData(algorithmType string) {
+// initializePerformanceData initializes performance data for a plugin
+func (m *Manager) initializePerformanceData(info *PluginInfo) {
 	m.performanceMu.Lock()
 	defer m.performanceMu.Unlock()
 	
 	// Check if performance data already exists
-	if _, ok := m.performanceData[algorithmType]; ok {
+	if _, ok := m.performanceData[info.AlgorithmType]; ok {
 		return
 	}
 	
-	// Get plugin info
-	plugin, err := m.GetPlugin(algorithmType)
-	if err != nil {
-		m.logger.Error("Failed to get plugin for performance data initialization",
-			zap.String("algorithm_type", algorithmType),
-			zap.Error(err))
-		return
-	}
-	
-	info := plugin.GetPluginInfo()
-	
-	// Create performance data
-	m.performanceData[algorithmType] = &PerformanceData{
+	// Initialize performance data
+	m.performanceData[info.AlgorithmType] = &PerformanceData{
 		AverageLatency:    info.PerformanceProfile.Latency,
 		MaxLatency:        info.PerformanceProfile.Latency,
 		MinLatency:        info.PerformanceProfile.Latency,
