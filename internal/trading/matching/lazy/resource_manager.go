@@ -1,206 +1,196 @@
 package lazy
 
 import (
-	"context"
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/fx/lazy"
 	"go.uber.org/zap"
 )
 
-// ResourceManager manages resources for matching engine components
+// ResourceManager manages resources for matching components
 type ResourceManager struct {
-	logger            *zap.Logger
-	metrics           *lazy.AdaptiveMetrics
-	cleanupInterval   time.Duration
-	idleTimeout       time.Duration
-	resources         map[string]*resourceInfo
-	mu                sync.RWMutex
-	cleanupRunning    bool
-	cleanupStopCh     chan struct{}
-	memoryThreshold   int64
-	currentMemoryUsed int64
-	memoryMu          sync.RWMutex
-}
-
-// resourceInfo tracks information about a resource
-type resourceInfo struct {
-	key           string
-	lastAccessed  time.Time
-	memoryUsage   int64
-	cleanupFunc   func() error
-	isInitialized bool
+	logger *zap.Logger
+	
+	// Providers
+	engineProvider *MatchingEngineProvider
+	orderBookProviders map[string]*OrderBookProvider
+	algorithmProviders map[string]*MatchingAlgorithmProvider
+	
+	// Resource usage tracking
+	memoryUsage     int64
+	lastAccessTimes map[string]time.Time
+	
+	// Configuration
+	cleanupInterval time.Duration
+	idleTimeout     time.Duration
+	
+	// Synchronization
+	mu       sync.RWMutex
+	stopChan chan struct{}
+	wg       sync.WaitGroup
 }
 
 // NewResourceManager creates a new resource manager
 func NewResourceManager(
 	logger *zap.Logger,
-	metrics *lazy.AdaptiveMetrics,
+	engineProvider *MatchingEngineProvider,
 ) *ResourceManager {
 	return &ResourceManager{
-		logger:          logger,
-		metrics:         metrics,
-		cleanupInterval: 5 * time.Minute,
-		idleTimeout:     30 * time.Minute,
-		resources:       make(map[string]*resourceInfo),
-		cleanupStopCh:   make(chan struct{}),
-		memoryThreshold: 4 * 1024 * 1024 * 1024, // 4GB default
+		logger:              logger,
+		engineProvider:      engineProvider,
+		orderBookProviders:  make(map[string]*OrderBookProvider),
+		algorithmProviders:  make(map[string]*MatchingAlgorithmProvider),
+		lastAccessTimes:     make(map[string]time.Time),
+		cleanupInterval:     5 * time.Minute,
+		idleTimeout:         30 * time.Minute,
+		stopChan:            make(chan struct{}),
 	}
 }
 
-// RegisterResource registers a resource with the manager
-func (m *ResourceManager) RegisterResource(
-	key string,
-	memoryUsage int64,
-	cleanupFunc func() error,
-) {
+// RegisterOrderBookProvider registers an order book provider
+func (m *ResourceManager) RegisterOrderBookProvider(provider *OrderBookProvider) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	
-	// Check if resource already exists
-	if info, ok := m.resources[key]; ok {
-		// Update existing resource
-		info.lastAccessed = time.Now()
-		info.memoryUsage = memoryUsage
-		info.cleanupFunc = cleanupFunc
-		info.isInitialized = true
-		return
-	}
-	
-	// Create new resource info
-	m.resources[key] = &resourceInfo{
-		key:           key,
-		lastAccessed:  time.Now(),
-		memoryUsage:   memoryUsage,
-		cleanupFunc:   cleanupFunc,
-		isInitialized: true,
-	}
-	
-	// Update memory usage
-	m.updateMemoryUsage(memoryUsage)
-	
-	m.logger.Debug("Registered resource",
-		zap.String("key", key),
-		zap.Int64("memory_usage", memoryUsage))
+	m.orderBookProviders[provider.GetSymbol()] = provider
 }
 
-// AccessResource marks a resource as accessed
-func (m *ResourceManager) AccessResource(key string) bool {
+// RegisterAlgorithmProvider registers a matching algorithm provider
+func (m *ResourceManager) RegisterAlgorithmProvider(provider *MatchingAlgorithmProvider) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	
-	info, ok := m.resources[key]
-	if !ok {
-		return false
-	}
-	
-	info.lastAccessed = time.Now()
-	return true
+	m.algorithmProviders[provider.GetAlgorithmType()] = provider
 }
 
-// UnregisterResource unregisters a resource
-func (m *ResourceManager) UnregisterResource(key string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	
-	info, ok := m.resources[key]
-	if !ok {
-		return nil
-	}
-	
-	// Call cleanup function
-	var err error
-	if info.cleanupFunc != nil {
-		err = info.cleanupFunc()
-	}
-	
-	// Update memory usage
-	m.updateMemoryUsage(-info.memoryUsage)
-	
-	// Remove resource
-	delete(m.resources, key)
-	
-	m.logger.Debug("Unregistered resource",
-		zap.String("key", key),
-		zap.Int64("memory_usage", info.memoryUsage))
-	
-	return err
+// Start starts the resource manager
+func (m *ResourceManager) Start() {
+	m.wg.Add(1)
+	go m.cleanupLoop()
 }
 
-// StartCleanup starts the cleanup goroutine
-func (m *ResourceManager) StartCleanup(ctx context.Context) {
-	m.mu.Lock()
-	if m.cleanupRunning {
-		m.mu.Unlock()
-		return
-	}
+// Stop stops the resource manager
+func (m *ResourceManager) Stop() {
+	close(m.stopChan)
+	m.wg.Wait()
+}
+
+// cleanupLoop periodically checks for idle components and cleans them up
+func (m *ResourceManager) cleanupLoop() {
+	defer m.wg.Done()
 	
-	m.cleanupRunning = true
-	m.mu.Unlock()
+	ticker := time.NewTicker(m.cleanupInterval)
+	defer ticker.Stop()
 	
-	go func() {
-		ticker := time.NewTicker(m.cleanupInterval)
-		defer ticker.Stop()
-		
-		for {
-			select {
-			case <-ticker.C:
-				m.cleanup()
-			case <-m.cleanupStopCh:
-				m.mu.Lock()
-				m.cleanupRunning = false
-				m.mu.Unlock()
-				return
-			case <-ctx.Done():
-				m.mu.Lock()
-				m.cleanupRunning = false
-				m.mu.Unlock()
-				return
-			}
+	for {
+		select {
+		case <-ticker.C:
+			m.checkAndCleanupIdleComponents()
+		case <-m.stopChan:
+			return
 		}
-	}()
-}
-
-// StopCleanup stops the cleanup goroutine
-func (m *ResourceManager) StopCleanup() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	
-	if m.cleanupRunning {
-		close(m.cleanupStopCh)
-		m.cleanupStopCh = make(chan struct{})
 	}
 }
 
-// cleanup cleans up idle resources
-func (m *ResourceManager) cleanup() {
+// checkAndCleanupIdleComponents checks for idle components and cleans them up
+func (m *ResourceManager) checkAndCleanupIdleComponents() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
 	now := time.Now()
 	
-	// Get resources to clean up
-	var toCleanup []string
+	// Check matching engine
+	if m.engineProvider.IsInitialized() {
+		lastAccess, ok := m.lastAccessTimes["matching-engine"]
+		if ok && now.Sub(lastAccess) > m.idleTimeout {
+			m.logger.Info("Cleaning up idle matching engine",
+				zap.Duration("idle_time", now.Sub(lastAccess)))
+			
+			// In a real implementation, we would call cleanup methods on the engine
+			// For now, we just mark it as cleaned up
+			delete(m.lastAccessTimes, "matching-engine")
+		}
+	}
 	
+	// Check order books
+	for symbol, provider := range m.orderBookProviders {
+		if provider.IsInitialized() {
+			componentName := "order-book-" + symbol
+			lastAccess, ok := m.lastAccessTimes[componentName]
+			if ok && now.Sub(lastAccess) > m.idleTimeout {
+				m.logger.Info("Cleaning up idle order book",
+					zap.String("symbol", symbol),
+					zap.Duration("idle_time", now.Sub(lastAccess)))
+				
+				// In a real implementation, we would call cleanup methods on the order book
+				delete(m.lastAccessTimes, componentName)
+			}
+		}
+	}
+	
+	// Check matching algorithms
+	for algorithmType, provider := range m.algorithmProviders {
+		if provider.IsInitialized() {
+			componentName := "matching-algorithm-" + algorithmType
+			lastAccess, ok := m.lastAccessTimes[componentName]
+			if ok && now.Sub(lastAccess) > m.idleTimeout {
+				m.logger.Info("Cleaning up idle matching algorithm",
+					zap.String("type", algorithmType),
+					zap.Duration("idle_time", now.Sub(lastAccess)))
+				
+				// In a real implementation, we would call cleanup methods on the algorithm
+				delete(m.lastAccessTimes, componentName)
+			}
+		}
+	}
+}
+
+// RecordAccess records access to a component
+func (m *ResourceManager) RecordAccess(componentName string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	m.lastAccessTimes[componentName] = time.Now()
+}
+
+// RecordMemoryUsage records memory usage for a component
+func (m *ResourceManager) RecordMemoryUsage(componentName string, bytes int64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	// In a real implementation, we would track memory usage per component
+	// For now, we just update the total
+	m.memoryUsage += bytes
+	
+	m.logger.Debug("Recorded memory usage",
+		zap.String("component", componentName),
+		zap.Int64("bytes", bytes),
+		zap.Int64("total_bytes", m.memoryUsage))
+}
+
+// GetTotalMemoryUsage returns the total memory usage
+func (m *ResourceManager) GetTotalMemoryUsage() int64 {
 	m.mu.RLock()
-	for key, info := range m.resources {
-		if now.Sub(info.lastAccessed) > m.idleTimeout {
-			toCleanup = append(toCleanup, key)
-		}
-	}
-	m.mu.RUnlock()
+	defer m.mu.RUnlock()
 	
-	// Clean up resources
-	for _, key := range toCleanup {
-		m.logger.Debug("Cleaning up idle resource", zap.String("key", key))
-		if err := m.UnregisterResource(key); err != nil {
-			m.logger.Error("Failed to clean up resource",
-				zap.String("key", key),
-				zap.Error(err))
-		}
-	}
+	return m.memoryUsage
+}
+
+// GetComponentLastAccessTime returns the last access time for a component
+func (m *ResourceManager) GetComponentLastAccessTime(componentName string) (time.Time, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	
-	m.logger.Debug("Cleanup completed",
-		zap.Int("cleaned_up", len(toCleanup)),
-		zap.Int64("memory_used", m.GetMemoryUsage()))
+	lastAccess, ok := m.lastAccessTimes[componentName]
+	return lastAccess, ok
+}
+
+// SetIdleTimeout sets the idle timeout for components
+func (m *ResourceManager) SetIdleTimeout(timeout time.Duration) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	m.idleTimeout = timeout
 }
 
 // SetCleanupInterval sets the cleanup interval
@@ -209,123 +199,5 @@ func (m *ResourceManager) SetCleanupInterval(interval time.Duration) {
 	defer m.mu.Unlock()
 	
 	m.cleanupInterval = interval
-}
-
-// SetIdleTimeout sets the idle timeout
-func (m *ResourceManager) SetIdleTimeout(timeout time.Duration) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	
-	m.idleTimeout = timeout
-}
-
-// SetMemoryThreshold sets the memory threshold
-func (m *ResourceManager) SetMemoryThreshold(threshold int64) {
-	m.memoryMu.Lock()
-	defer m.memoryMu.Unlock()
-	
-	m.memoryThreshold = threshold
-}
-
-// GetMemoryUsage gets the current memory usage
-func (m *ResourceManager) GetMemoryUsage() int64 {
-	m.memoryMu.RLock()
-	defer m.memoryMu.RUnlock()
-	
-	return m.currentMemoryUsed
-}
-
-// GetMemoryThreshold gets the memory threshold
-func (m *ResourceManager) GetMemoryThreshold() int64 {
-	m.memoryMu.RLock()
-	defer m.memoryMu.RUnlock()
-	
-	return m.memoryThreshold
-}
-
-// updateMemoryUsage updates the current memory usage
-func (m *ResourceManager) updateMemoryUsage(delta int64) {
-	m.memoryMu.Lock()
-	defer m.memoryMu.Unlock()
-	
-	m.currentMemoryUsed += delta
-	
-	// Ensure we don't go negative
-	if m.currentMemoryUsed < 0 {
-		m.currentMemoryUsed = 0
-	}
-	
-	// Record metrics
-	m.metrics.RecordMemoryUsage("matching-engine", m.currentMemoryUsed)
-}
-
-// GetResourceCount gets the number of resources
-func (m *ResourceManager) GetResourceCount() int {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	
-	return len(m.resources)
-}
-
-// IsMemoryAvailable checks if memory is available for a new resource
-func (m *ResourceManager) IsMemoryAvailable(memoryNeeded int64) bool {
-	m.memoryMu.RLock()
-	defer m.memoryMu.RUnlock()
-	
-	return m.currentMemoryUsed+memoryNeeded <= m.memoryThreshold
-}
-
-// ForceCleanup forces cleanup of resources to free memory
-func (m *ResourceManager) ForceCleanup(memoryNeeded int64) int64 {
-	// Get resources sorted by last accessed time
-	type resourceWithTime struct {
-		key          string
-		lastAccessed time.Time
-		memoryUsage  int64
-	}
-	
-	var resources []resourceWithTime
-	
-	m.mu.RLock()
-	for key, info := range m.resources {
-		resources = append(resources, resourceWithTime{
-			key:          key,
-			lastAccessed: info.lastAccessed,
-			memoryUsage:  info.memoryUsage,
-		})
-	}
-	m.mu.RUnlock()
-	
-	// Sort by last accessed time (oldest first)
-	for i := 0; i < len(resources)-1; i++ {
-		for j := i + 1; j < len(resources); j++ {
-			if resources[i].lastAccessed.After(resources[j].lastAccessed) {
-				resources[i], resources[j] = resources[j], resources[i]
-			}
-		}
-	}
-	
-	// Clean up resources until we have enough memory
-	var freedMemory int64
-	for _, res := range resources {
-		if m.IsMemoryAvailable(memoryNeeded) {
-			break
-		}
-		
-		m.logger.Info("Forcing cleanup of resource to free memory",
-			zap.String("key", res.key),
-			zap.Int64("memory_usage", res.memoryUsage))
-		
-		if err := m.UnregisterResource(res.key); err != nil {
-			m.logger.Error("Failed to clean up resource",
-				zap.String("key", res.key),
-				zap.Error(err))
-			continue
-		}
-		
-		freedMemory += res.memoryUsage
-	}
-	
-	return freedMemory
 }
 

@@ -9,89 +9,112 @@ import (
 	"go.uber.org/zap"
 )
 
-// MatchingEngineProvider provides lazy loading for matching engines
+// MatchingEngineProvider provides lazy loading for matching engine
 type MatchingEngineProvider struct {
-	lazyProvider *lazy.EnhancedLazyProvider
+	lazyProvider *lazy.LazyProvider
 	logger       *zap.Logger
 }
 
-// NewMatchingEngineProvider creates a new provider for matching engines
+// NewMatchingEngineProvider creates a new provider
 func NewMatchingEngineProvider(
 	logger *zap.Logger,
-	metrics *lazy.AdaptiveMetrics,
+	metrics *lazy.LazyLoadingMetrics,
 	config matching.EngineConfig,
 ) *MatchingEngineProvider {
 	return &MatchingEngineProvider{
-		lazyProvider: lazy.NewEnhancedLazyProvider(
+		lazyProvider: lazy.NewLazyProvider(
 			"matching-engine",
-			func(logger *zap.Logger) (interface{}, error) {
+			func(logger *zap.Logger) (*matching.Engine, error) {
 				logger.Info("Initializing matching engine")
 				startTime := time.Now()
 				
 				// This is typically an expensive operation
-				engine, err := matching.NewMatchingEngine(config, logger)
+				engine, err := matching.NewEngine(config, logger)
 				if err != nil {
 					return nil, err
 				}
 				
 				logger.Info("Matching engine initialized",
-					zap.Duration("duration", time.Since(startTime)))
+					zap.Duration("duration", time.Since(startTime)),
+					zap.Int("markets", len(config.Markets)),
+				)
 				
 				return engine, nil
 			},
 			logger,
 			metrics,
-			lazy.WithPriority(10), // Highest priority (lowest number)
-			lazy.WithTimeout(60*time.Second),
-			lazy.WithMemoryEstimate(200*1024*1024), // 200MB estimate
 		),
 		logger: logger,
 	}
 }
 
 // Get returns the matching engine, initializing it if necessary
-func (p *MatchingEngineProvider) Get() (*matching.MatchingEngine, error) {
+func (p *MatchingEngineProvider) Get() (*matching.Engine, error) {
 	instance, err := p.lazyProvider.Get()
 	if err != nil {
 		return nil, err
 	}
-	return instance.(*matching.MatchingEngine), nil
+	return instance.(*matching.Engine), nil
 }
 
 // GetWithContext returns the matching engine with context timeout
-func (p *MatchingEngineProvider) GetWithContext(ctx context.Context) (*matching.MatchingEngine, error) {
-	instance, err := p.lazyProvider.GetWithContext(ctx)
-	if err != nil {
-		return nil, err
+func (p *MatchingEngineProvider) GetWithContext(ctx context.Context) (*matching.Engine, error) {
+	// Create a channel for the result
+	resultCh := make(chan struct {
+		engine *matching.Engine
+		err    error
+	})
+
+	// Get the engine in a goroutine
+	go func() {
+		instance, err := p.lazyProvider.Get()
+		if err != nil {
+			resultCh <- struct {
+				engine *matching.Engine
+				err    error
+			}{nil, err}
+			return
+		}
+
+		resultCh <- struct {
+			engine *matching.Engine
+			err    error
+		}{instance.(*matching.Engine), nil}
+	}()
+
+	// Wait for the result or context cancellation
+	select {
+	case result := <-resultCh:
+		return result.engine, result.err
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	}
-	return instance.(*matching.MatchingEngine), nil
 }
 
-// IsInitialized returns whether the matching engine has been initialized
+// IsInitialized returns whether the engine has been initialized
 func (p *MatchingEngineProvider) IsInitialized() bool {
 	return p.lazyProvider.IsInitialized()
 }
 
-// OrderBookProvider provides lazy loading for order books
+// OrderBookProvider provides lazy loading for order book
 type OrderBookProvider struct {
-	lazyProvider *lazy.EnhancedLazyProvider
+	lazyProvider *lazy.LazyProvider
 	logger       *zap.Logger
 	symbol       string
 }
 
-// NewOrderBookProvider creates a new provider for order books
+// NewOrderBookProvider creates a new provider
 func NewOrderBookProvider(
 	logger *zap.Logger,
-	metrics *lazy.AdaptiveMetrics,
+	metrics *lazy.LazyLoadingMetrics,
 	symbol string,
 	config matching.OrderBookConfig,
 ) *OrderBookProvider {
 	return &OrderBookProvider{
-		lazyProvider: lazy.NewEnhancedLazyProvider(
+		lazyProvider: lazy.NewLazyProvider(
 			"order-book-"+symbol,
-			func(logger *zap.Logger) (interface{}, error) {
-				logger.Info("Initializing order book", 
-					zap.String("symbol", symbol))
+			func(logger *zap.Logger) (*matching.OrderBook, error) {
+				logger.Info("Initializing order book", zap.String("symbol", symbol))
 				startTime := time.Now()
 				
 				// This is typically an expensive operation
@@ -102,15 +125,13 @@ func NewOrderBookProvider(
 				
 				logger.Info("Order book initialized",
 					zap.Duration("duration", time.Since(startTime)),
-					zap.String("symbol", symbol))
+					zap.String("symbol", symbol),
+				)
 				
 				return orderBook, nil
 			},
 			logger,
 			metrics,
-			lazy.WithPriority(20), // High priority
-			lazy.WithTimeout(30*time.Second),
-			lazy.WithMemoryEstimate(50*1024*1024), // 50MB estimate
 		),
 		logger: logger,
 		symbol: symbol,
@@ -128,11 +149,36 @@ func (p *OrderBookProvider) Get() (*matching.OrderBook, error) {
 
 // GetWithContext returns the order book with context timeout
 func (p *OrderBookProvider) GetWithContext(ctx context.Context) (*matching.OrderBook, error) {
-	instance, err := p.lazyProvider.GetWithContext(ctx)
-	if err != nil {
-		return nil, err
+	// Create a channel for the result
+	resultCh := make(chan struct {
+		orderBook *matching.OrderBook
+		err       error
+	})
+
+	// Get the order book in a goroutine
+	go func() {
+		instance, err := p.lazyProvider.Get()
+		if err != nil {
+			resultCh <- struct {
+				orderBook *matching.OrderBook
+				err       error
+			}{nil, err}
+			return
+		}
+
+		resultCh <- struct {
+			orderBook *matching.OrderBook
+			err       error
+		}{instance.(*matching.OrderBook), nil}
+	}()
+
+	// Wait for the result or context cancellation
+	select {
+	case result := <-resultCh:
+		return result.orderBook, result.err
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	}
-	return instance.(*matching.OrderBook), nil
 }
 
 // IsInitialized returns whether the order book has been initialized
@@ -140,29 +186,29 @@ func (p *OrderBookProvider) IsInitialized() bool {
 	return p.lazyProvider.IsInitialized()
 }
 
-// GetSymbol returns the symbol
+// GetSymbol returns the symbol for this order book
 func (p *OrderBookProvider) GetSymbol() string {
 	return p.symbol
 }
 
-// MatchingAlgorithmProvider provides lazy loading for matching algorithms
+// MatchingAlgorithmProvider provides lazy loading for matching algorithm
 type MatchingAlgorithmProvider struct {
-	lazyProvider *lazy.EnhancedLazyProvider
+	lazyProvider *lazy.LazyProvider
 	logger       *zap.Logger
 	algorithmType string
 }
 
-// NewMatchingAlgorithmProvider creates a new provider for matching algorithms
+// NewMatchingAlgorithmProvider creates a new provider
 func NewMatchingAlgorithmProvider(
 	logger *zap.Logger,
-	metrics *lazy.AdaptiveMetrics,
+	metrics *lazy.LazyLoadingMetrics,
 	algorithmType string,
 	config matching.AlgorithmConfig,
 ) *MatchingAlgorithmProvider {
 	return &MatchingAlgorithmProvider{
-		lazyProvider: lazy.NewEnhancedLazyProvider(
+		lazyProvider: lazy.NewLazyProvider(
 			"matching-algorithm-"+algorithmType,
-			func(logger *zap.Logger) (interface{}, error) {
+			func(logger *zap.Logger) (matching.MatchingAlgorithm, error) {
 				logger.Info("Initializing matching algorithm", 
 					zap.String("type", algorithmType))
 				startTime := time.Now()
@@ -175,17 +221,15 @@ func NewMatchingAlgorithmProvider(
 				
 				logger.Info("Matching algorithm initialized",
 					zap.Duration("duration", time.Since(startTime)),
-					zap.String("type", algorithmType))
+					zap.String("type", algorithmType),
+				)
 				
 				return algorithm, nil
 			},
 			logger,
 			metrics,
-			lazy.WithPriority(30), // Medium priority
-			lazy.WithTimeout(20*time.Second),
-			lazy.WithMemoryEstimate(20*1024*1024), // 20MB estimate
 		),
-		logger:        logger,
+		logger: logger,
 		algorithmType: algorithmType,
 	}
 }
@@ -199,16 +243,7 @@ func (p *MatchingAlgorithmProvider) Get() (matching.MatchingAlgorithm, error) {
 	return instance.(matching.MatchingAlgorithm), nil
 }
 
-// GetWithContext returns the matching algorithm with context timeout
-func (p *MatchingAlgorithmProvider) GetWithContext(ctx context.Context) (matching.MatchingAlgorithm, error) {
-	instance, err := p.lazyProvider.GetWithContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return instance.(matching.MatchingAlgorithm), nil
-}
-
-// IsInitialized returns whether the matching algorithm has been initialized
+// IsInitialized returns whether the algorithm has been initialized
 func (p *MatchingAlgorithmProvider) IsInitialized() bool {
 	return p.lazyProvider.IsInitialized()
 }
@@ -216,78 +251,5 @@ func (p *MatchingAlgorithmProvider) IsInitialized() bool {
 // GetAlgorithmType returns the algorithm type
 func (p *MatchingAlgorithmProvider) GetAlgorithmType() string {
 	return p.algorithmType
-}
-
-// ExecutionHandlerProvider provides lazy loading for execution handlers
-type ExecutionHandlerProvider struct {
-	lazyProvider *lazy.EnhancedLazyProvider
-	logger       *zap.Logger
-	handlerType  string
-}
-
-// NewExecutionHandlerProvider creates a new provider for execution handlers
-func NewExecutionHandlerProvider(
-	logger *zap.Logger,
-	metrics *lazy.AdaptiveMetrics,
-	handlerType string,
-	config matching.ExecutionHandlerConfig,
-) *ExecutionHandlerProvider {
-	return &ExecutionHandlerProvider{
-		lazyProvider: lazy.NewEnhancedLazyProvider(
-			"execution-handler-"+handlerType,
-			func(logger *zap.Logger) (interface{}, error) {
-				logger.Info("Initializing execution handler", 
-					zap.String("type", handlerType))
-				startTime := time.Now()
-				
-				// This is typically an expensive operation
-				handler, err := matching.NewExecutionHandler(handlerType, config, logger)
-				if err != nil {
-					return nil, err
-				}
-				
-				logger.Info("Execution handler initialized",
-					zap.Duration("duration", time.Since(startTime)),
-					zap.String("type", handlerType))
-				
-				return handler, nil
-			},
-			logger,
-			metrics,
-			lazy.WithPriority(25), // Medium-high priority
-			lazy.WithTimeout(25*time.Second),
-			lazy.WithMemoryEstimate(30*1024*1024), // 30MB estimate
-		),
-		logger:      logger,
-		handlerType: handlerType,
-	}
-}
-
-// Get returns the execution handler, initializing it if necessary
-func (p *ExecutionHandlerProvider) Get() (matching.ExecutionHandler, error) {
-	instance, err := p.lazyProvider.Get()
-	if err != nil {
-		return nil, err
-	}
-	return instance.(matching.ExecutionHandler), nil
-}
-
-// GetWithContext returns the execution handler with context timeout
-func (p *ExecutionHandlerProvider) GetWithContext(ctx context.Context) (matching.ExecutionHandler, error) {
-	instance, err := p.lazyProvider.GetWithContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return instance.(matching.ExecutionHandler), nil
-}
-
-// IsInitialized returns whether the execution handler has been initialized
-func (p *ExecutionHandlerProvider) IsInitialized() bool {
-	return p.lazyProvider.IsInitialized()
-}
-
-// GetHandlerType returns the handler type
-func (p *ExecutionHandlerProvider) GetHandlerType() string {
-	return p.handlerType
 }
 
