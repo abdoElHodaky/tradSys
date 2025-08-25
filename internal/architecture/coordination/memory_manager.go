@@ -26,50 +26,36 @@ const (
 
 // ComponentMemoryInfo contains memory usage information for a component
 type ComponentMemoryInfo struct {
-	// Component name
+	// Component identity
 	Name string
-	
-	// Component type
 	Type string
 	
-	// Estimated memory usage
+	// Memory usage
 	MemoryUsage int64
 	
-	// Component priority (lower is higher priority)
+	// Component priority (higher priority components are unloaded last)
 	Priority int
 	
-	// Last access time
+	// Component state
 	LastAccess time.Time
-	
-	// Whether the component is currently in use
-	InUse bool
+	InUse      bool
 }
 
 // MemoryManagerConfig contains configuration for the memory manager
 type MemoryManagerConfig struct {
-	// Total memory limit
+	// TotalLimit is the total memory limit in bytes
 	TotalLimit int64
 	
-	// Low memory threshold (percentage of total limit)
-	LowThreshold float64
-	
-	// Medium memory threshold (percentage of total limit)
-	MediumThreshold float64
-	
-	// High memory threshold (percentage of total limit)
-	HighThreshold float64
-	
-	// Critical memory threshold (percentage of total limit)
+	// Memory pressure thresholds
+	LowThreshold      float64
+	MediumThreshold   float64
+	HighThreshold     float64
 	CriticalThreshold float64
 	
-	// Automatic unloading enabled
+	// Auto unload configuration
 	AutoUnloadEnabled bool
-	
-	// Minimum idle time before a component can be unloaded (seconds)
-	MinIdleTime int
-	
-	// Check interval for automatic unloading (seconds)
-	CheckInterval int
+	MinIdleTime       int
+	CheckInterval     int
 }
 
 // DefaultMemoryManagerConfig returns the default memory manager configuration
@@ -86,40 +72,25 @@ func DefaultMemoryManagerConfig() MemoryManagerConfig {
 	}
 }
 
-// MemoryManager manages memory allocation and tracking for components
+// MemoryManager manages memory usage and unloads components when memory pressure is high
 type MemoryManager struct {
 	// Configuration
 	config MemoryManagerConfig
 	
-	// Total memory usage
-//=======
-// MemoryManager manages memory allocation for components
-type MemoryManager struct {
-	// Total memory limit
-	totalLimit int64
-	
-	// Current memory usage
-//>>>>>>> main
-	totalUsage int64
-	
-	// Component memory usage
+	// Memory usage
+	totalUsage     int64
 	componentUsage map[string]*ComponentMemoryInfo
 	
-//<<<<<<< codegen-bot/integrate-coordination-system
-	// Mutex for thread safety
-//=======
-	// Mutex for protecting memory state
-//>>>>>>> main
+	// Synchronization
 	mu sync.RWMutex
 	
 	// Logger
 	logger *zap.Logger
-//<<<<<<< codegen-bot/integrate-coordination-system
 	
 	// Unload callback
 	unloadCallback func(ctx context.Context, componentName string) error
 	
-	// Stop channel for the background checker
+	// Background monitoring
 	stopCh chan struct{}
 }
 
@@ -137,6 +108,19 @@ func NewMemoryManager(config MemoryManagerConfig, logger *zap.Logger) *MemoryMan
 // SetUnloadCallback sets the callback function for unloading components
 func (m *MemoryManager) SetUnloadCallback(callback func(ctx context.Context, componentName string) error) {
 	m.unloadCallback = callback
+}
+
+// Start starts the memory manager
+func (m *MemoryManager) Start() {
+	// Start background monitoring if auto unload is enabled
+	if m.config.AutoUnloadEnabled {
+		go m.monitorMemoryUsage()
+	}
+}
+
+// Stop stops the memory manager
+func (m *MemoryManager) Stop() {
+	close(m.stopCh)
 }
 
 // StartAutoUnloader starts the automatic component unloader
@@ -171,6 +155,27 @@ func (m *MemoryManager) runAutoUnloader(ctx context.Context) {
 		case <-m.stopCh:
 			return
 		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+// monitorMemoryUsage monitors memory usage and unloads idle components when memory pressure is high
+func (m *MemoryManager) monitorMemoryUsage() {
+	ticker := time.NewTicker(time.Duration(m.config.CheckInterval) * time.Second)
+	defer ticker.Stop()
+	
+	for {
+		select {
+		case <-ticker.C:
+			// Check memory pressure
+			pressureLevel := m.GetMemoryPressureLevel()
+			
+			// Unload idle components if memory pressure is high
+			if pressureLevel >= MemoryPressureMedium {
+				m.UnloadIdleComponents(m.config.MinIdleTime)
+			}
+		case <-m.stopCh:
 			return
 		}
 	}
@@ -289,45 +294,10 @@ func (m *MemoryManager) getUnloadCandidates(minIdleTime time.Duration, maxCount 
 
 // RegisterComponent registers a component with the memory manager
 func (m *MemoryManager) RegisterComponent(name, componentType string, memoryUsage int64, priority int) {
-//=======
-}
-
-// ComponentMemoryInfo contains memory information for a component
-type ComponentMemoryInfo struct {
-	// Current memory usage
-	Usage int64
-	
-	// Estimated memory usage
-	Estimate int64
-	
-	// Last access time
-	LastAccess time.Time
-	
-	// Priority (lower is higher priority)
-	Priority int
-	
-	// Whether the component is currently in use
-	InUse bool
-}
-
-// NewMemoryManager creates a new memory manager
-func NewMemoryManager(totalLimit int64, logger *zap.Logger) *MemoryManager {
-	return &MemoryManager{
-		totalLimit:     totalLimit,
-		totalUsage:     0,
-		componentUsage: make(map[string]*ComponentMemoryInfo),
-		logger:         logger,
-	}
-}
-
-// RegisterComponent registers a component with the memory manager
-func (m *MemoryManager) RegisterComponent(name string, memoryEstimate int64) {
-//>>>>>>> main
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	
 	m.componentUsage[name] = &ComponentMemoryInfo{
-//<<<<<<< codegen-bot/integrate-coordination-system
 		Name:        name,
 		Type:        componentType,
 		MemoryUsage: memoryUsage,
@@ -335,187 +305,166 @@ func (m *MemoryManager) RegisterComponent(name string, memoryEstimate int64) {
 		LastAccess:  time.Now(),
 		InUse:       false,
 	}
+	
+	m.totalUsage += memoryUsage
+}
+
+// UnregisterComponent unregisters a component from the memory manager
+func (m *MemoryManager) UnregisterComponent(name string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	if info, exists := m.componentUsage[name]; exists {
+		m.totalUsage -= info.MemoryUsage
+		delete(m.componentUsage, name)
+	}
 }
 
 // UpdateComponentUsage updates the memory usage of a component
-func (m *MemoryManager) UpdateComponentUsage(name string, memoryUsage int64) error {
+func (m *MemoryManager) UpdateComponentUsage(name string, memoryUsage int64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	
-//=======
-		Usage:      0,
-		Estimate:   memoryEstimate,
-		LastAccess: time.Now(),
-		Priority:   50, // Default priority
-		InUse:      false,
+	if info, exists := m.componentUsage[name]; exists {
+		m.totalUsage -= info.MemoryUsage
+		info.MemoryUsage = memoryUsage
+		m.totalUsage += memoryUsage
 	}
 }
 
-// AllocateMemory allocates memory for a component
-func (m *MemoryManager) AllocateMemory(name string, size int64) error {
+// MarkComponentInUse marks a component as in use
+func (m *MemoryManager) MarkComponentInUse(name string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	
-	// Check if component exists
-//>>>>>>> main
-	info, exists := m.componentUsage[name]
-	if !exists {
-		return fmt.Errorf("component %s not registered", name)
+	if info, exists := m.componentUsage[name]; exists {
+		info.InUse = true
+		info.LastAccess = time.Now()
 	}
-	
-//<<<<<<< codegen-bot/integrate-coordination-system
-	// Update total usage
-	m.totalUsage = m.totalUsage - info.MemoryUsage + memoryUsage
-	
-	// Update component usage
-	info.MemoryUsage = memoryUsage
-	info.LastAccess = time.Now()
-//=======
-	// Check if there's enough memory
-	if m.totalUsage+size > m.totalLimit {
-		return fmt.Errorf("memory limit exceeded: requested %d, available %d", size, m.totalLimit-m.totalUsage)
-	}
-	
-	// Allocate memory
-	m.totalUsage += size
-	info.Usage += size
-	info.LastAccess = time.Now()
-	info.InUse = true
-	
-	m.logger.Debug("Memory allocated",
-		zap.String("component", name),
-		zap.Int64("size", size),
-		zap.Int64("total_usage", m.totalUsage),
-		zap.Int64("total_limit", m.totalLimit),
-	)
-//>>>>>>> main
-	
-	return nil
 }
 
-//<<<<<<< codegen-bot/integrate-coordination-system
-// MarkComponentAccessed marks a component as accessed
-func (m *MemoryManager) MarkComponentAccessed(name string) error {
+// MarkComponentNotInUse marks a component as not in use
+func (m *MemoryManager) MarkComponentNotInUse(name string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	
-//=======
-// ReleaseMemory releases memory for a component
-func (m *MemoryManager) ReleaseMemory(name string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	
-	// Check if component exists
-//>>>>>>> main
-	info, exists := m.componentUsage[name]
-	if !exists {
-		return fmt.Errorf("component %s not registered", name)
+	if info, exists := m.componentUsage[name]; exists {
+		info.InUse = false
+		info.LastAccess = time.Now()
 	}
-	
-//<<<<<<< codegen-bot/integrate-coordination-system
-	info.LastAccess = time.Now()
-	
-	return nil
 }
 
-// MarkComponentInUse marks a component as in use or not in use
-func (m *MemoryManager) MarkComponentInUse(name string, inUse bool) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	
-	info, exists := m.componentUsage[name]
-	if !exists {
-		return fmt.Errorf("component %s not registered", name)
-	}
-	
-	info.InUse = inUse
-	info.LastAccess = time.Now()
-//=======
-	// Release memory
-	m.totalUsage -= info.Usage
-	
-	// Ensure we don't go negative
-	if m.totalUsage < 0 {
-		m.totalUsage = 0
-	}
-	
-	m.logger.Debug("Memory released",
-		zap.String("component", name),
-		zap.Int64("size", info.Usage),
-		zap.Int64("total_usage", m.totalUsage),
-		zap.Int64("total_limit", m.totalLimit),
-	)
-	
-	// Reset component usage
-	info.Usage = 0
-	info.LastAccess = time.Now()
-	info.InUse = false
-//>>>>>>> main
-	
-	return nil
-}
-
-//<<<<<<< codegen-bot/integrate-coordination-system
-// UnregisterComponent unregisters a component from the memory manager
-func (m *MemoryManager) UnregisterComponent(name string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	
-//=======
-// UpdateUsage updates the memory usage for a component
-func (m *MemoryManager) UpdateUsage(name string, usage int64) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	
-	// Check if component exists
-//>>>>>>> main
-	info, exists := m.componentUsage[name]
-	if !exists {
-		return fmt.Errorf("component %s not registered", name)
-	}
-	
-//<<<<<<< codegen-bot/integrate-coordination-system
-	// Update total usage
-	m.totalUsage -= info.MemoryUsage
-	
-	// Remove component
-	delete(m.componentUsage, name)
-//=======
-	// Calculate the difference
-	diff := usage - info.Usage
-	
-	// Check if there's enough memory
-	if diff > 0 && m.totalUsage+diff > m.totalLimit {
-		return fmt.Errorf("memory limit exceeded: requested %d, available %d", diff, m.totalLimit-m.totalUsage)
-	}
-	
-	// Update usage
-	m.totalUsage += diff
-	info.Usage = usage
-	info.LastAccess = time.Now()
-//>>>>>>> main
-	
-	return nil
-}
-
-// CanAllocate checks if memory can be allocated for a component
-//<<<<<<< codegen-bot/integrate-coordination-system
-func (m *MemoryManager) CanAllocate(name string, memoryUsage int64) bool {
+// GetMemoryPressureLevel returns the current memory pressure level
+func (m *MemoryManager) GetMemoryPressureLevel() MemoryPressureLevel {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	
-	// Check if the component is already registered
-	info, exists := m.componentUsage[name]
-	if exists {
-		// If the component is already registered, check if the new usage is higher
-		if memoryUsage <= info.MemoryUsage {
-			return true
+	usagePercentage := float64(m.totalUsage) / float64(m.config.TotalLimit)
+	
+	if usagePercentage >= m.config.CriticalThreshold {
+		return MemoryPressureCritical
+	} else if usagePercentage >= m.config.HighThreshold {
+		return MemoryPressureHigh
+	} else if usagePercentage >= m.config.MediumThreshold {
+		return MemoryPressureMedium
+	}
+	
+	return MemoryPressureLow
+}
+
+// GetTotalMemoryUsage returns the total memory usage
+func (m *MemoryManager) GetTotalMemoryUsage() int64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	return m.totalUsage
+}
+
+// GetComponentMemoryUsage returns the memory usage of a component
+func (m *MemoryManager) GetComponentMemoryUsage(name string) (int64, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	if info, exists := m.componentUsage[name]; exists {
+		return info.MemoryUsage, nil
+	}
+	
+	return 0, fmt.Errorf("component %s not registered", name)
+}
+
+// GetAllComponentMemoryUsage returns the memory usage of all components
+func (m *MemoryManager) GetAllComponentMemoryUsage() map[string]*ComponentMemoryInfo {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	// Create a copy of the component usage map
+	componentUsage := make(map[string]*ComponentMemoryInfo, len(m.componentUsage))
+	for name, info := range m.componentUsage {
+		componentUsage[name] = &ComponentMemoryInfo{
+			Name:        info.Name,
+			Type:        info.Type,
+			MemoryUsage: info.MemoryUsage,
+			Priority:    info.Priority,
+			LastAccess:  info.LastAccess,
+			InUse:       info.InUse,
+		}
+	}
+	
+	return componentUsage
+}
+
+// UnloadComponent unloads a component
+func (m *MemoryManager) UnloadComponent(name string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	if info, exists := m.componentUsage[name]; exists {
+		if info.InUse {
+			return fmt.Errorf("component %s is in use", name)
 		}
 		
-		// Check if the additional memory can be allocated
-		additionalUsage := memoryUsage - info.MemoryUsage
-		return m.totalUsage+additionalUsage <= m.config.TotalLimit
+		m.totalUsage -= info.MemoryUsage
+		delete(m.componentUsage, name)
+		
+		return nil
 	}
+	
+	return fmt.Errorf("component %s not registered", name)
+}
+
+// UnloadIdleComponents unloads idle components
+func (m *MemoryManager) UnloadIdleComponents(minIdleTime int) int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	// Get all idle components
+	var idleComponents []*ComponentMemoryInfo
+	for _, info := range m.componentUsage {
+		if !info.InUse && time.Since(info.LastAccess).Seconds() >= float64(minIdleTime) {
+			idleComponents = append(idleComponents, info)
+		}
+	}
+	
+	// Sort idle components by priority (lower priority first)
+	sort.Slice(idleComponents, func(i, j int) bool {
+		return idleComponents[i].Priority < idleComponents[j].Priority
+	})
+	
+	// Unload idle components
+	unloadedCount := 0
+	for _, info := range idleComponents {
+		m.totalUsage -= info.MemoryUsage
+		delete(m.componentUsage, info.Name)
+		unloadedCount++
+	}
+	
+	return unloadedCount
+}
+
+// CanAllocateMemory checks if memory can be allocated
+func (m *MemoryManager) CanAllocateMemory(memoryUsage int64) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	
 	// Check if the memory can be allocated
 	return m.totalUsage+memoryUsage <= m.config.TotalLimit
@@ -617,26 +566,6 @@ func (m *MemoryManager) GetMemoryLimit() int64 {
 	return m.config.TotalLimit
 }
 
-// GetMemoryPressureLevel returns the current memory pressure level
-func (m *MemoryManager) GetMemoryPressureLevel() MemoryPressureLevel {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	
-	// Calculate the memory usage percentage
-	usagePercentage := float64(m.totalUsage) / float64(m.config.TotalLimit)
-	
-	// Determine the pressure level
-	if usagePercentage >= m.config.CriticalThreshold {
-		return MemoryPressureCritical
-	} else if usagePercentage >= m.config.HighThreshold {
-		return MemoryPressureHigh
-	} else if usagePercentage >= m.config.MediumThreshold {
-		return MemoryPressureMedium
-	} else {
-		return MemoryPressureLow
-	}
-}
-
 // GetComponentInfo returns information about a component
 func (m *MemoryManager) GetComponentInfo(name string) (*ComponentMemoryInfo, error) {
 	m.mu.RLock()
@@ -677,143 +606,6 @@ func (m *MemoryManager) pressureLevelToString(level MemoryPressureLevel) string 
 	default:
 		return "Unknown"
 	}
-//=======
-func (m *MemoryManager) CanAllocate(name string, size int64) bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	
-	return m.totalUsage+size <= m.totalLimit
-}
-
-// FreeMemory attempts to free memory by releasing unused components
-func (m *MemoryManager) FreeMemory(requiredSize int64) (bool, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	
-	// Check if we already have enough memory
-	if m.totalUsage+requiredSize <= m.totalLimit {
-		return true, nil
-	}
-	
-	// Calculate how much memory we need to free
-	toFree := (m.totalUsage + requiredSize) - m.totalLimit
-	
-	// Get a list of components sorted by priority and last access time
-	type componentToFree struct {
-		Name      string
-		Info      *ComponentMemoryInfo
-		FreeScore float64 // Higher score means more likely to be freed
-	}
-	
-	candidates := make([]componentToFree, 0, len(m.componentUsage))
-	
-	now := time.Now()
-	for name, info := range m.componentUsage {
-		// Skip components that are in use
-		if info.InUse {
-			continue
-		}
-		
-		// Skip components with no memory usage
-		if info.Usage == 0 {
-			continue
-		}
-		
-		// Calculate a score based on priority and idle time
-		idleTime := now.Sub(info.LastAccess).Seconds()
-		priorityFactor := float64(100 - info.Priority) / 100.0 // Higher priority (lower number) = lower score
-		
-		// Score is primarily based on idle time, with priority as a secondary factor
-		score := idleTime * priorityFactor
-		
-		candidates = append(candidates, componentToFree{
-			Name:      name,
-			Info:      info,
-			FreeScore: score,
-		})
-	}
-	
-	// Sort by score (highest first)
-	sort.Slice(candidates, func(i, j int) bool {
-		return candidates[i].FreeScore > candidates[j].FreeScore
-	})
-	
-	// Try to free memory
-	freed := int64(0)
-	freedComponents := make([]string, 0)
-	
-	for _, candidate := range candidates {
-		// Skip if this component wouldn't help
-		if candidate.Info.Usage == 0 {
-			continue
-		}
-		
-		// Free this component
-		freed += candidate.Info.Usage
-		freedComponents = append(freedComponents, candidate.Name)
-		
-		// Reset component usage
-		m.totalUsage -= candidate.Info.Usage
-		candidate.Info.Usage = 0
-		candidate.Info.InUse = false
-		
-		// Check if we've freed enough
-		if freed >= toFree {
-			break
-		}
-	}
-	
-	// Log what we freed
-	if len(freedComponents) > 0 {
-		m.logger.Info("Freed memory from components",
-			zap.Int64("freed", freed),
-			zap.Int64("required", toFree),
-			zap.Strings("components", freedComponents),
-		)
-	}
-	
-	// Check if we freed enough
-	return freed >= toFree, nil
-}
-
-// GetComponentUsage gets the memory usage for a component
-func (m *MemoryManager) GetComponentUsage(name string) (int64, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	
-	info, exists := m.componentUsage[name]
-	if !exists {
-		return 0, fmt.Errorf("component %s not registered", name)
-	}
-	
-	return info.Usage, nil
-}
-
-// GetTotalUsage gets the total memory usage
-func (m *MemoryManager) GetTotalUsage() int64 {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	
-	return m.totalUsage
-}
-
-// GetTotalLimit gets the total memory limit
-func (m *MemoryManager) GetTotalLimit() int64 {
-	return m.totalLimit
-}
-
-// SetComponentPriority sets the priority for a component
-func (m *MemoryManager) SetComponentPriority(name string, priority int) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	
-	info, exists := m.componentUsage[name]
-	if !exists {
-		return fmt.Errorf("component %s not registered", name)
-	}
-	
-	info.Priority = priority
-	return nil
 }
 
 // GetMemoryStats gets memory statistics
@@ -822,24 +614,24 @@ func (m *MemoryManager) GetMemoryStats() map[string]interface{} {
 	defer m.mu.RUnlock()
 	
 	stats := map[string]interface{}{
-		"total_usage": m.totalUsage,
-		"total_limit": m.totalLimit,
-		"usage_percent": float64(m.totalUsage) / float64(m.totalLimit) * 100.0,
-		"components": make(map[string]interface{}),
+		"total_usage":    m.totalUsage,
+		"total_limit":    m.config.TotalLimit,
+		"usage_percent":  float64(m.totalUsage) / float64(m.config.TotalLimit) * 100.0,
+		"components":     make(map[string]interface{}),
 	}
 	
 	componentStats := stats["components"].(map[string]interface{})
 	
 	for name, info := range m.componentUsage {
 		componentStats[name] = map[string]interface{}{
-			"usage":       info.Usage,
-			"estimate":    info.Estimate,
+			"usage":       info.MemoryUsage,
 			"last_access": info.LastAccess,
 			"priority":    info.Priority,
 			"in_use":      info.InUse,
+			"type":        info.Type,
 		}
 	}
 	
 	return stats
-//>>>>>>> main
 }
+
