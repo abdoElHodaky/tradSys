@@ -16,7 +16,6 @@ require (
 	github.com/spf13/viper v1.16.0
 	github.com/stretchr/testify v1.8.4
 	github.com/ulule/limiter/v3 v3.11.1
-	go-micro.dev/v4 v4.10.2
 	go.uber.org/fx v1.20.0
 	go.uber.org/zap v1.25.0
 	google.golang.org/grpc v1.58.2
