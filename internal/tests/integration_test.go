@@ -230,4 +230,3 @@ func (h *testHandler) Test(ctx context.Context, req *TestRequest, rsp *TestRespo
 	rsp.Message = req.Message + " World"
 	return nil
 }
-
