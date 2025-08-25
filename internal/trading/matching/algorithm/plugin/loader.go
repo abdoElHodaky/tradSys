@@ -191,23 +191,47 @@ func (l *Loader) LoadAllPlugins() ([]MatchingAlgorithmPlugin, error) {
 	l.mu.Unlock()
 	
 	var allPlugins []MatchingAlgorithmPlugin
-	var allErrors []error
 	
 	for _, dir := range dirs {
 		plugins, err := l.LoadPlugins(dir)
 		if err != nil {
-			allErrors = append(allErrors, fmt.Errorf("failed to load plugins from %s: %w", dir, err))
+			l.logger.Error("Failed to load plugins from directory",
+				zap.String("dir", dir),
+				zap.Error(err))
+			// Continue loading from other directories
 			continue
 		}
 		
 		allPlugins = append(allPlugins, plugins...)
 	}
 	
-	if len(allErrors) > 0 {
-		return allPlugins, fmt.Errorf("failed to load plugins from %d directories", len(allErrors))
-	}
-	
 	return allPlugins, nil
+}
+
+// LoadAllPluginsWithContext loads all plugins from all configured directories with context
+func (l *Loader) LoadAllPluginsWithContext(ctx context.Context) ([]MatchingAlgorithmPlugin, error) {
+	// Create a channel for the result
+	resultCh := make(chan struct {
+		plugins []MatchingAlgorithmPlugin
+		err     error
+	})
+	
+	// Load plugins in a goroutine
+	go func() {
+		plugins, err := l.LoadAllPlugins()
+		resultCh <- struct {
+			plugins []MatchingAlgorithmPlugin
+			err     error
+		}{plugins, err}
+	}()
+	
+	// Wait for the result or context cancellation
+	select {
+	case result := <-resultCh:
+		return result.plugins, result.err
+	case <-ctx.Done():
+		return nil, fmt.Errorf("plugin loading canceled: %w", ctx.Err())
+	}
 }
 
 // AddPluginDirectory adds a plugin directory
@@ -231,10 +255,10 @@ func (l *Loader) RemovePluginDirectory(dirPath string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	
-	// Find directory
+	// Find the directory
 	for i, dir := range l.pluginDirs {
 		if dir == dirPath {
-			// Remove directory
+			// Remove the directory
 			l.pluginDirs = append(l.pluginDirs[:i], l.pluginDirs[i+1:]...)
 			l.adaptiveLoader.RemovePluginDirectory(dirPath)
 			return
@@ -251,5 +275,15 @@ func (l *Loader) GetPluginDirectories() []string {
 	copy(dirs, l.pluginDirs)
 	
 	return dirs
+}
+
+// StartBackgroundScanner starts a background scanner for new plugins
+func (l *Loader) StartBackgroundScanner(ctx context.Context, scanInterval time.Duration) error {
+	return l.adaptiveLoader.StartPluginScanner(ctx, scanInterval)
+}
+
+// StopBackgroundScanner stops the background scanner
+func (l *Loader) StopBackgroundScanner() {
+	l.adaptiveLoader.StopPluginScanner()
 }
 
