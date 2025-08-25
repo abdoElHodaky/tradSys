@@ -20,6 +20,7 @@ type Config struct {
 	JWT         JWTConfig
 	Services    ServicesConfig
 	Logging     LoggingConfig
+	Registry    RegistryConfig
 }
 
 // ServerConfig represents the server configuration
@@ -61,6 +62,14 @@ type LoggingConfig struct {
 	OutputPath string
 }
 
+// RegistryConfig represents the service registry configuration
+type RegistryConfig struct {
+	Type             string
+	Addresses        []string
+	TTL              time.Duration
+	RegisterInterval time.Duration
+}
+
 // LoadConfig loads the application configuration
 func LoadConfig(configPath string, logger *zap.Logger) (*Config, error) {
 	// Set default configuration values
@@ -94,6 +103,12 @@ func LoadConfig(configPath string, logger *zap.Logger) (*Config, error) {
 		Logging: LoggingConfig{
 			Level:      "info",
 			OutputPath: "stdout",
+		},
+		Registry: RegistryConfig{
+			Type:             "mdns",
+			Addresses:        []string{},
+			TTL:              30 * time.Second,
+			RegisterInterval: 15 * time.Second,
 		},
 	}
 
@@ -208,6 +223,20 @@ func LoadConfig(configPath string, logger *zap.Logger) (*Config, error) {
 	}
 	if v.IsSet("logging.output_path") {
 		config.Logging.OutputPath = v.GetString("logging.output_path")
+	}
+
+	// Registry configuration
+	if v.IsSet("registry.type") {
+		config.Registry.Type = v.GetString("registry.type")
+	}
+	if v.IsSet("registry.addresses") {
+		config.Registry.Addresses = v.GetStringSlice("registry.addresses")
+	}
+	if v.IsSet("registry.ttl") {
+		config.Registry.TTL = v.GetDuration("registry.ttl")
+	}
+	if v.IsSet("registry.register_interval") {
+		config.Registry.RegisterInterval = v.GetDuration("registry.register_interval")
 	}
 
 	return config, nil
