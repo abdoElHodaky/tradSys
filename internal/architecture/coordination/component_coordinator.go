@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/architecture/fx/lazy"
-//<<<<<<< codegen-bot/integrate-coordination-system
+	"github.com/abdoElHodaky/tradSys/internal/metrics"
 	"go.uber.org/zap"
 )
 
@@ -36,10 +36,7 @@ type ComponentInfo struct {
 	
 	// Last access time
 	LastAccess time.Time
-//=======
-	"github.com/abdoElHodaky/tradSys/internal/metrics"
-	"go.uber.org/zap"
-)
+}
 
 // ComponentCoordinator provides a unified coordination layer for component initialization,
 // resource management, and lifecycle control to resolve conflicts between different
@@ -93,12 +90,10 @@ type ComponentInfo struct {
 	// Metrics
 	InitTime       time.Duration
 	AccessCount    int64
-//>>>>>>> main
 }
 
 // CoordinatorConfig contains configuration for the component coordinator
 type CoordinatorConfig struct {
-//<<<<<<< codegen-bot/integrate-coordination-system
 	// Memory manager configuration
 	MemoryConfig MemoryManagerConfig
 	
@@ -172,22 +167,6 @@ func NewComponentCoordinator(config CoordinatorConfig, logger *zap.Logger) *Comp
 	}
 	
 	return coordinator
-//=======
-	// Memory management
-	TotalMemoryLimit    int64
-	ComponentMemoryLimit int64
-	
-	// Initialization
-	DefaultTimeout      time.Duration
-	DefaultPriority     int
-	
-	// Resource management
-	EnableMemoryTracking bool
-	EnableCPUTracking    bool
-	
-	// Metrics
-	MetricsEnabled      bool
-	MetricsSampleRate   float64
 }
 
 // DefaultCoordinatorConfig returns the default configuration
@@ -221,7 +200,6 @@ func NewComponentCoordinator(config CoordinatorConfig, logger *zap.Logger) *Comp
 		logger:           logger,
 		config:           config,
 	}
-//>>>>>>> main
 }
 
 // RegisterComponent registers a component with the coordinator
@@ -231,30 +209,20 @@ func (c *ComponentCoordinator) RegisterComponent(
 	provider *lazy.EnhancedLazyProvider,
 	dependencies []string,
 ) error {
-//<<<<<<< codegen-bot/integrate-coordination-system
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	
-	// Check if the component is already registered
-//=======
 	c.componentsMu.Lock()
 	defer c.componentsMu.Unlock()
 	
-//>>>>>>> main
+	// Check if the component is already registered
+	
 	if _, exists := c.components[name]; exists {
 		return fmt.Errorf("component %s already registered", name)
 	}
 	
-//<<<<<<< codegen-bot/integrate-coordination-system
-	// Create the component info
-//=======
 	// Create component info
-//>>>>>>> main
 	info := &ComponentInfo{
 		Name:         name,
 		Type:         componentType,
 		Provider:     provider,
-//<<<<<<< codegen-bot/integrate-coordination-system
 		Dependencies: dependencies,
 		Initialized:  false,
 		MemoryUsage:  provider.GetMemoryEstimate(),
@@ -270,25 +238,6 @@ func (c *ComponentCoordinator) RegisterComponent(
 	
 	// Register with the timeout manager
 	c.timeoutManager.RegisterComponent(name, provider.GetTimeout())
-//=======
-		IsInitialized: false,
-		LastAccess:   time.Now(),
-		MemoryUsage:  provider.GetMemoryEstimate(),
-		Dependencies: dependencies,
-		Priority:     provider.GetPriority(),
-		Timeout:      c.config.DefaultTimeout,
-		AccessCount:  0,
-	}
-	
-	// Register with memory manager
-	if c.config.EnableMemoryTracking {
-		c.memoryManager.RegisterComponent(name, provider.GetMemoryEstimate())
-	}
-	
-	// Register with initialization manager
-	c.initManager.RegisterComponent(name, provider, dependencies)
-	
-	// Store component info
 	c.components[name] = info
 	
 	c.logger.Info("Component registered", 
@@ -297,14 +246,12 @@ func (c *ComponentCoordinator) RegisterComponent(
 		zap.Int("priority", provider.GetPriority()),
 		zap.Int64("memory_estimate", provider.GetMemoryEstimate()),
 	)
-//>>>>>>> main
 	
 	return nil
 }
 
 // GetComponent gets a component, initializing it if necessary
 func (c *ComponentCoordinator) GetComponent(ctx context.Context, name string) (interface{}, error) {
-//<<<<<<< codegen-bot/integrate-coordination-system
 	// Get the component info
 	info, err := c.GetComponentInfo(name)
 	if err != nil {
@@ -374,7 +321,6 @@ func (c *ComponentCoordinator) initializeComponent(ctx context.Context, info *Co
 	c.memoryManager.MarkComponentInUse(info.Name, false)
 	
 	return component, nil
-//=======
 	// Check if component exists
 	c.componentsMu.RLock()
 	info, exists := c.components[name]
@@ -450,12 +396,10 @@ func (c *ComponentCoordinator) initializeComponent(ctx context.Context, info *Co
 // InitializeComponents initializes components in dependency order
 func (c *ComponentCoordinator) InitializeComponents(ctx context.Context, componentNames []string) error {
 	return c.initManager.InitializeComponents(ctx, componentNames)
-//>>>>>>> main
 }
 
 // ShutdownComponent shuts down a component
 func (c *ComponentCoordinator) ShutdownComponent(ctx context.Context, name string) error {
-//<<<<<<< codegen-bot/integrate-coordination-system
 	// Get the component info
 	info, err := c.GetComponentInfo(name)
 	if err != nil {
@@ -487,7 +431,6 @@ func (c *ComponentCoordinator) ShutdownComponent(ctx context.Context, name strin
 	
 	// Re-register with the memory manager with zero usage
 	c.memoryManager.RegisterComponent(name, info.Type, 0, info.Priority)
-//=======
 	c.componentsMu.Lock()
 	defer c.componentsMu.Unlock()
 	
@@ -512,12 +455,9 @@ func (c *ComponentCoordinator) ShutdownComponent(ctx context.Context, name strin
 	}
 	
 	c.logger.Info("Component shut down", zap.String("component", name))
-//>>>>>>> main
 	
 	return nil
 }
-
-//<<<<<<< codegen-bot/integrate-coordination-system
 // unloadComponent unloads a component (used as a callback for the memory manager)
 func (c *ComponentCoordinator) unloadComponent(ctx context.Context, name string) error {
 	return c.ShutdownComponent(ctx, name)
@@ -525,14 +465,8 @@ func (c *ComponentCoordinator) unloadComponent(ctx context.Context, name string)
 
 // GetComponentInfo gets information about a component
 func (c *ComponentCoordinator) GetComponentInfo(name string) (*ComponentInfo, error) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-//=======
-// GetComponentInfo gets information about a component
-func (c *ComponentCoordinator) GetComponentInfo(name string) (*ComponentInfo, error) {
 	c.componentsMu.RLock()
 	defer c.componentsMu.RUnlock()
-//>>>>>>> main
 	
 	info, exists := c.components[name]
 	if !exists {
@@ -544,7 +478,6 @@ func (c *ComponentCoordinator) GetComponentInfo(name string) (*ComponentInfo, er
 
 // ListComponents lists all registered components
 func (c *ComponentCoordinator) ListComponents() []*ComponentInfo {
-//<<<<<<< codegen-bot/integrate-coordination-system
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	
@@ -588,7 +521,6 @@ func (c *ComponentCoordinator) Shutdown(ctx context.Context) error {
 	}
 	
 	return lastErr
-//=======
 	c.componentsMu.RLock()
 	defer c.componentsMu.RUnlock()
 	
@@ -614,6 +546,4 @@ func (c *ComponentCoordinator) GetMemoryLimit() int64 {
 		return c.memoryManager.GetTotalLimit()
 	}
 	return 0
-//>>>>>>> main
 }
-
