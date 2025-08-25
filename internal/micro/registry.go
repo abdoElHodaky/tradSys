@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/abdoElHodaky/tradSys/internal/config"
-	"go-micro.dev/v4/registry"
+	"github.com/micro/go-micro/v4/registry"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )

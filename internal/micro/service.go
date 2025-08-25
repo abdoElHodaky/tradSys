@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/config"
-	gomicro "go-micro.dev/v4"
-	"go-micro.dev/v4/registry"
+	gomicro "github.com/micro/go-micro/v4"
+	"github.com/micro/go-micro/v4/registry"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )

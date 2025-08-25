@@ -6,7 +6,7 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/marketdata"
 	"github.com/abdoElHodaky/tradSys/internal/micro"
 	"github.com/abdoElHodaky/tradSys/proto/marketdata"
-	"go-micro.dev/v4"
+	"github.com/micro/go-micro/v4"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -41,4 +41,3 @@ func registerMarketDataHandler(
 
 	logger.Info("Market data service registered")
 }
-

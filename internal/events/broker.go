@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/abdoElHodaky/tradSys/internal/config"
-	"go-micro.dev/v4/broker"
+	"github.com/micro/go-micro/v4/broker"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -63,4 +63,3 @@ func NewBroker(p BrokerParams) broker.Broker {
 var BrokerModule = fx.Options(
 	fx.Provide(NewBroker),
 )
-

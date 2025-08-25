@@ -1,6 +1,6 @@
 module github.com/abdoElHodaky/tradSys
 
-go 1.19
+go 1.20
 
 require (
 	github.com/ThreeDotsLabs/watermill v1.2.0-rc.11
@@ -117,3 +117,7 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 )
+
+replace google.golang.org/genproto => google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
+
+replace google.golang.org/genproto/googleapis/rpc => google.golang.org/genproto/googleapis/rpc v0.0.0-20230410155749-daa745c078e1
