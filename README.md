@@ -68,6 +68,65 @@ The Risk Management API provides risk control and position management:
   - DELETE /api/risk/limits/:id - Delete a risk limit
   - POST /api/risk/validate - Validate an order against risk limits
 
+## Coordination System
+
+The platform includes a robust coordination system for managing resources and preventing conflicts:
+
+### Lock Manager
+
+The Lock Manager provides thread-safe lock management with advanced features:
+
+- Deadlock detection and prevention
+- Lock timeout handling
+- Lock statistics tracking
+- Consistent lock ordering
+- Thread-safe operations
+
+```go
+// Example usage of LockManager
+lockManager := coordination.NewLockManager(config, logger)
+lockManager.RegisterLock("resource1", &sync.Mutex{})
+err := lockManager.AcquireLock("resource1", "component1")
+// Use the resource
+lockManager.ReleaseLock("resource1", "component1")
+```
+
+### Memory Manager
+
+The Memory Manager provides resource management with memory pressure monitoring:
+
+- Memory usage tracking
+- Automatic component unloading based on memory pressure
+- Priority-based unloading
+- Thread-safe operations
+- Comprehensive statistics
+
+```go
+// Example usage of MemoryManager
+memoryManager := coordination.NewMemoryManager(config, logger)
+memoryManager.RegisterComponent("component1", "service", 1024*1024, 10)
+memoryManager.MarkComponentInUse("component1")
+// Use the component
+memoryManager.MarkComponentNotInUse("component1")
+```
+
+### Component Coordinator
+
+The Component Coordinator provides a unified coordination layer for component initialization and resource management:
+
+- Lazy initialization of components
+- Resource management
+- Dependency resolution
+- Timeout handling
+- Metrics collection
+
+```go
+// Example usage of ComponentCoordinator
+coordinator := coordination.NewComponentCoordinator(config, logger)
+coordinator.RegisterComponent("component1", "service", provider, []string{"dependency1"})
+component, err := coordinator.GetComponent(ctx, "component1")
+```
+
 ## Dependency Injection with fx
 
 The platform uses Uber's fx framework for dependency injection, providing:
@@ -93,6 +152,45 @@ var Module = fx.Options(
 )
 ```
 
+## Lazy Loading System
+
+The platform includes a comprehensive lazy loading system for optimizing resource usage:
+
+### Enhanced Lazy Provider
+
+The Enhanced Lazy Provider defers component initialization until needed:
+
+- Memory usage estimation
+- Timeout handling
+- Priority-based initialization
+- Thread-safe operations
+- Metrics collection
+
+```go
+// Example usage of EnhancedLazyProvider
+provider := lazy.NewEnhancedLazyProvider(
+    "component1",
+    func(logger *zap.Logger) (interface{}, error) {
+        return NewComponent(), nil
+    },
+    logger,
+    metrics,
+    lazy.WithMemoryEstimate(1024*1024),
+    lazy.WithTimeout(30*time.Second),
+    lazy.WithPriority(10),
+)
+```
+
+### Initialization Manager
+
+The Initialization Manager handles component initialization with dependency resolution:
+
+- Dependency graph resolution
+- Parallel initialization where possible
+- Timeout handling
+- Error propagation
+- Metrics collection
+
 ## Features
 
 - Real-time market data streaming via WebSockets
@@ -103,6 +201,8 @@ var Module = fx.Options(
 - Performance optimization with object pooling
 - Statistical analysis (cointegration, correlation)
 - High-precision latency tracking
+- Lazy loading for resource optimization
+- Comprehensive coordination system
 
 ## Getting Started
 
@@ -164,30 +264,22 @@ tradSys/
 │   ├── api/                # API handlers and routes
 │   │   ├── handlers/       # HTTP handlers
 │   │   └── module.go       # API module definition
+│   ├── architecture/       # Architecture components
+│   │   ├── coordination/   # Coordination system
+│   │   ├── cqrs/           # CQRS implementation
+│   │   ├── fx/             # Dependency injection extensions
+│   │   └── gateway/        # API Gateway implementation
 │   ├── auth/               # Authentication
-│   │   ├── middleware.go   # Authentication middleware
-│   │   └── module.go       # Auth module definition
 │   ├── config/             # Configuration
 │   ├── db/                 # Database
-│   │   ├── models.go       # Database models
-│   │   ├── module.go       # Database module definition
-│   │   └── repositories/   # Database repositories
-│   ├── gateway/            # API Gateway
+│   ├── exchange/           # Exchange connectors
+│   ├── marketdata/         # Market data services
 │   ├── orders/             # Order management
-│   │   ├── interface.go    # Service interface
-│   │   ├── module.go       # Order module definition
-│   │   └── service.go      # Order service implementation
-│   └── risk/               # Risk management
-│       ├── interface.go    # Service interface
-│       ├── module.go       # Risk module definition
-│       └── service.go      # Risk service implementation
+│   ├── risk/               # Risk management
+│   ├── strategy/           # Trading strategies
+│   └── trading/            # Trading components
 ├── proto/                  # Protocol Buffers definitions
-│   ├── auth/               # Auth service protos
-│   ├── orders/             # Order service protos
-│   └── risk/               # Risk service protos
 ├── docs/                   # Documentation
-│   ├── swagger-ui/         # Swagger UI
-│   └── swagger.yaml        # OpenAPI specification
 ├── scripts/                # Utility scripts
 ├── docker-compose.yml      # Docker Compose configuration
 └── README.md               # Project documentation
@@ -217,6 +309,8 @@ The platform is optimized for high-frequency trading with the following features
 - Buffer pools for market data
 - Incremental statistics calculation
 - Query optimization and caching
+- Lazy loading for resource optimization
+- Memory pressure monitoring and management
 
 ## License
 
