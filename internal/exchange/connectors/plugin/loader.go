@@ -1,223 +1,289 @@
 package plugin
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
-	"plugin"
+	"plugin" // Go plugin
+	"runtime"
 	"sync"
+	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/exchange/connectors"
+	"github.com/abdoElHodaky/tradSys/internal/plugin/adaptive_loader"
 	"go.uber.org/zap"
 )
 
-// PluginLoader loads exchange connector plugins
-type PluginLoader struct {
-	pluginDir string
-	plugins   map[string]ExchangeConnectorPlugin
-	logger    *zap.Logger
-	mu        sync.RWMutex
-	// Track plugins being loaded to prevent concurrent loading of the same plugin
-	loadingPlugins sync.Map
+// Loader is a loader for exchange connector plugins
+type Loader struct {
+	logger         *zap.Logger
+	registry       *Registry
+	pluginDirs     []string
+	adaptiveLoader *adaptive_loader.AdaptivePluginLoader
+	mu             sync.RWMutex
 }
 
-// NewPluginLoader creates a new plugin loader
-func NewPluginLoader(pluginDir string, logger *zap.Logger) *PluginLoader {
-	return &PluginLoader{
-		pluginDir: pluginDir,
-		plugins:   make(map[string]ExchangeConnectorPlugin),
-		logger:    logger,
+// NewLoader creates a new loader
+func NewLoader(
+	logger *zap.Logger,
+	registry *Registry,
+	pluginDirs []string,
+) *Loader {
+	return &Loader{
+		logger:         logger,
+		registry:       registry,
+		pluginDirs:     pluginDirs,
+		adaptiveLoader: adaptive_loader.NewAdaptivePluginLoader(logger, nil, pluginDirs),
 	}
 }
 
-// LoadPlugins loads all plugins from the plugin directory
-func (l *PluginLoader) LoadPlugins() error {
-	// Check if the plugin directory exists
-	if _, err := os.Stat(l.pluginDir); os.IsNotExist(err) {
-		l.logger.Warn("Plugin directory does not exist", zap.String("directory", l.pluginDir))
-		return nil
+// LoadPlugin loads a plugin from a file
+func (l *Loader) LoadPlugin(filePath string) (ExchangeConnectorPlugin, error) {
+	l.logger.Info("Loading exchange connector plugin", zap.String("file", filePath))
+	
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("plugin file does not exist: %s", filePath)
 	}
-
-	// Find all .so files in the plugin directory
-	files, err := filepath.Glob(filepath.Join(l.pluginDir, "*.so"))
+	
+	// Open the plugin
+	plug, err := plugin.Open(filePath)
 	if err != nil {
-		return fmt.Errorf("failed to list plugin files: %w", err)
+		return nil, fmt.Errorf("failed to open plugin: %w", err)
 	}
+	
+	// Look up the plugin factory
+	factorySym, err := plug.Lookup("CreateExchangeConnectorPlugin")
+	if err != nil {
+		return nil, fmt.Errorf("plugin does not export CreateExchangeConnectorPlugin: %w", err)
+	}
+	
+	// Assert that the symbol is a factory function
+	factoryFunc, ok := factorySym.(func() (ExchangeConnectorPlugin, error))
+	if !ok {
+		return nil, fmt.Errorf("CreateExchangeConnectorPlugin is not of type func() (ExchangeConnectorPlugin, error)")
+	}
+	
+	// Create the plugin
+	plugin, err := factoryFunc()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create plugin: %w", err)
+	}
+	
+	// Register the plugin
+	if err := l.registry.RegisterPlugin(plugin); err != nil {
+		return nil, fmt.Errorf("failed to register plugin: %w", err)
+	}
+	
+	return plugin, nil
+}
 
+// LoadPlugins loads all plugins from a directory
+func (l *Loader) LoadPlugins(dirPath string) ([]ExchangeConnectorPlugin, error) {
+	l.logger.Info("Loading exchange connector plugins from directory", zap.String("dir", dirPath))
+	
+	// Check if directory exists
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("plugin directory does not exist: %s", dirPath)
+	}
+	
+	// Find all .so files in the directory
+	var files []string
+	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		
+		// Skip directories
+		if info.IsDir() {
+			return nil
+		}
+		
+		// Check file extension
+		if filepath.Ext(path) == ".so" {
+			files = append(files, path)
+		}
+		
+		return nil
+	})
+	
+	if err != nil {
+		return nil, fmt.Errorf("failed to walk directory: %w", err)
+	}
+	
+	// Load plugins in parallel with limited concurrency
+	var wg sync.WaitGroup
+	maxConcurrent := runtime.NumCPU()
+	semaphore := make(chan struct{}, maxConcurrent)
+	
+	var mu sync.Mutex
+	var plugins []ExchangeConnectorPlugin
+	var errors []error
+	
 	for _, file := range files {
-		// Use a separate function to ensure deferred mutex unlock happens properly
-		if err := l.loadPluginFile(file); err != nil {
-			l.logger.Error("Failed to load plugin", zap.String("file", file), zap.Error(err))
+		// Acquire semaphore
+		semaphore <- struct{}{}
+		
+		wg.Add(1)
+		go func(file string) {
+			defer wg.Done()
+			defer func() { <-semaphore }()
+			
+			plugin, err := l.LoadPlugin(file)
+			
+			mu.Lock()
+			defer mu.Unlock()
+			
+			if err != nil {
+				l.logger.Error("Failed to load plugin",
+					zap.String("file", file),
+					zap.Error(err))
+				errors = append(errors, fmt.Errorf("failed to load %s: %w", file, err))
+				return
+			}
+			
+			plugins = append(plugins, plugin)
+		}(file)
+	}
+	
+	// Wait for all loads to complete
+	wg.Wait()
+	
+	// Check for errors
+	if len(errors) > 0 {
+		return plugins, fmt.Errorf("failed to load %d plugins", len(errors))
+	}
+	
+	return plugins, nil
+}
+
+// LoadPluginsWithContext loads all plugins from a directory with context
+func (l *Loader) LoadPluginsWithContext(ctx context.Context, dirPath string) ([]ExchangeConnectorPlugin, error) {
+	// Create a channel for the result
+	resultCh := make(chan struct {
+		plugins []ExchangeConnectorPlugin
+		err     error
+	})
+	
+	// Load plugins in a goroutine
+	go func() {
+		plugins, err := l.LoadPlugins(dirPath)
+		resultCh <- struct {
+			plugins []ExchangeConnectorPlugin
+			err     error
+		}{plugins, err}
+	}()
+	
+	// Wait for the result or context cancellation
+	select {
+	case result := <-resultCh:
+		return result.plugins, result.err
+	case <-ctx.Done():
+		return nil, fmt.Errorf("plugin loading canceled: %w", ctx.Err())
+	}
+}
+
+// LoadAllPlugins loads all plugins from all configured directories
+func (l *Loader) LoadAllPlugins() ([]ExchangeConnectorPlugin, error) {
+	l.mu.Lock()
+	dirs := make([]string, len(l.pluginDirs))
+	copy(dirs, l.pluginDirs)
+	l.mu.Unlock()
+	
+	var allPlugins []ExchangeConnectorPlugin
+	
+	for _, dir := range dirs {
+		plugins, err := l.LoadPlugins(dir)
+		if err != nil {
+			l.logger.Error("Failed to load plugins from directory",
+				zap.String("dir", dir),
+				zap.Error(err))
+			// Continue loading from other directories
 			continue
 		}
+		
+		allPlugins = append(allPlugins, plugins...)
 	}
-
-	l.logger.Info("Loaded exchange connector plugins", zap.Int("count", len(l.plugins)))
-	return nil
+	
+	return allPlugins, nil
 }
 
-// loadPluginFile loads a single plugin file with proper locking
-func (l *PluginLoader) loadPluginFile(path string) error {
-	// Use a loading marker to prevent concurrent loading of the same plugin
-	if _, loaded := l.loadingPlugins.LoadOrStore(path, true); loaded {
-		// Another goroutine is already loading this plugin
-		return fmt.Errorf("plugin %s is already being loaded", path)
+// LoadAllPluginsWithContext loads all plugins from all configured directories with context
+func (l *Loader) LoadAllPluginsWithContext(ctx context.Context) ([]ExchangeConnectorPlugin, error) {
+	// Create a channel for the result
+	resultCh := make(chan struct {
+		plugins []ExchangeConnectorPlugin
+		err     error
+	})
+	
+	// Load plugins in a goroutine
+	go func() {
+		plugins, err := l.LoadAllPlugins()
+		resultCh <- struct {
+			plugins []ExchangeConnectorPlugin
+			err     error
+		}{plugins, err}
+	}()
+	
+	// Wait for the result or context cancellation
+	select {
+	case result := <-resultCh:
+		return result.plugins, result.err
+	case <-ctx.Done():
+		return nil, fmt.Errorf("plugin loading canceled: %w", ctx.Err())
 	}
-	defer l.loadingPlugins.Delete(path)
+}
 
-	// Acquire write lock for the entire loading process
+// AddPluginDirectory adds a plugin directory
+func (l *Loader) AddPluginDirectory(dirPath string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-
-	return l.loadPlugin(path)
-}
-
-// loadPlugin loads a single plugin (must be called with lock held)
-func (l *PluginLoader) loadPlugin(path string) error {
-	// Open the plugin
-	p, err := plugin.Open(path)
-	if err != nil {
-		return fmt.Errorf("failed to open plugin: %w", err)
-	}
-
-	// Look up the plugin info
-	infoSymbol, err := p.Lookup(PluginInfoSymbol)
-	if err != nil {
-		return fmt.Errorf("plugin does not export %s: %w", PluginInfoSymbol, err)
-	}
-
-	info, ok := infoSymbol.(*PluginInfo)
-	if !ok {
-		return fmt.Errorf("plugin info is not of type *PluginInfo")
-	}
-
-	// Check if this plugin is already loaded
-	if _, exists := l.plugins[info.ExchangeName]; exists {
-		return fmt.Errorf("plugin for exchange %s is already loaded", info.ExchangeName)
-	}
-
-	// Look up the create connector function
-	createSymbol, err := p.Lookup(CreateConnectorSymbol)
-	if err != nil {
-		return fmt.Errorf("plugin does not export %s: %w", CreateConnectorSymbol, err)
-	}
-
-	createFunc, ok := createSymbol.(func(connectors.ExchangeConfig, *zap.Logger) (connectors.ExchangeConnector, error))
-	if !ok {
-		return fmt.Errorf("create connector function has wrong signature")
-	}
-
-	// Create a plugin wrapper
-	plugin := &pluginWrapper{
-		info:       info,
-		createFunc: createFunc,
-		path:       path,
-	}
-
-	// Register the plugin
-	l.plugins[info.ExchangeName] = plugin
-
-	l.logger.Info("Loaded exchange connector plugin",
-		zap.String("name", info.Name),
-		zap.String("version", info.Version),
-		zap.String("author", info.Author),
-		zap.String("exchange", info.ExchangeName),
-		zap.String("path", path))
-
-	return nil
-}
-
-// GetPlugin returns a plugin by exchange name
-func (l *PluginLoader) GetPlugin(exchangeName string) (ExchangeConnectorPlugin, bool) {
-	l.mu.RLock()
-	defer l.mu.RUnlock()
-
-	plugin, ok := l.plugins[exchangeName]
-	return plugin, ok
-}
-
-// GetAvailablePlugins returns a list of available plugins
-func (l *PluginLoader) GetAvailablePlugins() []PluginInfo {
-	l.mu.RLock()
-	defer l.mu.RUnlock()
-
-	var plugins []PluginInfo
-	for _, p := range l.plugins {
-		plugins = append(plugins, *p.(*pluginWrapper).info)
-	}
-
-	return plugins
-}
-
-// UnloadPlugin unloads a plugin by exchange name
-func (l *PluginLoader) UnloadPlugin(exchangeName string) error {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	plugin, ok := l.plugins[exchangeName]
-	if !ok {
-		return fmt.Errorf("plugin for exchange %s is not loaded", exchangeName)
-	}
-
-	// Call cleanup if the plugin implements it
-	if cleanable, ok := plugin.(CleanupablePlugin); ok {
-		if err := cleanable.Cleanup(); err != nil {
-			l.logger.Warn("Error cleaning up plugin",
-				zap.String("exchange", exchangeName),
-				zap.Error(err))
+	
+	// Check if directory already exists
+	for _, dir := range l.pluginDirs {
+		if dir == dirPath {
+			return
 		}
 	}
-
-	// Remove the plugin from the registry
-	delete(l.plugins, exchangeName)
-
-	l.logger.Info("Unloaded exchange connector plugin", zap.String("exchange", exchangeName))
-	return nil
+	
+	l.pluginDirs = append(l.pluginDirs, dirPath)
+	l.adaptiveLoader.AddPluginDirectory(dirPath)
 }
 
-// pluginWrapper implements the ExchangeConnectorPlugin interface
-type pluginWrapper struct {
-	info       *PluginInfo
-	createFunc func(connectors.ExchangeConfig, *zap.Logger) (connectors.ExchangeConnector, error)
-	path       string
+// RemovePluginDirectory removes a plugin directory
+func (l *Loader) RemovePluginDirectory(dirPath string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	
+	// Find the directory
+	for i, dir := range l.pluginDirs {
+		if dir == dirPath {
+			// Remove the directory
+			l.pluginDirs = append(l.pluginDirs[:i], l.pluginDirs[i+1:]...)
+			l.adaptiveLoader.RemovePluginDirectory(dirPath)
+			return
+		}
+	}
 }
 
-// GetExchangeName returns the name of the exchange
-func (p *pluginWrapper) GetExchangeName() string {
-	return p.info.ExchangeName
+// GetPluginDirectories gets the plugin directories
+func (l *Loader) GetPluginDirectories() []string {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	
+	dirs := make([]string, len(l.pluginDirs))
+	copy(dirs, l.pluginDirs)
+	
+	return dirs
 }
 
-// CreateConnector creates an exchange connector
-func (p *pluginWrapper) CreateConnector(config connectors.ExchangeConfig, logger *zap.Logger) (connectors.ExchangeConnector, error) {
-	// Use panic recovery to prevent plugin failures from crashing the application
-	var connector connectors.ExchangeConnector
-	var err error
-
-	func() {
-		defer func() {
-			if r := recover(); r != nil {
-				err = fmt.Errorf("panic in plugin %s: %v", p.info.Name, r)
-				logger.Error("Panic in plugin",
-					zap.String("plugin", p.info.Name),
-					zap.String("exchange", p.info.ExchangeName),
-					zap.Any("panic", r))
-			}
-		}()
-
-		connector, err = p.createFunc(config, logger)
-	}()
-
-	return connector, err
+// StartBackgroundScanner starts a background scanner for new plugins
+func (l *Loader) StartBackgroundScanner(ctx context.Context, scanInterval time.Duration) error {
+	return l.adaptiveLoader.StartPluginScanner(ctx, scanInterval)
 }
 
-// Cleanup performs cleanup for the plugin
-func (p *pluginWrapper) Cleanup() error {
-	// No cleanup needed for this plugin wrapper
-	return nil
-}
-
-// CleanupablePlugin defines a plugin that can be cleaned up
-type CleanupablePlugin interface {
-	Cleanup() error
+// StopBackgroundScanner stops the background scanner
+func (l *Loader) StopBackgroundScanner() {
+	l.adaptiveLoader.StopPluginScanner()
 }
 
