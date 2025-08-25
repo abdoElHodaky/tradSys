@@ -1,10 +1,7 @@
 package coordination
 
 import (
-//<<<<<<< codegen-bot/integrate-coordination-system
 	"context"
-//=======
-//>>>>>>> main
 	"fmt"
 	"sort"
 	"sync"
@@ -13,7 +10,6 @@ import (
 	"go.uber.org/zap"
 )
 
-//<<<<<<< codegen-bot/integrate-coordination-system
 // MemoryPressureLevel represents the level of memory pressure in the system
 type MemoryPressureLevel int
 
@@ -847,4 +843,3 @@ func (m *MemoryManager) GetMemoryStats() map[string]interface{} {
 	return stats
 //>>>>>>> main
 }
-
