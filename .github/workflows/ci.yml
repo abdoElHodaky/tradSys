@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -50,7 +50,7 @@ jobs:
         run: ./scripts/generate_proto.sh
 
       - name: Upload proto artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: proto-gen
           path: proto/
@@ -61,7 +61,7 @@ jobs:
     needs: [proto]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -70,7 +70,7 @@ jobs:
           cache: true
 
       - name: Download proto artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: proto-gen
           path: proto/
@@ -79,7 +79,7 @@ jobs:
         run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           file: ./coverage.txt
           fail_ci_if_error: false
@@ -93,7 +93,7 @@ jobs:
         service: [gateway, marketdata, orders, risk, ws]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -102,7 +102,7 @@ jobs:
           cache: true
 
       - name: Download proto artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: proto-gen
           path: proto/
@@ -111,7 +111,7 @@ jobs:
         run: go build -v -o bin/${{ matrix.service }} ./cmd/${{ matrix.service }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.service }}-binary
           path: bin/${{ matrix.service }}
