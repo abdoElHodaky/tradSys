@@ -9,6 +9,25 @@ jobs:
   docker:
     name: Build and Push Docker Images
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [gateway, marketdata, orders, risk, ws]
+        include:
+          - service: gateway
+            dockerfile: ./build/gateway/Dockerfile
+            build_args: ""
+          - service: marketdata
+            dockerfile: ./Dockerfile
+            build_args: "SERVICE=marketdata"
+          - service: orders
+            dockerfile: ./Dockerfile
+            build_args: "SERVICE=orders"
+          - service: risk
+            dockerfile: ./Dockerfile
+            build_args: "SERVICE=risk"
+          - service: ws
+            dockerfile: ./Dockerfile
+            build_args: "SERVICE=ws"
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -35,58 +54,33 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha
 
-      - name: Build and push Gateway image
-        uses: docker/build-push-action@v4
+      # Set up Docker layer caching
+      - name: Cache Docker layers
+        uses: actions/cache@v3
         with:
-          context: .
-          file: ./build/gateway/Dockerfile
-          push: true
-          tags: abdoelhodaky/tradsys-gateway:${{ steps.meta.outputs.version }},abdoelhodaky/tradsys-gateway:latest
-          platforms: linux/amd64,linux/arm64
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ matrix.service }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-${{ matrix.service }}-
+            ${{ runner.os }}-buildx-
 
-      - name: Build and push Market Data image
+      - name: Build and push ${{ matrix.service }} image
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: ./Dockerfile
+          file: ${{ matrix.dockerfile }}
           push: true
-          tags: abdoelhodaky/tradsys-marketdata:${{ steps.meta.outputs.version }},abdoelhodaky/tradsys-marketdata:latest
+          tags: abdoelhodaky/tradsys-${{ matrix.service }}:${{ steps.meta.outputs.version }},abdoelhodaky/tradsys-${{ matrix.service }}:latest
           platforms: linux/amd64,linux/arm64
-          build-args: |
-            SERVICE=marketdata
+          build-args: ${{ matrix.build_args }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
-      - name: Build and push Order Service image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: abdoelhodaky/tradsys-orders:${{ steps.meta.outputs.version }},abdoelhodaky/tradsys-orders:latest
-          platforms: linux/amd64,linux/arm64
-          build-args: |
-            SERVICE=orders
-
-      - name: Build and push Risk Service image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: abdoelhodaky/tradsys-risk:${{ steps.meta.outputs.version }},abdoelhodaky/tradsys-risk:latest
-          platforms: linux/amd64,linux/arm64
-          build-args: |
-            SERVICE=risk
-
-      - name: Build and push WebSocket Service image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: abdoelhodaky/tradsys-ws:${{ steps.meta.outputs.version }},abdoelhodaky/tradsys-ws:latest
-          platforms: linux/amd64,linux/arm64
-          build-args: |
-            SERVICE=ws
+      # Move cache to prevent it from growing indefinitely
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
   deploy:
     name: Deploy to Kubernetes
@@ -125,4 +119,3 @@ jobs:
           kubectl rollout status deployment/orders
           kubectl rollout status deployment/risk
           kubectl rollout status deployment/ws
-

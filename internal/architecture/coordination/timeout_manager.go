@@ -8,7 +8,6 @@ import (
 	"go.uber.org/zap"
 )
 
-//<<<<<<< codegen-bot/integrate-coordination-system
 // TimeoutManagerConfig contains configuration for the timeout manager
 type TimeoutManagerConfig struct {
 	// Default timeout
@@ -22,96 +21,26 @@ func DefaultTimeoutManagerConfig() TimeoutManagerConfig {
 	}
 }
 
-// TimeoutManager manages timeouts for component operations
-type TimeoutManager struct {
-	// Configuration
-	config TimeoutManagerConfig
-//=======
 // TimeoutManager provides a unified approach to timeout management
-// to resolve conflicts between different timeout mechanisms.
 type TimeoutManager struct {
 	// Default timeout
 	defaultTimeout time.Duration
-//>>>>>>> main
 	
 	// Component timeouts
 	timeouts map[string]time.Duration
 	
-//<<<<<<< codegen-bot/integrate-coordination-system
-	// Mutex for thread safety
-//=======
 	// Operation timeouts
 	operationTimeouts map[string]time.Duration
 	
 	// Mutex for protecting timeouts
-//>>>>>>> main
 	mu sync.RWMutex
 	
 	// Logger
 	logger *zap.Logger
-//<<<<<<< codegen-bot/integrate-coordination-system
-}
-
-// NewTimeoutManager creates a new timeout manager
-func NewTimeoutManager(config TimeoutManagerConfig, logger *zap.Logger) *TimeoutManager {
-	return &TimeoutManager{
-		config:   config,
-		timeouts: make(map[string]time.Duration),
-		logger:   logger,
-	}
-}
-
-// RegisterComponent registers a component with the timeout manager
-func (t *TimeoutManager) RegisterComponent(name string, timeout time.Duration) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	
-	// If timeout is zero, use the default
-	if timeout == 0 {
-		timeout = t.config.DefaultTimeout
-	}
-	
-	t.timeouts[name] = timeout
-}
-
-// GetTimeout gets the timeout for a component
-func (t *TimeoutManager) GetTimeout(name string) time.Duration {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	
-	timeout, exists := t.timeouts[name]
-	if !exists {
-		return t.config.DefaultTimeout
-	}
-	
-	return timeout
-}
-
-// GetTimeoutContext creates a context with a timeout for a component
-func (t *TimeoutManager) GetTimeoutContext(ctx context.Context, name string) (context.Context, context.CancelFunc) {
-	timeout := t.GetTimeout(name)
-	return context.WithTimeout(ctx, timeout)
-}
-
-// UpdateTimeout updates the timeout for a component
-func (t *TimeoutManager) UpdateTimeout(name string, timeout time.Duration) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	
-	t.timeouts[name] = timeout
-}
-
-// UnregisterComponent unregisters a component from the timeout manager
-func (t *TimeoutManager) UnregisterComponent(name string) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	
-	delete(t.timeouts, name)
-//=======
 	
 	// Active timeouts
-	activeTimeouts     map[string]context.CancelFunc
-	activeTimeoutsMu   sync.Mutex
+	activeTimeouts   map[string]context.CancelFunc
+	activeTimeoutsMu sync.Mutex
 }
 
 // NewTimeoutManager creates a new timeout manager
@@ -139,6 +68,24 @@ func (t *TimeoutManager) SetComponentTimeout(component string, timeout time.Dura
 	defer t.mu.Unlock()
 	
 	t.timeouts[component] = timeout
+}
+
+// RegisterComponent registers a component with the timeout manager (legacy API)
+func (t *TimeoutManager) RegisterComponent(name string, timeout time.Duration) {
+	t.SetComponentTimeout(name, timeout)
+}
+
+// UpdateTimeout updates the timeout for a component (legacy API)
+func (t *TimeoutManager) UpdateTimeout(name string, timeout time.Duration) {
+	t.SetComponentTimeout(name, timeout)
+}
+
+// UnregisterComponent unregisters a component from the timeout manager (legacy API)
+func (t *TimeoutManager) UnregisterComponent(name string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	
+	delete(t.timeouts, name)
 }
 
 // SetOperationTimeout sets the timeout for an operation
@@ -173,6 +120,11 @@ func (t *TimeoutManager) GetTimeout(component string, operation string) time.Dur
 	
 	// Use default timeout
 	return t.defaultTimeout
+}
+
+// GetTimeoutContext creates a context with a timeout for a component (legacy API)
+func (t *TimeoutManager) GetTimeoutContext(ctx context.Context, name string) (context.Context, context.CancelFunc) {
+	return t.WithTimeout(ctx, name, "")
 }
 
 // WithTimeout creates a context with a timeout for a component and operation
@@ -243,6 +195,4 @@ func (t *TimeoutManager) GetTimeoutStats() map[string]interface{} {
 	}
 	
 	return stats
-//>>>>>>> main
 }
-

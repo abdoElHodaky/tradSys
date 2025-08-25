@@ -18,6 +18,7 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: '1.19'
+          cache: true
 
       - name: Install golangci-lint
         run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2
@@ -25,8 +26,8 @@ jobs:
       - name: Run golangci-lint
         run: golangci-lint run ./...
 
-  test:
-    name: Test
+  proto:
+    name: Generate Protocol Buffers
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -36,6 +37,7 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: '1.19'
+          cache: true
 
       - name: Install Protocol Buffers compiler
         run: |
@@ -46,6 +48,32 @@ jobs:
 
       - name: Generate Protocol Buffers code
         run: ./scripts/generate_proto.sh
+
+      - name: Upload proto artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: proto-gen
+          path: proto/
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: [proto]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.19'
+          cache: true
+
+      - name: Download proto artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: proto-gen
+          path: proto/
 
       - name: Run tests
         run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
@@ -60,6 +88,9 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     needs: [lint, test]
+    strategy:
+      matrix:
+        service: [gateway, marketdata, orders, risk, ws]
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -68,34 +99,19 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: '1.19'
+          cache: true
 
-      - name: Install Protocol Buffers compiler
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
-          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+      - name: Download proto artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: proto-gen
+          path: proto/
 
-      - name: Generate Protocol Buffers code
-        run: ./scripts/generate_proto.sh
-
-      - name: Build Gateway
-        run: go build -v -o bin/gateway ./cmd/gateway
-
-      - name: Build Market Data Service
-        run: go build -v -o bin/marketdata ./cmd/marketdata
-
-      - name: Build Order Service
-        run: go build -v -o bin/orders ./cmd/orders
-
-      - name: Build Risk Service
-        run: go build -v -o bin/risk ./cmd/risk
-
-      - name: Build WebSocket Service
-        run: go build -v -o bin/ws ./cmd/ws
+      - name: Build ${{ matrix.service }}
+        run: go build -v -o bin/${{ matrix.service }} ./cmd/${{ matrix.service }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: binaries
-          path: bin/
+          name: ${{ matrix.service }}-binary
+          path: bin/${{ matrix.service }}
