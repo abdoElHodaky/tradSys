@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/abdoElHodaky/tradSys/internal/architecture/discovery"
-	"github.com/asim/go-micro/v3/registry"
+	"go-micro.dev/v4/registry"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -76,4 +76,3 @@ func registerDiscoveryHooks(
 		},
 	})
 }
-

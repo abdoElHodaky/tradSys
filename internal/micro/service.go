@@ -28,18 +28,19 @@ type Service struct {
 }
 
 // NewService creates a new go-micro service with fx dependency injection
+// It uses configuration values for service registry settings
 func NewService(p ServiceParams) (*Service, error) {
 	// Create service options
 	options := []gomicro.Option{
 		gomicro.Name(p.Config.Service.Name),
 		gomicro.Version(p.Config.Service.Version),
 		gomicro.Address(p.Config.Service.Address),
-		gomicro.RegisterTTL(time.Second * 30),
-		gomicro.RegisterInterval(time.Second * 15),
+		gomicro.RegisterTTL(p.Config.Registry.TTL),
+		gomicro.RegisterInterval(p.Config.Registry.RegisterInterval),
 	}
 
 	// Add registry based on configuration
-	if p.Config.Registry.Type == "etcd" {
+	if p.Config.Registry.Type != "mdns" {
 		options = append(options, gomicro.Registry(
 			registry.NewRegistry(
 				registry.Addrs(p.Config.Registry.Addresses...),
@@ -90,4 +91,3 @@ func NewService(p ServiceParams) (*Service, error) {
 var Module = fx.Options(
 	fx.Provide(NewService),
 )
-

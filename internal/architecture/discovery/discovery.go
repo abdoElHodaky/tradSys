@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/asim/go-micro/v3/registry"
+	"go-micro.dev/v4/registry"
 	"go.uber.org/zap"
 )
 
@@ -175,4 +175,3 @@ func (s *RandomStrategy) Select(nodes []*registry.Node) (*registry.Node, error) 
 	// Get a random node
 	return nodes[time.Now().UnixNano()%int64(len(nodes))], nil
 }
-

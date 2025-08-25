@@ -19,6 +19,7 @@ type RegistryParams struct {
 }
 
 // NewRegistry creates a new service registry with fx dependency injection
+// It uses configuration values for registry type and addresses
 func NewRegistry(p RegistryParams) registry.Registry {
 	var reg registry.Registry
 
@@ -59,4 +60,3 @@ func NewRegistry(p RegistryParams) registry.Registry {
 var RegistryModule = fx.Options(
 	fx.Provide(NewRegistry),
 )
-
