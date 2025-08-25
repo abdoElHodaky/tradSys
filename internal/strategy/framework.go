@@ -6,20 +6,9 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
-//<<<<<<< codegen-bot/fix-order-model-syntax
-	"github.com/abdoElHodaky/tradSys/proto/marketdata"
-	"github.com/abdoElHodaky/tradSys/proto/orders"
-//=======
-//<<<<<<< codegen-bot/pairs-management-implementation
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
-	"github.com/abdoElHodaky/tradSys/internal/orders"
-	"github.com/abdoElHodaky/tradSys/proto/marketdata"
-	orderspb "github.com/abdoElHodaky/tradSys/proto/orders"
-//=======
 	"github.com/abdoElHodaky/tradSys/proto/marketdata"
 	"github.com/abdoElHodaky/tradSys/proto/orders"
-//>>>>>>> main
-//>>>>>>> main
 	"go.uber.org/zap"
 )
 
@@ -38,15 +27,7 @@ type Strategy interface {
 	OnMarketData(ctx context.Context, data *marketdata.MarketDataResponse) error
 	
 	// OnOrderUpdate processes order updates
-//<<<<<<< codegen-bot/fix-order-model-syntax
 	OnOrderUpdate(ctx context.Context, order *orders.OrderResponse) error
-//=======
-//<<<<<<< codegen-bot/pairs-management-implementation
-	OnOrderUpdate(ctx context.Context, order *orderspb.OrderResponse) error
-//=======
-	OnOrderUpdate(ctx context.Context, order *orders.OrderResponse) error
-//>>>>>>> main
-//>>>>>>> main
 	
 	// GetName returns the name of the strategy
 	GetName() string
