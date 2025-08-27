@@ -105,6 +105,105 @@ The Decision Support System API provides analytics and recommendations for tradi
   - POST /api/dss/backtest - Backtest a strategy
   - GET /api/dss/indicators - Get technical indicators
 
+## Decision Support System Integration API
+
+The Decision Support System (DSS) provides a comprehensive API for external systems to integrate with TradSys's analytics and recommendation engine:
+
+### API Design
+
+#### Authentication and Authorization
+
+- **OAuth2 Authentication**: Secure access using OAuth2 token-based authentication
+- **Scoped Permissions**: Fine-grained access control with specific scopes for different DSS features
+- **API Key Management**: Dedicated API keys for integration partners with usage tracking
+
+#### Core Endpoints
+
+1. **Market Analysis Integration**
+   - `GET /api/integration/dss/analysis`
+     - Parameters: `instruments`, `timeframe`, `indicators`
+     - Returns: Comprehensive market analysis with technical indicators and trend information
+   - `POST /api/integration/dss/analysis/custom`
+     - Request Body: Custom analysis parameters and indicator configurations
+     - Returns: Tailored analysis based on custom parameters
+
+2. **Recommendation Engine**
+   - `GET /api/integration/dss/recommendations`
+     - Parameters: `strategy`, `risk_profile`, `timeframe`
+     - Returns: Trading recommendations with entry/exit points and risk metrics
+   - `POST /api/integration/dss/recommendations/custom`
+     - Request Body: Custom strategy parameters and risk preferences
+     - Returns: Personalized recommendations based on custom parameters
+
+3. **Pattern Recognition**
+   - `GET /api/integration/dss/patterns`
+     - Parameters: `instruments`, `pattern_types`, `timeframe`
+     - Returns: Detected chart patterns with confidence scores and historical performance
+   - `POST /api/integration/dss/patterns/scan`
+     - Request Body: Custom pattern definitions and detection parameters
+     - Returns: Scan results for custom-defined patterns
+
+4. **Backtesting**
+   - `POST /api/integration/dss/backtest`
+     - Request Body: Strategy parameters, historical period, and instruments
+     - Returns: Detailed backtest results with performance metrics and trade logs
+
+5. **Real-time Notifications**
+   - `POST /api/integration/dss/notifications/subscribe`
+     - Request Body: Notification types, delivery methods, and filtering criteria
+     - Returns: Subscription ID and confirmation
+   - `DELETE /api/integration/dss/notifications/{subscription_id}`
+     - Unsubscribes from notifications
+
+6. **Data Export**
+   - `GET /api/integration/dss/export/analysis`
+     - Parameters: `format` (CSV, JSON, Excel), `data_points`, `timeframe`
+     - Returns: Formatted data export of analysis results
+   - `GET /api/integration/dss/export/recommendations`
+     - Parameters: `format`, `strategy`, `timeframe`
+     - Returns: Formatted data export of recommendations
+
+### Integration Methods
+
+1. **REST API**
+   - Standard RESTful endpoints for synchronous operations
+   - Comprehensive documentation with OpenAPI/Swagger specification
+   - Rate limiting and usage quotas
+
+2. **WebSocket Streams**
+   - Real-time data streaming for continuous updates
+   - Subscription-based model for specific data types
+   - Efficient binary protocol for high-throughput data
+
+3. **Webhook Notifications**
+   - Event-driven notifications sent to registered callback URLs
+   - Configurable event types and filtering
+   - Retry mechanisms and delivery guarantees
+
+4. **Batch Processing**
+   - Endpoints for bulk operations and data processing
+   - Asynchronous job submission and status tracking
+   - Scheduled execution of recurring analysis tasks
+
+### Data Formats
+
+- **JSON**: Primary data format for all API responses
+- **Protocol Buffers**: Optional binary format for high-performance integrations
+- **CSV/Excel**: Available for data exports and reporting functions
+
+### API Versioning
+
+- Explicit versioning in URL path (e.g., `/api/v1/integration/dss/...`)
+- Deprecation notices and migration guides for version transitions
+- Long-term support for stable API versions
+
+### Developer Resources
+
+- Interactive API documentation with Swagger UI
+- Client libraries for popular programming languages
+- Sample code and integration tutorials
+- Sandbox environment for testing
+
 ## Coordination System
 
 The platform includes a robust coordination system for managing resources and preventing conflicts:
