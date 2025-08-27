@@ -106,5 +106,6 @@ replace google.golang.org/genproto => google.golang.org/genproto v0.0.0-20230410
 
 replace google.golang.org/genproto/googleapis/rpc => google.golang.org/genproto/googleapis/rpc v0.0.0-20230410155749-daa745c078e1
 
+
 replace github.com/micro/go-micro/v4 => go-micro.dev/v4 v4.10.2
 
