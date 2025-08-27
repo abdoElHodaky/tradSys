@@ -76,7 +76,9 @@ jobs:
           path: proto/
 
       - name: Run tests
-        run: go test -v ./internal/tests
+        run: |
+          go mod tidy
+          go test -v ./internal/tests
 
   build:
     name: Build
@@ -102,7 +104,9 @@ jobs:
           path: proto/
 
       - name: Build ${{ matrix.service }}
-        run: go build -v -o bin/${{ matrix.service }} ./cmd/${{ matrix.service }}
+        run: |
+          go mod tidy
+          go build -v -o bin/${{ matrix.service }} ./cmd/${{ matrix.service }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
