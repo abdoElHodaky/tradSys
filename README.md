@@ -12,7 +12,6 @@ The platform follows a microservices architecture with the following components:
 4. **Risk Service**: Monitors positions and validates orders against risk parameters
 5. **WebSocket Service**: Streams real-time data to clients
 6. **Statistical Arbitrage Service**: Implements pair trading strategies
-7. **Decision Support System**: Provides analytics and recommendations for trading decisions
 
 ## Technology Stack
 
@@ -88,22 +87,6 @@ The Statistical Arbitrage API provides pair trading functionality:
   - GET /api/pairs/:id/statistics - Get pair statistics
   - POST /api/pairs/:id/analyze - Analyze a pair
   - POST /api/pairs/:id/strategy - Create a strategy for a pair
-
-### Decision Support System API
-
-The Decision Support System API provides analytics and recommendations for trading decisions:
-
-- Market trend analysis
-- Pattern recognition
-- Risk assessment
-- Recommendation generation
-- Historical performance analysis
-- API endpoints:
-  - GET /api/dss/analysis - Get market analysis
-  - POST /api/dss/recommendations - Get trading recommendations
-  - GET /api/dss/patterns - Get detected patterns
-  - POST /api/dss/backtest - Backtest a strategy
-  - GET /api/dss/indicators - Get technical indicators
 
 ## Coordination System
 
@@ -250,16 +233,6 @@ The Pairs Trading WebSocket streams real-time pair trading data:
 - Position updates
 - Signal generation
 
-### Decision Support WebSocket
-
-The Decision Support WebSocket streams real-time analytics and recommendations:
-
-- Market trend updates
-- Pattern detection alerts
-- Risk assessment changes
-- Trading recommendations
-- Indicator value updates
-
 ## Features
 
 - Real-time market data streaming via WebSockets
@@ -272,7 +245,6 @@ The Decision Support WebSocket streams real-time analytics and recommendations:
 - High-precision latency tracking
 - Lazy loading for resource optimization
 - Comprehensive coordination system
-- Decision support with machine learning
 - Backtesting capabilities for strategy validation
 
 ## Getting Started
@@ -283,7 +255,6 @@ The Decision Support WebSocket streams real-time analytics and recommendations:
 - Docker and Docker Compose
 - Protocol Buffers compiler
 - PostgreSQL (optional for local development)
-- TensorFlow (for decision support system)
 
 ### Installation
 
@@ -346,11 +317,6 @@ tradSys/
 │   ├── db/                 # Database
 │   │   ├── models/         # Database models
 │   │   └── repositories/   # Database repositories
-│   ├── dss/                # Decision Support System
-│   │   ├── analysis/       # Market analysis
-│   │   ├── ml/             # Machine learning models
-│   │   ├── patterns/       # Pattern recognition
-│   │   └── recommendations/ # Recommendation engine
 │   ├── exchange/           # Exchange connectors
 │   ├── marketdata/         # Market data services
 │   ├── orders/             # Order management
