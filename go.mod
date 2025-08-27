@@ -4,7 +4,6 @@ go 1.20
 
 require (
 	github.com/ThreeDotsLabs/watermill v1.2.0-rc.11
-	github.com/asim/go-micro/v3 v3.7.1
 	github.com/gin-gonic/gin v1.10.1
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/google/uuid v1.3.0
@@ -17,7 +16,6 @@ require (
 	github.com/spf13/viper v1.16.0
 	github.com/stretchr/testify v1.8.4
 	github.com/ulule/limiter/v3 v3.11.1
-	go-micro.dev/v4 v4.10.2
 	go.uber.org/fx v1.24.0
 	go.uber.org/zap v1.25.0
 	google.golang.org/grpc v1.67.3
@@ -107,3 +105,4 @@ require (
 replace google.golang.org/genproto => google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 
 replace google.golang.org/genproto/googleapis/rpc => google.golang.org/genproto/googleapis/rpc v0.0.0-20230410155749-daa745c078e1
+
