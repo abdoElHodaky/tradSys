@@ -11,6 +11,7 @@ The platform follows a microservices architecture with the following components:
 3. **Order Service**: Handles order creation, execution, and management
 4. **Risk Service**: Monitors positions and validates orders against risk parameters
 5. **WebSocket Service**: Streams real-time data to clients
+6. **Statistical Arbitrage Service**: Implements pair trading strategies
 
 ## Technology Stack
 
@@ -67,6 +68,24 @@ The Risk Management API provides risk control and position management:
   - POST /api/risk/limits - Create or update risk limits
   - DELETE /api/risk/limits/:id - Delete a risk limit
   - POST /api/risk/validate - Validate an order against risk limits
+
+### Statistical Arbitrage API
+
+The Statistical Arbitrage API provides pair trading functionality:
+
+- Pair creation and management
+- Cointegration and correlation analysis
+- Z-score calculation and tracking
+- Position management for pair trades
+- API endpoints:
+  - GET /api/pairs - List all pairs
+  - POST /api/pairs - Create a new pair
+  - GET /api/pairs/:id - Get a specific pair
+  - PUT /api/pairs/:id - Update a pair
+  - DELETE /api/pairs/:id - Delete a pair
+  - GET /api/pairs/:id/statistics - Get pair statistics
+  - POST /api/pairs/:id/analyze - Analyze a pair
+  - POST /api/pairs/:id/strategy - Create a strategy for a pair
 
 ## Coordination System
 
@@ -191,6 +210,28 @@ The Initialization Manager handles component initialization with dependency reso
 - Error propagation
 - Metrics collection
 
+## WebSocket Integration
+
+The platform provides real-time data streaming via WebSockets:
+
+### Market Data WebSocket
+
+The Market Data WebSocket streams real-time market data to clients:
+
+- Price updates
+- Order book changes
+- Trade executions
+- Market statistics
+
+### Pairs Trading WebSocket
+
+The Pairs Trading WebSocket streams real-time pair trading data:
+
+- Z-score updates
+- Spread changes
+- Position updates
+- Signal generation
+
 ## Features
 
 - Real-time market data streaming via WebSockets
@@ -272,12 +313,16 @@ tradSys/
 │   ├── auth/               # Authentication
 │   ├── config/             # Configuration
 │   ├── db/                 # Database
+│   │   ├── models/         # Database models
+│   │   └── repositories/   # Database repositories
 │   ├── exchange/           # Exchange connectors
 │   ├── marketdata/         # Market data services
 │   ├── orders/             # Order management
 │   ├── risk/               # Risk management
+│   ├── statistics/         # Statistical analysis
 │   ├── strategy/           # Trading strategies
-│   └── trading/            # Trading components
+│   ├── trading/            # Trading components
+│   └── websocket/          # WebSocket handlers
 ├── proto/                  # Protocol Buffers definitions
 ├── docs/                   # Documentation
 ├── scripts/                # Utility scripts
