@@ -6,7 +6,7 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/marketdata"
 	"github.com/abdoElHodaky/tradSys/internal/micro"
 	"github.com/abdoElHodaky/tradSys/proto/marketdata"
-	"github.com/micro/go-micro/v4"
+	"go-micro.dev/v4"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
