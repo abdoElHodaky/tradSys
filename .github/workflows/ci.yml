@@ -78,7 +78,7 @@ jobs:
 
       - name: Run tests
         run: |
-          go clean -modcache
+          
           go mod tidy
           go test -v ./internal/tests
 
@@ -107,7 +107,7 @@ jobs:
 
       - name: Build ${{ matrix.service }}
         run: |
-          go clean -modcache
+          
           go mod tidy
           go build -v -o bin/${{ matrix.service }} ./cmd/${{ matrix.service }}
 
