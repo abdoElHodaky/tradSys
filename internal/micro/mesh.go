@@ -5,16 +5,9 @@ import (
 
 	gomicro "go-micro.dev/v4"
 	"go-micro.dev/v4/client"
-	"go-micro.dev/v4/client/selector"
+	// Using registry instead of selector due to module path issues
+	"go-micro.dev/v4/registry"
 	"go-micro.dev/v4/server"
-
-
-	gomicro "github.com/micro/go-micro/v4"
-	"github.com/micro/go-micro/v4/client"
-	"github.com/micro/go-micro/v4/client/selector"
-	"github.com/micro/go-micro/v4/server"
-
-
 	"go.uber.org/zap"
 )
 
@@ -63,9 +56,7 @@ func ConfigureMesh(service gomicro.Service, opts MeshOptions, logger *zap.Logger
 	service.Client().Init(
 		client.Wrap(wrappers...),
 		client.Retries(3),
-		client.Selector(selector.NewSelector(
-			selector.SetStrategy(selector.RoundRobin),
-		)),
+		client.Registry(registry.DefaultRegistry),
 	)
 
 	// Configure server wrappers
@@ -98,4 +89,3 @@ func NewMeshOptions(config *config.Config) MeshOptions {
 		EnableRateLimiting:  config.Resilience.RateLimitingEnabled,
 	}
 }
-
