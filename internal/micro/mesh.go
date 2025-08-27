@@ -3,11 +3,15 @@ package micro
 import (
 	"github.com/abdoElHodaky/tradSys/internal/config"
 
-	gomicro "go-micro.dev/v4"
-	"go-micro.dev/v4/client"
-	// Using registry instead of selector due to module path issues
-	"go-micro.dev/v4/registry"
-	"go-micro.dev/v4/server"
+
+
+	gomicro "github.com/micro/go-micro/v4"
+	"github.com/micro/go-micro/v4/client"
+	"github.com/micro/go-micro/v4/client/selector"
+	"github.com/micro/go-micro/v4/server"
+
+
+
 	"go.uber.org/zap"
 )
 
