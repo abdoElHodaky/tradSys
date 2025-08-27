@@ -76,7 +76,7 @@ jobs:
           path: proto/
 
       - name: Run tests
-        run: go test -v ./internal
+        run: go test -v ./internal/tests
 
   build:
     name: Build
