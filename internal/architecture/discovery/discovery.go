@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/micro/go-micro/v4/registry"
+	"go-micro.dev/v4/registry"
 	"go.uber.org/zap"
 )
 

@@ -9,8 +9,8 @@ import (
 
 	"github.com/abdoElHodaky/tradSys/internal/config"
 	"github.com/abdoElHodaky/tradSys/internal/micro"
-	gomicro "github.com/micro/go-micro/v4"
-	"github.com/micro/go-micro/v4/registry"
+	gomicro "go-micro.dev/v4"
+	"go-micro.dev/v4/registry"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"

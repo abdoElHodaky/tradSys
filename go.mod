@@ -9,7 +9,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/jmoiron/sqlx v1.3.5
-	github.com/micro/go-micro/v4 v4.10.2
+	go-micro.dev/v4 v4.10.2
 	github.com/nats-io/nats.go v1.22.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/prometheus/client_golang v1.16.0
@@ -105,4 +105,7 @@ require (
 replace google.golang.org/genproto => google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 
 replace google.golang.org/genproto/googleapis/rpc => google.golang.org/genproto/googleapis/rpc v0.0.0-20230410155749-daa745c078e1
+
+
+replace github.com/micro/go-micro/v4 => go-micro.dev/v4 v4.10.2
 
