@@ -1,6 +1,6 @@
 # TradSys - Trading System Platform
 
-TradSys is a microservices-based trading system platform built with Go and go-micro.dev/v4. It provides a robust foundation for building scalable and resilient trading applications.
+TradSys is a microservices-based trading system platform built with Go and go-micro.dev/v4. It provides a robust foundation for building scalable and resilient trading applications with advanced decision support capabilities.
 
 ## Features
 
@@ -9,6 +9,7 @@ TradSys is a microservices-based trading system platform built with Go and go-mi
 - **Risk Management**: Integrated risk management capabilities
 - **Market Data Processing**: Real-time market data handling
 - **Monitoring**: Built-in support for metrics and tracing
+- **Decision Support Integration**: APIs for connecting with external decision support systems
 
 ## Architecture
 
@@ -19,6 +20,7 @@ TradSys is built using a microservices architecture with the following component
 - **Risk Service**: Provides risk assessment and management
 - **Market Data Service**: Processes and distributes market data
 - **Monitoring Service**: Collects and exposes metrics
+- **Decision Support Service**: Integrates with external decision support systems and provides analytical insights
 
 ## Getting Started
 
@@ -80,6 +82,17 @@ The system exposes APIs for various trading operations. Here's an overview of th
 - `GET /api/risk/exposure`: Get current risk exposure
 - `POST /api/risk/limits`: Set risk limits
 
+### Decision Support API
+
+- `POST /api/decision-support/analyze`: Submit data for analysis
+- `GET /api/decision-support/recommendations`: Get trading recommendations
+- `GET /api/decision-support/scenarios`: Get scenario analysis results
+- `POST /api/decision-support/backtest`: Run backtest with specified parameters
+- `GET /api/decision-support/insights/{symbol}`: Get market insights for a symbol
+- `GET /api/decision-support/portfolio/optimize`: Get portfolio optimization recommendations
+- `POST /api/decision-support/alerts/configure`: Configure decision support alerts
+- `GET /api/decision-support/alerts`: Get current decision support alerts
+
 ## Development
 
 ### Project Structure
@@ -89,16 +102,19 @@ tradSys/
 ├── cmd/                  # Service entry points
 │   ├── orders/           # Order service
 │   ├── marketdata/       # Market data service
-│   └── risk/             # Risk service
+│   ├── risk/             # Risk service
+│   └── decisionsupport/  # Decision support service
 ├── internal/             # Internal packages
 │   ├── config/           # Configuration
 │   ├── micro/            # Service mesh utilities
 │   ├── trading/          # Trading logic
-│   └── risk/             # Risk management
+│   ├── risk/             # Risk management
+│   └── decisionsupport/  # Decision support logic
 ├── proto/                # Protocol buffers
 │   ├── orders/           # Order service definitions
 │   ├── marketdata/       # Market data service definitions
-│   └── risk/             # Risk service definitions
+│   ├── risk/             # Risk service definitions
+│   └── decisionsupport/  # Decision support service definitions
 └── examples/             # Example applications
 ```
 
@@ -109,7 +125,18 @@ tradSys/
 3. Implement the service in `internal/`
 4. Update configuration in `config/`
 
+## Decision Support System Integration
+
+TradSys provides comprehensive integration with external decision support systems through a dedicated API. This integration allows for:
+
+- Real-time trading recommendations
+- Market insights and analysis
+- Portfolio optimization
+- Scenario analysis and backtesting
+- Risk assessment and alerts
+
+For detailed API documentation, see [Decision Support API](docs/decision-support-api.md).
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
