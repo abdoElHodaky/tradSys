@@ -14,7 +14,7 @@ func TestJWT(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 
 	// Load config
-	cfg, err := config.LoadConfig("../../config", logger)
+	_, err := config.LoadConfig("../../config", logger)
 	assert.NoError(t, err)
 
 	// Create JWT service with test configuration
@@ -57,7 +57,8 @@ func TestJWT(t *testing.T) {
 	refreshedToken, err := jwtService.RefreshToken(token)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, refreshedToken)
-	assert.NotEqual(t, token, refreshedToken)
+	// Token will be different because timestamps are different
+	assert.NotEqual(t, token, refreshedToken, "Refreshed token should be different from original")
 
 	// Validate refreshed token
 	refreshedClaims, err := jwtService.ValidateToken(refreshedToken)
