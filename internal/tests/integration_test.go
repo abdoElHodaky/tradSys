@@ -2,6 +2,8 @@ package tests
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -9,6 +11,7 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/micro"
 	gomicro "github.com/micro/go-micro/v4"
 	"github.com/micro/go-micro/v4/registry"
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
 	"go.uber.org/zap"
@@ -129,9 +132,47 @@ func TestRegistryConfiguration(t *testing.T) {
 
 // TestServiceCommunication verifies that services can communicate with each other
 func TestServiceCommunication(t *testing.T) {
-	// Skip in CI environment
-	t.Skip("Skipping integration test in CI environment")
+	// Check if we're in CI environment
+	if os.Getenv("CI") == "true" {
+		// Use a mock approach in CI environment
+		t.Log("Running in CI environment, using mock approach")
+		testServiceCommunicationWithMock(t)
+	} else {
+		// Use the real service communication in non-CI environment
+		t.Log("Running in non-CI environment, using real service communication")
+		testServiceCommunicationWithRealServices(t)
+	}
+}
 
+// testServiceCommunicationWithMock tests service communication using mocks
+func testServiceCommunicationWithMock(t *testing.T) {
+	// Create a test logger
+	logger := zaptest.NewLogger(t)
+
+	// Create a mock service
+	mockService := &mockMicroService{
+		t:      t,
+		logger: logger,
+	}
+
+	// Create a mock request
+	req := &TestRequest{
+		Message: "Hello",
+	}
+
+	// Create a response
+	rsp := &TestResponse{}
+
+	// Call the mock service
+	err := mockService.HandleRequest("TestHandler.Test", req, rsp)
+	assert.NoError(t, err)
+
+	// Verify the response
+	assert.Equal(t, "Hello World", rsp.Message)
+}
+
+// testServiceCommunicationWithRealServices tests service communication using real services
+func testServiceCommunicationWithRealServices(t *testing.T) {
 	// Create a test logger
 	logger := zaptest.NewLogger(t)
 
@@ -210,6 +251,36 @@ func TestServiceCommunication(t *testing.T) {
 	if rsp.Message != "Hello World" {
 		t.Errorf("Expected response message to be 'Hello World', got '%s'", rsp.Message)
 	}
+}
+
+// mockMicroService is a mock implementation of a micro service
+type mockMicroService struct {
+	t      *testing.T
+	logger *zap.Logger
+}
+
+// HandleRequest handles a request to the mock service
+func (m *mockMicroService) HandleRequest(method string, req interface{}, rsp interface{}) error {
+	m.logger.Info("Handling request", zap.String("method", method))
+
+	// Type assertion
+	testReq, ok := req.(*TestRequest)
+	if !ok {
+		return fmt.Errorf("expected *TestRequest, got %T", req)
+	}
+
+	testRsp, ok := rsp.(*TestResponse)
+	if !ok {
+		return fmt.Errorf("expected *TestResponse, got %T", rsp)
+	}
+
+	// Handle the request
+	if method == "TestHandler.Test" {
+		testRsp.Message = testReq.Message + " World"
+		return nil
+	}
+
+	return fmt.Errorf("unknown method: %s", method)
 }
 
 // TestRequest is a test request

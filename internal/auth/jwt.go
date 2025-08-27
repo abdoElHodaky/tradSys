@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // JWTConfig contains configuration for JWT authentication
@@ -113,4 +113,3 @@ func (s *JWTService) RefreshToken(tokenString string) (string, error) {
 
 	return signedToken, nil
 }
-
