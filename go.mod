@@ -103,5 +103,11 @@ require (
 )
 
 replace github.com/micro/go-micro/v4 => go-micro.dev/v4 v4.10.2
+
 replace go-micro.dev/v4/client/selector => go-micro.dev/v4 v4.10.2
+
+
+
+replace github.com/micro/go-micro/v4 => go-micro.dev/v4 v4.10.2
+
 
