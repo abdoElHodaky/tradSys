@@ -2,7 +2,7 @@ package micro
 
 import (
 	"github.com/abdoElHodaky/tradSys/internal/config"
-	gomicro "github.com/micro/go-micro/v4
+	gomicro "github.com/micro/go-micro/v4"
 	"github.com/micro/go-micro/v4/client"
 	"github.com/micro/go-micro/v4/client/selector"
 	"github.com/micro/go-micro/v4/server"
@@ -89,4 +89,3 @@ func NewMeshOptions(config *config.Config) MeshOptions {
 		EnableRateLimiting:  config.Resilience.RateLimitingEnabled,
 	}
 }
-
