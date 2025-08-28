@@ -40,6 +40,7 @@ jobs:
             - go-mod-v1-{{ checksum "go.sum" }}
       - run: 
           command: |
+            go env -w GO111MODULE=off
             go mod tidy
             go mod download
       - run:
@@ -63,6 +64,7 @@ jobs:
             - go-mod-v1-{{ checksum "go.sum" }}
       - run: 
           command: |
+             go env -w GO111MODULE=off
              go mod tidy
              go mod download
       - run:
@@ -86,7 +88,11 @@ jobs:
       - restore_cache:
           keys:
             - go-mod-v1-{{ checksum "go.sum" }}
-      - run: go mod download
+      - run: 
+          command: |
+             go env -w GO111MODULE=off
+             go mod tidy
+             go mod download
       - run:
           name: Generate protobuf files (if needed)
           command: |
