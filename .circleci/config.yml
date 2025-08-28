@@ -8,19 +8,33 @@ executors:
     resource_class: large
     working_directory: ~/project
 
-jobs:
-  lint:
-    executor: large-linux-machine
+commands:
+  setup_go:
     steps:
-      - checkout
       - run:
-          name: Install Go
+          name: Install Go 1.20
           command: |
             curl -LO https://go.dev/dl/go1.20.10.linux-amd64.tar.gz
             sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.20.10.linux-amd64.tar.gz
             echo 'export PATH=$PATH:/usr/local/go/bin' >> $BASH_ENV
             source $BASH_ENV
             go version
+  setup_protobuf:
+    steps:
+      - run:
+          name: Install Protobuf
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y protobuf-compiler
+            protoc --version
+
+jobs:
+  lint:
+    executor: large-linux-machine
+    steps:
+      - checkout
+      - setup_go
+      - setup_protobuf
       - restore_cache:
           keys:
             - go-mod-v1-{{ checksum "go.sum" }}
@@ -39,18 +53,16 @@ jobs:
     executor: large-linux-machine
     steps:
       - checkout
-      - run:
-          name: Install Go
-          command: |
-            curl -LO https://go.dev/dl/go1.20.10.linux-amd64.tar.gz
-            sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.20.10.linux-amd64.tar.gz
-            echo 'export PATH=$PATH:/usr/local/go/bin' >> $BASH_ENV
-            source $BASH_ENV
-            go version
+      - setup_go
+      - setup_protobuf
       - restore_cache:
           keys:
             - go-mod-v1-{{ checksum "go.sum" }}
       - run: go mod download
+      - run:
+          name: Generate protobuf files (if needed)
+          command: |
+            if [ -f proto/gen.sh ]; then bash proto/gen.sh; fi
       - run:
           name: Run tests
           command: |
@@ -63,18 +75,16 @@ jobs:
     executor: large-linux-machine
     steps:
       - checkout
-      - run:
-          name: Install Go
-          command: |
-            curl -LO https://go.dev/dl/go1.20.10.linux-amd64.tar.gz
-            sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.20.10.linux-amd64.tar.gz
-            echo 'export PATH=$PATH:/usr/local/go/bin' >> $BASH_ENV
-            source $BASH_ENV
-            go version
+      - setup_go
+      - setup_protobuf
       - restore_cache:
           keys:
             - go-mod-v1-{{ checksum "go.sum" }}
       - run: go mod download
+      - run:
+          name: Generate protobuf files (if needed)
+          command: |
+            if [ -f proto/gen.sh ]; then bash proto/gen.sh; fi
       - run:
           name: Build
           command: go build -v ./...
