@@ -1,83 +1,116 @@
 name: CI
-
 on:
   push:
-    branches: [main, master]
+    branches: [ main ]
   pull_request:
-    branches: [main, master]
+    branches: [ main ]
 
 jobs:
   lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: 1.20
-      - name: Cache Go modules
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      - name: Download dependencies
-        run: go mod download
-      - name: Install golangci-lint
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $HOME/bin v1.54.2
-          echo "$HOME/bin" >> $GITHUB_PATH
-      - name: Run golangci-lint
-        run: golangci-lint run --timeout 5m
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  test:
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+          cache: true
+
+      - name: Install golangci-lint
+        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2
+
+      - name: Run golangci-lint
+        run: golangci-lint --version
+
+  proto:
+    name: Generate Protocol Buffers
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
         with:
-          go-version: 1.20
-      - name: Cache Go modules
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      - name: Download dependencies
-        run: go mod download
-      - name: Run tests
+          go-version: '1.20'
+          cache: true
+
+      - name: Install Protocol Buffers compiler
         run: |
-          mkdir -p test-results
-          go test -v ./... | tee test-results/test-output.txt
-      - name: Upload test results
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+      - name: Generate Protocol Buffers code
+        run: ./scripts/generate_proto.sh
+
+      - name: Upload proto artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
-          path: test-results
+          name: proto-gen
+          path: proto/
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: [proto]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+          cache: true
+
+      - name: Download proto artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: proto-gen
+          path: proto/
+
+      - name: Run tests
+        run: |
+          go clean -modcache
+          go mod tidy
+          go test -v ./internal/tests
 
   build:
+    name: Build
     runs-on: ubuntu-latest
     needs: [lint, test]
+    strategy:
+      matrix:
+        service: [gateway, marketdata, orders, risk, ws]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
         with:
-          go-version: 1.20
-      - name: Cache Go modules
-        uses: actions/cache@v3
+          go-version: '1.20'
+          cache: true
+
+      - name: Download proto artifacts
+        uses: actions/download-artifact@v4
         with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      - name: Download dependencies
-        run: go mod download
-      - name: Build
-        run: go build -v ./...
+          name: proto-gen
+          path: proto/
+
+      - name: Build ${{ matrix.service }}
+        run: |
+          go clean -modcache
+          go mod tidy
+          go build -v -o bin/${{ matrix.service }} ./cmd/${{ matrix.service }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.service }}-binary
+          path: bin/${{ matrix.service }}
