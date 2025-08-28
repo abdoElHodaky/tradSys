@@ -3,7 +3,7 @@ version: 2.1
 executors:
   large-linux-machine:
     machine:
-      image: ubuntu-2204:2023.07.1
+      image: ubuntu-latest
       docker_layer_caching: true
     resource_class: large
     working_directory: ~/project
