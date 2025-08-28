@@ -40,7 +40,7 @@ jobs:
             - go-mod-v1-{{ checksum "go.sum" }}
       - run: 
           command: |
-            go get -u ./..
+            go get -u ./...
             go mod tidy
             go mod download
       - run:
@@ -64,7 +64,7 @@ jobs:
             - go-mod-v1-{{ checksum "go.sum" }}
       - run: 
           command: |
-            go get -u ./..
+            go get -u ./...
             go mod tidy
             go mod download
       - run:
@@ -90,7 +90,7 @@ jobs:
             - go-mod-v1-{{ checksum "go.sum" }}
       - run: 
           command: |
-            go get -u ./..
+            go get -u ./...
             go mod tidy
             go mod download
       - run:
