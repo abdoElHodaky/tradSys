@@ -1,84 +1,91 @@
 version: 2.1
 
 executors:
-  go-executor:
-    docker:
-      - image: cimg/go:1.20
+  large-linux-machine:
+    machine:
+      image: ubuntu-2204:2023.07.1
+      docker_layer_caching: true
+    resource_class: large
     working_directory: ~/project
 
 jobs:
-  checkout_code:
-    executor: go-executor
+  lint:
+    executor: large-linux-machine
     steps:
       - checkout
-      - run: git submodule update --init --recursive
-
-  dependencies:
-    executor: go-executor
-    steps:
-      - checkout
+      - run:
+          name: Install Go
+          command: |
+            curl -LO https://go.dev/dl/go1.20.10.linux-amd64.tar.gz
+            sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.20.10.linux-amd64.tar.gz
+            echo 'export PATH=$PATH:/usr/local/go/bin' >> $BASH_ENV
+            source $BASH_ENV
+            go version
       - restore_cache:
           keys:
             - go-mod-v1-{{ checksum "go.sum" }}
-      - run:
-          name: Download Go modules
-          command: go mod download
-      - save_cache:
-          key: go-mod-v1-{{ checksum "go.sum" }}
-          paths:
-            - ~/go/pkg/mod
-
-  lint:
-    executor: go-executor
-    steps:
-      - checkout
+      - run: go mod download
       - run:
           name: Install golangci-lint
           command: |
-            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ~/bin v1.54.2
+            echo 'export PATH=$PATH:~/bin' >> $BASH_ENV
+            source $BASH_ENV
       - run:
           name: Run golangci-lint
           command: golangci-lint run --timeout 5m
 
   test:
-    executor: go-executor
+    executor: large-linux-machine
     steps:
       - checkout
+      - run:
+          name: Install Go
+          command: |
+            curl -LO https://go.dev/dl/go1.20.10.linux-amd64.tar.gz
+            sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.20.10.linux-amd64.tar.gz
+            echo 'export PATH=$PATH:/usr/local/go/bin' >> $BASH_ENV
+            source $BASH_ENV
+            go version
       - restore_cache:
           keys:
             - go-mod-v1-{{ checksum "go.sum" }}
+      - run: go mod download
       - run:
-          name: Run Tests
-          command: go test -v ./...
+          name: Run tests
+          command: |
+            mkdir -p test-results
+            go test -v ./... | tee test-results/test-output.txt
       - store_test_results:
           path: test-results
 
   build:
-    executor: go-executor
+    executor: large-linux-machine
     steps:
       - checkout
+      - run:
+          name: Install Go
+          command: |
+            curl -LO https://go.dev/dl/go1.20.10.linux-amd64.tar.gz
+            sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.20.10.linux-amd64.tar.gz
+            echo 'export PATH=$PATH:/usr/local/go/bin' >> $BASH_ENV
+            source $BASH_ENV
+            go version
       - restore_cache:
           keys:
             - go-mod-v1-{{ checksum "go.sum" }}
+      - run: go mod download
       - run:
           name: Build
           command: go build -v ./...
 
 workflows:
   version: 2
-  build_and_test:
+  ci_pipeline:
     jobs:
-      - checkout_code
-      - dependencies:
-          requires:
-            - checkout_code
-      - lint:
-          requires:
-            - dependencies
-      - test:
-          requires:
-            - dependencies
+      - lint
+      - test
       - build:
           requires:
-            - test
             - lint
+            - test
