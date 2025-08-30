@@ -45,40 +45,40 @@ func (a *API) RegisterRoutes(router *gin.Engine) {
 	dssGroup.POST("/recommend/execute", a.ExecuteRecommendation)
 	
 	// Model endpoints
-	dssGroup.GET("/models", a.ListModels)
-	dssGroup.POST("/models", a.CreateModel)
-	dssGroup.GET("/models/:id", a.GetModel)
-	dssGroup.PUT("/models/:id", a.UpdateModel)
-	dssGroup.DELETE("/models/:id", a.DeleteModel)
-	dssGroup.POST("/models/:id/backtest", a.BacktestModel)
+	dssGroup.GET("/models", a.handleListModels)
+	dssGroup.POST("/models", a.handleCreateModel)
+	dssGroup.GET("/models/:id", a.handleGetModel)
+	dssGroup.PUT("/models/:id", a.handleUpdateModel)
+	dssGroup.DELETE("/models/:id", a.handleDeleteModel)
+	dssGroup.POST("/models/:id/backtest", a.handleBacktestModel)
 	
 	// Backtest endpoints
-	dssGroup.POST("/backtest", a.Backtest)
-	dssGroup.GET("/backtest/:id", a.GetBacktest)
-	dssGroup.GET("/backtest/:id/trades", a.GetBacktestTrades)
-	dssGroup.GET("/backtest/:id/metrics", a.GetBacktestMetrics)
+	dssGroup.POST("/backtest", a.handleBacktest)
+	dssGroup.GET("/backtest/:id", a.handleGetBacktest)
+	dssGroup.GET("/backtest/:id/trades", a.handleGetBacktestTrades)
+	dssGroup.GET("/backtest/:id/metrics", a.handleGetBacktestMetrics)
 	
 	// Alert endpoints
-	dssGroup.POST("/alerts", a.CreateAlert)
-	dssGroup.GET("/alerts", a.ListAlerts)
-	dssGroup.GET("/alerts/:id", a.GetAlert)
-	dssGroup.PUT("/alerts/:id", a.UpdateAlert)
-	dssGroup.DELETE("/alerts/:id", a.DeleteAlert)
-	dssGroup.GET("/alerts/history", a.GetAlertHistory)
+	dssGroup.POST("/alerts", a.handleCreateAlert)
+	dssGroup.GET("/alerts", a.handleListAlerts)
+	dssGroup.GET("/alerts/:id", a.handleGetAlert)
+	dssGroup.PUT("/alerts/:id", a.handleUpdateAlert)
+	dssGroup.DELETE("/alerts/:id", a.handleDeleteAlert)
+	dssGroup.GET("/alerts/history", a.handleGetAlertHistory)
 	
 	// Webhook endpoints
-	dssGroup.POST("/webhooks", a.RegisterWebhook)
-	dssGroup.GET("/webhooks", a.ListWebhooks)
-	dssGroup.GET("/webhooks/:id", a.GetWebhook)
-	dssGroup.PUT("/webhooks/:id", a.UpdateWebhook)
-	dssGroup.DELETE("/webhooks/:id", a.DeleteWebhook)
-	dssGroup.POST("/webhooks/:id/test", a.TestWebhook)
+	dssGroup.POST("/webhooks", a.handleRegisterWebhook)
+	dssGroup.GET("/webhooks", a.handleListWebhooks)
+	dssGroup.GET("/webhooks/:id", a.handleGetWebhook)
+	dssGroup.PUT("/webhooks/:id", a.handleUpdateWebhook)
+	dssGroup.DELETE("/webhooks/:id", a.handleDeleteWebhook)
+	dssGroup.POST("/webhooks/:id/test", a.handleTestWebhook)
 	
 	// Market data endpoints
-	dssGroup.GET("/market-data/:symbol", a.GetMarketData)
-	dssGroup.GET("/market-data/:symbol/candles", a.GetCandles)
-	dssGroup.GET("/market-data/:symbol/depth", a.GetOrderBookDepth)
-	dssGroup.GET("/market-data/:symbol/trades", a.GetRecentTrades)
+	dssGroup.GET("/market-data/:symbol", a.handleGetMarketData)
+	dssGroup.GET("/market-data/:symbol/candles", a.handleGetCandles)
+	dssGroup.GET("/market-data/:symbol/depth", a.handleGetOrderBookDepth)
+	dssGroup.GET("/market-data/:symbol/trades", a.handleGetRecentTrades)
 	
 	// WebSocket endpoint
 	dssGroup.GET("/stream", a.WebSocketHandler)
@@ -511,10 +511,352 @@ func (a *API) WebSocketHandler(c *gin.Context) {
 	// and handle real-time data streaming
 }
 
-// Additional handler methods for other endpoints would be implemented here
-// ListModels, CreateModel, GetModel, UpdateModel, DeleteModel, BacktestModel
-// Backtest, GetBacktest, GetBacktestTrades, GetBacktestMetrics
-// CreateAlert, ListAlerts, GetAlert, UpdateAlert, DeleteAlert, GetAlertHistory
-// RegisterWebhook, ListWebhooks, GetWebhook, UpdateWebhook, DeleteWebhook, TestWebhook
-// GetMarketData, GetCandles, GetOrderBookDepth, GetRecentTrades
+// handleListModels handles the GET /models endpoint
+func (a *API) handleListModels(c *gin.Context) {
+	// Parse query parameters
+	limit := 10 // Default limit
+	cursor := c.Query("cursor")
+	
+	// Get user from context
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{
+				"code":    "internal_error",
+				"message": "User context not found",
+			},
+		})
+		return
+	}
+	
+	// List models
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+	
+	models, pagination, err := a.service.ListModels(ctx, user.(User), limit, cursor)
+	if err != nil {
+		a.logger.Error("Failed to list models", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{
+				"code":    "retrieval_failed",
+				"message": "Failed to retrieve models",
+				"details": err.Error(),
+			},
+		})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"models":     models,
+		"pagination": pagination,
+	})
+}
+
+// handleCreateModel handles the POST /models endpoint
+func (a *API) handleCreateModel(c *gin.Context) {
+	var request ModelRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		a.logger.Error("Invalid model request", zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"code":    "invalid_parameters",
+				"message": "Invalid parameters provided",
+				"details": err.Error(),
+			},
+		})
+		return
+	}
+	
+	// Get user from context
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{
+				"code":    "internal_error",
+				"message": "User context not found",
+			},
+		})
+		return
+	}
+	
+	// Create model
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+	
+	model, err := a.service.CreateModel(ctx, user.(User), request)
+	if err != nil {
+		a.logger.Error("Failed to create model", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{
+				"code":    "creation_failed",
+				"message": "Failed to create model",
+				"details": err.Error(),
+			},
+		})
+		return
+	}
+	
+	c.JSON(http.StatusCreated, model)
+}
+
+// handleGetModel handles the GET /models/:id endpoint
+func (a *API) handleGetModel(c *gin.Context) {
+	modelID := c.Param("id")
+	
+	// Get user from context
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{
+				"code":    "internal_error",
+				"message": "User context not found",
+			},
+		})
+		return
+	}
+	
+	// Get model
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+	
+	model, err := a.service.GetModel(ctx, user.(User), modelID)
+	if err != nil {
+		a.logger.Error("Failed to get model", zap.Error(err), zap.String("model_id", modelID))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{
+				"code":    "retrieval_failed",
+				"message": "Failed to retrieve model",
+				"details": err.Error(),
+			},
+		})
+		return
+	}
+	
+	if model == nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": gin.H{
+				"code":    "resource_not_found",
+				"message": "Model not found",
+			},
+		})
+		return
+	}
+	
+	c.JSON(http.StatusOK, model)
+}
+
+// handleUpdateModel handles the PUT /models/:id endpoint
+func (a *API) handleUpdateModel(c *gin.Context) {
+	modelID := c.Param("id")
+	
+	var request ModelRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		a.logger.Error("Invalid model update request", zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"code":    "invalid_parameters",
+				"message": "Invalid parameters provided",
+				"details": err.Error(),
+			},
+		})
+		return
+	}
+	
+	// Get user from context
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{
+				"code":    "internal_error",
+				"message": "User context not found",
+			},
+		})
+		return
+	}
+	
+	// Update model
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+	
+	model, err := a.service.UpdateModel(ctx, user.(User), modelID, request)
+	if err != nil {
+		a.logger.Error("Failed to update model", zap.Error(err), zap.String("model_id", modelID))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{
+				"code":    "update_failed",
+				"message": "Failed to update model",
+				"details": err.Error(),
+			},
+		})
+		return
+	}
+	
+	c.JSON(http.StatusOK, model)
+}
+
+// handleDeleteModel handles the DELETE /models/:id endpoint
+func (a *API) handleDeleteModel(c *gin.Context) {
+	modelID := c.Param("id")
+	
+	// Get user from context
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{
+				"code":    "internal_error",
+				"message": "User context not found",
+			},
+		})
+		return
+	}
+	
+	// Delete model
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+	
+	err := a.service.DeleteModel(ctx, user.(User), modelID)
+	if err != nil {
+		a.logger.Error("Failed to delete model", zap.Error(err), zap.String("model_id", modelID))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{
+				"code":    "deletion_failed",
+				"message": "Failed to delete model",
+				"details": err.Error(),
+			},
+		})
+		return
+	}
+	
+	c.Status(http.StatusNoContent)
+}
+
+// handleBacktestModel handles the POST /models/:id/backtest endpoint
+func (a *API) handleBacktestModel(c *gin.Context) {
+	modelID := c.Param("id")
+	
+	var request BacktestRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		a.logger.Error("Invalid backtest request", zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"code":    "invalid_parameters",
+				"message": "Invalid parameters provided",
+				"details": err.Error(),
+			},
+		})
+		return
+	}
+	
+	// Get user from context
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{
+				"code":    "internal_error",
+				"message": "User context not found",
+			},
+		})
+		return
+	}
+	
+	// Backtest model
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+	
+	result, err := a.service.BacktestModel(ctx, user.(User), modelID, request)
+	if err != nil {
+		a.logger.Error("Failed to backtest model", zap.Error(err), zap.String("model_id", modelID))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{
+				"code":    "backtest_failed",
+				"message": "Failed to backtest model",
+				"details": err.Error(),
+			},
+		})
+		return
+	}
+	
+	c.JSON(http.StatusOK, result)
+}
+
+// Additional handler methods for other endpoints
+func (a *API) handleBacktest(c *gin.Context) {
+	// Implementation for POST /backtest
+}
+
+func (a *API) handleGetBacktest(c *gin.Context) {
+	// Implementation for GET /backtest/:id
+}
+
+func (a *API) handleGetBacktestTrades(c *gin.Context) {
+	// Implementation for GET /backtest/:id/trades
+}
+
+func (a *API) handleGetBacktestMetrics(c *gin.Context) {
+	// Implementation for GET /backtest/:id/metrics
+}
+
+func (a *API) handleCreateAlert(c *gin.Context) {
+	// Implementation for POST /alerts
+}
+
+func (a *API) handleListAlerts(c *gin.Context) {
+	// Implementation for GET /alerts
+}
+
+func (a *API) handleGetAlert(c *gin.Context) {
+	// Implementation for GET /alerts/:id
+}
+
+func (a *API) handleUpdateAlert(c *gin.Context) {
+	// Implementation for PUT /alerts/:id
+}
+
+func (a *API) handleDeleteAlert(c *gin.Context) {
+	// Implementation for DELETE /alerts/:id
+}
+
+func (a *API) handleGetAlertHistory(c *gin.Context) {
+	// Implementation for GET /alerts/history
+}
+
+func (a *API) handleRegisterWebhook(c *gin.Context) {
+	// Implementation for POST /webhooks
+}
+
+func (a *API) handleListWebhooks(c *gin.Context) {
+	// Implementation for GET /webhooks
+}
+
+func (a *API) handleGetWebhook(c *gin.Context) {
+	// Implementation for GET /webhooks/:id
+}
+
+func (a *API) handleUpdateWebhook(c *gin.Context) {
+	// Implementation for PUT /webhooks/:id
+}
+
+func (a *API) handleDeleteWebhook(c *gin.Context) {
+	// Implementation for DELETE /webhooks/:id
+}
+
+func (a *API) handleTestWebhook(c *gin.Context) {
+	// Implementation for POST /webhooks/:id/test
+}
+
+func (a *API) handleGetMarketData(c *gin.Context) {
+	// Implementation for GET /market-data/:symbol
+}
+
+func (a *API) handleGetCandles(c *gin.Context) {
+	// Implementation for GET /market-data/:symbol/candles
+}
+
+func (a *API) handleGetOrderBookDepth(c *gin.Context) {
+	// Implementation for GET /market-data/:symbol/depth
+}
+
+func (a *API) handleGetRecentTrades(c *gin.Context) {
+	// Implementation for GET /market-data/:symbol/trades
+}
 

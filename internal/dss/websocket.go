@@ -1,7 +1,6 @@
 package dss
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"sync"
@@ -26,14 +25,14 @@ type WebSocketManager struct {
 
 // WebSocketClient represents a connected WebSocket client
 type WebSocketClient struct {
-	ID           string
-	User         User
-	Conn         *websocket.Conn
-	Send         chan []byte
-	Manager      *WebSocketManager
+	ID            string
+	User          User
+	Conn          *websocket.Conn
+	Send          chan []byte
+	Manager       *WebSocketManager
 	Subscriptions map[string]bool
-	SubsMutex    sync.RWMutex
-	Logger       *zap.Logger
+	SubsMutex     sync.RWMutex
+	Logger        *zap.Logger
 }
 
 // NewWebSocketManager creates a new WebSocket manager
