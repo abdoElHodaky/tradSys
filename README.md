@@ -1,277 +1,188 @@
 # TradSys - Trading System Platform
 
-TradSys is a microservices-based trading system platform built with Go and modern architecture patterns. It provides a robust foundation for building scalable and resilient trading applications with advanced decision support capabilities.
+TradSys is a comprehensive trading system platform designed for high-performance, scalable trading operations. It provides a robust foundation for building trading applications with support for various asset classes, market data integration, and advanced trading strategies.
 
 ## Features
 
-- **Service Mesh Architecture**: Built with dependency injection and modular design
-- **Distributed Trading**: Supports distributed order processing and matching
-- **Risk Management**: Integrated risk management capabilities with circuit breakers and bulkheads
-- **Market Data Processing**: Real-time and historical market data handling
-- **Monitoring**: Built-in support for metrics and tracing
-- **Decision Support Integration**: APIs for connecting with external decision support systems
-- **Event-Driven Architecture**: CQRS pattern with event sourcing
-- **Resilience Patterns**: Circuit breakers, retries, timeouts, and bulkheads
+- **Event-Driven Architecture**: Built on a modern event-driven architecture for real-time processing
+- **Microservices Design**: Modular components that can be deployed independently
+- **High Performance**: Optimized for low-latency trading operations
+- **Scalability**: Horizontal scaling capabilities for handling increased load
+- **Resilience**: Circuit breakers, rate limiting, and retry mechanisms for robust operations
+- **Extensibility**: Plugin system for custom strategies and integrations
+- **Comprehensive Monitoring**: Built-in metrics and logging for operational visibility
 
-## Architecture
+## Requirements
 
-TradSys is built using a microservices architecture with the following components:
-
-- **Order Service**: Handles order creation, validation, and lifecycle management
-- **Matching Service**: Implements order matching algorithms
-- **Risk Service**: Provides risk assessment and management
-- **Market Data Service**: Processes and distributes market data
-- **Monitoring Service**: Collects and exposes metrics
-- **Decision Support Service**: Integrates with external decision support systems and provides analytical insights
+- Go 1.19 or higher
+- PostgreSQL 13 or higher
+- Redis 6 or higher
+- NATS or Kafka for messaging
 
 ## Getting Started
 
-### Prerequisites
-
-- Go 1.19 or later
-- PostgreSQL 14 or later
-- Docker (optional, for containerized deployment)
-
 ### Installation
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/abdoElHodaky/tradSys.git
-   cd tradSys
-   ```
-
-2. Install dependencies:
-   ```bash
-   go mod tidy
-   ```
-
-3. Build the services:
-   ```bash
-   go build -o bin/ ./cmd/...
-   ```
-
-## Usage
-
-### Running Services
-
-To run a service:
-
 ```bash
-./bin/[service-name] --config=config/[service-name].yaml
+# Clone the repository
+git clone https://github.com/abdoElHodaky/tradSys.git
+cd tradSys
+
+# Install dependencies
+go mod download
+
+# Build the application
+go build -o tradsys cmd/tradsys/main.go
 ```
 
 ### Configuration
 
-Configuration is handled through YAML files in the `config/` directory. Each service has its own configuration file.
+Create a configuration file `config.yaml` in the root directory:
 
-## API Design
-
-The system exposes APIs for various trading operations. Here's an overview of the main API endpoints:
-
-### Order API
-
-- `POST /api/orders`: Create a new order
-- `GET /api/orders/{id}`: Get order details
-- `PUT /api/orders/{id}`: Update an order
-- `DELETE /api/orders/{id}`: Cancel an order
-
-### Market Data API
-
-- `GET /api/market-data/{symbol}`: Get latest market data for a symbol
-- `GET /api/market-data/{symbol}/history`: Get historical market data
-- `GET /api/market-data/{symbol}/candles`: Get OHLCV candles for a symbol
-- `GET /api/market-data/indicators/{indicator}/{symbol}`: Get technical indicator values
-
-### Risk API
-
-- `GET /api/risk/exposure`: Get current risk exposure
-- `POST /api/risk/limits`: Set risk limits
-- `GET /api/risk/circuit-breakers`: Get circuit breaker status
-- `POST /api/risk/circuit-breakers/reset`: Reset circuit breakers
-
-## Development
-
-### Project Structure
-
-```
-tradSys/
-├── cmd/                  # Service entry points
-│   ├── orders/           # Order service
-│   ├── marketdata/       # Market data service
-│   ├── risk/             # Risk service
-│   └── decisionsupport/  # Decision support service
-├── internal/             # Internal packages
-│   ├── architecture/     # Architecture components (fx, resilience)
-│   ├── config/           # Configuration
-│   ├── db/               # Database models and repositories
-│   ├── marketdata/       # Market data processing
-│   ├── plugin/           # Plugins (CQRS, event bus)
-│   ├── trading/          # Trading logic and order management
-│   ├── risk/             # Risk management
-│   └── decisionsupport/  # Decision support logic
-├── proto/                # Protocol buffers
-│   ├── orders/           # Order service definitions
-│   ├── marketdata/       # Market data service definitions
-│   ├── risk/             # Risk service definitions
-│   └── decisionsupport/  # Decision support service definitions
-└── examples/             # Example applications
+```yaml
+environment: development
+server:
+  port: 8080
+  readTimeout: 5s
+  writeTimeout: 10s
+  idleTimeout: 120s
+database:
+  driver: postgres
+  host: localhost
+  port: 5432
+  username: postgres
+  password: postgres
+  database: tradsys
+  sslMode: disable
+  maxConns: 10
+  maxIdle: 5
 ```
 
-### Adding a New Service
+### Running
 
-1. Create a new directory in `cmd/`
-2. Define service interfaces in `proto/`
-3. Implement the service in `internal/`
-4. Update configuration in `config/`
+```bash
+# Run the application
+./tradsys --config config.yaml
+```
 
-## Decision Support System Integration
+## Architecture
 
-TradSys provides comprehensive integration with external decision support systems through a dedicated API. This integration allows for:
+TradSys is built on a microservices architecture with the following components:
 
-- Real-time trading recommendations
-- Market insights and analysis
-- Portfolio optimization
-- Scenario analysis and backtesting
-- Risk assessment and alerts
+- **API Gateway**: Entry point for external requests
+- **Order Service**: Handles order management and execution
+- **Market Data Service**: Processes and distributes market data
+- **Strategy Service**: Executes trading strategies
+- **Risk Management Service**: Enforces risk controls
+- **Position Service**: Tracks positions and exposures
+- **Authentication Service**: Manages user authentication and authorization
 
-### Decision Support System API Design
+## Decision Support System API
 
-The Decision Support System (DSS) API is designed to be flexible and extensible, allowing integration with various external systems. The API follows RESTful principles and uses JSON for data exchange, with additional support for gRPC and WebSocket protocols for high-performance use cases.
+The Decision Support System (DSS) API provides advanced analytics and decision-making capabilities for trading strategies. It integrates with the core trading platform to provide real-time insights and recommendations.
 
-#### Key API Endpoints
-
-1. **Analysis Endpoint**
-   - `POST /api/decision-support/analyze`
-   - Submits market data, portfolio information, and other parameters for analysis
-   - Returns analysis results including recommendations and insights
-   - Supports both synchronous and asynchronous processing modes
-
-2. **Recommendation Endpoint**
-   - `GET /api/decision-support/recommendations`
-   - Retrieves trading recommendations based on current market conditions
-   - Supports filtering by instrument, strategy, and confidence level
-   - Provides pagination and sorting options
-
-3. **Scenario Analysis**
-   - `POST /api/decision-support/scenarios`
-   - Runs what-if scenarios with different market conditions
-   - Returns potential outcomes and risk assessments
-   - Supports batch processing of multiple scenarios
-
-4. **Backtesting**
-   - `POST /api/decision-support/backtest`
-   - Tests strategies against historical data
-   - Returns performance metrics and optimization suggestions
-   - Supports long-running jobs with status tracking
-
-5. **Portfolio Optimization**
-   - `GET /api/decision-support/portfolio/optimize`
-   - Provides portfolio optimization recommendations
-   - Supports different optimization objectives (risk, return, Sharpe ratio)
-   - Allows constraints specification (sector exposure, max position size)
-
-6. **Alerts Configuration**
-   - `POST /api/decision-support/alerts/configure`
-   - Configures alerts based on market conditions or analysis results
-   - Supports different notification channels (webhook, email, SMS)
-   - Allows complex condition definitions using a rule engine
-
-7. **Model Management**
-   - `POST /api/decision-support/models`
-   - Registers custom decision models for use in analysis
-   - Supports model versioning and A/B testing
-   - Provides model performance metrics
-
-8. **Real-time Insights**
-   - `GET /api/decision-support/insights/{symbol}`
-   - Provides real-time market insights for specific symbols
-   - Supports WebSocket connections for streaming updates
-   - Includes sentiment analysis and news impact assessment
-
-#### Integration Patterns
+### Integration Patterns
 
 The DSS API supports multiple integration patterns:
 
-1. **Synchronous Request-Response**
-   - Direct API calls for immediate analysis and recommendations
-   - Suitable for user-initiated actions
-   - Implements circuit breakers and timeouts for resilience
+1. **Synchronous Request-Response**: For immediate analysis and recommendations
+2. **Asynchronous Processing**: For complex, time-consuming operations
+3. **Event-Driven Integration**: For real-time updates based on market events
+4. **Streaming Data**: Via WebSockets for continuous updates
+5. **Batch Processing**: For large datasets and historical analysis
 
-2. **Asynchronous Processing**
-   - Submit analysis jobs that run in the background
-   - Poll job status or receive webhook notifications when complete
-   - Supports job cancellation and priority settings
-   - Ideal for complex, time-consuming analysis
+### API Endpoints
 
-3. **Event-Driven Integration**
-   - Subscribe to events and receive updates when conditions change
-   - Supports WebHooks for push notifications
-   - Implements the publish-subscribe pattern for real-time updates
-   - Provides event filtering and transformation capabilities
+#### Analysis Endpoints
 
-4. **Streaming Data**
-   - WebSocket API for continuous stream of recommendations and insights
-   - Supports server-sent events (SSE) for one-way streaming
-   - Provides connection management with automatic reconnection
-   - Implements backpressure handling for high-volume data
+- `POST /api/v1/dss/analyze`: Analyze market data and provide insights
+- `POST /api/v1/dss/recommend`: Generate trading recommendations
+- `POST /api/v1/dss/backtest`: Run backtesting on historical data
+- `POST /api/v1/dss/scenario`: Perform scenario analysis
 
-5. **Batch Processing**
-   - Bulk API endpoints for processing large datasets
-   - Supports CSV and JSON data formats
-   - Provides pagination and cursor-based result retrieval
-   - Implements rate limiting and quota management
+#### Configuration Endpoints
 
-#### API Versioning and Compatibility
+- `GET /api/v1/dss/models`: List available analysis models
+- `POST /api/v1/dss/models`: Create a new analysis model
+- `GET /api/v1/dss/models/{id}`: Get details of a specific model
+- `PUT /api/v1/dss/models/{id}`: Update a model
+- `DELETE /api/v1/dss/models/{id}`: Delete a model
 
-The DSS API implements versioning to ensure backward compatibility:
+#### Real-time Endpoints
 
-- API versions are specified in the URL path (e.g., `/api/v1/decision-support/analyze`)
-- Changes to request/response formats are documented in the API changelog
-- Deprecated endpoints are marked and maintained for a transition period
-- New features are added in a backward-compatible manner when possible
+- `GET /api/v1/dss/stream`: WebSocket endpoint for real-time insights
+- `POST /api/v1/dss/alerts`: Configure real-time alerts
+- `GET /api/v1/dss/alerts`: List configured alerts
 
-#### Authentication and Security
+### Authentication and Security
 
-The DSS API uses OAuth 2.0 for authentication and supports role-based access control:
+The DSS API uses OAuth 2.0 for authentication with JWT tokens. All endpoints require authentication except for public documentation endpoints.
 
-- JWT tokens for authentication with configurable expiration
-- Fine-grained permissions for different API operations
-- Rate limiting based on client identity
-- All API requests are encrypted using TLS
-- Audit logging for security monitoring
+```
+Authorization: Bearer <jwt_token>
+```
 
-#### Performance Considerations
+### Rate Limiting
 
-The API is designed for high performance and scalability:
+API endpoints are rate-limited to ensure fair usage:
 
-- Horizontal scaling of API endpoints
-- Response caching for frequently accessed data
-- Compression for large payloads
-- Connection pooling for database and external service connections
-- Asynchronous processing for compute-intensive operations
+- 100 requests per minute for standard users
+- 1000 requests per minute for premium users
 
-#### Error Handling
+### Error Handling
 
-The API implements consistent error handling:
+The API uses standard HTTP status codes and returns detailed error messages:
 
-- Standard error response format with error codes and messages
-- Detailed error information for debugging (configurable)
-- Validation errors with field-specific details
-- Retry suggestions for transient errors
-- Rate limit information in response headers
+```json
+{
+  "error": {
+    "code": "invalid_parameters",
+    "message": "Invalid parameters provided",
+    "details": {
+      "field": "timeframe",
+      "issue": "must be one of: 1m, 5m, 15m, 1h, 1d"
+    }
+  }
+}
+```
 
-#### SDK and Client Libraries
+## Development
 
-To facilitate integration, TradSys provides:
+### Testing
 
-- Official client SDKs for popular languages (Go, Python, JavaScript)
-- OpenAPI/Swagger documentation for API exploration
-- Code samples for common integration scenarios
-- Postman collection for testing API endpoints
+```bash
+# Run all tests
+go test ./...
 
-For detailed API documentation, see [Decision Support API](docs/decision-support-api.md).
+# Run specific tests
+go test ./internal/trading/...
+```
+
+### Code Style
+
+We follow standard Go code style guidelines. Run the following before committing:
+
+```bash
+# Format code
+go fmt ./...
+
+# Lint code
+golangci-lint run
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/my-feature`
+3. Commit your changes: `git commit -am 'Add my feature'`
+4. Push to the branch: `git push origin feature/my-feature`
+5. Submit a pull request
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Contact
+
+For questions or support, please contact [abdo.arh38@yahoo.com](mailto:abdo.arh38@yahoo.com).
 
