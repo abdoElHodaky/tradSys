@@ -3,9 +3,7 @@ package sandbox
 import (
 	"crypto/x509"
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
 	"sync"
 
 	"go.uber.org/zap"
@@ -66,12 +64,12 @@ type VulnerabilityScanner struct {
 func NewVulnerabilityScanner(logger *zap.Logger) *VulnerabilityScanner {
 	return &VulnerabilityScanner{
 		ScanPatterns: []string{
-			"eval\\(",                // Dangerous eval usage
-			"exec\\(",                // Command execution
-			"os\\.Open\\(\".*/",      // Absolute path file access
-			"net\\.Dial\\(",          // Network access
-			"unsafe\\.",              // Unsafe package usage
-			"runtime\\.SetFinalizer", // Runtime manipulation
+			"eval\\\\(",                // Dangerous eval usage
+			"exec\\\\(",                // Command execution
+			"os\\\\.Open\\\\(\\\".*/",      // Absolute path file access
+			"net\\\\.Dial\\\\(",          // Network access
+			"unsafe\\\\.",              // Unsafe package usage
+			"runtime\\\\.SetFinalizer", // Runtime manipulation
 		},
 		Logger: logger,
 	}
@@ -231,3 +229,4 @@ func CalculatePluginChecksum(pluginPath string) (string, error) {
 	// For now, just return a placeholder
 	return "checksum-placeholder", nil
 }
+

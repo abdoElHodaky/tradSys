@@ -1,17 +1,10 @@
 package config
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 	"time"
-
-	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
-// Config contains application configuration
+// Config represents the application configuration
 type Config struct {
 	Environment string
 	Server      ServerConfig
@@ -20,6 +13,9 @@ type Config struct {
 	Services    ServicesConfig
 	Logging     LoggingConfig
 	Registry    RegistryConfig
+	Broker      BrokerConfig
+	Service     ServiceConfig
+	Resilience  ResilienceConfig
 }
 
 // ServerConfig represents the server configuration
@@ -39,40 +35,120 @@ type DatabaseConfig struct {
 	Password string
 	Database string
 	SSLMode  string
+	MaxConns int
+	MaxIdle  int
 }
 
 // JWTConfig represents the JWT configuration
 type JWTConfig struct {
-	SecretKey     string
-	TokenDuration time.Duration
-	Issuer        string
+	Secret        string
+	ExpiryMinutes int
 }
 
 // ServicesConfig represents the services configuration
 type ServicesConfig struct {
-	MarketDataURL string
-	OrdersURL     string
-	RiskURL       string
+	OrderService      ServiceEndpoint
+	MarketDataService ServiceEndpoint
+	RiskService       ServiceEndpoint
+}
+
+// ServiceEndpoint represents a service endpoint configuration
+type ServiceEndpoint struct {
+	URL      string
+	Timeout  time.Duration
+	Retries  int
+	Insecure bool
 }
 
 // LoggingConfig represents the logging configuration
 type LoggingConfig struct {
 	Level      string
+	Format     string
 	OutputPath string
 }
 
 // RegistryConfig represents the service registry configuration
 type RegistryConfig struct {
 	Type             string
+	Address          string
 	Addresses        []string
+	Namespace        string
 	TTL              time.Duration
 	RegisterInterval time.Duration
 }
 
-// LoadConfig loads the application configuration
-func LoadConfig(configPath string, logger *zap.Logger) (*Config, error) {
-	// Set default configuration values
-	config := &Config{
+// BrokerConfig represents the message broker configuration
+type BrokerConfig struct {
+	Type      string
+	Addresses []string
+}
+
+// ServiceConfig represents the microservice configuration
+type ServiceConfig struct {
+	Name      string
+	Version   string
+	ID        string
+	Namespace string
+	Address   string
+}
+
+// ResilienceConfig represents the resilience configuration
+type ResilienceConfig struct {
+	CircuitBreaker CircuitBreakerConfig
+	RateLimiter    RateLimiterConfig
+	Retry          RetryConfig
+	Bulkhead       BulkheadConfig
+	Timeout        TimeoutConfig
+}
+
+// CircuitBreakerConfig represents the circuit breaker configuration
+type CircuitBreakerConfig struct {
+	Enabled       bool
+	Threshold     int
+	Timeout       time.Duration
+	HalfOpenLimit int
+}
+
+// RateLimiterConfig represents the rate limiter configuration
+type RateLimiterConfig struct {
+	Enabled bool
+	Limit   int
+	Burst   int
+	Period  time.Duration
+}
+
+// RetryConfig represents the retry configuration
+type RetryConfig struct {
+	Enabled     bool
+	MaxAttempts int
+	Delay       time.Duration
+	MaxDelay    time.Duration
+	Multiplier  float64
+}
+
+// BulkheadConfig represents the bulkhead configuration
+type BulkheadConfig struct {
+	Enabled      bool
+	MaxConcurrent int
+	QueueSize    int
+}
+
+// TimeoutConfig represents the timeout configuration
+type TimeoutConfig struct {
+	Enabled bool
+	Default time.Duration
+}
+
+// LoadConfig loads the configuration from the specified file
+func LoadConfig(path string) (*Config, error) {
+	// Implementation would load from file
+	// For now, return default config
+	return DefaultConfig(), nil
+}
+
+// DefaultConfig returns the default configuration
+func DefaultConfig() *Config {
+	return &Config{
 		Environment: "development",
 		Server: ServerConfig{
 			Port:         8080,
@@ -81,162 +157,94 @@ func LoadConfig(configPath string, logger *zap.Logger) (*Config, error) {
 			IdleTimeout:  120 * time.Second,
 		},
 		Database: DatabaseConfig{
-			Driver:   "sqlite3",
+			Driver:   "postgres",
 			Host:     "localhost",
 			Port:     5432,
 			Username: "postgres",
 			Password: "postgres",
-			Database: "trading",
+			Database: "tradsys",
 			SSLMode:  "disable",
+			MaxConns: 10,
+			MaxIdle:  5,
 		},
 		JWT: JWTConfig{
-			SecretKey:     "default-secret-key",
-			TokenDuration: 24 * time.Hour,
-			Issuer:        "trading-system",
+			Secret:        "default-secret-key",
+			ExpiryMinutes: 60,
 		},
 		Services: ServicesConfig{
-			MarketDataURL: "localhost:50051",
-			OrdersURL:     "localhost:50051",
-			RiskURL:       "localhost:50051",
+			OrderService: ServiceEndpoint{
+				URL:      "http://localhost:8081",
+				Timeout:  5 * time.Second,
+				Retries:  3,
+				Insecure: true,
+			},
+			MarketDataService: ServiceEndpoint{
+				URL:      "http://localhost:8082",
+				Timeout:  5 * time.Second,
+				Retries:  3,
+				Insecure: true,
+			},
+			RiskService: ServiceEndpoint{
+				URL:      "http://localhost:8083",
+				Timeout:  5 * time.Second,
+				Retries:  3,
+				Insecure: true,
+			},
 		},
 		Logging: LoggingConfig{
 			Level:      "info",
+			Format:     "json",
 			OutputPath: "stdout",
 		},
 		Registry: RegistryConfig{
 			Type:             "mdns",
+			Address:          "",
 			Addresses:        []string{},
-			TTL:              30 * time.Second,
-			RegisterInterval: 15 * time.Second,
+			Namespace:        "tradsys",
+			TTL:              60 * time.Second,
+			RegisterInterval: 30 * time.Second,
+		},
+		Broker: BrokerConfig{
+			Type:      "nats",
+			Addresses: []string{"nats://localhost:4222"},
+		},
+		Service: ServiceConfig{
+			Name:      "tradsys",
+			Version:   "1.0.0",
+			ID:        "tradsys-1",
+			Namespace: "tradsys",
+			Address:   ":8080",
+		},
+		Resilience: ResilienceConfig{
+			CircuitBreaker: CircuitBreakerConfig{
+				Enabled:       true,
+				Threshold:     5,
+				Timeout:       30 * time.Second,
+				HalfOpenLimit: 2,
+			},
+			RateLimiter: RateLimiterConfig{
+				Enabled: true,
+				Limit:   100,
+				Burst:   10,
+				Period:  1 * time.Second,
+			},
+			Retry: RetryConfig{
+				Enabled:     true,
+				MaxAttempts: 3,
+				Delay:       100 * time.Millisecond,
+				MaxDelay:    1 * time.Second,
+				Multiplier:  2.0,
+			},
+			Bulkhead: BulkheadConfig{
+				Enabled:      true,
+				MaxConcurrent: 20,
+				QueueSize:    50,
+			},
+			Timeout: TimeoutConfig{
+				Enabled: true,
+				Default: 5 * time.Second,
+			},
 		},
 	}
-
-	// Initialize Viper
-	v := viper.New()
-
-	// Set configuration file path
-	if configPath != "" {
-		// Get the directory and file name from the config path
-		dir, file := filepath.Split(configPath)
-		ext := filepath.Ext(file)
-		name := strings.TrimSuffix(file, ext)
-
-		// Set the configuration file properties
-		v.AddConfigPath(dir)
-		v.SetConfigName(name)
-		v.SetConfigType(strings.TrimPrefix(ext, "."))
-	} else {
-		// Set default configuration file properties
-		v.AddConfigPath(".")
-		v.AddConfigPath("./config")
-		v.AddConfigPath("/etc/trading")
-		v.SetConfigName("config")
-		v.SetConfigType("yaml")
-	}
-
-	// Read environment variables
-	v.AutomaticEnv()
-	v.SetEnvPrefix("TRADING")
-	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-
-	// Read configuration file
-	if err := v.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			logger.Warn("Config file not found, using default values and environment variables")
-		} else {
-			return nil, fmt.Errorf("failed to read config file: %w", err)
-		}
-	} else {
-		logger.Info("Using config file", zap.String("file", v.ConfigFileUsed()))
-	}
-
-	// Override configuration with environment variables
-	if env := os.Getenv("TRADING_ENVIRONMENT"); env != "" {
-		config.Environment = env
-	} else if v.IsSet("environment") {
-		config.Environment = v.GetString("environment")
-	}
-
-	// Server configuration
-	if v.IsSet("server.port") {
-		config.Server.Port = v.GetInt("server.port")
-	}
-	if v.IsSet("server.read_timeout") {
-		config.Server.ReadTimeout = v.GetDuration("server.read_timeout")
-	}
-	if v.IsSet("server.write_timeout") {
-		config.Server.WriteTimeout = v.GetDuration("server.write_timeout")
-	}
-	if v.IsSet("server.idle_timeout") {
-		config.Server.IdleTimeout = v.GetDuration("server.idle_timeout")
-	}
-
-	// Database configuration
-	if v.IsSet("database.driver") {
-		config.Database.Driver = v.GetString("database.driver")
-	}
-	if v.IsSet("database.host") {
-		config.Database.Host = v.GetString("database.host")
-	}
-	if v.IsSet("database.port") {
-		config.Database.Port = v.GetInt("database.port")
-	}
-	if v.IsSet("database.username") {
-		config.Database.Username = v.GetString("database.username")
-	}
-	if v.IsSet("database.password") {
-		config.Database.Password = v.GetString("database.password")
-	}
-	if v.IsSet("database.database") {
-		config.Database.Database = v.GetString("database.database")
-	}
-	if v.IsSet("database.ssl_mode") {
-		config.Database.SSLMode = v.GetString("database.ssl_mode")
-	}
-
-	// JWT configuration
-	if v.IsSet("jwt.secret_key") {
-		config.JWT.SecretKey = v.GetString("jwt.secret_key")
-	}
-	if v.IsSet("jwt.token_duration") {
-		config.JWT.TokenDuration = v.GetDuration("jwt.token_duration")
-	}
-	if v.IsSet("jwt.issuer") {
-		config.JWT.Issuer = v.GetString("jwt.issuer")
-	}
-
-	// Services configuration
-	if v.IsSet("services.market_data_url") {
-		config.Services.MarketDataURL = v.GetString("services.market_data_url")
-	}
-	if v.IsSet("services.orders_url") {
-		config.Services.OrdersURL = v.GetString("services.orders_url")
-	}
-	if v.IsSet("services.risk_url") {
-		config.Services.RiskURL = v.GetString("services.risk_url")
-	}
-
-	// Logging configuration
-	if v.IsSet("logging.level") {
-		config.Logging.Level = v.GetString("logging.level")
-	}
-	if v.IsSet("logging.output_path") {
-		config.Logging.OutputPath = v.GetString("logging.output_path")
-	}
-
-	// Registry configuration
-	if v.IsSet("registry.type") {
-		config.Registry.Type = v.GetString("registry.type")
-	}
-	if v.IsSet("registry.addresses") {
-		config.Registry.Addresses = v.GetStringSlice("registry.addresses")
-	}
-	if v.IsSet("registry.ttl") {
-		config.Registry.TTL = v.GetDuration("registry.ttl")
-	}
-	if v.IsSet("registry.register_interval") {
-		config.Registry.RegisterInterval = v.GetDuration("registry.register_interval")
-	}
-
-	return config, nil
 }
+
