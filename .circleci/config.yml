@@ -12,10 +12,10 @@ commands:
   setup_go:
     steps:
       - run:
-          name: Install Go 1.22
+          name: Install Go 1.23
           command: |
-            curl -LO https://go.dev/dl/go1.22.1.linux-amd64.tar.gz
-            sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.22.1.linux-amd64.tar.gz
+            curl -LO https://go.dev/dl/go1.23.11.linux-amd64.tar.gz
+            sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.23.11.linux-amd64.tar.gz
             echo 'export PATH=$PATH:/usr/local/go/bin' >> $BASH_ENV
             source $BASH_ENV
             go version
@@ -40,7 +40,7 @@ jobs:
             - go-mod-v1-{{ checksum "go.sum" }}
       - run: 
           command: |
-            go get -u ./...
+            
             go mod tidy
             go mod download
       - run:
@@ -64,7 +64,7 @@ jobs:
             - go-mod-v1-{{ checksum "go.sum" }}
       - run: 
           command: |
-            go get -u ./...
+            
             go mod tidy
             go mod download
       - run:
@@ -90,7 +90,7 @@ jobs:
             - go-mod-v1-{{ checksum "go.sum" }}
       - run: 
           command: |
-            go get -u ./...
+            
             go mod tidy
             go mod download
       - run:
