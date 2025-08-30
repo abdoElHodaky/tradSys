@@ -75,7 +75,7 @@ jobs:
           name: Run tests
           command: |
             mkdir -p test-results
-            go test -v ./internal | tee test-results/test-output.txt
+            go test -v  internal/tests | tee test-results/test-output.txt
       - store_test_results:
           path: test-results
 
