@@ -1,181 +1,201 @@
-# Decision Support System Integration API
+# Decision Support System API Documentation
 
-This document outlines the API design for integrating TradSys with external decision support systems.
-
-## Overview
-
-The Decision Support API provides a comprehensive interface for connecting TradSys with external decision support systems. It enables bidirectional data flow, allowing trading systems to send market data and receive trading recommendations, risk assessments, and portfolio optimization suggestions.
-
-## Authentication
-
-All API endpoints require JWT authentication. Tokens can be obtained through the standard authentication endpoints.
-
-```
-Authorization: Bearer <jwt_token>
-```
+This document provides detailed information about the Decision Support System (DSS) API for TradSys. The DSS API enables integration with external decision support systems and provides analytical capabilities for trading decisions.
 
 ## API Endpoints
 
-### Data Analysis
+### Analysis
 
-#### Submit Data for Analysis
+#### Analyze Market Data
 
 ```
 POST /api/decision-support/analyze
 ```
 
-Submit trading data for analysis by the decision support system.
+Analyzes market data and provides trading recommendations.
 
 **Request Body:**
+
 ```json
 {
-  "data_type": "market_data|order_flow|portfolio|custom",
-  "time_range": {
-    "start": "2023-01-01T00:00:00Z",
-    "end": "2023-01-31T23:59:59Z"
-  },
-  "symbols": ["AAPL", "MSFT", "GOOGL"],
-  "additional_parameters": {
-    "key1": "value1",
-    "key2": "value2"
-  },
-  "analysis_type": "technical|fundamental|sentiment|ml_prediction"
-}
-```
-
-**Response:**
-```json
-{
-  "analysis_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "status": "processing|completed|failed",
-  "estimated_completion_time": "2023-02-01T01:30:00Z",
-  "result_endpoint": "/api/decision-support/analysis/a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-}
-```
-
-#### Get Analysis Results
-
-```
-GET /api/decision-support/analysis/{analysis_id}
-```
-
-Retrieve the results of a previously submitted analysis request.
-
-**Response:**
-```json
-{
-  "analysis_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "status": "completed",
-  "created_at": "2023-02-01T01:00:00Z",
-  "completed_at": "2023-02-01T01:15:00Z",
-  "results": {
-    "summary": "Market shows bullish trend for technology sector",
-    "details": {
-      "technical_indicators": { ... },
-      "sentiment_analysis": { ... },
-      "predictions": { ... }
-    },
-    "confidence_score": 0.85
+  "symbol": "AAPL",
+  "timeframe": "1h",
+  "start_time": "2023-01-01T00:00:00Z",
+  "end_time": "2023-01-31T23:59:59Z",
+  "indicators": ["rsi", "macd", "bollinger"],
+  "parameters": {
+    "rsi_period": 14,
+    "macd_fast": 12,
+    "macd_slow": 26,
+    "macd_signal": 9,
+    "bollinger_period": 20,
+    "bollinger_std": 2
   }
 }
 ```
 
-### Trading Recommendations
+**Response:**
 
-#### Get Trading Recommendations
+```json
+[
+  {
+    "symbol": "AAPL",
+    "action": "buy",
+    "price": 150.25,
+    "quantity": 10,
+    "confidence": 75.5,
+    "rationale": "RSI indicates oversold condition, MACD shows bullish crossover",
+    "timestamp": "2023-01-31T15:30:00Z",
+    "expires_at": "2023-02-01T15:30:00Z",
+    "indicators": {
+      "rsi": 32.5,
+      "macd": 0.75,
+      "trend": 1.0
+    }
+  }
+]
+```
+
+### Recommendations
+
+#### Get Recommendations
 
 ```
-GET /api/decision-support/recommendations
+GET /api/decision-support/recommendations?symbol=AAPL&limit=5
 ```
 
-Get trading recommendations based on current market conditions and portfolio.
+Retrieves trading recommendations for a specific symbol or all symbols.
 
 **Query Parameters:**
-- `symbols` (optional): Comma-separated list of symbols
-- `strategy` (optional): Strategy type (e.g., "conservative", "aggressive")
-- `time_horizon` (optional): Time horizon for recommendations (e.g., "short_term", "long_term")
+
+- `symbol` (optional): Trading symbol to get recommendations for
+- `limit` (optional): Maximum number of recommendations to return (default: 10)
 
 **Response:**
+
 ```json
-{
-  "recommendations": [
-    {
-      "symbol": "AAPL",
-      "action": "buy|sell|hold",
-      "price_target": 150.00,
-      "confidence": 0.78,
-      "time_horizon": "short_term",
-      "reasoning": "Strong earnings report and positive technical indicators",
-      "risk_assessment": "low|medium|high"
-    },
-    {
-      "symbol": "MSFT",
-      "action": "hold",
-      "confidence": 0.65,
-      "time_horizon": "medium_term",
-      "reasoning": "Current price aligned with fair value estimate",
-      "risk_assessment": "low"
+[
+  {
+    "symbol": "AAPL",
+    "action": "buy",
+    "price": 150.25,
+    "quantity": 10,
+    "confidence": 75.5,
+    "rationale": "RSI indicates oversold condition, MACD shows bullish crossover",
+    "timestamp": "2023-01-31T15:30:00Z",
+    "expires_at": "2023-02-01T15:30:00Z",
+    "indicators": {
+      "rsi": 32.5,
+      "macd": 0.75,
+      "trend": 1.0
     }
-  ],
-  "generated_at": "2023-02-01T02:30:00Z",
-  "valid_until": "2023-02-01T14:30:00Z"
-}
+  },
+  {
+    "symbol": "MSFT",
+    "action": "sell",
+    "price": 250.75,
+    "quantity": 5,
+    "confidence": 65.0,
+    "rationale": "Approaching resistance level with bearish divergence",
+    "timestamp": "2023-01-31T14:45:00Z",
+    "expires_at": "2023-02-01T14:45:00Z",
+    "indicators": {
+      "rsi": 72.5,
+      "macd": -0.5,
+      "trend": -0.5
+    }
+  }
+]
 ```
 
 ### Scenario Analysis
 
-#### Get Scenario Analysis
+#### Analyze Scenarios
 
 ```
-GET /api/decision-support/scenarios
+POST /api/decision-support/scenarios
 ```
 
-Get scenario analysis for different market conditions.
+Analyzes different market scenarios and their potential impact.
 
-**Query Parameters:**
-- `portfolio_id` (required): ID of the portfolio to analyze
-- `scenario_type` (optional): Type of scenario (e.g., "market_crash", "interest_rate_hike", "custom")
+**Request Body:**
 
-**Response:**
 ```json
 {
+  "base_symbol": "SPY",
   "scenarios": [
     {
-      "name": "Market Correction (-10%)",
-      "probability": 0.25,
-      "impact": {
-        "portfolio_value_change": -7.5,
-        "var_95": -12.3,
-        "max_drawdown": 15.2
-      },
-      "recommended_actions": [
-        {
-          "action": "increase_hedge",
-          "details": "Increase hedging positions by 5%"
-        },
-        {
-          "action": "rebalance",
-          "details": "Reduce technology exposure by 3%"
-        }
-      ]
+      "name": "bullish",
+      "description": "Market continues upward trend",
+      "price_change": 0.05,
+      "volatility_change": -0.1,
+      "probability": 0.6,
+      "additional_factors": {
+        "interest_rate_change": 0.0025,
+        "economic_growth": "strong"
+      }
     },
     {
-      "name": "Strong Bull Market (+15%)",
-      "probability": 0.35,
-      "impact": {
-        "portfolio_value_change": 12.8,
-        "var_95": -5.1,
-        "max_drawdown": 7.5
-      },
-      "recommended_actions": [
-        {
-          "action": "increase_leverage",
-          "details": "Increase position sizes in high-beta stocks"
-        }
-      ]
+      "name": "bearish",
+      "description": "Market reverses into downtrend",
+      "price_change": -0.08,
+      "volatility_change": 0.3,
+      "probability": 0.3,
+      "additional_factors": {
+        "interest_rate_change": 0.005,
+        "economic_growth": "weak"
+      }
     }
   ],
-  "analysis_date": "2023-02-01T03:00:00Z"
+  "portfolio": {
+    "positions": [
+      {
+        "symbol": "AAPL",
+        "quantity": 100,
+        "entry_price": 145.75,
+        "current_price": 150.25,
+        "unrealized_pl": 450.0
+      },
+      {
+        "symbol": "MSFT",
+        "quantity": 50,
+        "entry_price": 240.50,
+        "current_price": 250.75,
+        "unrealized_pl": 512.5
+      }
+    ],
+    "cash": 10000.0,
+    "total_value": 35000.0
+  },
+  "risk_parameters": {
+    "max_drawdown": 0.1,
+    "var_confidence": 0.95,
+    "risk_free_rate": 0.03
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "bullish": {
+    "expected_return": 1750.0,
+    "risk": 0.05,
+    "probability": 0.6,
+    "recommended_actions": ["increase_tech_exposure", "reduce_cash"]
+  },
+  "bearish": {
+    "expected_return": -2800.0,
+    "risk": 0.15,
+    "probability": 0.3,
+    "recommended_actions": ["hedge_with_puts", "increase_defensive_positions"]
+  },
+  "overall_assessment": {
+    "expected_return": 350.0,
+    "risk_level": "moderate",
+    "confidence": 0.7
+  }
 }
 ```
 
@@ -187,89 +207,70 @@ Get scenario analysis for different market conditions.
 POST /api/decision-support/backtest
 ```
 
-Run a backtest with specified parameters.
+Runs a backtest of a trading strategy against historical data.
 
 **Request Body:**
+
 ```json
 {
-  "strategy": {
-    "name": "Moving Average Crossover",
-    "parameters": {
-      "short_period": 10,
-      "long_period": 50,
-      "position_sizing": "fixed|percent|kelly"
-    }
-  },
-  "symbols": ["AAPL", "MSFT", "GOOGL"],
-  "time_range": {
-    "start": "2022-01-01T00:00:00Z",
-    "end": "2022-12-31T23:59:59Z"
-  },
-  "initial_capital": 100000,
-  "commission_model": {
-    "type": "fixed|percentage",
-    "value": 0.001
+  "strategy": "momentum",
+  "symbols": ["AAPL", "MSFT", "AMZN"],
+  "start_time": "2022-01-01T00:00:00Z",
+  "end_time": "2022-12-31T23:59:59Z",
+  "initial_capital": 100000.0,
+  "parameters": {
+    "lookback_period": 20,
+    "momentum_threshold": 0.05,
+    "position_size": 0.1,
+    "stop_loss": 0.05,
+    "take_profit": 0.15
   }
 }
 ```
 
 **Response:**
+
 ```json
 {
-  "backtest_id": "b1c2d3e4-f5g6-7890-abcd-ef1234567890",
-  "status": "processing|completed|failed",
-  "estimated_completion_time": "2023-02-01T04:00:00Z",
-  "result_endpoint": "/api/decision-support/backtest/b1c2d3e4-f5g6-7890-abcd-ef1234567890"
-}
-```
-
-#### Get Backtest Results
-
-```
-GET /api/decision-support/backtest/{backtest_id}
-```
-
-Get the results of a previously run backtest.
-
-**Response:**
-```json
-{
-  "backtest_id": "b1c2d3e4-f5g6-7890-abcd-ef1234567890",
-  "status": "completed",
-  "strategy": {
-    "name": "Moving Average Crossover",
-    "parameters": {
-      "short_period": 10,
-      "long_period": 50
-    }
-  },
-  "performance": {
-    "total_return": 15.7,
-    "annualized_return": 12.3,
-    "sharpe_ratio": 1.2,
-    "max_drawdown": 8.5,
-    "win_rate": 0.65,
-    "profit_factor": 1.8
-  },
+  "strategy": "momentum",
+  "start_time": "2022-01-01T00:00:00Z",
+  "end_time": "2022-12-31T23:59:59Z",
+  "initial_capital": 100000.0,
+  "final_capital": 125000.0,
+  "total_return": 0.25,
+  "annualized_return": 0.25,
+  "sharpe_ratio": 1.2,
+  "max_drawdown": 0.12,
+  "win_rate": 0.65,
   "trades": [
     {
       "symbol": "AAPL",
-      "entry_date": "2022-02-15T10:30:00Z",
-      "entry_price": 145.50,
-      "exit_date": "2022-03-10T15:45:00Z",
-      "exit_price": 158.75,
-      "profit_loss": 9.11,
-      "profit_loss_percent": 9.11
+      "entry_time": "2022-01-15T10:30:00Z",
+      "entry_price": 170.25,
+      "exit_time": "2022-02-10T15:45:00Z",
+      "exit_price": 175.50,
+      "quantity": 100,
+      "profit_loss": 525.0,
+      "side": "buy"
     },
-    // More trades...
-  ],
-  "equity_curve": [
     {
-      "date": "2022-01-01T00:00:00Z",
-      "equity": 100000
-    },
-    // More equity points...
-  ]
+      "symbol": "MSFT",
+      "entry_time": "2022-02-01T09:30:00Z",
+      "entry_price": 310.75,
+      "exit_time": "2022-02-15T16:00:00Z",
+      "exit_price": 300.25,
+      "quantity": 50,
+      "profit_loss": -525.0,
+      "side": "buy"
+    }
+  ],
+  "equity_curve": {
+    "2022-01-01": 100000.0,
+    "2022-01-15": 100525.0,
+    "2022-02-01": 101050.0,
+    "2022-02-15": 100525.0,
+    "2022-12-31": 125000.0
+  }
 }
 ```
 
@@ -278,406 +279,406 @@ Get the results of a previously run backtest.
 #### Get Market Insights
 
 ```
-GET /api/decision-support/insights/{symbol}
+GET /api/decision-support/insights/AAPL
 ```
 
-Get detailed market insights for a specific symbol.
-
-**Query Parameters:**
-- `time_range` (optional): Time range for analysis (e.g., "1d", "1w", "1m", "3m", "1y")
-- `insight_types` (optional): Types of insights to include (e.g., "technical,fundamental,sentiment")
+Retrieves market insights for a specific symbol.
 
 **Response:**
+
 ```json
 {
-  "symbol": "AAPL",
-  "last_price": 145.86,
-  "change_percent": 1.25,
-  "insights": {
-    "technical": {
-      "trend": "bullish|bearish|neutral",
-      "support_levels": [140.50, 138.20],
-      "resistance_levels": [148.75, 152.00],
-      "indicators": {
-        "rsi": 58.5,
-        "macd": {
-          "value": 2.35,
-          "signal": 1.85,
-          "histogram": 0.50
-        },
-        "moving_averages": {
-          "sma_50": 142.30,
-          "sma_200": 135.75,
-          "ema_20": 144.50
-        }
-      }
-    },
-    "fundamental": {
-      "pe_ratio": 24.5,
-      "eps": 5.95,
-      "market_cap": "2.45T",
-      "dividend_yield": 0.65,
-      "revenue_growth": 8.5,
-      "fair_value_estimate": 155.00
-    },
-    "sentiment": {
-      "overall": "positive|negative|neutral",
-      "score": 0.72,
-      "news_sentiment": 0.65,
-      "social_media_sentiment": 0.78,
-      "analyst_recommendations": {
-        "buy": 25,
-        "hold": 8,
-        "sell": 2
-      }
-    },
-    "events": [
-      {
-        "type": "earnings",
-        "date": "2023-04-15T00:00:00Z",
-        "description": "Q2 2023 Earnings Release"
-      },
-      {
-        "type": "dividend",
-        "date": "2023-03-10T00:00:00Z",
-        "description": "Quarterly dividend payment"
-      }
-    ]
+  "trend": {
+    "short_term": "bullish",
+    "medium_term": "bullish",
+    "long_term": "neutral",
+    "strength": 0.75
   },
-  "generated_at": "2023-02-01T05:00:00Z"
+  "support_resistance": {
+    "support_levels": [145.0, 142.5, 140.0],
+    "resistance_levels": [155.0, 157.5, 160.0]
+  },
+  "volatility": {
+    "current": 0.15,
+    "historical": 0.12,
+    "forecast": 0.14,
+    "percentile": 75,
+    "trend": "increasing"
+  },
+  "sentiment": {
+    "overall": "positive",
+    "social_media": "very_positive",
+    "news": "neutral",
+    "analyst": "positive"
+  },
+  "correlations": {
+    "sp500": 0.75,
+    "sector": 0.85,
+    "vix": -0.6
+  },
+  "events": [
+    {
+      "type": "earnings",
+      "date": "2023-04-15",
+      "importance": "high",
+      "description": "Q2 Earnings Report"
+    },
+    {
+      "type": "dividend",
+      "date": "2023-05-01",
+      "importance": "medium",
+      "description": "Quarterly Dividend Payment"
+    }
+  ]
 }
 ```
 
 ### Portfolio Optimization
 
-#### Get Portfolio Optimization
+#### Optimize Portfolio
 
 ```
 GET /api/decision-support/portfolio/optimize
 ```
 
-Get portfolio optimization recommendations.
+Optimizes a portfolio based on the specified objective.
 
-**Query Parameters:**
-- `portfolio_id` (required): ID of the portfolio to optimize
-- `objective` (optional): Optimization objective (e.g., "max_return", "min_risk", "max_sharpe")
-- `constraints` (optional): JSON-encoded constraints for optimization
+**Request Body:**
 
-**Response:**
 ```json
 {
-  "current_portfolio": {
-    "expected_return": 8.5,
-    "volatility": 12.3,
-    "sharpe_ratio": 0.69,
-    "allocations": {
-      "AAPL": 0.15,
-      "MSFT": 0.12,
-      "GOOGL": 0.10,
-      "AMZN": 0.08,
-      "BRK.B": 0.05,
-      "other": 0.50
-    }
-  },
-  "optimized_portfolio": {
-    "expected_return": 9.8,
-    "volatility": 11.5,
-    "sharpe_ratio": 0.85,
-    "allocations": {
-      "AAPL": 0.18,
-      "MSFT": 0.15,
-      "GOOGL": 0.12,
-      "AMZN": 0.10,
-      "BRK.B": 0.08,
-      "other": 0.37
-    }
-  },
-  "rebalancing_actions": [
+  "positions": [
     {
       "symbol": "AAPL",
-      "current_allocation": 0.15,
-      "target_allocation": 0.18,
-      "action": "buy",
-      "amount_percent": 0.03
+      "quantity": 100,
+      "entry_price": 145.75,
+      "current_price": 150.25,
+      "unrealized_pl": 450.0
     },
     {
-      "symbol": "XYZ",
-      "current_allocation": 0.05,
-      "target_allocation": 0.02,
-      "action": "sell",
-      "amount_percent": 0.03
+      "symbol": "MSFT",
+      "quantity": 50,
+      "entry_price": 240.50,
+      "current_price": 250.75,
+      "unrealized_pl": 512.5
     }
   ],
-  "optimization_date": "2023-02-01T06:00:00Z"
+  "cash": 10000.0,
+  "total_value": 35000.0
 }
 ```
 
-### Alerts Configuration
+**Query Parameters:**
 
-#### Configure Decision Support Alerts
+- `objective`: Optimization objective (options: "risk", "return", "sharpe", default: "sharpe")
+
+**Response:**
+
+```json
+{
+  "positions": [
+    {
+      "symbol": "AAPL",
+      "quantity": 120,
+      "entry_price": 145.75,
+      "current_price": 150.25,
+      "unrealized_pl": 540.0
+    },
+    {
+      "symbol": "MSFT",
+      "quantity": 40,
+      "entry_price": 240.50,
+      "current_price": 250.75,
+      "unrealized_pl": 410.0
+    },
+    {
+      "symbol": "AMZN",
+      "quantity": 10,
+      "entry_price": 3200.0,
+      "current_price": 3200.0,
+      "unrealized_pl": 0.0
+    }
+  ],
+  "cash": 5000.0,
+  "total_value": 36750.0
+}
+```
+
+### Alerts
+
+#### Configure Alert
 
 ```
 POST /api/decision-support/alerts/configure
 ```
 
-Configure alerts for decision support events.
+Configures an alert based on market conditions or analysis results.
 
 **Request Body:**
+
 ```json
 {
-  "alerts": [
-    {
-      "type": "recommendation",
-      "symbols": ["AAPL", "MSFT", "GOOGL"],
-      "actions": ["buy", "sell"],
-      "min_confidence": 0.7,
-      "notification_channels": ["email", "push", "sms"]
-    },
-    {
-      "type": "market_insight",
-      "symbols": ["SPY", "QQQ"],
-      "conditions": [
-        {
-          "indicator": "rsi",
-          "operator": "above",
-          "value": 70
-        },
-        {
-          "indicator": "price",
-          "operator": "below",
-          "value": "sma_200"
-        }
-      ],
-      "notification_channels": ["email", "push"]
-    },
-    {
-      "type": "risk_warning",
-      "threshold": "high",
-      "notification_channels": ["email", "sms", "push"]
-    }
-  ]
+  "name": "AAPL RSI Alert",
+  "description": "Alert when RSI crosses below 30 or above 70",
+  "symbol": "AAPL",
+  "condition": "rsi < 30 || rsi > 70",
+  "threshold": 30.0,
+  "notification_channels": ["email", "sms", "app"],
+  "enabled": true
 }
 ```
 
 **Response:**
+
 ```json
 {
-  "status": "success",
-  "message": "Alerts configured successfully",
-  "alert_ids": [
-    "alert-123",
-    "alert-124",
-    "alert-125"
-  ]
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 }
 ```
 
-#### Get Decision Support Alerts
+#### Get Alerts
 
 ```
-GET /api/decision-support/alerts
+GET /api/decision-support/alerts?acknowledged=false
 ```
 
-Get currently configured decision support alerts.
+Retrieves current alerts.
+
+**Query Parameters:**
+
+- `acknowledged`: Filter by acknowledgement status (true/false)
 
 **Response:**
-```json
-{
-  "alerts": [
-    {
-      "id": "alert-123",
-      "type": "recommendation",
-      "symbols": ["AAPL", "MSFT", "GOOGL"],
-      "actions": ["buy", "sell"],
-      "min_confidence": 0.7,
-      "notification_channels": ["email", "push", "sms"],
-      "created_at": "2023-01-15T10:30:00Z",
-      "last_triggered": "2023-01-28T14:45:00Z"
-    },
-    {
-      "id": "alert-124",
-      "type": "market_insight",
-      "symbols": ["SPY", "QQQ"],
-      "conditions": [
-        {
-          "indicator": "rsi",
-          "operator": "above",
-          "value": 70
-        },
-        {
-          "indicator": "price",
-          "operator": "below",
-          "value": "sma_200"
-        }
-      ],
-      "notification_channels": ["email", "push"],
-      "created_at": "2023-01-20T09:15:00Z",
-      "last_triggered": null
-    }
-  ]
-}
-```
-
-## WebSocket API
-
-In addition to the REST API, the Decision Support Service provides a WebSocket interface for real-time data streaming and notifications.
-
-### Connection
-
-```
-WebSocket: wss://api.tradsys.com/ws/decision-support
-```
-
-Authentication is performed by passing the JWT token as a query parameter:
-
-```
-wss://api.tradsys.com/ws/decision-support?token=<jwt_token>
-```
-
-### Message Types
-
-#### Subscribe to Recommendations
 
 ```json
-{
-  "action": "subscribe",
-  "channel": "recommendations",
-  "symbols": ["AAPL", "MSFT", "GOOGL"],
-  "min_confidence": 0.7
-}
-```
-
-#### Recommendation Update
-
-```json
-{
-  "type": "recommendation",
-  "timestamp": "2023-02-01T10:15:30Z",
-  "symbol": "AAPL",
-  "action": "buy",
-  "price_target": 150.00,
-  "confidence": 0.85,
-  "reasoning": "Strong technical breakout with increasing volume"
-}
-```
-
-#### Subscribe to Market Insights
-
-```json
-{
-  "action": "subscribe",
-  "channel": "market_insights",
-  "symbols": ["AAPL", "MSFT", "SPY"],
-  "insight_types": ["technical", "sentiment"]
-}
-```
-
-#### Market Insight Update
-
-```json
-{
-  "type": "market_insight",
-  "timestamp": "2023-02-01T10:20:45Z",
-  "symbol": "AAPL",
-  "insight_type": "technical",
-  "data": {
-    "rsi": 72.5,
-    "macd_histogram": 1.25,
-    "trend_change": "bullish"
+[
+  {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "configuration_id": "c1d2e3f4-5678-90ab-cdef-123456789012",
+    "timestamp": "2023-01-31T14:30:00Z",
+    "symbol": "AAPL",
+    "message": "RSI crossed below 30, indicating oversold conditions",
+    "value": 28.5,
+    "threshold": 30.0,
+    "acknowledged": false
+  },
+  {
+    "id": "b2c3d4e5-f6a7-8901-bcde-f23456789012",
+    "configuration_id": "d2e3f4a5-6789-01bc-defg-234567890123",
+    "timestamp": "2023-01-31T10:15:00Z",
+    "symbol": "MSFT",
+    "message": "Price crossed below 200-day moving average",
+    "value": 245.75,
+    "threshold": 248.50,
+    "acknowledged": false
   }
-}
+]
 ```
 
-## Integration Patterns
-
-### Push Model
-
-External decision support systems can push recommendations and insights to TradSys using the following endpoint:
+#### Acknowledge Alert
 
 ```
-POST /api/decision-support/external/push
+POST /api/decision-support/alerts/a1b2c3d4-e5f6-7890-abcd-ef1234567890/acknowledge
 ```
 
-**Request Body:**
-```json
-{
-  "api_key": "external_system_api_key",
-  "source": "external_system_name",
-  "timestamp": "2023-02-01T11:00:00Z",
-  "data_type": "recommendation|insight|alert",
-  "data": {
-    // Data structure depends on data_type
-  }
-}
-```
+Acknowledges an alert.
 
-### Pull Model
-
-External systems can register webhooks to be notified when new data is available:
+**Response:**
 
 ```
-POST /api/decision-support/external/webhook/register
-```
-
-**Request Body:**
-```json
-{
-  "callback_url": "https://external-system.com/webhook/callback",
-  "events": ["new_market_data", "order_executed", "portfolio_updated"],
-  "secret": "webhook_secret_for_signature_verification"
-}
+HTTP/1.1 200 OK
 ```
 
 ## Error Handling
 
-All API endpoints follow a consistent error response format:
+The API uses standard HTTP status codes to indicate the success or failure of a request:
+
+- `200 OK`: The request was successful
+- `400 Bad Request`: The request was invalid or malformed
+- `401 Unauthorized`: Authentication failed
+- `403 Forbidden`: The authenticated user does not have permission to access the resource
+- `404 Not Found`: The requested resource was not found
+- `500 Internal Server Error`: An error occurred on the server
+
+Error responses include a JSON body with details about the error:
 
 ```json
 {
-  "error": true,
-  "code": "error_code",
-  "message": "Human-readable error message",
+  "error": "Invalid request body",
+  "message": "The request body is missing required fields",
   "details": {
-    // Additional error details if available
+    "missing_fields": ["symbol", "timeframe"]
   }
 }
 ```
 
-Common error codes:
-- `authentication_error`: Invalid or expired authentication token
-- `authorization_error`: Insufficient permissions for the requested operation
-- `validation_error`: Invalid request parameters
-- `resource_not_found`: Requested resource not found
-- `service_unavailable`: Decision support service temporarily unavailable
-- `rate_limit_exceeded`: API rate limit exceeded
+## Authentication
+
+The API uses OAuth 2.0 for authentication. To access the API, you need to include an Authorization header with a valid access token:
+
+```
+Authorization: Bearer <access_token>
+```
 
 ## Rate Limiting
 
-API endpoints are subject to rate limiting to ensure fair usage. Rate limit information is included in response headers:
+The API implements rate limiting to ensure fair usage and system stability. Rate limits are applied on a per-user basis and are reset hourly.
 
-```
-X-RateLimit-Limit: 100
-X-RateLimit-Remaining: 95
-X-RateLimit-Reset: 1612180800
-```
+The following headers are included in API responses to provide information about rate limiting:
+
+- `X-RateLimit-Limit`: The maximum number of requests allowed per hour
+- `X-RateLimit-Remaining`: The number of requests remaining in the current rate limit window
+- `X-RateLimit-Reset`: The time at which the current rate limit window resets (Unix timestamp)
+
+When a rate limit is exceeded, the API returns a `429 Too Many Requests` status code.
 
 ## Versioning
 
-The API is versioned to ensure backward compatibility. The current version is specified in the URL path:
+The API is versioned to ensure backward compatibility. The current version is v1.
+
+## Webhooks
+
+The API supports webhooks for real-time notifications of events such as new recommendations, alerts, and analysis results. To configure webhooks, use the webhook management endpoints:
 
 ```
-/api/v1/decision-support/...
+POST /api/webhooks/configure
+GET /api/webhooks
+DELETE /api/webhooks/{id}
 ```
 
-## Implementation Considerations
+## Integration Examples
 
-When implementing the Decision Support API, consider the following:
+### Python Example
 
-1. **Security**: Ensure proper authentication and authorization for all endpoints
-2. **Performance**: Optimize for low latency, especially for real-time recommendations
-3. **Scalability**: Design for high throughput during market hours
-4. **Reliability**: Implement proper error handling and retry mechanisms
-5. **Monitoring**: Add comprehensive logging and monitoring
-6. **Documentation**: Keep API documentation up-to-date
-7. **Testing**: Create thorough test suites for all endpoints
+```python
+import requests
+import json
+
+API_URL = "https://api.tradsys.com"
+API_KEY = "your_api_key"
+
+headers = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+}
+
+# Get recommendations
+response = requests.get(
+    f"{API_URL}/api/decision-support/recommendations?symbol=AAPL&limit=5",
+    headers=headers
+)
+
+if response.status_code == 200:
+    recommendations = response.json()
+    for rec in recommendations:
+        print(f"Symbol: {rec['symbol']}, Action: {rec['action']}, Price: {rec['price']}")
+else:
+    print(f"Error: {response.status_code}, {response.text}")
+
+# Run a backtest
+backtest_request = {
+    "strategy": "momentum",
+    "symbols": ["AAPL", "MSFT", "AMZN"],
+    "start_time": "2022-01-01T00:00:00Z",
+    "end_time": "2022-12-31T23:59:59Z",
+    "initial_capital": 100000.0,
+    "parameters": {
+        "lookback_period": 20,
+        "momentum_threshold": 0.05,
+        "position_size": 0.1
+    }
+}
+
+response = requests.post(
+    f"{API_URL}/api/decision-support/backtest",
+    headers=headers,
+    data=json.dumps(backtest_request)
+)
+
+if response.status_code == 200:
+    result = response.json()
+    print(f"Backtest result: {result['total_return']:.2%} return, {result['sharpe_ratio']:.2f} Sharpe ratio")
+else:
+    print(f"Error: {response.status_code}, {response.text}")
+```
+
+### JavaScript Example
+
+```javascript
+const API_URL = "https://api.tradsys.com";
+const API_KEY = "your_api_key";
+
+const headers = {
+  "Authorization": `Bearer ${API_KEY}`,
+  "Content-Type": "application/json"
+};
+
+// Get market insights
+fetch(`${API_URL}/api/decision-support/insights/AAPL`, { headers })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    return response.json();
+  })
+  .then(insights => {
+    console.log("Market Insights:", insights);
+    console.log(`Short-term trend: ${insights.trend.short_term}`);
+    console.log(`Support levels: ${insights.support_resistance.support_levels.join(", ")}`);
+  })
+  .catch(error => {
+    console.error("Error fetching insights:", error);
+  });
+
+// Configure an alert
+const alertConfig = {
+  "name": "AAPL RSI Alert",
+  "description": "Alert when RSI crosses below 30 or above 70",
+  "symbol": "AAPL",
+  "condition": "rsi < 30 || rsi > 70",
+  "threshold": 30.0,
+  "notification_channels": ["email", "app"],
+  "enabled": true
+};
+
+fetch(`${API_URL}/api/decision-support/alerts/configure`, {
+  method: "POST",
+  headers,
+  body: JSON.stringify(alertConfig)
+})
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    return response.json();
+  })
+  .then(result => {
+    console.log(`Alert configured with ID: ${result.id}`);
+  })
+  .catch(error => {
+    console.error("Error configuring alert:", error);
+  });
+```
+
+## Best Practices
+
+1. **Use Pagination**: When retrieving large datasets, use pagination parameters to limit the amount of data returned in a single request.
+
+2. **Handle Rate Limits**: Implement exponential backoff and retry logic to handle rate limiting.
+
+3. **Webhook Reliability**: Implement proper error handling and retry logic for webhook deliveries.
+
+4. **Cache Results**: Cache API responses when appropriate to reduce the number of API calls.
+
+5. **Use Compression**: Enable gzip compression for API requests and responses to reduce bandwidth usage.
+
+6. **Validate Inputs**: Always validate user inputs before sending them to the API.
+
+7. **Handle Errors Gracefully**: Implement proper error handling to provide a good user experience.
+
+8. **Monitor API Usage**: Monitor your API usage to avoid hitting rate limits and to identify potential issues.
+
+## Support
+
+For API support, please contact api-support@tradsys.com or visit our developer portal at https://developers.tradsys.com.
 

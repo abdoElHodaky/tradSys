@@ -1,6 +1,8 @@
 package resilience
 
 import (
+	"context"
+	
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -18,27 +20,29 @@ var Module = fx.Options(
 func registerHooks(
 	lc fx.Lifecycle,
 	logger *zap.Logger,
-	circuitBreaker *CircuitBreakerFactory,
+	circuitBreaker CircuitBreakerFactory,
 ) {
 	lc.Append(fx.Hook{
-		OnStart: func(ctx fx.Context) error {
+		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting resilience components")
 			return nil
 		},
-		OnStop: func(ctx fx.Context) error {
+		OnStop: func(ctx context.Context) error {
 			logger.Info("Stopping resilience components")
 			
-			// Log circuit breaker metrics
+			// Log circuit breaker metrics for common circuit breakers
 			for _, name := range []string{"strategy-market-data", "strategy-order-update", "strategy-start", "strategy-stop"} {
+				cb := circuitBreaker.GetCircuitBreaker(name)
+				metrics := cb.GetMetrics()
+				
 				logger.Info("Circuit breaker metrics",
 					zap.String("name", name),
-					zap.Int64("executions", circuitBreaker.GetMetrics().GetExecutionCount(name)),
-					zap.Int64("successes", circuitBreaker.GetMetrics().GetSuccessCount(name)),
-					zap.Int64("failures", circuitBreaker.GetMetrics().GetFailureCount(name)),
-					zap.Float64("success_rate", circuitBreaker.GetMetrics().GetSuccessRate(name)),
-					zap.Duration("avg_execution_time", circuitBreaker.GetMetrics().GetAverageExecutionTime(name)),
-					zap.Int64("fallbacks", circuitBreaker.GetMetrics().GetFallbackCount(name)),
-					zap.Float64("fallback_success_rate", circuitBreaker.GetMetrics().GetFallbackSuccessRate(name)))
+					zap.Int("requests", metrics.Requests),
+					zap.Int("successes", metrics.Successes),
+					zap.Int("failures", metrics.Failures),
+					zap.Int("timeouts", metrics.Timeouts),
+					zap.Int("rejections", metrics.Rejections),
+					zap.Float64("failure_rate", metrics.FailureRate))
 			}
 			
 			return nil

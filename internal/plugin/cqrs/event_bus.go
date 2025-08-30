@@ -3,7 +3,6 @@ package cqrs
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"sync"
 	"time"
 
@@ -302,3 +301,4 @@ func (b *AsyncEventBus) worker() {
 		cancel()
 	}
 }
+

@@ -1,7 +1,7 @@
 package indicators
 
 import (
-	"github.com/abdoElHodaky/tradSys/proto/marketdata"
+	"github.com/abdoElHodaky/tradSys/internal/marketdata"
 )
 
 // IndicatorParams contains parameters for a technical indicator

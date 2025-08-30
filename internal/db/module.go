@@ -1,6 +1,8 @@
 package db
 
 import (
+	"context"
+	
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -22,17 +24,17 @@ func NewDatabase(lifecycle fx.Lifecycle, logger *zap.Logger) (*gorm.DB, error) {
 	}
 	
 	// Initialize the database
-	if err := InitializeDatabase(db, logger); err != nil {
+	if err := InitializeDatabaseWithOptimizations(db, logger); err != nil {
 		return nil, err
 	}
 	
 	// Register lifecycle hooks
 	lifecycle.Append(fx.Hook{
-		OnStart: func(ctx fx.Context) error {
+		OnStart: func(context.Context) error {
 			logger.Info("Database connection established")
 			return nil
 		},
-		OnStop: func(ctx fx.Context) error {
+		OnStop: func(context.Context) error {
 			logger.Info("Closing database connection")
 			sqlDB, err := db.DB()
 			if err != nil {

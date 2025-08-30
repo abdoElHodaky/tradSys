@@ -1,15 +1,17 @@
 # TradSys - Trading System Platform
 
-TradSys is a microservices-based trading system platform built with Go and go-micro.dev/v4. It provides a robust foundation for building scalable and resilient trading applications with advanced decision support capabilities.
+TradSys is a microservices-based trading system platform built with Go and modern architecture patterns. It provides a robust foundation for building scalable and resilient trading applications with advanced decision support capabilities.
 
 ## Features
 
-- **Service Mesh Architecture**: Built on go-micro.dev/v4 for service discovery, load balancing, and resilience
+- **Service Mesh Architecture**: Built with dependency injection and modular design
 - **Distributed Trading**: Supports distributed order processing and matching
-- **Risk Management**: Integrated risk management capabilities
-- **Market Data Processing**: Real-time market data handling
+- **Risk Management**: Integrated risk management capabilities with circuit breakers and bulkheads
+- **Market Data Processing**: Real-time and historical market data handling
 - **Monitoring**: Built-in support for metrics and tracing
 - **Decision Support Integration**: APIs for connecting with external decision support systems
+- **Event-Driven Architecture**: CQRS pattern with event sourcing
+- **Resilience Patterns**: Circuit breakers, retries, timeouts, and bulkheads
 
 ## Architecture
 
@@ -26,7 +28,8 @@ TradSys is built using a microservices architecture with the following component
 
 ### Prerequisites
 
-- Go 1.20 or later
+- Go 1.22 or later
+- PostgreSQL 14 or later
 - Docker (optional, for containerized deployment)
 
 ### Installation
@@ -76,11 +79,15 @@ The system exposes APIs for various trading operations. Here's an overview of th
 
 - `GET /api/market-data/{symbol}`: Get latest market data for a symbol
 - `GET /api/market-data/{symbol}/history`: Get historical market data
+- `GET /api/market-data/{symbol}/candles`: Get OHLCV candles for a symbol
+- `GET /api/market-data/indicators/{indicator}/{symbol}`: Get technical indicator values
 
 ### Risk API
 
 - `GET /api/risk/exposure`: Get current risk exposure
 - `POST /api/risk/limits`: Set risk limits
+- `GET /api/risk/circuit-breakers`: Get circuit breaker status
+- `POST /api/risk/circuit-breakers/reset`: Reset circuit breakers
 
 ### Decision Support API
 
@@ -105,9 +112,12 @@ tradSys/
 │   ├── risk/             # Risk service
 │   └── decisionsupport/  # Decision support service
 ├── internal/             # Internal packages
+│   ├── architecture/     # Architecture components (fx, resilience)
 │   ├── config/           # Configuration
-│   ├── micro/            # Service mesh utilities
-│   ├── trading/          # Trading logic
+│   ├── db/               # Database models and repositories
+│   ├── marketdata/       # Market data processing
+│   ├── plugin/           # Plugins (CQRS, event bus)
+│   ├── trading/          # Trading logic and order management
 │   ├── risk/             # Risk management
 │   └── decisionsupport/  # Decision support logic
 ├── proto/                # Protocol buffers
@@ -135,8 +145,74 @@ TradSys provides comprehensive integration with external decision support system
 - Scenario analysis and backtesting
 - Risk assessment and alerts
 
+### Decision Support System API Design
+
+The Decision Support System (DSS) API is designed to be flexible and extensible, allowing integration with various external systems. The API follows RESTful principles and uses JSON for data exchange.
+
+#### Key API Endpoints
+
+1. **Analysis Endpoint**
+   - `POST /api/decision-support/analyze`
+   - Submits market data, portfolio information, and other parameters for analysis
+   - Returns analysis results including recommendations and insights
+
+2. **Recommendation Endpoint**
+   - `GET /api/decision-support/recommendations`
+   - Retrieves trading recommendations based on current market conditions
+   - Supports filtering by instrument, strategy, and confidence level
+
+3. **Scenario Analysis**
+   - `POST /api/decision-support/scenarios`
+   - Runs what-if scenarios with different market conditions
+   - Returns potential outcomes and risk assessments
+
+4. **Backtesting**
+   - `POST /api/decision-support/backtest`
+   - Tests strategies against historical data
+   - Returns performance metrics and optimization suggestions
+
+5. **Portfolio Optimization**
+   - `GET /api/decision-support/portfolio/optimize`
+   - Provides portfolio optimization recommendations
+   - Supports different optimization objectives (risk, return, Sharpe ratio)
+
+6. **Alerts Configuration**
+   - `POST /api/decision-support/alerts/configure`
+   - Configures alerts based on market conditions or analysis results
+   - Supports different notification channels
+
+#### Integration Patterns
+
+The DSS API supports multiple integration patterns:
+
+1. **Synchronous Request-Response**
+   - Direct API calls for immediate analysis and recommendations
+   - Suitable for user-initiated actions
+
+2. **Asynchronous Processing**
+   - Submit analysis jobs that run in the background
+   - Receive notifications when analysis is complete
+   - Suitable for complex, time-consuming analysis
+
+3. **Event-Driven Integration**
+   - Subscribe to events and receive updates when conditions change
+   - Suitable for real-time monitoring and alerts
+
+4. **Streaming Data**
+   - Continuous stream of recommendations and insights
+   - Suitable for algorithmic trading systems
+
+#### Authentication and Security
+
+The DSS API uses OAuth 2.0 for authentication and supports role-based access control. All API requests are encrypted using TLS.
+
+#### Rate Limiting and Quotas
+
+To ensure fair usage and system stability, the API implements rate limiting and usage quotas. These can be configured based on user tiers and subscription levels.
+
 For detailed API documentation, see [Decision Support API](docs/decision-support-api.md).
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
