@@ -11,12 +11,13 @@ TradSys is a comprehensive trading system platform designed for high-performance
 - **Resilience**: Circuit breakers, rate limiting, and retry mechanisms for robust operations
 - **Extensibility**: Plugin system for custom strategies and integrations
 - **Comprehensive Monitoring**: Built-in metrics and logging for operational visibility
+- **Decision Support Integration**: API for integrating with external decision support systems
 
 ## Requirements
 
-- Go 1.19 or higher
-- PostgreSQL 13 or higher
-- Redis 6 or higher
+- Go 1.20 or higher
+- PostgreSQL 14 or higher
+- Redis 7 or higher
 - NATS or Kafka for messaging
 
 ## Getting Started
@@ -56,6 +57,13 @@ database:
   sslMode: disable
   maxConns: 10
   maxIdle: 5
+messaging:
+  provider: nats
+  url: nats://localhost:4222
+  cluster_id: tradsys
+  client_id: tradsys-server
+  max_reconnects: 10
+  reconnect_wait: 5s
 ```
 
 ### Running
@@ -76,10 +84,11 @@ TradSys is built on a microservices architecture with the following components:
 - **Risk Management Service**: Enforces risk controls
 - **Position Service**: Tracks positions and exposures
 - **Authentication Service**: Manages user authentication and authorization
+- **Decision Support Service**: Provides analytics and decision-making capabilities
 
-## Decision Support System API
+## Decision Support System Integration
 
-The Decision Support System (DSS) API provides advanced analytics and decision-making capabilities for trading strategies. It integrates with the core trading platform to provide real-time insights and recommendations.
+The Decision Support System (DSS) integration allows external systems to provide advanced analytics and decision-making capabilities for trading strategies. TradSys offers multiple integration patterns to accommodate different use cases.
 
 ### Integration Patterns
 
@@ -96,7 +105,67 @@ The DSS API supports multiple integration patterns:
 #### Analysis Endpoints
 
 - `POST /api/v1/dss/analyze`: Analyze market data and provide insights
+  ```json
+  // Request
+  {
+    "symbol": "BTC-USD",
+    "timeframe": "1h",
+    "indicators": ["rsi", "macd", "bollinger"],
+    "start_time": "2023-01-01T00:00:00Z",
+    "end_time": "2023-01-31T23:59:59Z"
+  }
+  
+  // Response
+  {
+    "analysis_id": "an_12345",
+    "symbol": "BTC-USD",
+    "timeframe": "1h",
+    "results": {
+      "rsi": {
+        "current": 65.75,
+        "trend": "bullish",
+        "signals": [
+          {"time": "2023-01-15T14:00:00Z", "value": 30.2, "signal": "oversold"}
+        ]
+      },
+      "macd": {
+        "current": {"line": 0.0025, "signal": 0.0015, "histogram": 0.001},
+        "trend": "bullish",
+        "signals": [
+          {"time": "2023-01-20T09:00:00Z", "type": "crossover", "direction": "bullish"}
+        ]
+      }
+    }
+  }
+  ```
+
 - `POST /api/v1/dss/recommend`: Generate trading recommendations
+  ```json
+  // Request
+  {
+    "symbol": "BTC-USD",
+    "strategy": "momentum",
+    "risk_profile": "moderate",
+    "position_size": "auto"
+  }
+  
+  // Response
+  {
+    "recommendation_id": "rec_67890",
+    "symbol": "BTC-USD",
+    "action": "buy",
+    "confidence": 0.85,
+    "price_target": 45000.00,
+    "stop_loss": 42500.00,
+    "time_horizon": "medium",
+    "reasoning": [
+      "RSI showing bullish divergence",
+      "MACD crossover detected",
+      "Volume increasing on recent price action"
+    ]
+  }
+  ```
+
 - `POST /api/v1/dss/backtest`: Run backtesting on historical data
 - `POST /api/v1/dss/scenario`: Perform scenario analysis
 
@@ -104,6 +173,33 @@ The DSS API supports multiple integration patterns:
 
 - `GET /api/v1/dss/models`: List available analysis models
 - `POST /api/v1/dss/models`: Create a new analysis model
+  ```json
+  // Request
+  {
+    "name": "Custom RSI Strategy",
+    "description": "RSI-based strategy with custom parameters",
+    "type": "technical",
+    "parameters": {
+      "rsi_period": 14,
+      "overbought_threshold": 70,
+      "oversold_threshold": 30,
+      "signal_confirmation": true
+    },
+    "signals": {
+      "buy": ["rsi_oversold", "price_above_ma"],
+      "sell": ["rsi_overbought", "price_below_ma"]
+    }
+  }
+  
+  // Response
+  {
+    "model_id": "mdl_12345",
+    "name": "Custom RSI Strategy",
+    "created_at": "2023-06-15T10:30:00Z",
+    "status": "active"
+  }
+  ```
+
 - `GET /api/v1/dss/models/{id}`: Get details of a specific model
 - `PUT /api/v1/dss/models/{id}`: Update a model
 - `DELETE /api/v1/dss/models/{id}`: Delete a model
@@ -111,6 +207,31 @@ The DSS API supports multiple integration patterns:
 #### Real-time Endpoints
 
 - `GET /api/v1/dss/stream`: WebSocket endpoint for real-time insights
+  ```
+  // Connection
+  ws://api.tradsys.com/api/v1/dss/stream?token=<jwt_token>&symbols=BTC-USD,ETH-USD
+  
+  // Subscription message
+  {
+    "action": "subscribe",
+    "channels": ["recommendations", "alerts", "market_insights"],
+    "symbols": ["BTC-USD", "ETH-USD"]
+  }
+  
+  // Sample message
+  {
+    "type": "recommendation",
+    "timestamp": "2023-06-15T14:35:22.123Z",
+    "symbol": "BTC-USD",
+    "data": {
+      "action": "buy",
+      "confidence": 0.78,
+      "price_target": 44500.00,
+      "reasoning": "RSI oversold condition with increasing volume"
+    }
+  }
+  ```
+
 - `POST /api/v1/dss/alerts`: Configure real-time alerts
 - `GET /api/v1/dss/alerts`: List configured alerts
 
@@ -122,12 +243,19 @@ The DSS API uses OAuth 2.0 for authentication with JWT tokens. All endpoints req
 Authorization: Bearer <jwt_token>
 ```
 
+API keys with specific scopes can also be used for machine-to-machine integration:
+
+```
+X-API-Key: <api_key>
+```
+
 ### Rate Limiting
 
 API endpoints are rate-limited to ensure fair usage:
 
 - 100 requests per minute for standard users
 - 1000 requests per minute for premium users
+- 5000 requests per minute for enterprise users
 
 ### Error Handling
 
@@ -141,8 +269,35 @@ The API uses standard HTTP status codes and returns detailed error messages:
     "details": {
       "field": "timeframe",
       "issue": "must be one of: 1m, 5m, 15m, 1h, 1d"
-    }
+    },
+    "request_id": "req_abcdef123456"
   }
+}
+```
+
+### Webhooks
+
+The DSS API supports webhooks for asynchronous notifications:
+
+```json
+// Webhook configuration
+{
+  "url": "https://your-system.com/webhooks/tradsys",
+  "events": ["recommendation.new", "alert.triggered", "analysis.completed"],
+  "secret": "your_webhook_secret"
+}
+
+// Sample webhook payload
+{
+  "event": "recommendation.new",
+  "timestamp": "2023-06-15T14:35:22.123Z",
+  "data": {
+    "recommendation_id": "rec_67890",
+    "symbol": "BTC-USD",
+    "action": "buy",
+    "confidence": 0.85
+  },
+  "signature": "sha256=..."
 }
 ```
 
@@ -156,6 +311,9 @@ go test ./...
 
 # Run specific tests
 go test ./internal/trading/...
+
+# Run integration tests
+go test -tags=integration ./...
 ```
 
 ### Code Style
@@ -168,6 +326,18 @@ go fmt ./...
 
 # Lint code
 golangci-lint run
+```
+
+### API Documentation
+
+API documentation is available using Swagger/OpenAPI:
+
+```bash
+# Generate API documentation
+swag init -g cmd/tradsys/main.go
+
+# View documentation
+# Open http://localhost:8080/swagger/index.html after starting the server
 ```
 
 ## Contributing
