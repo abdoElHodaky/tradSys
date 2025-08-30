@@ -69,9 +69,12 @@ type LoggingConfig struct {
 
 // RegistryConfig represents the service registry configuration
 type RegistryConfig struct {
-	Type      string
-	Address   string
-	Namespace string
+	Type             string
+	Address          string
+	Addresses        []string
+	Namespace        string
+	TTL              time.Duration
+	RegisterInterval time.Duration
 }
 
 // BrokerConfig represents the message broker configuration
@@ -86,6 +89,7 @@ type ServiceConfig struct {
 	Version   string
 	ID        string
 	Namespace string
+	Address   string
 }
 
 // ResilienceConfig represents the resilience configuration
@@ -193,9 +197,12 @@ func DefaultConfig() *Config {
 			OutputPath: "stdout",
 		},
 		Registry: RegistryConfig{
-			Type:      "mdns",
-			Address:   "",
-			Namespace: "tradsys",
+			Type:             "mdns",
+			Address:          "",
+			Addresses:        []string{},
+			Namespace:        "tradsys",
+			TTL:              60 * time.Second,
+			RegisterInterval: 30 * time.Second,
 		},
 		Broker: BrokerConfig{
 			Type:      "nats",
@@ -206,6 +213,7 @@ func DefaultConfig() *Config {
 			Version:   "1.0.0",
 			ID:        "tradsys-1",
 			Namespace: "tradsys",
+			Address:   ":8080",
 		},
 		Resilience: ResilienceConfig{
 			CircuitBreaker: CircuitBreakerConfig{
