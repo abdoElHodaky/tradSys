@@ -1,39 +1,86 @@
 package api
 
 import (
-	"embed"
-	"io/fs"
+	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	"github.com/swaggo/files"
+	"github.com/swaggo/gin-swagger"
+	"go.uber.org/zap"
 )
 
-//go:embed docs/swagger.yaml
-var swaggerFS embed.FS
+// DocsConfig represents the configuration for API documentation
+type DocsConfig struct {
+	// BasePath is the base path for the API
+	BasePath string
+	// Title is the title of the API documentation
+	Title string
+	// Description is the description of the API documentation
+	Description string
+	// Version is the version of the API documentation
+	Version string
+	// Host is the host of the API
+	Host string
+	// Schemes is the list of schemes supported by the API
+	Schemes []string
+	// EnableSwagger enables Swagger documentation
+	EnableSwagger bool
+	// SwaggerPath is the path to the Swagger documentation
+	SwaggerPath string
+	// CustomDocsPath is the path to custom documentation
+	CustomDocsPath string
+}
 
-// RegisterSwaggerRoutes registers the Swagger documentation routes
-func RegisterSwaggerRoutes(router *gin.Engine) {
-	// Serve Swagger UI
-	router.GET("/swagger/*any", func(c *gin.Context) {
-		// Redirect to Swagger UI
-		c.Redirect(http.StatusMovedPermanently, "/swagger/index.html")
-	})
-
-	// Serve Swagger YAML file
-	router.GET("/swagger.yaml", func(c *gin.Context) {
-		yamlFile, err := swaggerFS.ReadFile("docs/swagger.yaml")
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read Swagger file"})
-			return
-		}
-		c.Data(http.StatusOK, "application/yaml", yamlFile)
-	})
-
-	// Serve Swagger UI static files
-	swaggerFiles, err := fs.Sub(swaggerFS, "docs")
-	if err != nil {
-		panic(err)
+// DefaultDocsConfig returns the default configuration for API documentation
+func DefaultDocsConfig() DocsConfig {
+	return DocsConfig{
+		BasePath:      "/api/v1",
+		Title:         "TradSys API",
+		Description:   "Trading System API",
+		Version:       "1.0.0",
+		Host:          "localhost:8080",
+		Schemes:       []string{"http", "https"},
+		EnableSwagger: true,
+		SwaggerPath:   "/swagger/*any",
+		CustomDocsPath: "",
 	}
-	router.StaticFS("/swagger", http.FS(swaggerFiles))
+}
+
+// SetupDocs sets up API documentation
+func SetupDocs(router *gin.Engine, config DocsConfig, logger *zap.Logger) error {
+	// Initialize Swagger documentation
+	if config.EnableSwagger {
+		// Initialize Swagger info
+		docs := swaggerFiles.NewHandler()
+		
+		// Set up Swagger endpoint
+		router.GET(config.SwaggerPath, ginSwagger.WrapHandler(docs))
+		
+		logger.Info("Swagger documentation enabled",
+			zap.String("path", config.SwaggerPath))
+	}
+	
+	// Set up custom documentation if provided
+	if config.CustomDocsPath != "" {
+		if _, err := os.Stat(config.CustomDocsPath); err != nil {
+			logger.Error("Custom documentation path does not exist",
+				zap.String("path", config.CustomDocsPath),
+				zap.Error(err))
+			return fmt.Errorf("custom documentation path does not exist: %w", err)
+		}
+		
+		// Serve custom documentation
+		docsPath := filepath.Clean(config.CustomDocsPath)
+		router.StaticFS("/docs", http.Dir(docsPath))
+		
+		logger.Info("Custom documentation enabled",
+			zap.String("path", "/docs"),
+			zap.String("source", docsPath))
+	}
+	
+	return nil
 }
 

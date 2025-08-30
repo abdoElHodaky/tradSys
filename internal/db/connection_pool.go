@@ -3,324 +3,350 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
-	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
 
 // ConnectionPool manages a pool of database connections
 type ConnectionPool struct {
-	db           *sqlx.DB
-	logger       *zap.Logger
-	maxOpenConns int
-	maxIdleConns int
-	connLifetime time.Duration
-	metrics      *ConnectionMetrics
-	mutex        sync.RWMutex
+	// Database connection
+	db *sql.DB
+	
+	// Configuration
+	maxConnections int
+	maxIdleTime    time.Duration
+	
+	// Connection tracking
+	activeConnections int
+	mu                sync.Mutex
+	
+	// Metrics
+	metrics ConnectionPoolMetrics
+	
+	// Logger
+	logger *zap.Logger
 }
 
-// ConnectionMetrics tracks database connection metrics
-type ConnectionMetrics struct {
-	OpenConnections    int64
-	InUseConnections   int64
-	IdleConnections    int64
-	WaitCount          int64
-	WaitDuration       time.Duration
-	MaxIdleTimeClosed  int64
-	MaxLifetimeClosed  int64
-	QueryCount         int64
-	QueryErrors        int64
-	QueryDuration      time.Duration
-	SlowQueryThreshold time.Duration
-	SlowQueries        int64
-	mutex              sync.RWMutex
+// ConnectionPoolMetrics tracks metrics for the connection pool
+type ConnectionPoolMetrics struct {
+	TotalConnections     int64
+	ActiveConnections    int64
+	IdleConnections      int64
+	WaitCount            int64
+	WaitDuration         time.Duration
+	MaxIdleTimeClosed    int64
+	MaxLifetimeClosed    int64
+	ConnectionErrors     int64
+	ConnectionTimeouts   int64
+	QueryCount           int64
+	QueryErrors          int64
+	QueryDuration        time.Duration
+	TransactionCount     int64
+	TransactionErrors    int64
+	TransactionDuration  time.Duration
+	TransactionRollbacks int64
 }
 
-// ConnectionPoolOptions contains options for the connection pool
-type ConnectionPoolOptions struct {
-	MaxOpenConns      int
-	MaxIdleConns      int
-	ConnLifetime      time.Duration
-	SlowQueryThreshold time.Duration
+// ConnectionPoolConfig represents the configuration for the connection pool
+type ConnectionPoolConfig struct {
+	// MaxConnections is the maximum number of connections in the pool
+	MaxConnections int
+	// MaxIdleConnections is the maximum number of idle connections in the pool
+	MaxIdleConnections int
+	// MaxIdleTime is the maximum time a connection can be idle before being closed
+	MaxIdleTime time.Duration
+	// MaxLifetime is the maximum time a connection can be used before being closed
+	MaxLifetime time.Duration
+	// ConnectionTimeout is the timeout for establishing a connection
+	ConnectionTimeout time.Duration
 }
 
-// NewConnectionPool creates a new database connection pool
-func NewConnectionPool(db *sqlx.DB, logger *zap.Logger, options ConnectionPoolOptions) *ConnectionPool {
-	// Set default values if not provided
-	if options.MaxOpenConns == 0 {
-		options.MaxOpenConns = 25
+// DefaultConnectionPoolConfig returns the default configuration for the connection pool
+func DefaultConnectionPoolConfig() ConnectionPoolConfig {
+	return ConnectionPoolConfig{
+		MaxConnections:     10,
+		MaxIdleConnections: 5,
+		MaxIdleTime:        5 * time.Minute,
+		MaxLifetime:        1 * time.Hour,
+		ConnectionTimeout:  10 * time.Second,
 	}
-	if options.MaxIdleConns == 0 {
-		options.MaxIdleConns = 10
-	}
-	if options.ConnLifetime == 0 {
-		options.ConnLifetime = 5 * time.Minute
-	}
-	if options.SlowQueryThreshold == 0 {
-		options.SlowQueryThreshold = 100 * time.Millisecond
-	}
+}
 
+// NewConnectionPool creates a new connection pool
+func NewConnectionPool(db *sql.DB, config ConnectionPoolConfig, logger *zap.Logger) (*ConnectionPool, error) {
+	if db == nil {
+		return nil, errors.New("database connection is nil")
+	}
+	
+	if logger == nil {
+		var err error
+		logger, err = zap.NewProduction()
+		if err != nil {
+			return nil, fmt.Errorf("failed to create logger: %w", err)
+		}
+	}
+	
 	// Configure connection pool
-	db.SetMaxOpenConns(options.MaxOpenConns)
-	db.SetMaxIdleConns(options.MaxIdleConns)
-	db.SetConnMaxLifetime(options.ConnLifetime)
-
-	metrics := &ConnectionMetrics{
-		SlowQueryThreshold: options.SlowQueryThreshold,
-	}
-
-	pool := &ConnectionPool{
-		db:           db,
-		logger:       logger,
-		maxOpenConns: options.MaxOpenConns,
-		maxIdleConns: options.MaxIdleConns,
-		connLifetime: options.ConnLifetime,
-		metrics:      metrics,
-	}
-
-	// Start metrics collection
-	go pool.collectMetrics()
-
-	logger.Info("Database connection pool initialized",
-		zap.Int("max_open_conns", options.MaxOpenConns),
-		zap.Int("max_idle_conns", options.MaxIdleConns),
-		zap.Duration("conn_lifetime", options.ConnLifetime),
-		zap.Duration("slow_query_threshold", options.SlowQueryThreshold),
-	)
-
-	return pool
+	db.SetMaxOpenConns(config.MaxConnections)
+	db.SetMaxIdleConns(config.MaxIdleConnections)
+	db.SetConnMaxIdleTime(config.MaxIdleTime)
+	db.SetConnMaxLifetime(config.MaxLifetime)
+	
+	return &ConnectionPool{
+		db:             db,
+		maxConnections: config.MaxConnections,
+		maxIdleTime:    config.MaxIdleTime,
+		logger:         logger.With(zap.String("component", "connection_pool")),
+	}, nil
 }
 
-// collectMetrics periodically collects connection pool metrics
-func (p *ConnectionPool) collectMetrics() {
-	ticker := time.NewTicker(10 * time.Second)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		stats := p.db.Stats()
-
-		p.metrics.mutex.Lock()
-		p.metrics.OpenConnections = int64(stats.OpenConnections)
-		p.metrics.InUseConnections = int64(stats.InUse)
-		p.metrics.IdleConnections = int64(stats.Idle)
-		p.metrics.WaitCount = stats.WaitCount
-		p.metrics.WaitDuration = stats.WaitDuration
-		p.metrics.MaxIdleTimeClosed = stats.MaxIdleClosed
-		p.metrics.MaxLifetimeClosed = stats.MaxLifetimeClosed
-		p.metrics.mutex.Unlock()
-
-		p.logger.Debug("Database connection pool metrics",
-			zap.Int("open_connections", stats.OpenConnections),
-			zap.Int("in_use_connections", stats.InUse),
-			zap.Int("idle_connections", stats.Idle),
-			zap.Int64("wait_count", stats.WaitCount),
-			zap.Duration("wait_duration", stats.WaitDuration),
-			zap.Int64("max_idle_closed", stats.MaxIdleClosed),
-			zap.Int64("max_lifetime_closed", stats.MaxLifetimeClosed),
-		)
+// GetConnection gets a connection from the pool
+func (p *ConnectionPool) GetConnection(ctx context.Context) (*sql.Conn, error) {
+	p.mu.Lock()
+	if p.activeConnections >= p.maxConnections {
+		p.mu.Unlock()
+		return nil, errors.New("connection pool exhausted")
 	}
+	p.activeConnections++
+	p.metrics.ActiveConnections++
+	p.metrics.TotalConnections++
+	p.mu.Unlock()
+	
+	// Get connection from pool
+	conn, err := p.db.Conn(ctx)
+	if err != nil {
+		p.mu.Lock()
+		p.activeConnections--
+		p.metrics.ActiveConnections--
+		p.metrics.ConnectionErrors++
+		p.mu.Unlock()
+		
+		p.logger.Error("Failed to get connection from pool",
+			zap.Error(err))
+		
+		return nil, fmt.Errorf("failed to get connection from pool: %w", err)
+	}
+	
+	return conn, nil
 }
 
-// GetDB returns the underlying database connection
-func (p *ConnectionPool) GetDB() *sqlx.DB {
-	return p.db
+// ReleaseConnection releases a connection back to the pool
+func (p *ConnectionPool) ReleaseConnection(conn *sql.Conn) error {
+	if conn == nil {
+		return errors.New("connection is nil")
+	}
+	
+	p.mu.Lock()
+	p.activeConnections--
+	p.metrics.ActiveConnections--
+	p.mu.Unlock()
+	
+	return conn.Close()
+}
+
+// Close closes the connection pool
+func (p *ConnectionPool) Close() error {
+	return p.db.Close()
+}
+
+// Stats returns statistics about the connection pool
+func (p *ConnectionPool) Stats() sql.DBStats {
+	return p.db.Stats()
+}
+
+// Metrics returns metrics for the connection pool
+func (p *ConnectionPool) Metrics() ConnectionPoolMetrics {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	
+	// Update metrics from DB stats
+	stats := p.db.Stats()
+	p.metrics.IdleConnections = int64(stats.Idle)
+	p.metrics.WaitCount = stats.WaitCount
+	p.metrics.WaitDuration = stats.WaitDuration
+	p.metrics.MaxIdleTimeClosed = stats.MaxIdleTimeClosed
+	p.metrics.MaxLifetimeClosed = stats.MaxLifetimeClosed
+	
+	return p.metrics
 }
 
 // Exec executes a query without returning any rows
 func (p *ConnectionPool) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	startTime := time.Now()
+	start := time.Now()
+	
+	p.mu.Lock()
+	p.metrics.QueryCount++
+	p.mu.Unlock()
+	
 	result, err := p.db.ExecContext(ctx, query, args...)
-	duration := time.Since(startTime)
-
-	p.trackQuery(query, duration, err)
-
+	
+	p.mu.Lock()
+	p.metrics.QueryDuration += time.Since(start)
+	if err != nil {
+		p.metrics.QueryErrors++
+	}
+	p.mu.Unlock()
+	
+	if err != nil {
+		p.logger.Error("Query execution failed",
+			zap.String("query", query),
+			zap.Error(err))
+	}
+	
 	return result, err
 }
 
 // Query executes a query that returns rows
-func (p *ConnectionPool) Query(ctx context.Context, query string, args ...interface{}) (*sqlx.Rows, error) {
-	startTime := time.Now()
-	rows, err := p.db.QueryxContext(ctx, query, args...)
-	duration := time.Since(startTime)
-
-	p.trackQuery(query, duration, err)
-
+func (p *ConnectionPool) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+	start := time.Now()
+	
+	p.mu.Lock()
+	p.metrics.QueryCount++
+	p.mu.Unlock()
+	
+	rows, err := p.db.QueryContext(ctx, query, args...)
+	
+	p.mu.Lock()
+	p.metrics.QueryDuration += time.Since(start)
+	if err != nil {
+		p.metrics.QueryErrors++
+	}
+	p.mu.Unlock()
+	
+	if err != nil {
+		p.logger.Error("Query execution failed",
+			zap.String("query", query),
+			zap.Error(err))
+	}
+	
 	return rows, err
 }
 
 // QueryRow executes a query that returns a single row
-func (p *ConnectionPool) QueryRow(ctx context.Context, query string, args ...interface{}) *sqlx.Row {
-	startTime := time.Now()
-	row := p.db.QueryRowxContext(ctx, query, args...)
-	duration := time.Since(startTime)
-
-	p.trackQuery(query, duration, nil)
-
+func (p *ConnectionPool) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	start := time.Now()
+	
+	p.mu.Lock()
+	p.metrics.QueryCount++
+	p.mu.Unlock()
+	
+	row := p.db.QueryRowContext(ctx, query, args...)
+	
+	p.mu.Lock()
+	p.metrics.QueryDuration += time.Since(start)
+	p.mu.Unlock()
+	
 	return row
 }
 
-// NamedExec executes a named query without returning any rows
-func (p *ConnectionPool) NamedExec(ctx context.Context, query string, arg interface{}) (sql.Result, error) {
-	startTime := time.Now()
-	result, err := p.db.NamedExecContext(ctx, query, arg)
-	duration := time.Since(startTime)
-
-	p.trackQuery(query, duration, err)
-
-	return result, err
-}
-
-// NamedQuery executes a named query that returns rows
-func (p *ConnectionPool) NamedQuery(ctx context.Context, query string, arg interface{}) (*sqlx.Rows, error) {
-	startTime := time.Now()
-	rows, err := p.db.NamedQueryContext(ctx, query, arg)
-	duration := time.Since(startTime)
-
-	p.trackQuery(query, duration, err)
-
-	return rows, err
-}
-
-// Select executes a query and scans the results into dest
-func (p *ConnectionPool) Select(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
-	startTime := time.Now()
-	err := p.db.SelectContext(ctx, dest, query, args...)
-	duration := time.Since(startTime)
-
-	p.trackQuery(query, duration, err)
-
-	return err
-}
-
-// Get executes a query and scans the result into dest
-func (p *ConnectionPool) Get(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
-	startTime := time.Now()
-	err := p.db.GetContext(ctx, dest, query, args...)
-	duration := time.Since(startTime)
-
-	p.trackQuery(query, duration, err)
-
-	return err
-}
-
-// Begin starts a transaction
-func (p *ConnectionPool) Begin(ctx context.Context) (*sqlx.Tx, error) {
-	return p.db.BeginTxx(ctx, nil)
-}
-
-// BeginTx starts a transaction with options
-func (p *ConnectionPool) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx, error) {
-	return p.db.BeginTxx(ctx, opts)
-}
-
-// Ping verifies a connection to the database is still alive
-func (p *ConnectionPool) Ping(ctx context.Context) error {
-	return p.db.PingContext(ctx)
-}
-
-// Close closes the database connection pool
-func (p *ConnectionPool) Close() error {
-	p.logger.Info("Closing database connection pool")
-	return p.db.Close()
-}
-
-// trackQuery tracks query metrics
-func (p *ConnectionPool) trackQuery(query string, duration time.Duration, err error) {
-	p.metrics.mutex.Lock()
-	defer p.metrics.mutex.Unlock()
-
-	p.metrics.QueryCount++
-	p.metrics.QueryDuration += duration
-
+// Begin starts a new transaction
+func (p *ConnectionPool) Begin(ctx context.Context) (*sql.Tx, error) {
+	start := time.Now()
+	
+	p.mu.Lock()
+	p.metrics.TransactionCount++
+	p.mu.Unlock()
+	
+	tx, err := p.db.BeginTx(ctx, nil)
+	
+	p.mu.Lock()
 	if err != nil {
-		p.metrics.QueryErrors++
-		p.logger.Error("Database query error",
-			zap.Error(err),
-			zap.String("query", query),
-			zap.Duration("duration", duration),
-		)
+		p.metrics.TransactionErrors++
 	}
-
-	if duration >= p.metrics.SlowQueryThreshold {
-		p.metrics.SlowQueries++
-		p.logger.Warn("Slow database query",
-			zap.String("query", query),
-			zap.Duration("duration", duration),
-			zap.Duration("threshold", p.metrics.SlowQueryThreshold),
-		)
+	p.mu.Unlock()
+	
+	if err != nil {
+		p.logger.Error("Failed to start transaction",
+			zap.Error(err))
 	}
-}
-
-// GetMetrics returns the current connection metrics
-func (p *ConnectionPool) GetMetrics() ConnectionMetrics {
-	p.metrics.mutex.RLock()
-	defer p.metrics.mutex.RUnlock()
-
-	return *p.metrics
-}
-
-// ResetMetrics resets the query metrics
-func (p *ConnectionPool) ResetMetrics() {
-	p.metrics.mutex.Lock()
-	defer p.metrics.mutex.Unlock()
-
-	p.metrics.QueryCount = 0
-	p.metrics.QueryErrors = 0
-	p.metrics.QueryDuration = 0
-	p.metrics.SlowQueries = 0
-
-	p.logger.Info("Database query metrics reset")
-}
-
-// GetStats returns the current database stats
-func (p *ConnectionPool) GetStats() sql.DBStats {
-	return p.db.Stats()
-}
-
-// LogStats logs the current database stats
-func (p *ConnectionPool) LogStats() {
-	stats := p.db.Stats()
-	p.logger.Info("Database connection pool stats",
-		zap.Int("max_open_conns", p.maxOpenConns),
-		zap.Int("max_idle_conns", p.maxIdleConns),
-		zap.Duration("conn_lifetime", p.connLifetime),
-		zap.Int("open_connections", stats.OpenConnections),
-		zap.Int("in_use_connections", stats.InUse),
-		zap.Int("idle_connections", stats.Idle),
-		zap.Int64("wait_count", stats.WaitCount),
-		zap.Duration("wait_duration", stats.WaitDuration),
-		zap.Int64("max_idle_closed", stats.MaxIdleClosed),
-		zap.Int64("max_lifetime_closed", stats.MaxLifetimeClosed),
-	)
+	
+	return tx, err
 }
 
 // WithTransaction executes a function within a transaction
-func (p *ConnectionPool) WithTransaction(ctx context.Context, fn func(*sqlx.Tx) error) error {
-	tx, err := p.Begin(ctx)
+func (p *ConnectionPool) WithTransaction(ctx context.Context, fn func(*sql.Tx) error) error {
+	start := time.Now()
+	
+	p.mu.Lock()
+	p.metrics.TransactionCount++
+	p.mu.Unlock()
+	
+	tx, err := p.db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+		p.mu.Lock()
+		p.metrics.TransactionErrors++
+		p.mu.Unlock()
+		
+		p.logger.Error("Failed to start transaction",
+			zap.Error(err))
+		
+		return fmt.Errorf("failed to start transaction: %w", err)
 	}
-
-	defer func() {
-		if p := recover(); p != nil {
-			// Rollback on panic
-			_ = tx.Rollback()
-			panic(p) // Re-throw panic after rollback
-		} else if err != nil {
-			// Rollback on error
-			_ = tx.Rollback()
-		} else {
-			// Commit if no error or panic
-			err = tx.Commit()
-			if err != nil {
-				err = fmt.Errorf("failed to commit transaction: %w", err)
-			}
-		}
-	}()
-
+	
+	// Execute function within transaction
 	err = fn(tx)
-	return err
+	
+	// Handle panic
+	if r := recover(); r != nil {
+		// Attempt to roll back the transaction
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			p.logger.Error("Failed to roll back transaction after panic",
+				zap.Error(rollbackErr))
+		}
+		
+		p.mu.Lock()
+		p.metrics.TransactionRollbacks++
+		p.mu.Unlock()
+		
+		// Re-throw the original panic
+		if err, ok := r.(error); ok {
+			p.logger.Error("Panic in transaction",
+				zap.Error(err))
+			return err
+		}
+		
+		return fmt.Errorf("panic in transaction: %v", r)
+	}
+	
+	// Handle error
+	if err != nil {
+		// Attempt to roll back the transaction
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			p.logger.Error("Failed to roll back transaction after error",
+				zap.Error(rollbackErr))
+		}
+		
+		p.mu.Lock()
+		p.metrics.TransactionErrors++
+		p.metrics.TransactionRollbacks++
+		p.mu.Unlock()
+		
+		p.logger.Error("Transaction failed",
+			zap.Error(err))
+		
+		return fmt.Errorf("transaction failed: %w", err)
+	}
+	
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		p.mu.Lock()
+		p.metrics.TransactionErrors++
+		p.mu.Unlock()
+		
+		p.logger.Error("Failed to commit transaction",
+			zap.Error(err))
+		
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+	
+	p.mu.Lock()
+	p.metrics.TransactionDuration += time.Since(start)
+	p.mu.Unlock()
+	
+	return nil
 }
+
