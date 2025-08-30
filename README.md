@@ -21,6 +21,14 @@ TradSys is a comprehensive trading system platform designed for high-performance
 
 ## Getting Started
 
+
+### Prerequisites
+
+- Go 1.19 or later
+- PostgreSQL 14 or later
+- Docker (optional, for containerized deployment)
+
+
 ### Installation
 
 ```bash
@@ -79,11 +87,15 @@ TradSys is built on a microservices architecture with the following components:
 
 ## Decision Support System API
 
+
 The Decision Support System (DSS) API provides advanced analytics and decision-making capabilities for trading strategies. It integrates with the core trading platform to provide real-time insights and recommendations.
 
 ### Integration Patterns
 
 The DSS API supports multiple integration patterns:
+
+## Development
+
 
 1. **Synchronous Request-Response**: For immediate analysis and recommendations
 2. **Asynchronous Processing**: For complex, time-consuming operations
@@ -114,9 +126,14 @@ The DSS API supports multiple integration patterns:
 - `POST /api/v1/dss/alerts`: Configure real-time alerts
 - `GET /api/v1/dss/alerts`: List configured alerts
 
+
 ### Authentication and Security
 
+The Decision Support System (DSS) API is designed to be flexible and extensible, allowing integration with various external systems. The API follows RESTful principles and uses JSON for data exchange, with additional support for gRPC and WebSocket protocols for high-performance use cases.
+
+
 The DSS API uses OAuth 2.0 for authentication with JWT tokens. All endpoints require authentication except for public documentation endpoints.
+
 
 ```
 Authorization: Bearer <jwt_token>
@@ -133,6 +150,55 @@ API endpoints are rate-limited to ensure fair usage:
 
 The API uses standard HTTP status codes and returns detailed error messages:
 
+1. **Analysis Endpoint**
+   - `POST /api/decision-support/analyze`
+   - Submits market data, portfolio information, and other parameters for analysis
+   - Returns analysis results including recommendations and insights
+   - Supports both synchronous and asynchronous processing modes
+
+2. **Recommendation Endpoint**
+   - `GET /api/decision-support/recommendations`
+   - Retrieves trading recommendations based on current market conditions
+   - Supports filtering by instrument, strategy, and confidence level
+   - Provides pagination and sorting options
+
+3. **Scenario Analysis**
+   - `POST /api/decision-support/scenarios`
+   - Runs what-if scenarios with different market conditions
+   - Returns potential outcomes and risk assessments
+   - Supports batch processing of multiple scenarios
+
+4. **Backtesting**
+   - `POST /api/decision-support/backtest`
+   - Tests strategies against historical data
+   - Returns performance metrics and optimization suggestions
+   - Supports long-running jobs with status tracking
+
+5. **Portfolio Optimization**
+   - `GET /api/decision-support/portfolio/optimize`
+   - Provides portfolio optimization recommendations
+   - Supports different optimization objectives (risk, return, Sharpe ratio)
+   - Allows constraints specification (sector exposure, max position size)
+
+6. **Alerts Configuration**
+   - `POST /api/decision-support/alerts/configure`
+   - Configures alerts based on market conditions or analysis results
+   - Supports different notification channels (webhook, email, SMS)
+   - Allows complex condition definitions using a rule engine
+
+7. **Model Management**
+   - `POST /api/decision-support/models`
+   - Registers custom decision models for use in analysis
+   - Supports model versioning and A/B testing
+   - Provides model performance metrics
+
+8. **Real-time Insights**
+   - `GET /api/decision-support/insights/{symbol}`
+   - Provides real-time market insights for specific symbols
+   - Supports WebSocket connections for streaming updates
+   - Includes sentiment analysis and news impact assessment
+
+
 ```json
 {
   "error": {
@@ -148,6 +214,7 @@ The API uses standard HTTP status codes and returns detailed error messages:
 
 ## Development
 
+
 ### Testing
 
 ```bash
@@ -160,7 +227,47 @@ go test ./internal/trading/...
 
 ### Code Style
 
+1. **Synchronous Request-Response**
+   - Direct API calls for immediate analysis and recommendations
+   - Suitable for user-initiated actions
+   - Implements circuit breakers and timeouts for resilience
+
+2. **Asynchronous Processing**
+   - Submit analysis jobs that run in the background
+   - Poll job status or receive webhook notifications when complete
+   - Supports job cancellation and priority settings
+   - Ideal for complex, time-consuming analysis
+
+3. **Event-Driven Integration**
+   - Subscribe to events and receive updates when conditions change
+   - Supports WebHooks for push notifications
+   - Implements the publish-subscribe pattern for real-time updates
+   - Provides event filtering and transformation capabilities
+
+4. **Streaming Data**
+   - WebSocket API for continuous stream of recommendations and insights
+   - Supports server-sent events (SSE) for one-way streaming
+   - Provides connection management with automatic reconnection
+   - Implements backpressure handling for high-volume data
+
+5. **Batch Processing**
+   - Bulk API endpoints for processing large datasets
+   - Supports CSV and JSON data formats
+   - Provides pagination and cursor-based result retrieval
+   - Implements rate limiting and quota management
+
+#### API Versioning and Compatibility
+
+The DSS API implements versioning to ensure backward compatibility:
+
+- API versions are specified in the URL path (e.g., `/api/v1/decision-support/analyze`)
+- Changes to request/response formats are documented in the API changelog
+- Deprecated endpoints are marked and maintained for a transition period
+- New features are added in a backward-compatible manner when possible
+
+
 We follow standard Go code style guidelines. Run the following before committing:
+
 
 ```bash
 # Format code
@@ -171,6 +278,43 @@ golangci-lint run
 ```
 
 ## Contributing
+
+The DSS API uses OAuth 2.0 for authentication and supports role-based access control:
+
+- JWT tokens for authentication with configurable expiration
+- Fine-grained permissions for different API operations
+- Rate limiting based on client identity
+- All API requests are encrypted using TLS
+- Audit logging for security monitoring
+
+#### Performance Considerations
+
+The API is designed for high performance and scalability:
+
+- Horizontal scaling of API endpoints
+- Response caching for frequently accessed data
+- Compression for large payloads
+- Connection pooling for database and external service connections
+- Asynchronous processing for compute-intensive operations
+
+#### Error Handling
+
+The API implements consistent error handling:
+
+- Standard error response format with error codes and messages
+- Detailed error information for debugging (configurable)
+- Validation errors with field-specific details
+- Retry suggestions for transient errors
+- Rate limit information in response headers
+
+#### SDK and Client Libraries
+
+To facilitate integration, TradSys provides:
+
+- Official client SDKs for popular languages (Go, Python, JavaScript)
+- OpenAPI/Swagger documentation for API exploration
+- Code samples for common integration scenarios
+- Postman collection for testing API endpoints
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/my-feature`
