@@ -28,7 +28,7 @@ TradSys is built using a microservices architecture with the following component
 
 ### Prerequisites
 
-- Go 1.22 or later
+- Go 1.19 or later
 - PostgreSQL 14 or later
 - Docker (optional, for containerized deployment)
 
@@ -89,17 +89,6 @@ The system exposes APIs for various trading operations. Here's an overview of th
 - `GET /api/risk/circuit-breakers`: Get circuit breaker status
 - `POST /api/risk/circuit-breakers/reset`: Reset circuit breakers
 
-### Decision Support API
-
-- `POST /api/decision-support/analyze`: Submit data for analysis
-- `GET /api/decision-support/recommendations`: Get trading recommendations
-- `GET /api/decision-support/scenarios`: Get scenario analysis results
-- `POST /api/decision-support/backtest`: Run backtest with specified parameters
-- `GET /api/decision-support/insights/{symbol}`: Get market insights for a symbol
-- `GET /api/decision-support/portfolio/optimize`: Get portfolio optimization recommendations
-- `POST /api/decision-support/alerts/configure`: Configure decision support alerts
-- `GET /api/decision-support/alerts`: Get current decision support alerts
-
 ## Development
 
 ### Project Structure
@@ -147,7 +136,7 @@ TradSys provides comprehensive integration with external decision support system
 
 ### Decision Support System API Design
 
-The Decision Support System (DSS) API is designed to be flexible and extensible, allowing integration with various external systems. The API follows RESTful principles and uses JSON for data exchange.
+The Decision Support System (DSS) API is designed to be flexible and extensible, allowing integration with various external systems. The API follows RESTful principles and uses JSON for data exchange, with additional support for gRPC and WebSocket protocols for high-performance use cases.
 
 #### Key API Endpoints
 
@@ -155,31 +144,49 @@ The Decision Support System (DSS) API is designed to be flexible and extensible,
    - `POST /api/decision-support/analyze`
    - Submits market data, portfolio information, and other parameters for analysis
    - Returns analysis results including recommendations and insights
+   - Supports both synchronous and asynchronous processing modes
 
 2. **Recommendation Endpoint**
    - `GET /api/decision-support/recommendations`
    - Retrieves trading recommendations based on current market conditions
    - Supports filtering by instrument, strategy, and confidence level
+   - Provides pagination and sorting options
 
 3. **Scenario Analysis**
    - `POST /api/decision-support/scenarios`
    - Runs what-if scenarios with different market conditions
    - Returns potential outcomes and risk assessments
+   - Supports batch processing of multiple scenarios
 
 4. **Backtesting**
    - `POST /api/decision-support/backtest`
    - Tests strategies against historical data
    - Returns performance metrics and optimization suggestions
+   - Supports long-running jobs with status tracking
 
 5. **Portfolio Optimization**
    - `GET /api/decision-support/portfolio/optimize`
    - Provides portfolio optimization recommendations
    - Supports different optimization objectives (risk, return, Sharpe ratio)
+   - Allows constraints specification (sector exposure, max position size)
 
 6. **Alerts Configuration**
    - `POST /api/decision-support/alerts/configure`
    - Configures alerts based on market conditions or analysis results
-   - Supports different notification channels
+   - Supports different notification channels (webhook, email, SMS)
+   - Allows complex condition definitions using a rule engine
+
+7. **Model Management**
+   - `POST /api/decision-support/models`
+   - Registers custom decision models for use in analysis
+   - Supports model versioning and A/B testing
+   - Provides model performance metrics
+
+8. **Real-time Insights**
+   - `GET /api/decision-support/insights/{symbol}`
+   - Provides real-time market insights for specific symbols
+   - Supports WebSocket connections for streaming updates
+   - Includes sentiment analysis and news impact assessment
 
 #### Integration Patterns
 
@@ -188,27 +195,79 @@ The DSS API supports multiple integration patterns:
 1. **Synchronous Request-Response**
    - Direct API calls for immediate analysis and recommendations
    - Suitable for user-initiated actions
+   - Implements circuit breakers and timeouts for resilience
 
 2. **Asynchronous Processing**
    - Submit analysis jobs that run in the background
-   - Receive notifications when analysis is complete
-   - Suitable for complex, time-consuming analysis
+   - Poll job status or receive webhook notifications when complete
+   - Supports job cancellation and priority settings
+   - Ideal for complex, time-consuming analysis
 
 3. **Event-Driven Integration**
    - Subscribe to events and receive updates when conditions change
-   - Suitable for real-time monitoring and alerts
+   - Supports WebHooks for push notifications
+   - Implements the publish-subscribe pattern for real-time updates
+   - Provides event filtering and transformation capabilities
 
 4. **Streaming Data**
-   - Continuous stream of recommendations and insights
-   - Suitable for algorithmic trading systems
+   - WebSocket API for continuous stream of recommendations and insights
+   - Supports server-sent events (SSE) for one-way streaming
+   - Provides connection management with automatic reconnection
+   - Implements backpressure handling for high-volume data
+
+5. **Batch Processing**
+   - Bulk API endpoints for processing large datasets
+   - Supports CSV and JSON data formats
+   - Provides pagination and cursor-based result retrieval
+   - Implements rate limiting and quota management
+
+#### API Versioning and Compatibility
+
+The DSS API implements versioning to ensure backward compatibility:
+
+- API versions are specified in the URL path (e.g., `/api/v1/decision-support/analyze`)
+- Changes to request/response formats are documented in the API changelog
+- Deprecated endpoints are marked and maintained for a transition period
+- New features are added in a backward-compatible manner when possible
 
 #### Authentication and Security
 
-The DSS API uses OAuth 2.0 for authentication and supports role-based access control. All API requests are encrypted using TLS.
+The DSS API uses OAuth 2.0 for authentication and supports role-based access control:
 
-#### Rate Limiting and Quotas
+- JWT tokens for authentication with configurable expiration
+- Fine-grained permissions for different API operations
+- Rate limiting based on client identity
+- All API requests are encrypted using TLS
+- Audit logging for security monitoring
 
-To ensure fair usage and system stability, the API implements rate limiting and usage quotas. These can be configured based on user tiers and subscription levels.
+#### Performance Considerations
+
+The API is designed for high performance and scalability:
+
+- Horizontal scaling of API endpoints
+- Response caching for frequently accessed data
+- Compression for large payloads
+- Connection pooling for database and external service connections
+- Asynchronous processing for compute-intensive operations
+
+#### Error Handling
+
+The API implements consistent error handling:
+
+- Standard error response format with error codes and messages
+- Detailed error information for debugging (configurable)
+- Validation errors with field-specific details
+- Retry suggestions for transient errors
+- Rate limit information in response headers
+
+#### SDK and Client Libraries
+
+To facilitate integration, TradSys provides:
+
+- Official client SDKs for popular languages (Go, Python, JavaScript)
+- OpenAPI/Swagger documentation for API exploration
+- Code samples for common integration scenarios
+- Postman collection for testing API endpoints
 
 For detailed API documentation, see [Decision Support API](docs/decision-support-api.md).
 
