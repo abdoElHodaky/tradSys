@@ -2,6 +2,8 @@ package db
 
 import (
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
+	"github.com/abdoElHodaky/tradSys/internal/db/models/position"
+	"github.com/abdoElHodaky/tradSys/internal/db/models/trade"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -13,8 +15,8 @@ func MigrateSchema(db *gorm.DB, logger *zap.Logger) error {
 	// Define all models to migrate
 	models := []interface{}{
 		&models.Order{},
-		&models.Trade{},
-		&models.Position{},
+		&trade.Trade{},
+		&position.Position{},
 		&models.Quote{},
 		&models.OHLCV{},
 		&models.MarketDepth{},

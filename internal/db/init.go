@@ -6,8 +6,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// InitializeDatabase sets up the database with optimizations
-func InitializeDatabase(db *gorm.DB, logger *zap.Logger) error {
+// InitializeDatabaseWithOptimizations sets up the database with optimizations
+func InitializeDatabaseWithOptimizations(db *gorm.DB, logger *zap.Logger) error {
 	// Create optimizer
 	optimizer := query.NewOptimizer(db, logger)
 	
