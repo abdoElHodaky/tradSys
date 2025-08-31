@@ -1,6 +1,7 @@
 package external
 
 import (
+	"context"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -16,19 +17,19 @@ func NewFxManager(
 	lifecycle fx.Lifecycle,
 	logger *zap.Logger,
 	binanceProvider *BinanceProvider,
-) *Manager {
-	manager := NewManager(logger)
+) *ProviderManager {
+	manager := NewProviderManager(logger)
 	
 	// Register providers
 	manager.RegisterProvider(binanceProvider)
 	
 	// Register lifecycle hooks
 	lifecycle.Append(fx.Hook{
-		OnStart: func(ctx fx.Context) error {
+		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting market data provider manager")
 			return manager.ConnectAll(ctx)
 		},
-		OnStop: func(ctx fx.Context) error {
+		OnStop: func(ctx context.Context) error {
 			logger.Info("Stopping market data provider manager")
 			return manager.DisconnectAll(ctx)
 		},
@@ -47,4 +48,3 @@ func NewFxBinanceProvider(
 	
 	return NewBinanceProvider(apiKey, apiSecret, logger)
 }
-
