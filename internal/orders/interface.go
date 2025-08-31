@@ -6,8 +6,8 @@ import (
 	"github.com/abdoElHodaky/tradSys/proto/orders"
 )
 
-// OrderService defines the interface for order management operations
-type OrderService interface {
+// Service defines the interface for order management operations
+type Service interface {
 	// CreateOrder creates a new order
 	CreateOrder(ctx context.Context, symbol string, orderType orders.OrderType, side orders.OrderSide, quantity, price, stopPrice float64, clientOrderID string) (*orders.OrderResponse, error)
 	
@@ -20,4 +20,3 @@ type OrderService interface {
 	// GetOrders retrieves a list of orders
 	GetOrders(ctx context.Context, symbol string, status orders.OrderStatus, startTime, endTime int64, limit int32) ([]*orders.OrderResponse, error)
 }
-

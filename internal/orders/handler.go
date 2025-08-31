@@ -21,7 +21,7 @@ type HandlerParams struct {
 	RiskServiceConn *grpc.ClientConn              `optional:"true" name:"riskService"`
 }
 
-// Handler implements the OrderService handler
+// Handler implements the Service handler
 type Handler struct {
 	orders.UnimplementedOrderServiceServer
 	logger     *zap.Logger
@@ -176,4 +176,3 @@ func (h *Handler) GetOrders(ctx context.Context, req *orders.GetOrdersRequest, r
 var Module = fx.Options(
 	fx.Provide(NewHandler),
 )
-
