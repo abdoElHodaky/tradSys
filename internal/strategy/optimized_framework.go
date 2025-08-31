@@ -31,7 +31,7 @@ type OptimizedStrategyManager struct {
 	orderPool         *pools.OrderPool
 	
 	// Latency tracking
-	latencyTracker    *latency.LatencyTracker
+	latencyTracker    *latency.Tracker
 	
 	// Statistics
 	processedMarketData uint64
@@ -57,7 +57,7 @@ func NewOptimizedStrategyManager(logger *zap.Logger, workerCount int) *Optimized
 		workerPool:           make(chan struct{}, workerCount),
 		marketDataPool:       pools.NewMarketDataPool(),
 		orderPool:            pools.NewOrderPool(),
-		latencyTracker:       latency.NewLatencyTracker(logger),
+		latencyTracker:       latency.NewTracker(logger),
 		circuitBreakerEnabled: true,
 	}
 }
@@ -403,7 +403,7 @@ func (m *OptimizedStrategyManager) IsCircuitBreakerTripped() bool {
 }
 
 // GetLatencyTracker returns the latency tracker
-func (m *OptimizedStrategyManager) GetLatencyTracker() *latency.LatencyTracker {
+func (m *OptimizedStrategyManager) GetLatencyTracker() *latency.Tracker {
 	return m.latencyTracker
 }
 
@@ -452,4 +452,3 @@ func (m *OptimizedStrategyManager) getPrioritizedStrategies() []Strategy {
 	
 	return strategies
 }
-
