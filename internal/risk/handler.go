@@ -17,7 +17,7 @@ type HandlerParams struct {
 	Repository *repositories.RiskRepository `optional:"true"`
 }
 
-// Handler implements the RiskService handler
+// Handler implements the Service handler
 type Handler struct {
 	risk.UnimplementedRiskServiceServer
 	logger     *zap.Logger
@@ -32,7 +32,7 @@ func NewHandler(p HandlerParams) *Handler {
 	}
 }
 
-// ValidateOrder implements the RiskService.ValidateOrder method
+// ValidateOrder implements the Service.ValidateOrder method
 func (h *Handler) ValidateOrder(ctx context.Context, req *risk.ValidateOrderRequest, rsp *risk.ValidateOrderResponse) error {
 	h.logger.Info("ValidateOrder called",
 		zap.String("symbol", req.Symbol),
@@ -117,4 +117,3 @@ func (h *Handler) UpdateRiskLimits(ctx context.Context, req *risk.UpdateRiskLimi
 var Module = fx.Options(
 	fx.Provide(NewHandler),
 )
-
