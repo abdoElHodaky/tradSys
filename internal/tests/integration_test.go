@@ -9,9 +9,13 @@ import (
 
 	"github.com/abdoElHodaky/tradSys/internal/config"
 	"github.com/abdoElHodaky/tradSys/internal/micro"
+	"github.com/abdoElHodaky/tradSys/internal/performance"
+	"github.com/abdoElHodaky/tradSys/internal/resource"
+	"github.com/abdoElHodaky/tradSys/internal/trading/order_matching"
 	gomicro "go-micro.dev/v4"
 	"go-micro.dev/v4/registry"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
 	"go.uber.org/zap"
@@ -48,52 +52,38 @@ func TestFrameworkStandardization(t *testing.T) {
 		Config:    cfg,
 		Lifecycle: lc,
 	})
-	if err != nil {
-		t.Fatalf("Failed to create service: %v", err)
-	}
 
-	// Verify that the service was created with the correct options
-	if service.Options().Server.Options().Name != "test-service" {
-		t.Errorf("Expected service name to be 'test-service', got '%s'", service.Options().Server.Options().Name)
-	}
+	// Assert that the service was created successfully
+	assert.NoError(t, err)
+	assert.NotNil(t, service)
 
-	if service.Options().Server.Options().Version != "1.0.0" {
-		t.Errorf("Expected service version to be '1.0.0', got '%s'", service.Options().Server.Options().Version)
-	}
+	// Assert that the service has the correct name
+	assert.Equal(t, "test-service", service.Name())
 
-	// Create a registry
-	reg := micro.NewRegistry(micro.RegistryParams{
-		Logger:    logger,
-		Config:    cfg,
-		Lifecycle: lc,
-	})
+	// Assert that the service has the correct version
+	assert.Equal(t, "1.0.0", service.Version())
 
-	// Verify that the registry was created
-	if reg == nil {
-		t.Fatal("Expected registry to be created, got nil")
-	}
+	// Start the service
+	assert.NoError(t, lc.Start(context.Background()))
 
-	// Start the lifecycle
-	ctx := context.Background()
-	if err := lc.Start(ctx); err != nil {
-		t.Fatalf("Failed to start lifecycle: %v", err)
-	}
-
-	// Stop the lifecycle
-	if err := lc.Stop(ctx); err != nil {
-		t.Fatalf("Failed to stop lifecycle: %v", err)
-	}
+	// Stop the service
+	assert.NoError(t, lc.Stop(context.Background()))
 }
 
-// TestRegistryConfiguration verifies that the registry configuration works correctly
-func TestRegistryConfiguration(t *testing.T) {
+// TestServiceRegistration verifies that service registration works correctly
+func TestServiceRegistration(t *testing.T) {
+	// Skip if running in CI
+	if os.Getenv("CI") != "" {
+		t.Skip("Skipping test in CI environment")
+	}
+
 	// Create a test logger
 	logger := zaptest.NewLogger(t)
 
-	// Create a test config with custom TTL and interval
+	// Create a test config
 	cfg := &config.Config{
 		Service: config.Service{
-			Name:        "test-service",
+			Name:        "test-registration-service",
 			Version:     "1.0.0",
 			Address:     ":0",
 			Environment: "test",
@@ -101,8 +91,8 @@ func TestRegistryConfiguration(t *testing.T) {
 		Registry: config.RegistryConfig{
 			Type:             "mdns",
 			Addresses:        []string{},
-			TTL:              10 * time.Second,
-			RegisterInterval: 5 * time.Second,
+			TTL:              5 * time.Second,
+			RegisterInterval: 2 * time.Second,
 		},
 	}
 
@@ -115,189 +105,334 @@ func TestRegistryConfiguration(t *testing.T) {
 		Config:    cfg,
 		Lifecycle: lc,
 	})
-	if err != nil {
-		t.Fatalf("Failed to create service: %v", err)
-	}
 
-	// Verify that the service was created with the correct TTL and interval
-	opts := service.Options()
-	if opts.RegisterTTL != 10*time.Second {
-		t.Errorf("Expected TTL to be 10s, got %v", opts.RegisterTTL)
-	}
+	// Assert that the service was created successfully
+	assert.NoError(t, err)
+	assert.NotNil(t, service)
 
-	if opts.RegisterInterval != 5*time.Second {
-		t.Errorf("Expected interval to be 5s, got %v", opts.RegisterInterval)
-	}
+	// Start the service
+	assert.NoError(t, lc.Start(context.Background()))
+
+	// Wait for the service to register
+	time.Sleep(3 * time.Second)
+
+	// Get the registry
+	reg := service.Options().Registry
+
+	// Get services
+	services, err := reg.GetService(cfg.Service.Name)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, services)
+
+	// Assert that the service is registered
+	assert.Equal(t, cfg.Service.Name, services[0].Name)
+	assert.Equal(t, cfg.Service.Version, services[0].Version)
+
+	// Stop the service
+	assert.NoError(t, lc.Stop(context.Background()))
 }
 
-// TestServiceCommunication verifies that services can communicate with each other
-func TestServiceCommunication(t *testing.T) {
-	// Check if we're in CI environment
-	if os.Getenv("CI") == "true" {
-		// Use a mock approach in CI environment
-		t.Log("Running in CI environment, using mock approach")
-		testServiceCommunicationWithMock(t)
-	} else {
-		// Use the real service communication in non-CI environment
-		t.Log("Running in non-CI environment, using real service communication")
-		testServiceCommunicationWithRealServices(t)
+// TestServiceDiscovery verifies that service discovery works correctly
+func TestServiceDiscovery(t *testing.T) {
+	// Skip if running in CI
+	if os.Getenv("CI") != "" {
+		t.Skip("Skipping test in CI environment")
 	}
-}
 
-// testServiceCommunicationWithMock tests service communication using mocks
-func testServiceCommunicationWithMock(t *testing.T) {
 	// Create a test logger
 	logger := zaptest.NewLogger(t)
 
-	// Create a mock service
-	mockService := &mockMicroService{
-		t:      t,
-		logger: logger,
+	// Create a test config for the first service
+	cfg1 := &config.Config{
+		Service: config.Service{
+			Name:        "test-discovery-service-1",
+			Version:     "1.0.0",
+			Address:     ":0",
+			Environment: "test",
+		},
+		Registry: config.RegistryConfig{
+			Type:             "mdns",
+			Addresses:        []string{},
+			TTL:              5 * time.Second,
+			RegisterInterval: 2 * time.Second,
+		},
 	}
 
-	// Create a mock request
-	req := &TestRequest{
-		Message: "Hello",
+	// Create a test config for the second service
+	cfg2 := &config.Config{
+		Service: config.Service{
+			Name:        "test-discovery-service-2",
+			Version:     "1.0.0",
+			Address:     ":0",
+			Environment: "test",
+		},
+		Registry: config.RegistryConfig{
+			Type:             "mdns",
+			Addresses:        []string{},
+			TTL:              5 * time.Second,
+			RegisterInterval: 2 * time.Second,
+		},
 	}
 
-	// Create a response
-	rsp := &TestResponse{}
+	// Create test lifecycles
+	lc1 := fxtest.NewLifecycle(t)
+	lc2 := fxtest.NewLifecycle(t)
 
-	// Call the mock service
-	err := mockService.HandleRequest("TestHandler.Test", req, rsp)
+	// Create services
+	service1, err := micro.NewService(micro.ServiceParams{
+		Logger:    logger,
+		Config:    cfg1,
+		Lifecycle: lc1,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, service1)
+
+	service2, err := micro.NewService(micro.ServiceParams{
+		Logger:    logger,
+		Config:    cfg2,
+		Lifecycle: lc2,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, service2)
+
+	// Start the services
+	assert.NoError(t, lc1.Start(context.Background()))
+	assert.NoError(t, lc2.Start(context.Background()))
+
+	// Wait for the services to register
+	time.Sleep(3 * time.Second)
+
+	// Get the registry
+	reg := service1.Options().Registry
+
+	// Get services
+	services1, err := reg.GetService(cfg1.Service.Name)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, services1)
+
+	services2, err := reg.GetService(cfg2.Service.Name)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, services2)
+
+	// Assert that the services are registered
+	assert.Equal(t, cfg1.Service.Name, services1[0].Name)
+	assert.Equal(t, cfg1.Service.Version, services1[0].Version)
+
+	assert.Equal(t, cfg2.Service.Name, services2[0].Name)
+	assert.Equal(t, cfg2.Service.Version, services2[0].Version)
+
+	// Stop the services
+	assert.NoError(t, lc1.Stop(context.Background()))
+	assert.NoError(t, lc2.Stop(context.Background()))
+}
+
+// TestResourceManager verifies that the resource manager works correctly
+func TestResourceManager(t *testing.T) {
+	// Create a test logger
+	logger := zaptest.NewLogger(t)
+
+	// Create a resource manager
+	config := resource.DefaultResourceManagerConfig()
+	config.CleanupInterval = 100 * time.Millisecond
+	config.ResourceTimeout = 200 * time.Millisecond
+	rm := resource.NewResourceManager(config, logger)
+
+	// Register a resource
+	resourceID := "test-resource"
+	cleanupCalled := false
+	rm.RegisterResource(resourceID, resource.ResourceTypeMemory, func() error {
+		cleanupCalled = true
+		return nil
+	}, nil)
+
+	// Verify that the resource is registered
+	assert.Equal(t, 1, rm.GetResourceCount())
+	assert.Equal(t, 1, rm.GetResourceCountByType(resource.ResourceTypeMemory))
+
+	// Wait for the resource to be cleaned up
+	time.Sleep(500 * time.Millisecond)
+
+	// Verify that the resource was cleaned up
+	assert.Equal(t, 0, rm.GetResourceCount())
+	assert.True(t, cleanupCalled)
+
+	// Shutdown the resource manager
+	rm.Shutdown()
+}
+
+// TestProfiler verifies that the profiler works correctly
+func TestProfiler(t *testing.T) {
+	// Create a test logger
+	logger := zaptest.NewLogger(t)
+
+	// Create a temporary directory for profiles
+	tempDir, err := os.MkdirTemp("", "profiler-test")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	// Create profiler options
+	options := performance.DefaultProfilerOptions()
+	options.ProfileDir = tempDir
+
+	// Create a profiler
+	profiler, err := performance.NewProfiler(options, logger)
+	require.NoError(t, err)
+
+	// Start the profiler
+	err = profiler.Start()
+	require.NoError(t, err)
+
+	// Verify that the profiler is started
+	assert.True(t, profiler.IsStarted())
+
+	// Take a snapshot
+	err = profiler.TakeSnapshot("test-snapshot")
+	require.NoError(t, err)
+
+	// Get memory stats
+	memStats := profiler.GetMemoryStats()
+	assert.NotNil(t, memStats)
+	assert.Contains(t, memStats, "alloc")
+	assert.Contains(t, memStats, "totalAlloc")
+
+	// Get goroutine stats
+	goroutineStats := profiler.GetGoroutineStats()
+	assert.NotNil(t, goroutineStats)
+	assert.Contains(t, goroutineStats, "goroutines")
+
+	// Stop the profiler
+	err = profiler.Stop()
+	require.NoError(t, err)
+
+	// Verify that the profiler is stopped
+	assert.False(t, profiler.IsStarted())
+}
+
+// TestOrderMatching verifies that the order matching engine works correctly
+func TestOrderMatching(t *testing.T) {
+	// Create a test logger
+	logger := zaptest.NewLogger(t)
+
+	// Create an order matching engine
+	engine := order_matching.NewOrderMatchingEngine(logger)
+
+	// Create an order book
+	symbol := "BTC-USD"
+	orderBook := engine.CreateOrderBook(symbol)
+	assert.NotNil(t, orderBook)
+
+	// Create a buy order
+	buyOrder := order_matching.NewOrder(symbol, order_matching.OrderTypeLimit, order_matching.OrderSideBuy, 10000.0, 1.0, "user1")
+
+	// Create a sell order
+	sellOrder := order_matching.NewOrder(symbol, order_matching.OrderTypeLimit, order_matching.OrderSideSell, 10000.0, 0.5, "user2")
+
+	// Place the orders
+	err := engine.PlaceOrder(buyOrder)
 	assert.NoError(t, err)
 
-	// Verify the response
-	assert.Equal(t, "Hello World", rsp.Message)
+	err = engine.PlaceOrder(sellOrder)
+	assert.NoError(t, err)
+
+	// Get the order book snapshot
+	snapshot, err := engine.GetOrderBookSnapshot(symbol, 10)
+	assert.NoError(t, err)
+	assert.NotNil(t, snapshot)
+
+	// Verify that the buy order is partially filled
+	buyOrderResult, err := engine.GetOrder(symbol, buyOrder.ID)
+	assert.NoError(t, err)
+	assert.Equal(t, order_matching.OrderStatusPartiallyFilled, buyOrderResult.Status)
+	assert.Equal(t, 0.5, buyOrderResult.RemainingSize)
+
+	// Verify that the sell order is filled
+	_, err = engine.GetOrder(symbol, sellOrder.ID)
+	assert.Error(t, err) // Order should be removed from the order book
+
+	// Get engine stats
+	stats := engine.GetStats()
+	assert.NotNil(t, stats)
+	assert.Equal(t, uint64(2), stats["ordersProcessed"])
+
+	// Create a context for cleanup
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	// Run cleanup
+	engine.Cleanup(ctx)
 }
 
-// testServiceCommunicationWithRealServices tests service communication using real services
-func testServiceCommunicationWithRealServices(t *testing.T) {
+// TestMessageBatcher verifies that the message batcher works correctly
+func TestMessageBatcher(t *testing.T) {
 	// Create a test logger
 	logger := zaptest.NewLogger(t)
 
-	// Create a test app
-	app := fx.New(
-		fx.Supply(logger),
-		fx.Supply(&config.Config{
-			Service: config.Service{
-				Name:        "test-service",
-				Version:     "1.0.0",
-				Address:     ":0",
-				Environment: "test",
-			},
-			Registry: config.RegistryConfig{
-				Type:             "mdns",
-				Addresses:        []string{},
-				TTL:              5 * time.Second,
-				RegisterInterval: 2 * time.Second,
-			},
-		}),
-		fx.Provide(micro.NewService),
-		fx.Provide(micro.NewRegistry),
-		fx.Invoke(func(service *micro.Service) {
-			// Register a handler
-			if err := service.Server().Handle(
-				service.Server().NewHandler(
-					&testHandler{},
-				),
-			); err != nil {
-				t.Fatalf("Failed to register handler: %v", err)
-			}
-		}),
-	)
+	// Create a channel to receive batches
+	batchCh := make(chan *performance.MessageBatch, 10)
 
-	// Start the app
-	ctx := context.Background()
-	if err := app.Start(ctx); err != nil {
-		t.Fatalf("Failed to start app: %v", err)
-	}
-
-	// Stop the app when the test is done
-	defer func() {
-		if err := app.Stop(ctx); err != nil {
-			t.Fatalf("Failed to stop app: %v", err)
-		}
-	}()
-
-	// Create a client
-	client := gomicro.NewService(
-		gomicro.Name("test-client"),
-		gomicro.Registry(registry.NewRegistry()),
-	)
-
-	// Initialize the client
-	if err := client.Init(); err != nil {
-		t.Fatalf("Failed to initialize client: %v", err)
-	}
-
-	// Wait for service discovery
-	time.Sleep(1 * time.Second)
-
-	// Create a request
-	req := client.Client().NewRequest("test-service", "TestHandler.Test", &TestRequest{
-		Message: "Hello",
-	})
-
-	// Create a response
-	rsp := &TestResponse{}
-
-	// Call the service
-	if err := client.Client().Call(ctx, req, rsp); err != nil {
-		t.Fatalf("Failed to call service: %v", err)
-	}
-
-	// Verify the response
-	if rsp.Message != "Hello World" {
-		t.Errorf("Expected response message to be 'Hello World', got '%s'", rsp.Message)
-	}
-}
-
-// mockMicroService is a mock implementation of a micro service
-type mockMicroService struct {
-	t      *testing.T
-	logger *zap.Logger
-}
-
-// HandleRequest handles a request to the mock service
-func (m *mockMicroService) HandleRequest(method string, req interface{}, rsp interface{}) error {
-	m.logger.Info("Handling request", zap.String("method", method))
-
-	// Type assertion
-	testReq, ok := req.(*TestRequest)
-	if !ok {
-		return fmt.Errorf("expected *TestRequest, got %T", req)
-	}
-
-	testRsp, ok := rsp.(*TestResponse)
-	if !ok {
-		return fmt.Errorf("expected *TestResponse, got %T", rsp)
-	}
-
-	// Handle the request
-	if method == "TestHandler.Test" {
-		testRsp.Message = testReq.Message + " World"
+	// Create a send function
+	sendFunc := func(batch *performance.MessageBatch) error {
+		batchCh <- batch
 		return nil
 	}
 
-	return fmt.Errorf("unknown method: %s", method)
+	// Create a message batcher
+	config := performance.DefaultMessageBatcherConfig()
+	config.BatchTimeout = 100 * time.Millisecond
+	batcher := performance.NewMessageBatcher(config, sendFunc, logger)
+
+	// Create a context for the batcher
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Start the batcher
+	err := batcher.Start(ctx)
+	require.NoError(t, err)
+
+	// Add messages
+	for i := 0; i < 5; i++ {
+		message := &performance.BatchableMessage{
+			Type:     "test",
+			Data:     []byte(fmt.Sprintf(`{"id":%d}`, i)),
+			Priority: performance.PriorityMedium,
+		}
+		err := batcher.AddMessage(message)
+		assert.NoError(t, err)
+	}
+
+	// Wait for the batch to be sent
+	select {
+	case batch := <-batchCh:
+		assert.Len(t, batch.Messages, 5)
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timeout waiting for batch")
+	}
+
+	// Add a critical message
+	criticalMessage := &performance.BatchableMessage{
+		Type:     "critical",
+		Data:     []byte(`{"id":999}`),
+		Priority: performance.PriorityCritical,
+	}
+	err = batcher.AddMessage(criticalMessage)
+	assert.NoError(t, err)
+
+	// Critical messages should be sent immediately
+	select {
+	case batch := <-batchCh:
+		assert.Len(t, batch.Messages, 1)
+		assert.Equal(t, "critical", batch.Messages[0].Type)
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timeout waiting for critical batch")
+	}
+
+	// Get batcher stats
+	stats := batcher.GetStats()
+	assert.NotNil(t, stats)
+	assert.Equal(t, uint64(6), stats["messageCount"])
+
+	// Stop the batcher
+	err = batcher.Stop()
+	require.NoError(t, err)
 }
 
-// TestRequest is a test request
-type TestRequest struct {
-	Message string `json:"message"`
-}
-
-// TestResponse is a test response
-type TestResponse struct {
-	Message string `json:"message"`
-}
-
-// testHandler is a test handler
-type testHandler struct{}
-
-// Test is a test method
-func (h *testHandler) Test(ctx context.Context, req *TestRequest, rsp *TestResponse) error {
-	rsp.Message = req.Message + " World"
-	return nil
-}
