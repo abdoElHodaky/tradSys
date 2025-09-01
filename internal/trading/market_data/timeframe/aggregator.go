@@ -7,18 +7,18 @@ import (
 	"go.uber.org/zap"
 )
 
-// TimeframeInterval represents a timeframe interval
-type TimeframeInterval string
+// Interval represents a timeframe interval
+type Interval string
 
 // Timeframe intervals
 const (
-	Interval1m  TimeframeInterval = "1m"
-	Interval5m  TimeframeInterval = "5m"
-	Interval15m TimeframeInterval = "15m"
-	Interval30m TimeframeInterval = "30m"
-	Interval1h  TimeframeInterval = "1h"
-	Interval4h  TimeframeInterval = "4h"
-	Interval1d  TimeframeInterval = "1d"
+	Interval1m  Interval = "1m"
+	Interval5m  Interval = "5m"
+	Interval15m Interval = "15m"
+	Interval30m Interval = "30m"
+	Interval1h  Interval = "1h"
+	Interval4h  Interval = "4h"
+	Interval1d  Interval = "1d"
 )
 
 // OHLCV represents an OHLCV candle
@@ -27,7 +27,7 @@ type OHLCV struct {
 	Symbol string
 
 	// Interval is the timeframe interval
-	Interval TimeframeInterval
+	Interval Interval
 
 	// Timestamp is the timestamp of the candle
 	Timestamp time.Time
@@ -66,16 +66,16 @@ type Trade struct {
 	Timestamp time.Time
 }
 
-// TimeframeAggregator aggregates trades into OHLCV candles
-type TimeframeAggregator struct {
+// Aggregator aggregates trades into OHLCV candles
+type Aggregator struct {
 	// Logger
 	logger *zap.Logger
 
 	// Current candles
-	currentCandles map[string]map[TimeframeInterval]*OHLCV
+	currentCandles map[string]map[Interval]*OHLCV
 
 	// Historical candles
-	historicalCandles map[string]map[TimeframeInterval][]*OHLCV
+	historicalCandles map[string]map[Interval][]*OHLCV
 
 	// Maximum number of historical candles to keep
 	maxHistoricalCandles int
@@ -93,33 +93,33 @@ type TimeframeAggregator struct {
 // OHLCVCallback is a callback for OHLCV updates
 type OHLCVCallback func(candle *OHLCV)
 
-// NewTimeframeAggregator creates a new TimeframeAggregator
-func NewTimeframeAggregator(logger *zap.Logger, maxHistoricalCandles int) *TimeframeAggregator {
+// NewAggregator creates a new Aggregator
+func NewAggregator(logger *zap.Logger, maxHistoricalCandles int) *Aggregator {
 	if maxHistoricalCandles <= 0 {
 		maxHistoricalCandles = 1000
 	}
 
-	return &TimeframeAggregator{
+	return &Aggregator{
 		logger:              logger,
-		currentCandles:      make(map[string]map[TimeframeInterval]*OHLCV),
-		historicalCandles:   make(map[string]map[TimeframeInterval][]*OHLCV),
+		currentCandles:      make(map[string]map[Interval]*OHLCV),
+		historicalCandles:   make(map[string]map[Interval][]*OHLCV),
 		maxHistoricalCandles: maxHistoricalCandles,
 		subscribers:         make(map[string][]OHLCVCallback),
 	}
 }
 
 // ProcessTrade processes a trade
-func (a *TimeframeAggregator) ProcessTrade(trade *Trade) {
+func (a *Aggregator) ProcessTrade(trade *Trade) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
 	// Initialize maps if needed
 	if _, exists := a.currentCandles[trade.Symbol]; !exists {
-		a.currentCandles[trade.Symbol] = make(map[TimeframeInterval]*OHLCV)
+		a.currentCandles[trade.Symbol] = make(map[Interval]*OHLCV)
 	}
 
 	if _, exists := a.historicalCandles[trade.Symbol]; !exists {
-		a.historicalCandles[trade.Symbol] = make(map[TimeframeInterval][]*OHLCV)
+		a.historicalCandles[trade.Symbol] = make(map[Interval][]*OHLCV)
 	}
 
 	// Process for each interval
@@ -133,7 +133,7 @@ func (a *TimeframeAggregator) ProcessTrade(trade *Trade) {
 }
 
 // processTradeForInterval processes a trade for a specific interval
-func (a *TimeframeAggregator) processTradeForInterval(trade *Trade, interval TimeframeInterval) {
+func (a *Aggregator) processTradeForInterval(trade *Trade, interval Interval) {
 	// Get the current candle
 	candle, exists := a.currentCandles[trade.Symbol][interval]
 
@@ -185,7 +185,7 @@ func (a *TimeframeAggregator) processTradeForInterval(trade *Trade, interval Tim
 }
 
 // GetCurrentCandle gets the current candle for a symbol and interval
-func (a *TimeframeAggregator) GetCurrentCandle(symbol string, interval TimeframeInterval) *OHLCV {
+func (a *Aggregator) GetCurrentCandle(symbol string, interval Interval) *OHLCV {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
@@ -197,9 +197,9 @@ func (a *TimeframeAggregator) GetCurrentCandle(symbol string, interval Timeframe
 }
 
 // GetHistoricalCandles gets historical candles for a symbol and interval
-func (a *TimeframeAggregator) GetHistoricalCandles(
+func (a *Aggregator) GetHistoricalCandles(
 	symbol string,
-	interval TimeframeInterval,
+	interval Interval,
 	limit int,
 ) []*OHLCV {
 	a.mu.RLock()
@@ -225,7 +225,7 @@ func (a *TimeframeAggregator) GetHistoricalCandles(
 }
 
 // SubscribeOHLCV subscribes to OHLCV updates
-func (a *TimeframeAggregator) SubscribeOHLCV(symbol string, callback OHLCVCallback) {
+func (a *Aggregator) SubscribeOHLCV(symbol string, callback OHLCVCallback) {
 	a.subMu.Lock()
 	defer a.subMu.Unlock()
 
@@ -237,7 +237,7 @@ func (a *TimeframeAggregator) SubscribeOHLCV(symbol string, callback OHLCVCallba
 }
 
 // UnsubscribeOHLCV unsubscribes from OHLCV updates
-func (a *TimeframeAggregator) UnsubscribeOHLCV(symbol string, callback OHLCVCallback) {
+func (a *Aggregator) UnsubscribeOHLCV(symbol string, callback OHLCVCallback) {
 	a.subMu.Lock()
 	defer a.subMu.Unlock()
 
@@ -258,7 +258,7 @@ func (a *TimeframeAggregator) UnsubscribeOHLCV(symbol string, callback OHLCVCall
 }
 
 // notifySubscribers notifies subscribers of an OHLCV update
-func (a *TimeframeAggregator) notifySubscribers(candle *OHLCV) {
+func (a *Aggregator) notifySubscribers(candle *OHLCV) {
 	a.subMu.RLock()
 	defer a.subMu.RUnlock()
 
@@ -272,7 +272,7 @@ func (a *TimeframeAggregator) notifySubscribers(candle *OHLCV) {
 // Helper functions
 
 // isInSameCandle checks if two timestamps are in the same candle
-func isInSameCandle(t1, t2 time.Time, interval TimeframeInterval) bool {
+func isInSameCandle(t1, t2 time.Time, interval Interval) bool {
 	switch interval {
 	case Interval1m:
 		return t1.Year() == t2.Year() && t1.Month() == t2.Month() && t1.Day() == t2.Day() &&
@@ -300,7 +300,7 @@ func isInSameCandle(t1, t2 time.Time, interval TimeframeInterval) bool {
 }
 
 // normalizeTimestamp normalizes a timestamp to the start of a candle
-func normalizeTimestamp(t time.Time, interval TimeframeInterval) time.Time {
+func normalizeTimestamp(t time.Time, interval Interval) time.Time {
 	switch interval {
 	case Interval1m:
 		return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), 0, 0, t.Location())

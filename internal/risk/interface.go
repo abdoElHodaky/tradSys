@@ -6,8 +6,8 @@ import (
 	"github.com/abdoElHodaky/tradSys/proto/risk"
 )
 
-// RiskService defines the interface for risk management operations
-type RiskService interface {
+// Service defines the interface for risk management operations
+type Service interface {
 	// GetPositions gets positions for a user
 	GetPositions(ctx context.Context, userID, symbol string) (*risk.GetPositionsResponse, error)
 	
