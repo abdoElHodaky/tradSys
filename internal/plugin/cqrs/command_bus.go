@@ -2,174 +2,163 @@ package cqrs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"sync"
-	"time"
 
 	"go.uber.org/zap"
 )
 
-// CommandHandler is the interface that all command handlers must implement
-type CommandHandler interface {
-	// Type returns the type of command this handler can process
-	Type() reflect.Type
-	
-	// Handle processes the command
-	Handle(ctx context.Context, command interface{}) error
-}
+// CommandHandler is a function that handles a command
+type CommandHandler func(ctx context.Context, command interface{}) (interface{}, error)
 
-// CommandHandlerFunc is a function that handles a command
-type CommandHandlerFunc func(ctx context.Context, command interface{}) error
-
-// CommandMiddleware is a function that wraps a command handler
-type CommandMiddleware func(CommandHandlerFunc) CommandHandlerFunc
-
-// CommandBus dispatches commands to their handlers
+// CommandBus is a simple command bus implementation
 type CommandBus struct {
-	handlers   map[reflect.Type]CommandHandler
-	middleware []CommandMiddleware
-	logger     *zap.Logger
-	mu         sync.RWMutex
+	handlers map[string]CommandHandler
+	logger   *zap.Logger
+	mu       sync.RWMutex
 }
 
 // NewCommandBus creates a new command bus
 func NewCommandBus(logger *zap.Logger) *CommandBus {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
 	return &CommandBus{
-		handlers:   make(map[reflect.Type]CommandHandler),
-		middleware: []CommandMiddleware{},
-		logger:     logger,
+		handlers: make(map[string]CommandHandler),
+		logger:   logger,
 	}
 }
 
-// RegisterHandler registers a command handler
-func (b *CommandBus) RegisterHandler(handler CommandHandler) error {
+// Register registers a command handler for a specific command type
+func (b *CommandBus) Register(commandType interface{}, handler CommandHandler) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	
-	commandType := handler.Type()
-	if _, exists := b.handlers[commandType]; exists {
-		return fmt.Errorf("handler already registered for command type %v", commandType)
+
+	commandName := getTypeName(commandType)
+	if _, exists := b.handlers[commandName]; exists {
+		return fmt.Errorf("handler already registered for command type: %s", commandName)
 	}
-	
-	b.handlers[commandType] = handler
-	b.logger.Debug("Registered command handler", 
-		zap.String("command_type", commandType.String()))
-	
+
+	b.handlers[commandName] = handler
+	b.logger.Debug("Registered command handler", zap.String("commandType", commandName))
 	return nil
 }
 
-// RegisterMiddleware registers middleware to be applied to all commands
-func (b *CommandBus) RegisterMiddleware(middleware CommandMiddleware) {
+// Dispatch dispatches a command to its registered handler
+func (b *CommandBus) Dispatch(ctx context.Context, command interface{}) (interface{}, error) {
+	b.mu.RLock()
+	commandName := getTypeName(command)
+	handler, exists := b.handlers[commandName]
+	b.mu.RUnlock()
+
+	if !exists {
+		return nil, fmt.Errorf("no handler registered for command type: %s", commandName)
+	}
+
+	b.logger.Debug("Dispatching command", zap.String("commandType", commandName))
+	
+	result, err := handler(ctx, command)
+	if err != nil {
+		// Handle different error types
+		switch e := err.(type) {
+		case *ValidationError:
+			b.logger.Debug("Command validation error",
+				zap.String("commandType", commandName),
+				zap.String("error", e.Error()),
+			)
+		case error:
+			b.logger.Debug("Command handler error",
+				zap.String("commandType", commandName),
+				zap.Error(e),
+			)
+		}
+		return nil, fmt.Errorf("command execution failed: %w", err)
+	}
+
+	return result, nil
+}
+
+// ValidationError represents a validation error
+type ValidationError struct {
+	Message string
+	Field   string
+}
+
+// Error implements the error interface
+func (e *ValidationError) Error() string {
+	if e.Field != "" {
+		return fmt.Sprintf("validation error on field '%s': %s", e.Field, e.Message)
+	}
+	return fmt.Sprintf("validation error: %s", e.Message)
+}
+
+// MiddlewareFunc is a function that wraps a command handler
+type MiddlewareFunc func(next CommandHandler) CommandHandler
+
+// Use adds middleware to the command bus
+func (b *CommandBus) Use(middleware MiddlewareFunc) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	
-	b.middleware = append(b.middleware, middleware)
-}
 
-// Dispatch sends a command to its handler
-func (b *CommandBus) Dispatch(ctx context.Context, command interface{}) error {
-	b.mu.RLock()
-	commandType := reflect.TypeOf(command)
-	handler, exists := b.handlers[commandType]
-	middleware := make([]CommandMiddleware, len(b.middleware))
-	copy(middleware, b.middleware)
-	b.mu.RUnlock()
-	
-	if !exists {
-		return fmt.Errorf("no handler registered for command type %v", commandType)
-	}
-	
-	// Apply middleware
-	next := handler.Handle
-	for i := len(middleware) - 1; i >= 0; i-- {
-		next = middleware[i](next)
-	}
-	
-	return next(ctx, command)
-}
-
-// TypedCommandHandler is a generic command handler for a specific command type
-type TypedCommandHandler[T any] struct {
-	handleFunc func(ctx context.Context, command T) error
-}
-
-// NewTypedCommandHandler creates a new typed command handler
-func NewTypedCommandHandler[T any](handleFunc func(ctx context.Context, command T) error) *TypedCommandHandler[T] {
-	return &TypedCommandHandler[T]{
-		handleFunc: handleFunc,
+	for commandType, handler := range b.handlers {
+		b.handlers[commandType] = middleware(handler)
 	}
 }
 
-// Type returns the type of command this handler can process
-func (h *TypedCommandHandler[T]) Type() reflect.Type {
-	var t T
-	return reflect.TypeOf(t)
-}
-
-// Handle processes the command
-func (h *TypedCommandHandler[T]) Handle(ctx context.Context, command interface{}) error {
-	typedCommand, ok := command.(T)
-	if !ok {
-		return fmt.Errorf("invalid command type: expected %T, got %T", *new(T), command)
-	}
-	
-	return h.handleFunc(ctx, typedCommand)
-}
-
-// LoggingMiddleware logs commands before and after execution
-func LoggingMiddleware(logger *zap.Logger) CommandMiddleware {
-	return func(next CommandHandlerFunc) CommandHandlerFunc {
-		return func(ctx context.Context, command interface{}) error {
-			start := time.Now()
-			logger.Debug("Executing command", 
-				zap.String("command_type", reflect.TypeOf(command).String()))
+// LoggingMiddleware creates a middleware that logs command execution
+func LoggingMiddleware(logger *zap.Logger) MiddlewareFunc {
+	return func(next CommandHandler) CommandHandler {
+		return func(ctx context.Context, command interface{}) (interface{}, error) {
+			commandName := getTypeName(command)
 			
-			err := next(ctx, command)
+			logger.Debug("Executing command",
+				zap.String("commandType", commandName),
+			)
 			
-			logger.Debug("Command executed",
-				zap.String("command_type", reflect.TypeOf(command).String()),
-				zap.Duration("duration", time.Since(start)),
-				zap.Error(err))
+			result, err := next(ctx, command)
 			
-			return err
-		}
-	}
-}
-
-// ValidationMiddleware validates commands before execution
-func ValidationMiddleware() CommandMiddleware {
-	return func(next CommandHandlerFunc) CommandHandlerFunc {
-		return func(ctx context.Context, command interface{}) error {
-			// Check if the command implements the Validator interface
-			if validator, ok := command.(interface{ Validate() error }); ok {
-				if err := validator.Validate(); err != nil {
-					return fmt.Errorf("command validation failed: %w", err)
-				}
+			if err != nil {
+				logger.Debug("Command execution failed",
+					zap.String("commandType", commandName),
+					zap.Error(err),
+				)
+				return nil, err
 			}
 			
-			return next(ctx, command)
+			logger.Debug("Command executed successfully",
+				zap.String("commandType", commandName),
+			)
+			
+			return result, nil
 		}
 	}
 }
 
-// RecoveryMiddleware recovers from panics in command handlers
-func RecoveryMiddleware(logger *zap.Logger) CommandMiddleware {
-	return func(next CommandHandlerFunc) CommandHandlerFunc {
-		return func(ctx context.Context, command interface{}) (err error) {
+// getTypeName returns the name of the type
+func getTypeName(value interface{}) string {
+	t := reflect.TypeOf(value)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	return t.String()
+}
+
+// ErrorHandlingMiddleware creates a middleware that handles errors
+func ErrorHandlingMiddleware() MiddlewareFunc {
+	return func(next CommandHandler) CommandHandler {
+		return func(ctx context.Context, command interface{}) (result interface{}, err error) {
 			defer func() {
 				if r := recover(); r != nil {
-					logger.Error("Recovered from panic in command handler",
-						zap.String("command_type", reflect.TypeOf(command).String()),
-						zap.Any("panic", r))
-					
-					switch x := r.(type) {
+					switch v := r.(type) {
 					case string:
-						err = fmt.Errorf("command handler panic: %s", x)
+						err = errors.New(v)
 					case error:
-						err = fmt.Errorf("command handler panic: %w", x)
+						err = v
 					default:
-						err = fmt.Errorf("command handler panic: %v", x)
+						err = fmt.Errorf("unknown panic: %v", r)
 					}
 				}
 			}()
@@ -178,3 +167,4 @@ func RecoveryMiddleware(logger *zap.Logger) CommandMiddleware {
 		}
 	}
 }
+
