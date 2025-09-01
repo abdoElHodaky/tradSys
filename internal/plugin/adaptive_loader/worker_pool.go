@@ -10,378 +10,360 @@ import (
 	"go.uber.org/zap"
 )
 
-// Task represents a unit of work to be executed by the worker pool
+// WorkerPoolConfig contains configuration for the worker pool
+type WorkerPoolConfig struct {
+	// MaxWorkers is the maximum number of workers
+	MaxWorkers int
+
+	// MaxQueuedTasks is the maximum number of queued tasks
+	MaxQueuedTasks int
+
+	// WorkerIdleTimeout is the timeout for idle workers
+	WorkerIdleTimeout time.Duration
+
+	// TaskTimeout is the timeout for tasks
+	TaskTimeout time.Duration
+}
+
+// DefaultWorkerPoolConfig returns the default worker pool configuration
+func DefaultWorkerPoolConfig() WorkerPoolConfig {
+	return WorkerPoolConfig{
+		MaxWorkers:        10,
+		MaxQueuedTasks:    100,
+		WorkerIdleTimeout: 30 * time.Second,
+		TaskTimeout:       5 * time.Minute,
+	}
+}
+
+// Task represents a task to be executed by the worker pool
 type Task struct {
-	// The function to execute
-	Execute func() error
-	
-	// Task metadata
-	Name        string
-	Priority    int
-	CreatedAt   time.Time
-	StartedAt   time.Time
-	CompletedAt time.Time
-	
-	// Error handling
-	Error       error
-	RetryCount  int
-	MaxRetries  int
-	RetryDelay  time.Duration
-	
+	// Function to execute
+	Func func() error
+
 	// Context for cancellation
-	ctx         context.Context
-	cancel      context.CancelFunc
+	Ctx context.Context
+
+	// Timeout for the task
+	Timeout time.Duration
+
+	// Result channel
+	Result chan<- error
 }
 
-// NewTask creates a new task with the given name and execution function
-func NewTask(name string, execute func() error) *Task {
-	ctx, cancel := context.WithCancel(context.Background())
-	return &Task{
-		Name:       name,
-		Execute:    execute,
-		Priority:   0, // Default priority
-		CreatedAt:  time.Now(),
-		MaxRetries: 3,
-		RetryDelay: 100 * time.Millisecond,
-		ctx:        ctx,
-		cancel:     cancel,
-	}
-}
-
-// WithPriority sets the priority of the task
-func (t *Task) WithPriority(priority int) *Task {
-	t.Priority = priority
-	return t
-}
-
-// WithMaxRetries sets the maximum number of retries for the task
-func (t *Task) WithMaxRetries(maxRetries int) *Task {
-	t.MaxRetries = maxRetries
-	return t
-}
-
-// WithRetryDelay sets the delay between retries for the task
-func (t *Task) WithRetryDelay(delay time.Duration) *Task {
-	t.RetryDelay = delay
-	return t
-}
-
-// WithContext sets the context for the task
-func (t *Task) WithContext(ctx context.Context) *Task {
-	if t.cancel != nil {
-		t.cancel()
-	}
-	t.ctx, t.cancel = context.WithCancel(ctx)
-	return t
-}
-
-// Cancel cancels the task
-func (t *Task) Cancel() {
-	if t.cancel != nil {
-		t.cancel()
-	}
-}
-
-// IsCancelled checks if the task has been cancelled
-func (t *Task) IsCancelled() bool {
-	select {
-	case <-t.ctx.Done():
-		return true
-	default:
-		return false
-	}
-}
-
-// WorkerPool manages a pool of workers for executing tasks
+// WorkerPool is a pool of workers for executing tasks
 type WorkerPool struct {
 	// Configuration
-	numWorkers      int
-	queueSize       int
-	
+	config WorkerPoolConfig
+
 	// Task queue
-	taskQueue       chan *Task
-	priorityQueue   []*Task
-	queueMu         sync.Mutex
-	
+	tasks chan Task
+
 	// Worker management
-	workers         []*worker
-	workerWg        sync.WaitGroup
-	
-	// Pool state
-	running         int32
-	stopCh          chan struct{}
-	
-	// Metrics
-	completedTasks  int64
-	failedTasks     int64
-	
-	// Logging
-	logger          *zap.Logger
+	workerCount int32
+	running     int32
+	stopCh      chan struct{}
+	wg          sync.WaitGroup
+
+	// Statistics
+	completedTasks uint64
+	failedTasks    uint64
+	timeoutTasks   uint64
+	totalTaskTime  int64
+
+	// Logger
+	logger *zap.Logger
 }
 
-// worker represents a worker in the pool
-type worker struct {
-	id        int
-	pool      *WorkerPool
-	taskCh    chan *Task
-	stopCh    chan struct{}
-	logger    *zap.Logger
-}
+// NewWorkerPool creates a new worker pool
+func NewWorkerPool(config WorkerPoolConfig, logger *zap.Logger) *WorkerPool {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
 
-// NewWorkerPool creates a new worker pool with the given number of workers
-func NewWorkerPool(numWorkers, queueSize int, logger *zap.Logger) *WorkerPool {
-	if numWorkers <= 0 {
-		numWorkers = 1
-	}
-	
-	if queueSize <= 0 {
-		queueSize = numWorkers * 10
-	}
-	
 	return &WorkerPool{
-		numWorkers:     numWorkers,
-		queueSize:      queueSize,
-		taskQueue:      make(chan *Task, queueSize),
-		priorityQueue:  make([]*Task, 0),
-		workers:        make([]*worker, 0, numWorkers),
-		stopCh:         make(chan struct{}),
-		logger:         logger,
+		config:        config,
+		tasks:         make(chan Task, config.MaxQueuedTasks),
+		stopCh:        make(chan struct{}),
+		logger:        logger,
 	}
 }
 
 // Start starts the worker pool
-func (p *WorkerPool) Start() {
+func (p *WorkerPool) Start() error {
+	// Check if already running
 	if !atomic.CompareAndSwapInt32(&p.running, 0, 1) {
-		// Already running
-		return
+		return fmt.Errorf("worker pool already running")
 	}
-	
-	// Start workers
-	for i := 0; i < p.numWorkers; i++ {
-		w := &worker{
-			id:     i,
-			pool:   p,
-			taskCh: make(chan *Task),
-			stopCh: make(chan struct{}),
-			logger: p.logger.With(zap.Int("worker_id", i)),
-		}
-		
-		p.workers = append(p.workers, w)
-		p.workerWg.Add(1)
-		
-		go w.start()
+
+	p.logger.Info("Starting worker pool",
+		zap.Int("maxWorkers", p.config.MaxWorkers),
+		zap.Int("maxQueuedTasks", p.config.MaxQueuedTasks),
+	)
+
+	// Start initial workers
+	for i := 0; i < p.config.MaxWorkers; i++ {
+		p.startWorker()
 	}
-	
-	// Start task dispatcher
-	go p.dispatch()
+
+	return nil
 }
 
 // Stop stops the worker pool
 func (p *WorkerPool) Stop() {
+	// Check if already stopped
 	if !atomic.CompareAndSwapInt32(&p.running, 1, 0) {
-		// Not running
 		return
 	}
-	
+
+	p.logger.Info("Stopping worker pool")
+
 	// Signal all workers to stop
 	close(p.stopCh)
-	
+
 	// Wait for all workers to finish
-	p.workerWg.Wait()
+	p.wg.Wait()
+
+	p.logger.Info("Worker pool stopped")
 }
 
 // Submit submits a task to the worker pool
-func (p *WorkerPool) Submit(task *Task) error {
+func (p *WorkerPool) Submit(ctx context.Context, task func() error, timeout time.Duration) error {
+	// Check if running
 	if atomic.LoadInt32(&p.running) == 0 {
-		return fmt.Errorf("worker pool is not running")
+		return fmt.Errorf("worker pool not running")
 	}
-	
-	// Check if the task has a high priority
-	if task.Priority > 0 {
-		// Add to priority queue
-		p.queueMu.Lock()
-		p.priorityQueue = append(p.priorityQueue, task)
-		// Sort by priority (higher first)
-		p.sortPriorityQueue()
-		p.queueMu.Unlock()
-		return nil
+
+	// Create result channel
+	resultCh := make(chan error, 1)
+
+	// Create task
+	t := Task{
+		Func:    task,
+		Ctx:     ctx,
+		Timeout: timeout,
+		Result:  resultCh,
 	}
-	
-	// Try to add to regular queue
+
+	// Submit task
 	select {
-	case p.taskQueue <- task:
+	case p.tasks <- t:
+		// Task submitted
+	default:
+		// Queue full
+		return fmt.Errorf("task queue full")
+	}
+
+	// Wait for result
+	select {
+	case err := <-resultCh:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// SubmitAsync submits a task to the worker pool without waiting for the result
+func (p *WorkerPool) SubmitAsync(ctx context.Context, task func() error, timeout time.Duration) error {
+	// Check if running
+	if atomic.LoadInt32(&p.running) == 0 {
+		return fmt.Errorf("worker pool not running")
+	}
+
+	// Create task
+	t := Task{
+		Func:    task,
+		Ctx:     ctx,
+		Timeout: timeout,
+		Result:  nil,
+	}
+
+	// Submit task
+	select {
+	case p.tasks <- t:
+		// Task submitted
 		return nil
 	default:
-		// Queue is full
-		return fmt.Errorf("task queue is full")
+		// Queue full
+		return fmt.Errorf("task queue full")
 	}
 }
 
-// sortPriorityQueue sorts the priority queue by priority (higher first)
-func (p *WorkerPool) sortPriorityQueue() {
-	// Simple insertion sort for small queues
-	for i := 1; i < len(p.priorityQueue); i++ {
-		task := p.priorityQueue[i]
-		j := i - 1
-		for j >= 0 && p.priorityQueue[j].Priority < task.Priority {
-			p.priorityQueue[j+1] = p.priorityQueue[j]
-			j--
-		}
-		p.priorityQueue[j+1] = task
-	}
-}
+// startWorker starts a new worker
+func (p *WorkerPool) startWorker() {
+	p.wg.Add(1)
+	atomic.AddInt32(&p.workerCount, 1)
 
-// dispatch dispatches tasks to workers
-func (p *WorkerPool) dispatch() {
-	for {
-		var task *Task
-		
-		// First check priority queue
-		p.queueMu.Lock()
-		if len(p.priorityQueue) > 0 {
-			task = p.priorityQueue[0]
-			p.priorityQueue = p.priorityQueue[1:]
-			p.queueMu.Unlock()
-		} else {
-			p.queueMu.Unlock()
-			
-			// Then check regular queue
+	go func() {
+		defer func() {
+			atomic.AddInt32(&p.workerCount, -1)
+			p.wg.Done()
+
+			// Handle panics
+			if r := recover(); r != nil {
+				p.logger.Error("Worker panic",
+					zap.Any("panic", r),
+				)
+			}
+		}()
+
+		p.logger.Debug("Worker started")
+
+		// Worker loop
+		for {
 			select {
-			case task = <-p.taskQueue:
-				// Got a task
 			case <-p.stopCh:
-				// Pool is stopping
+				// Worker pool stopped
+				p.logger.Debug("Worker stopped")
 				return
+			case task := <-p.tasks:
+				// Execute task
+				p.executeTask(task)
+			case <-time.After(p.config.WorkerIdleTimeout):
+				// Worker idle timeout
+				workerCount := atomic.LoadInt32(&p.workerCount)
+				if workerCount > 1 {
+					// Only exit if there are other workers
+					p.logger.Debug("Worker idle timeout",
+						zap.Int32("workerCount", workerCount),
+					)
+					return
+				}
 			}
 		}
-		
-		// Find an available worker
-		dispatched := false
-		for _, w := range p.workers {
-			select {
-			case w.taskCh <- task:
-				dispatched = true
-				break
-			default:
-				// Worker is busy, try next one
-			}
-		}
-		
-		// If no worker is available, wait for one
-		if !dispatched {
-			// Pick a random worker and wait for it
-			w := p.workers[0]
-			select {
-			case w.taskCh <- task:
-				// Task dispatched
-			case <-p.stopCh:
-				// Pool is stopping
-				return
-			}
-		}
-	}
+	}()
 }
 
-// GetStats returns statistics about the worker pool
-func (p *WorkerPool) GetStats() map[string]interface{} {
-	return map[string]interface{}{
-		"num_workers":     p.numWorkers,
-		"queue_size":      p.queueSize,
-		"queue_length":    len(p.taskQueue),
-		"priority_queue":  len(p.priorityQueue),
-		"completed_tasks": atomic.LoadInt64(&p.completedTasks),
-		"failed_tasks":    atomic.LoadInt64(&p.failedTasks),
-		"running":         atomic.LoadInt32(&p.running) == 1,
-	}
-}
+// executeTask executes a task
+func (p *WorkerPool) executeTask(task Task) {
+	// Create context with timeout
+	var ctx context.Context
+	var cancel context.CancelFunc
 
-// start starts the worker
-func (w *worker) start() {
-	defer w.pool.workerWg.Done()
-	
-	w.logger.Debug("Worker started")
-	
-	for {
-		select {
-		case task := <-w.taskCh:
-			// Execute the task
-			w.executeTask(task)
-		case <-w.stopCh:
-			// Worker is stopping
-			w.logger.Debug("Worker stopped")
-			return
-		case <-w.pool.stopCh:
-			// Pool is stopping
-			w.logger.Debug("Worker stopped (pool stopping)")
-			return
-		}
-	}
-}
-
-// executeTask executes a task with retry logic
-func (w *worker) executeTask(task *Task) {
-	// Check if the task has been cancelled
-	if task.IsCancelled() {
-		w.logger.Debug("Task cancelled before execution",
-			zap.String("task", task.Name))
-		return
-	}
-	
-	// Set start time
-	task.StartedAt = time.Now()
-	
-	// Execute the task with retries
-	var err error
-	for attempt := 0; attempt <= task.MaxRetries; attempt++ {
-		if attempt > 0 {
-			// Log retry attempt
-			w.logger.Debug("Retrying task",
-				zap.String("task", task.Name),
-				zap.Int("attempt", attempt),
-				zap.Int("max_retries", task.MaxRetries))
-			
-			// Wait before retrying
-			select {
-			case <-task.ctx.Done():
-				// Task cancelled
-				task.Error = fmt.Errorf("task cancelled during retry wait: %w", task.ctx.Err())
-				return
-			case <-time.After(task.RetryDelay * time.Duration(attempt)):
-				// Continue with retry
-			}
-		}
-		
-		// Execute the task
-		err = task.Execute()
-		if err == nil {
-			// Task completed successfully
-			break
-		}
-		
-		// Task failed
-		task.Error = err
-		
-		// Check if we should retry
-		if attempt >= task.MaxRetries {
-			// No more retries
-			w.logger.Warn("Task failed after max retries",
-				zap.String("task", task.Name),
-				zap.Error(err),
-				zap.Int("max_retries", task.MaxRetries))
-			
-			// Update metrics
-			atomic.AddInt64(&w.pool.failedTasks, 1)
-			return
-		}
-	}
-	
-	// Set completion time
-	task.CompletedAt = time.Now()
-	
-	// Update metrics
-	if err == nil {
-		atomic.AddInt64(&w.pool.completedTasks, 1)
+	if task.Timeout > 0 {
+		ctx, cancel = context.WithTimeout(task.Ctx, task.Timeout)
 	} else {
-		atomic.AddInt64(&w.pool.failedTasks, 1)
+		ctx, cancel = context.WithTimeout(task.Ctx, p.config.TaskTimeout)
+	}
+	defer cancel()
+
+	// Execute task in a goroutine
+	resultCh := make(chan error, 1)
+	startTime := time.Now()
+
+	go func() {
+		defer func() {
+			// Handle panics
+			if r := recover(); r != nil {
+				err := fmt.Errorf("task panic: %v", r)
+				p.logger.Error("Task panic",
+					zap.Any("panic", r),
+				)
+				resultCh <- err
+			}
+		}()
+
+		// Execute task
+		resultCh <- task.Func()
+	}()
+
+	// Wait for result or timeout
+	var err error
+	select {
+	case err = <-resultCh:
+		// Task completed
+		if err != nil {
+			atomic.AddUint64(&p.failedTasks, 1)
+			p.logger.Debug("Task failed",
+				zap.Error(err),
+				zap.Duration("duration", time.Since(startTime)),
+			)
+		} else {
+			atomic.AddUint64(&p.completedTasks, 1)
+			p.logger.Debug("Task completed",
+				zap.Duration("duration", time.Since(startTime)),
+			)
+		}
+	case <-ctx.Done():
+		// Task timeout or context cancelled
+		err = ctx.Err()
+		atomic.AddUint64(&p.timeoutTasks, 1)
+		p.logger.Debug("Task timeout",
+			zap.Error(err),
+			zap.Duration("duration", time.Since(startTime)),
+		)
+	}
+
+	// Update statistics
+	atomic.AddInt64(&p.totalTaskTime, time.Since(startTime).Nanoseconds())
+
+	// Send result if result channel is provided
+	if task.Result != nil {
+		task.Result <- err
+	}
+
+	// Start a new worker if needed
+	workerCount := atomic.LoadInt32(&p.workerCount)
+	if workerCount < int32(p.config.MaxWorkers) {
+		p.startWorker()
 	}
 }
+
+// GetStats gets the worker pool statistics
+func (p *WorkerPool) GetStats() map[string]interface{} {
+	stats := make(map[string]interface{})
+	stats["running"] = atomic.LoadInt32(&p.running) == 1
+	stats["workerCount"] = atomic.LoadInt32(&p.workerCount)
+	stats["completedTasks"] = atomic.LoadUint64(&p.completedTasks)
+	stats["failedTasks"] = atomic.LoadUint64(&p.failedTasks)
+	stats["timeoutTasks"] = atomic.LoadUint64(&p.timeoutTasks)
+	stats["totalTaskTime"] = time.Duration(atomic.LoadInt64(&p.totalTaskTime))
+	stats["averageTaskTime"] = time.Duration(0)
+
+	// Calculate average task time
+	completedTasks := atomic.LoadUint64(&p.completedTasks)
+	if completedTasks > 0 {
+		stats["averageTaskTime"] = time.Duration(atomic.LoadInt64(&p.totalTaskTime)) / time.Duration(completedTasks)
+	}
+
+	return stats
+}
+
+// IsRunning returns whether the worker pool is running
+func (p *WorkerPool) IsRunning() bool {
+	return atomic.LoadInt32(&p.running) == 1
+}
+
+// GetWorkerCount returns the number of workers
+func (p *WorkerPool) GetWorkerCount() int {
+	return int(atomic.LoadInt32(&p.workerCount))
+}
+
+// GetCompletedTasks returns the number of completed tasks
+func (p *WorkerPool) GetCompletedTasks() uint64 {
+	return atomic.LoadUint64(&p.completedTasks)
+}
+
+// GetFailedTasks returns the number of failed tasks
+func (p *WorkerPool) GetFailedTasks() uint64 {
+	return atomic.LoadUint64(&p.failedTasks)
+}
+
+// GetTimeoutTasks returns the number of timeout tasks
+func (p *WorkerPool) GetTimeoutTasks() uint64 {
+	return atomic.LoadUint64(&p.timeoutTasks)
+}
+
+// GetTotalTaskTime returns the total task time
+func (p *WorkerPool) GetTotalTaskTime() time.Duration {
+	return time.Duration(atomic.LoadInt64(&p.totalTaskTime))
+}
+
+// GetAverageTaskTime returns the average task time
+func (p *WorkerPool) GetAverageTaskTime() time.Duration {
+	completedTasks := atomic.LoadUint64(&p.completedTasks)
+	if completedTasks == 0 {
+		return 0
+	}
+	return time.Duration(atomic.LoadInt64(&p.totalTaskTime)) / time.Duration(completedTasks)
+}
+
