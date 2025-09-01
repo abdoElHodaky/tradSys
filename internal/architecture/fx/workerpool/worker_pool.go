@@ -188,10 +188,10 @@ func (f *WorkerPoolFactory) Submit(poolName string, task func()) error {
 	// Submit the task to the pool
 	err = pool.Submit(func() {
 		defer func() {
-			if r := recover(); r != nil {
+			if rec := recover(); rec != nil {
 				f.logger.Error("Task panicked",
 					zap.String("pool", poolName),
-					zap.Any("panic", r))
+					zap.Any("panic", rec))
 				
 				f.metrics.RecordPanic(poolName)
 			}
@@ -229,10 +229,10 @@ func (f *WorkerPoolFactory) SubmitTask(poolName string, task func() error) error
 	// Submit the task to the pool
 	err = pool.Submit(func() {
 		defer func() {
-			if r := recover(); r != nil {
+			if rec := recover(); rec != nil {
 				f.logger.Error("Task panicked",
 					zap.String("pool", poolName),
-					zap.Any("panic", r))
+					zap.Any("panic", rec))
 				
 				f.metrics.RecordPanic(poolName)
 			}
@@ -284,10 +284,10 @@ func (f *WorkerPoolFactory) SubmitWithTimeout(poolName string, task func(), time
 	// Submit the task to the pool
 	err = pool.Submit(func() {
 		defer func() {
-			if r := recover(); r != nil {
+			if rec := recover(); rec != nil {
 				f.logger.Error("Task panicked",
 					zap.String("pool", poolName),
-					zap.Any("panic", r))
+					zap.Any("panic", rec))
 				
 				f.metrics.RecordPanic(poolName)
 			}
@@ -543,4 +543,3 @@ func (m *WorkerPoolMetrics) Reset() {
 	m.panics = make(map[string]int64)
 	m.executionTimes = make(map[string][]time.Duration)
 }
-
