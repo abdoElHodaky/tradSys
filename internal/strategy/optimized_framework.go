@@ -2,222 +2,138 @@ package strategy
 
 import (
 	"context"
-	"runtime"
+	"fmt"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/performance/latency"
-	"github.com/abdoElHodaky/tradSys/internal/performance/pools"
-	"github.com/abdoElHodaky/tradSys/proto/marketdata"
-	"github.com/abdoElHodaky/tradSys/proto/orders"
+	"github.com/abdoElHodaky/tradSys/internal/trading/market_data"
+	"github.com/abdoElHodaky/tradSys/internal/trading/order"
+	"github.com/panjf2000/ants/v2"
 	"go.uber.org/zap"
 )
 
-// OptimizedStrategyManager is an enhanced version of StrategyManager
-// optimized for high-frequency trading scenarios
+// OptimizedStrategyManager is a high-performance strategy manager
 type OptimizedStrategyManager struct {
-	logger            *zap.Logger
-	strategies        map[string]Strategy
-	strategyPriorities map[string]int
-	running           map[string]bool
-	mu                sync.RWMutex
-	
-	// Worker pool for strategy execution
-	workerPool        chan struct{}
-	
-	// Object pools to reduce GC pressure
-	marketDataPool    *pools.MarketDataPool
-	orderPool         *pools.OrderPool
-	
-	// Latency tracking
-	latencyTracker    *latency.Tracker
-	
-	// Statistics
+	strategies          map[string]Strategy
+	strategyPriorities  map[string]int
 	processedMarketData uint64
 	processedOrders     uint64
-	
-	// Circuit breaker
-	circuitBreakerEnabled bool
-	circuitBreakerTripped int32 // atomic
+	workerPool          chan struct{}
+	marketDataPool      sync.Pool
+	orderPool           sync.Pool
+	logger              *zap.Logger
+	mu                  sync.RWMutex
+	maxWorkers          int
 }
 
 // NewOptimizedStrategyManager creates a new optimized strategy manager
-func NewOptimizedStrategyManager(logger *zap.Logger, workerCount int) *OptimizedStrategyManager {
-	// Default to number of CPUs if workerCount is not specified
-	if workerCount <= 0 {
-		workerCount = runtime.NumCPU()
+func NewOptimizedStrategyManager(maxWorkers int, logger *zap.Logger) *OptimizedStrategyManager {
+	if logger == nil {
+		logger = zap.NewNop()
 	}
-	
+
+	if maxWorkers <= 0 {
+		maxWorkers = 10
+	}
+
 	return &OptimizedStrategyManager{
-		logger:               logger,
-		strategies:           make(map[string]Strategy),
-		strategyPriorities:   make(map[string]int),
-		running:              make(map[string]bool),
-		workerPool:           make(chan struct{}, workerCount),
-		marketDataPool:       pools.NewMarketDataPool(),
-		orderPool:            pools.NewOrderPool(),
-		latencyTracker:       latency.NewTracker(logger),
-		circuitBreakerEnabled: true,
+		strategies:         make(map[string]Strategy),
+		strategyPriorities: make(map[string]int),
+		workerPool:         make(chan struct{}, maxWorkers),
+		marketDataPool: sync.Pool{
+			New: func() interface{} {
+				return &market_data.MarketData{}
+			},
+		},
+		orderPool: sync.Pool{
+			New: func() interface{} {
+				return &order.Order{}
+			},
+		},
+		logger:     logger,
+		maxWorkers: maxWorkers,
 	}
 }
 
-// RegisterStrategy registers a strategy with optional priority
-// Higher priority (lower number) strategies are executed first
-func (m *OptimizedStrategyManager) RegisterStrategy(strategy Strategy, priority int) error {
+// RegisterStrategy registers a strategy with the manager
+func (m *OptimizedStrategyManager) RegisterStrategy(ctx context.Context, strategy Strategy, priority int) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	name := strategy.GetName()
 	if _, exists := m.strategies[name]; exists {
-		return ErrStrategyAlreadyRegistered
+		return fmt.Errorf("strategy already registered: %s", name)
 	}
-	
+
 	m.strategies[name] = strategy
 	m.strategyPriorities[name] = priority
-	m.running[name] = false
-	
-	m.logger.Info("Strategy registered", 
-		zap.String("name", name),
-		zap.Int("priority", priority))
-	
+
+	m.logger.Info("Registered strategy",
+		zap.String("strategy", name),
+		zap.Int("priority", priority),
+	)
+
 	return nil
 }
 
-// UnregisterStrategy unregisters a strategy
-func (m *OptimizedStrategyManager) UnregisterStrategy(name string) error {
+// UnregisterStrategy unregisters a strategy from the manager
+func (m *OptimizedStrategyManager) UnregisterStrategy(ctx context.Context, name string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
-	if _, exists := m.strategies[name]; !exists {
-		return ErrStrategyNotFound
+
+	strategy, exists := m.strategies[name]
+	if !exists {
+		return fmt.Errorf("strategy not registered: %s", name)
 	}
-	
-	// Stop the strategy if it's running
-	if m.running[name] {
-		m.mu.Unlock()
-		if err := m.StopStrategy(context.Background(), name); err != nil {
-			m.mu.Lock()
-			return err
-		}
-		m.mu.Lock()
+
+	// Shutdown the strategy
+	if err := strategy.Shutdown(ctx); err != nil {
+		m.logger.Error("Failed to shutdown strategy",
+			zap.String("strategy", name),
+			zap.Error(err),
+		)
 	}
-	
+
 	delete(m.strategies, name)
 	delete(m.strategyPriorities, name)
-	delete(m.running, name)
-	
-	m.logger.Info("Strategy unregistered", zap.String("name", name))
-	
+
+	m.logger.Info("Unregistered strategy",
+		zap.String("strategy", name),
+	)
+
 	return nil
 }
 
-// StartStrategy starts a strategy
-func (m *OptimizedStrategyManager) StartStrategy(ctx context.Context, name string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	
-	strategy, exists := m.strategies[name]
-	if !exists {
-		return ErrStrategyNotFound
-	}
-	
-	if m.running[name] {
-		return ErrStrategyAlreadyRunning
-	}
-	
-	startTime := time.Now()
-	if err := strategy.Start(ctx); err != nil {
-		return err
-	}
-	m.latencyTracker.TrackStrategyExecution(name+"_start", startTime)
-	
-	m.running[name] = true
-	
-	m.logger.Info("Strategy started", zap.String("name", name))
-	
-	return nil
-}
-
-// StopStrategy stops a strategy
-func (m *OptimizedStrategyManager) StopStrategy(ctx context.Context, name string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	
-	strategy, exists := m.strategies[name]
-	if !exists {
-		return ErrStrategyNotFound
-	}
-	
-	if !m.running[name] {
-		return ErrStrategyNotRunning
-	}
-	
-	startTime := time.Now()
-	if err := strategy.Stop(ctx); err != nil {
-		return err
-	}
-	m.latencyTracker.TrackStrategyExecution(name+"_stop", startTime)
-	
-	m.running[name] = false
-	
-	m.logger.Info("Strategy stopped", zap.String("name", name))
-	
-	return nil
-}
-
-// GetStrategy returns a strategy
+// GetStrategy gets a strategy by name
 func (m *OptimizedStrategyManager) GetStrategy(name string) (Strategy, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	strategy, exists := m.strategies[name]
 	if !exists {
-		return nil, ErrStrategyNotFound
+		return nil, fmt.Errorf("strategy not registered: %s", name)
 	}
-	
+
 	return strategy, nil
 }
 
-// ListStrategies returns a list of registered strategies
-func (m *OptimizedStrategyManager) ListStrategies() []string {
+// GetRegisteredStrategies gets all registered strategies
+func (m *OptimizedStrategyManager) GetRegisteredStrategies() []string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
-	var strategies []string
+
+	strategies := make([]string, 0, len(m.strategies))
 	for name := range m.strategies {
 		strategies = append(strategies, name)
 	}
-	
+
 	return strategies
 }
 
-// IsStrategyRunning checks if a strategy is running
-func (m *OptimizedStrategyManager) IsStrategyRunning(name string) (bool, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	
-	if _, exists := m.strategies[name]; !exists {
-		return false, ErrStrategyNotFound
-	}
-	
-	return m.running[name], nil
-}
-
-// ProcessMarketData processes market data updates for all running strategies
-// with optimized worker pool and priority-based execution
-func (m *OptimizedStrategyManager) ProcessMarketData(ctx context.Context, data *marketdata.MarketDataResponse) {
-	// Check circuit breaker
-	if m.circuitBreakerEnabled && atomic.LoadInt32(&m.circuitBreakerTripped) == 1 {
-		m.logger.Warn("Circuit breaker tripped, skipping market data processing",
-			zap.String("symbol", data.Symbol))
-		return
-	}
-	
-	// Track market data processing
-	startTime := time.Now()
-	defer m.latencyTracker.TrackMarketDataProcessing(data.Symbol, startTime)
-	
+// ProcessMarketData processes market data through all registered strategies
+func (m *OptimizedStrategyManager) ProcessMarketData(ctx context.Context, data *market_data.MarketData) {
 	// Increment processed count
 	atomic.AddUint64(&m.processedMarketData, 1)
 	
@@ -228,7 +144,7 @@ func (m *OptimizedStrategyManager) ProcessMarketData(ctx context.Context, data *
 	}
 	
 	// Create a copy of the market data to avoid race conditions
-	dataCopy := m.marketDataPool.Get()
+	dataCopy := m.marketDataPool.Get().(*market_data.MarketData)
 	*dataCopy = *data
 	
 	// Try to get a worker from the pool
@@ -240,51 +156,49 @@ func (m *OptimizedStrategyManager) ProcessMarketData(ctx context.Context, data *
 				m.marketDataPool.Put(dataCopy)
 			}()
 			
+			// Process the market data through each strategy
 			for _, s := range strategies {
-				strategyStartTime := time.Now()
-				if err := s.OnMarketData(ctx, dataCopy); err != nil {
-					m.logger.Error("Failed to process market data",
-						zap.Error(err),
-						zap.String("strategy", s.GetName()),
-						zap.String("symbol", dataCopy.Symbol))
+				strategy := s
+				if !strategy.IsRunning() {
+					continue
 				}
-				m.latencyTracker.TrackStrategyExecution(s.GetName()+"_market_data", strategyStartTime)
+				
+				// Process the market data
+				if err := strategy.ProcessMarketData(ctx, dataCopy); err != nil {
+					m.logger.Error("Failed to process market data",
+						zap.String("strategy", strategy.GetName()),
+						zap.Error(err),
+					)
+				}
 			}
 		}()
 	default:
-		// Worker pool is full, process in current goroutine
-		m.logger.Warn("Worker pool full, processing market data in current goroutine",
-			zap.String("symbol", data.Symbol))
+		// Worker pool is full, process synchronously
+		m.logger.Debug("Worker pool full, processing market data synchronously")
 		
+		// Process the market data through each strategy
 		for _, s := range strategies {
-			strategyStartTime := time.Now()
-			if err := s.OnMarketData(ctx, dataCopy); err != nil {
-				m.logger.Error("Failed to process market data",
-					zap.Error(err),
-					zap.String("strategy", s.GetName()),
-					zap.String("symbol", dataCopy.Symbol))
+			strategy := s
+			if !strategy.IsRunning() {
+				continue
 			}
-			m.latencyTracker.TrackStrategyExecution(s.GetName()+"_market_data", strategyStartTime)
+			
+			// Process the market data
+			if err := strategy.ProcessMarketData(ctx, dataCopy); err != nil {
+				m.logger.Error("Failed to process market data",
+					zap.String("strategy", strategy.GetName()),
+					zap.Error(err),
+				)
+			}
 		}
 		
+		// Return the copy to the pool
 		m.marketDataPool.Put(dataCopy)
 	}
 }
 
-// ProcessOrderUpdate processes order updates for all running strategies
-// with optimized worker pool and priority-based execution
-func (m *OptimizedStrategyManager) ProcessOrderUpdate(ctx context.Context, order *orders.OrderResponse) {
-	// Check circuit breaker
-	if m.circuitBreakerEnabled && atomic.LoadInt32(&m.circuitBreakerTripped) == 1 {
-		m.logger.Warn("Circuit breaker tripped, skipping order update processing",
-			zap.String("order_id", order.OrderId))
-		return
-	}
-	
-	// Track order processing
-	startTime := time.Now()
-	defer m.latencyTracker.TrackOrderProcessing(order.OrderId, startTime)
-	
+// ProcessOrder processes an order through all registered strategies
+func (m *OptimizedStrategyManager) ProcessOrder(ctx context.Context, order *order.Order) {
 	// Increment processed count
 	atomic.AddUint64(&m.processedOrders, 1)
 	
@@ -295,7 +209,7 @@ func (m *OptimizedStrategyManager) ProcessOrderUpdate(ctx context.Context, order
 	}
 	
 	// Create a copy of the order to avoid race conditions
-	orderCopy := m.orderPool.Get()
+	orderCopy := m.orderPool.Get().(*order.Order)
 	*orderCopy = *order
 	
 	// Try to get a worker from the pool
@@ -307,149 +221,385 @@ func (m *OptimizedStrategyManager) ProcessOrderUpdate(ctx context.Context, order
 				m.orderPool.Put(orderCopy)
 			}()
 			
+			// Process the order through each strategy
 			for _, s := range strategies {
-				strategyStartTime := time.Now()
-				if err := s.OnOrderUpdate(ctx, orderCopy); err != nil {
-					m.logger.Error("Failed to process order update",
-						zap.Error(err),
-						zap.String("strategy", s.GetName()),
-						zap.String("order_id", orderCopy.OrderId))
+				strategy := s
+				if !strategy.IsRunning() {
+					continue
 				}
-				m.latencyTracker.TrackStrategyExecution(s.GetName()+"_order_update", strategyStartTime)
+				
+				// Process the order
+				if err := strategy.ProcessOrder(ctx, orderCopy); err != nil {
+					m.logger.Error("Failed to process order",
+						zap.String("strategy", strategy.GetName()),
+						zap.Error(err),
+					)
+				}
 			}
 		}()
 	default:
-		// Worker pool is full, process in current goroutine
-		m.logger.Warn("Worker pool full, processing order update in current goroutine",
-			zap.String("order_id", order.OrderId))
+		// Worker pool is full, process synchronously
+		m.logger.Debug("Worker pool full, processing order synchronously")
 		
+		// Process the order through each strategy
 		for _, s := range strategies {
-			strategyStartTime := time.Now()
-			if err := s.OnOrderUpdate(ctx, orderCopy); err != nil {
-				m.logger.Error("Failed to process order update",
-					zap.Error(err),
-					zap.String("strategy", s.GetName()),
-					zap.String("order_id", orderCopy.OrderId))
+			strategy := s
+			if !strategy.IsRunning() {
+				continue
 			}
-			m.latencyTracker.TrackStrategyExecution(s.GetName()+"_order_update", strategyStartTime)
+			
+			// Process the order
+			if err := strategy.ProcessOrder(ctx, orderCopy); err != nil {
+				m.logger.Error("Failed to process order",
+					zap.String("strategy", strategy.GetName()),
+					zap.Error(err),
+				)
+			}
 		}
 		
+		// Return the copy to the pool
 		m.orderPool.Put(orderCopy)
 	}
 }
 
-// SetStrategyPriority sets the priority of a strategy
-// Lower numbers indicate higher priority
-func (m *OptimizedStrategyManager) SetStrategyPriority(name string, priority int) error {
+// GetStats gets the strategy manager statistics
+func (m *OptimizedStrategyManager) GetStats() map[string]interface{} {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	stats := map[string]interface{}{
+		"registered_strategies":  len(m.strategies),
+		"processed_market_data":  atomic.LoadUint64(&m.processedMarketData),
+		"processed_orders":       atomic.LoadUint64(&m.processedOrders),
+		"max_workers":            m.maxWorkers,
+		"strategy_stats":         make(map[string]interface{}),
+	}
+
+	// Get stats for each strategy
+	for name, strategy := range m.strategies {
+		stats["strategy_stats"].(map[string]interface{})[name] = map[string]interface{}{
+			"priority": m.strategyPriorities[name],
+			"running":  strategy.IsRunning(),
+		}
+	}
+
+	return stats
+}
+
+// Shutdown shuts down the strategy manager
+func (m *OptimizedStrategyManager) Shutdown(ctx context.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
-	if _, exists := m.strategies[name]; !exists {
-		return ErrStrategyNotFound
+
+	m.logger.Info("Shutting down strategy manager")
+
+	// Shutdown all strategies
+	for name, strategy := range m.strategies {
+		if err := strategy.Shutdown(ctx); err != nil {
+			m.logger.Error("Failed to shutdown strategy",
+				zap.String("strategy", name),
+				zap.Error(err),
+			)
+		}
 	}
-	
-	m.strategyPriorities[name] = priority
-	
-	m.logger.Info("Strategy priority updated",
-		zap.String("name", name),
-		zap.Int("priority", priority))
-	
+
+	// Clear the strategies
+	m.strategies = make(map[string]Strategy)
+	m.strategyPriorities = make(map[string]int)
+
 	return nil
 }
 
-// GetStrategyPriority gets the priority of a strategy
-func (m *OptimizedStrategyManager) GetStrategyPriority(name string) (int, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	
-	if _, exists := m.strategies[name]; !exists {
-		return 0, ErrStrategyNotFound
-	}
-	
-	return m.strategyPriorities[name], nil
-}
-
-// EnableCircuitBreaker enables the circuit breaker
-func (m *OptimizedStrategyManager) EnableCircuitBreaker() {
-	m.circuitBreakerEnabled = true
-	atomic.StoreInt32(&m.circuitBreakerTripped, 0)
-	m.logger.Info("Circuit breaker enabled")
-}
-
-// DisableCircuitBreaker disables the circuit breaker
-func (m *OptimizedStrategyManager) DisableCircuitBreaker() {
-	m.circuitBreakerEnabled = false
-	atomic.StoreInt32(&m.circuitBreakerTripped, 0)
-	m.logger.Info("Circuit breaker disabled")
-}
-
-// TripCircuitBreaker trips the circuit breaker
-func (m *OptimizedStrategyManager) TripCircuitBreaker() {
-	if m.circuitBreakerEnabled {
-		atomic.StoreInt32(&m.circuitBreakerTripped, 1)
-		m.logger.Warn("Circuit breaker tripped")
-	}
-}
-
-// ResetCircuitBreaker resets the circuit breaker
-func (m *OptimizedStrategyManager) ResetCircuitBreaker() {
-	atomic.StoreInt32(&m.circuitBreakerTripped, 0)
-	m.logger.Info("Circuit breaker reset")
-}
-
-// IsCircuitBreakerTripped checks if the circuit breaker is tripped
-func (m *OptimizedStrategyManager) IsCircuitBreakerTripped() bool {
-	return atomic.LoadInt32(&m.circuitBreakerTripped) == 1
-}
-
-// GetLatencyTracker returns the latency tracker
-func (m *OptimizedStrategyManager) GetLatencyTracker() *latency.Tracker {
-	return m.latencyTracker
-}
-
-// GetProcessedCounts returns the number of processed market data and order updates
-func (m *OptimizedStrategyManager) GetProcessedCounts() (marketData, orders uint64) {
-	return atomic.LoadUint64(&m.processedMarketData), atomic.LoadUint64(&m.processedOrders)
-}
-
-// getPrioritizedStrategies returns a slice of running strategies sorted by priority
+// getPrioritizedStrategies gets strategies sorted by priority
 func (m *OptimizedStrategyManager) getPrioritizedStrategies() []Strategy {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
-	// Create a slice of strategy-priority pairs
-	type strategyPriorityPair struct {
-		strategy Strategy
-		priority int
+
+	// Create a slice of strategy names
+	names := make([]string, 0, len(m.strategies))
+	for name := range m.strategies {
+		names = append(names, name)
 	}
-	
-	var pairs []strategyPriorityPair
-	
-	for name, strategy := range m.strategies {
-		if m.running[name] {
-			pairs = append(pairs, strategyPriorityPair{
-				strategy: strategy,
-				priority: m.strategyPriorities[name],
-			})
-		}
+
+	// Sort by priority (higher priority first)
+	sort.Slice(names, func(i, j int) bool {
+		return m.strategyPriorities[names[i]] > m.strategyPriorities[names[j]]
+	})
+
+	// Create a slice of strategies
+	strategies := make([]Strategy, 0, len(names))
+	for _, name := range names {
+		strategies = append(strategies, m.strategies[name])
 	}
-	
-	// Sort by priority (lower number = higher priority)
-	// Using a simple bubble sort for clarity, could use sort.Slice in production
-	for i := 0; i < len(pairs); i++ {
-		for j := i + 1; j < len(pairs); j++ {
-			if pairs[i].priority > pairs[j].priority {
-				pairs[i], pairs[j] = pairs[j], pairs[i]
-			}
-		}
-	}
-	
-	// Extract just the strategies
-	strategies := make([]Strategy, len(pairs))
-	for i, pair := range pairs {
-		strategies[i] = pair.strategy
-	}
-	
+
 	return strategies
+}
+
+// ParallelStrategyManager is a strategy manager that processes data in parallel
+type ParallelStrategyManager struct {
+	strategies          map[string]Strategy
+	strategyPriorities  map[string]int
+	processedMarketData uint64
+	processedOrders     uint64
+	pool                *ants.Pool
+	logger              *zap.Logger
+	mu                  sync.RWMutex
+}
+
+// NewParallelStrategyManager creates a new parallel strategy manager
+func NewParallelStrategyManager(maxWorkers int, logger *zap.Logger) (*ParallelStrategyManager, error) {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
+	if maxWorkers <= 0 {
+		maxWorkers = 10
+	}
+
+	// Create a worker pool
+	pool, err := ants.NewPool(maxWorkers)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create worker pool: %w", err)
+	}
+
+	return &ParallelStrategyManager{
+		strategies:         make(map[string]Strategy),
+		strategyPriorities: make(map[string]int),
+		pool:               pool,
+		logger:             logger,
+	}, nil
+}
+
+// RegisterStrategy registers a strategy with the manager
+func (m *ParallelStrategyManager) RegisterStrategy(ctx context.Context, strategy Strategy, priority int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	name := strategy.GetName()
+	if _, exists := m.strategies[name]; exists {
+		return fmt.Errorf("strategy already registered: %s", name)
+	}
+
+	m.strategies[name] = strategy
+	m.strategyPriorities[name] = priority
+
+	m.logger.Info("Registered strategy",
+		zap.String("strategy", name),
+		zap.Int("priority", priority),
+	)
+
+	return nil
+}
+
+// UnregisterStrategy unregisters a strategy from the manager
+func (m *ParallelStrategyManager) UnregisterStrategy(ctx context.Context, name string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	strategy, exists := m.strategies[name]
+	if !exists {
+		return fmt.Errorf("strategy not registered: %s", name)
+	}
+
+	// Shutdown the strategy
+	if err := strategy.Shutdown(ctx); err != nil {
+		m.logger.Error("Failed to shutdown strategy",
+			zap.String("strategy", name),
+			zap.Error(err),
+		)
+	}
+
+	delete(m.strategies, name)
+	delete(m.strategyPriorities, name)
+
+	m.logger.Info("Unregistered strategy",
+		zap.String("strategy", name),
+	)
+
+	return nil
+}
+
+// GetStrategy gets a strategy by name
+func (m *ParallelStrategyManager) GetStrategy(name string) (Strategy, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	strategy, exists := m.strategies[name]
+	if !exists {
+		return nil, fmt.Errorf("strategy not registered: %s", name)
+	}
+
+	return strategy, nil
+}
+
+// GetRegisteredStrategies gets all registered strategies
+func (m *ParallelStrategyManager) GetRegisteredStrategies() []string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	strategies := make([]string, 0, len(m.strategies))
+	for name := range m.strategies {
+		strategies = append(strategies, name)
+	}
+
+	return strategies
+}
+
+// ProcessMarketData processes market data through all registered strategies
+func (m *ParallelStrategyManager) ProcessMarketData(ctx context.Context, data *market_data.MarketData) {
+	// Increment processed count
+	atomic.AddUint64(&m.processedMarketData, 1)
+
+	// Get strategies
+	m.mu.RLock()
+	strategies := make([]Strategy, 0, len(m.strategies))
+	for _, strategy := range m.strategies {
+		if strategy.IsRunning() {
+			strategies = append(strategies, strategy)
+		}
+	}
+	m.mu.RUnlock()
+
+	if len(strategies) == 0 {
+		return
+	}
+
+	// Create a wait group to wait for all strategies to finish
+	var wg sync.WaitGroup
+	wg.Add(len(strategies))
+
+	// Process the market data through each strategy in parallel
+	for _, s := range strategies {
+		strategy := s
+		dataCopy := *data // Create a copy to avoid race conditions
+
+		// Submit the task to the worker pool
+		err := m.pool.Submit(func() {
+			defer wg.Done()
+
+			// Process the market data
+			if err := strategy.ProcessMarketData(ctx, &dataCopy); err != nil {
+				m.logger.Error("Failed to process market data",
+					zap.String("strategy", strategy.GetName()),
+					zap.Error(err),
+				)
+			}
+		})
+
+		if err != nil {
+			m.logger.Error("Failed to submit task to worker pool",
+				zap.Error(err),
+			)
+			wg.Done()
+		}
+	}
+
+	// Wait for all strategies to finish
+	wg.Wait()
+}
+
+// ProcessOrder processes an order through all registered strategies
+func (m *ParallelStrategyManager) ProcessOrder(ctx context.Context, order *order.Order) {
+	// Increment processed count
+	atomic.AddUint64(&m.processedOrders, 1)
+
+	// Get strategies
+	m.mu.RLock()
+	strategies := make([]Strategy, 0, len(m.strategies))
+	for _, strategy := range m.strategies {
+		if strategy.IsRunning() {
+			strategies = append(strategies, strategy)
+		}
+	}
+	m.mu.RUnlock()
+
+	if len(strategies) == 0 {
+		return
+	}
+
+	// Create a wait group to wait for all strategies to finish
+	var wg sync.WaitGroup
+	wg.Add(len(strategies))
+
+	// Process the order through each strategy in parallel
+	for _, s := range strategies {
+		strategy := s
+		orderCopy := *order // Create a copy to avoid race conditions
+
+		// Submit the task to the worker pool
+		err := m.pool.Submit(func() {
+			defer wg.Done()
+
+			// Process the order
+			if err := strategy.ProcessOrder(ctx, &orderCopy); err != nil {
+				m.logger.Error("Failed to process order",
+					zap.String("strategy", strategy.GetName()),
+					zap.Error(err),
+				)
+			}
+		})
+
+		if err != nil {
+			m.logger.Error("Failed to submit task to worker pool",
+				zap.Error(err),
+			)
+			wg.Done()
+		}
+	}
+
+	// Wait for all strategies to finish
+	wg.Wait()
+}
+
+// GetStats gets the strategy manager statistics
+func (m *ParallelStrategyManager) GetStats() map[string]interface{} {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	stats := map[string]interface{}{
+		"registered_strategies":  len(m.strategies),
+		"processed_market_data":  atomic.LoadUint64(&m.processedMarketData),
+		"processed_orders":       atomic.LoadUint64(&m.processedOrders),
+		"worker_pool_running":    m.pool.Running(),
+		"worker_pool_capacity":   m.pool.Cap(),
+		"strategy_stats":         make(map[string]interface{}),
+	}
+
+	// Get stats for each strategy
+	for name, strategy := range m.strategies {
+		stats["strategy_stats"].(map[string]interface{})[name] = map[string]interface{}{
+			"priority": m.strategyPriorities[name],
+			"running":  strategy.IsRunning(),
+		}
+	}
+
+	return stats
+}
+
+// Shutdown shuts down the strategy manager
+func (m *ParallelStrategyManager) Shutdown(ctx context.Context) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.logger.Info("Shutting down strategy manager")
+
+	// Shutdown all strategies
+	for name, strategy := range m.strategies {
+		if err := strategy.Shutdown(ctx); err != nil {
+			m.logger.Error("Failed to shutdown strategy",
+				zap.String("strategy", name),
+				zap.Error(err),
+			)
+		}
+	}
+
+	// Clear the strategies
+	m.strategies = make(map[string]Strategy)
+	m.strategyPriorities = make(map[string]int)
+
+	// Release the worker pool
+	m.pool.Release()
+
+	return nil
 }
 
