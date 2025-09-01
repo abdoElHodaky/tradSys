@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.uber.org/zap"
@@ -12,11 +13,11 @@ import (
 // LockInfo contains information about a lock
 type LockInfo struct {
 	// Lock
-	Lock sync.Mutex
+	mu sync.Mutex
 
 	// Statistics
-	AcquisitionCount int
-	TotalHeldTime    time.Duration
+	AcquisitionCount int64
+	TotalHeldTime    int64 // nanoseconds
 	LastAcquired     time.Time
 	LastReleased     time.Time
 	
@@ -33,13 +34,25 @@ type LockManagerConfig struct {
 	
 	// LockTimeout is the default timeout for acquiring locks
 	LockTimeout time.Duration
+
+	// DeadlockDetectionInterval is the interval at which to check for deadlocks
+	DeadlockDetectionInterval time.Duration
+
+	// MaxLockHoldTime is the maximum time a lock can be held before it's considered a potential deadlock
+	MaxLockHoldTime time.Duration
+
+	// EnableMetrics enables metrics collection
+	EnableMetrics bool
 }
 
 // DefaultLockManagerConfig returns the default lock manager configuration
 func DefaultLockManagerConfig() LockManagerConfig {
 	return LockManagerConfig{
-		DeadlockDetectionEnabled: true,
-		LockTimeout:              5 * time.Second,
+		DeadlockDetectionEnabled:   true,
+		LockTimeout:                5 * time.Second,
+		DeadlockDetectionInterval:  1 * time.Second,
+		MaxLockHoldTime:            30 * time.Second,
+		EnableMetrics:              true,
 	}
 }
 
@@ -49,18 +62,28 @@ type LockManager struct {
 	config LockManagerConfig
 	
 	// Locks
-	locks map[string]*LockInfo
-	mu    sync.Mutex
+	locks      map[string]*LockInfo
+	locksMutex sync.RWMutex
+	
+	// Lock acquisition graph for deadlock detection
+	lockGraph      map[string]map[string]bool
+	lockGraphMutex sync.RWMutex
+	
+	// Statistics
+	totalLocks        int64
+	totalAcquisitions int64
+	totalTimeouts     int64
+	totalDeadlocks    int64
+	
+	// Context for cancellation
+	ctx        context.Context
+	cancelFunc context.CancelFunc
+	
+	// Wait group for goroutines
+	wg sync.WaitGroup
 	
 	// Logger
 	logger *zap.Logger
-	
-	// Deadlock detection
-	lockHolders map[string]string   // lockName -> holderName
-	holderLocks map[string][]string // holderName -> []lockName
-	
-	// Lock timeouts
-	lockTimeouts map[string]time.Duration // lockName -> timeout
 }
 
 // NewLockManager creates a new lock manager
@@ -69,478 +92,521 @@ func NewLockManager(config LockManagerConfig, logger *zap.Logger) *LockManager {
 		logger = zap.NewNop()
 	}
 	
-	return &LockManager{
-		config:       config,
-		locks:        make(map[string]*LockInfo),
-		lockHolders:  make(map[string]string),
-		holderLocks:  make(map[string][]string),
-		lockTimeouts: make(map[string]time.Duration),
-		logger:       logger,
+	ctx, cancel := context.WithCancel(context.Background())
+	
+	lm := &LockManager{
+		config:     config,
+		locks:      make(map[string]*LockInfo),
+		lockGraph:  make(map[string]map[string]bool),
+		ctx:        ctx,
+		cancelFunc: cancel,
+		logger:     logger,
 	}
+	
+	// Start deadlock detection if enabled
+	if config.DeadlockDetectionEnabled {
+		lm.wg.Add(1)
+		go lm.deadlockDetectionLoop()
+	}
+	
+	return lm
 }
 
-// RegisterLock registers a lock with the manager
-func (l *LockManager) RegisterLock(lockName string) error {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+// RegisterLock registers a lock with the lock manager
+func (lm *LockManager) RegisterLock(lockID string) error {
+	lm.locksMutex.Lock()
+	defer lm.locksMutex.Unlock()
 	
-	if _, exists := l.locks[lockName]; exists {
-		return fmt.Errorf("lock %s already registered", lockName)
+	// Check if the lock already exists
+	if _, exists := lm.locks[lockID]; exists {
+		return fmt.Errorf("lock %s already exists", lockID)
 	}
 	
-	l.locks[lockName] = &LockInfo{
-		AcquisitionCount: 0,
-		TotalHeldTime:    0,
-		LastAcquired:     time.Time{},
-		LastReleased:     time.Time{},
-		IsHeld:           false,
-		CurrentHolder:    "",
-		AcquiredAt:       time.Time{},
+	// Create the lock
+	lm.locks[lockID] = &LockInfo{
+		LastAcquired: time.Time{},
+		LastReleased: time.Time{},
 	}
 	
-	l.logger.Debug("Registered lock", zap.String("lock", lockName))
+	// Update statistics
+	atomic.AddInt64(&lm.totalLocks, 1)
 	
-	return nil
-}
-
-// UnregisterLock unregisters a lock from the manager
-func (l *LockManager) UnregisterLock(lockName string) error {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	
-	lockInfo, exists := l.locks[lockName]
-	if !exists {
-		return fmt.Errorf("lock %s not registered", lockName)
-	}
-	
-	if lockInfo.IsHeld {
-		return fmt.Errorf("lock %s is currently held by %s", lockName, lockInfo.CurrentHolder)
-	}
-	
-	delete(l.locks, lockName)
-	delete(l.lockTimeouts, lockName)
-	delete(l.lockHolders, lockName)
-	
-	l.logger.Debug("Unregistered lock", zap.String("lock", lockName))
-	
-	return nil
-}
-
-// SetLockTimeout sets the timeout for a specific lock
-func (l *LockManager) SetLockTimeout(lockName string, timeout time.Duration) error {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	
-	if _, exists := l.locks[lockName]; !exists {
-		return fmt.Errorf("lock %s not registered", lockName)
-	}
-	
-	l.lockTimeouts[lockName] = timeout
-	
-	return nil
-}
-
-// SetDefaultTimeout sets the default timeout for all locks
-func (l *LockManager) SetDefaultTimeout(timeout time.Duration) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	
-	l.config.LockTimeout = timeout
-}
-
-// EnableDeadlockDetection enables or disables deadlock detection
-func (l *LockManager) EnableDeadlockDetection(enabled bool) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	
-	l.config.DeadlockDetectionEnabled = enabled
-}
-
-// AcquireLock acquires a lock with the given name
-func (l *LockManager) AcquireLock(ctx context.Context, lockName, holderName string) error {
-	l.mu.Lock()
-	
-	// Check if the lock exists
-	lockInfo, exists := l.locks[lockName]
-	if !exists {
-		l.mu.Unlock()
-		return fmt.Errorf("lock %s not registered", lockName)
-	}
-	
-	// Check for deadlocks if enabled
-	if l.config.DeadlockDetectionEnabled {
-		// Check if acquiring this lock would create a deadlock
-		if err := l.checkForDeadlock(lockName, holderName); err != nil {
-			l.mu.Unlock()
-			return err
-		}
-	}
-	
-	// Get timeout for this lock
-	timeout, exists := l.lockTimeouts[lockName]
-	if !exists {
-		timeout = l.config.LockTimeout
-	}
-	
-	// Create a channel to signal when the lock is acquired
-	lockAcquired := make(chan struct{}, 1)
-	
-	// Try to acquire the lock in a goroutine
-	go func() {
-		lockInfo.Lock.Lock()
-		lockAcquired <- struct{}{}
-	}()
-	
-	// Release the manager lock while waiting for the lock
-	l.mu.Unlock()
-	
-	// Wait for the lock with timeout
-	select {
-	case <-lockAcquired:
-		// Lock acquired
-	case <-time.After(timeout):
-		// Timeout
-		return fmt.Errorf("timeout acquiring lock %s after %s", lockName, timeout)
-	case <-ctx.Done():
-		// Context cancelled
-		return fmt.Errorf("context cancelled while acquiring lock %s: %w", lockName, ctx.Err())
-	}
-	
-	// Update lock info
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	
-	lockInfo.AcquisitionCount++
-	lockInfo.IsHeld = true
-	lockInfo.CurrentHolder = holderName
-	lockInfo.AcquiredAt = time.Now()
-	lockInfo.LastAcquired = time.Now()
-	
-	// Update deadlock detection info
-	if l.config.DeadlockDetectionEnabled {
-		l.lockHolders[lockName] = holderName
-		
-		if _, exists := l.holderLocks[holderName]; !exists {
-			l.holderLocks[holderName] = make([]string, 0)
-		}
-		
-		l.holderLocks[holderName] = append(l.holderLocks[holderName], lockName)
-	}
-	
-	l.logger.Debug("Acquired lock",
-		zap.String("lock", lockName),
-		zap.String("holder", holderName),
+	lm.logger.Debug("Registered lock",
+		zap.String("lockID", lockID),
 	)
 	
 	return nil
 }
 
-// TryAcquireLock tries to acquire a lock without blocking
-func (l *LockManager) TryAcquireLock(lockName, holderName string) (bool, error) {
-	l.mu.Lock()
-	
-	// Check if the lock exists
-	lockInfo, exists := l.locks[lockName]
-	if !exists {
-		l.mu.Unlock()
-		return false, fmt.Errorf("lock %s not registered", lockName)
+// AcquireLock acquires a lock
+func (lm *LockManager) AcquireLock(lockID, holderID string) error {
+	return lm.AcquireLockWithTimeout(lockID, holderID, lm.config.LockTimeout)
+}
+
+// AcquireLockWithTimeout acquires a lock with a timeout
+func (lm *LockManager) AcquireLockWithTimeout(lockID, holderID string, timeout time.Duration) error {
+	// Get the lock info
+	lockInfo, err := lm.getLockInfo(lockID)
+	if err != nil {
+		return err
 	}
 	
-	// Check for deadlocks if enabled
-	if l.config.DeadlockDetectionEnabled {
-		// Check if acquiring this lock would create a deadlock
-		if err := l.checkForDeadlock(lockName, holderName); err != nil {
-			l.mu.Unlock()
-			return false, err
-		}
-	}
+	// Create a context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
 	
 	// Try to acquire the lock
-	acquired := make(chan bool, 1)
+	acquired := make(chan struct{})
 	go func() {
-		acquired <- lockInfo.Lock.TryLock()
-	}()
-	
-	// Release the manager lock while waiting for the result
-	l.mu.Unlock()
-	
-	// Get the result
-	if !<-acquired {
-		return false, nil
-	}
-	
-	// Update lock info
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	
-	lockInfo.AcquisitionCount++
-	lockInfo.IsHeld = true
-	lockInfo.CurrentHolder = holderName
-	lockInfo.AcquiredAt = time.Now()
-	lockInfo.LastAcquired = time.Now()
-	
-	// Update deadlock detection info
-	if l.config.DeadlockDetectionEnabled {
-		l.lockHolders[lockName] = holderName
+		// Lock the mutex
+		lockInfo.mu.Lock()
 		
-		if _, exists := l.holderLocks[holderName]; !exists {
-			l.holderLocks[holderName] = make([]string, 0)
-		}
-		
-		l.holderLocks[holderName] = append(l.holderLocks[holderName], lockName)
-	}
-	
-	l.logger.Debug("Acquired lock (try)",
-		zap.String("lock", lockName),
-		zap.String("holder", holderName),
-	)
-	
-	return true, nil
-}
-
-// ReleaseLock releases a lock
-func (l *LockManager) ReleaseLock(lockName, holderName string) error {
-	l.mu.Lock()
-	
-	// Check if the lock exists
-	lockInfo, exists := l.locks[lockName]
-	if !exists {
-		l.mu.Unlock()
-		return fmt.Errorf("lock %s not registered", lockName)
-	}
-	
-	// Check if the lock is held by the specified holder
-	if lockInfo.IsHeld && lockInfo.CurrentHolder != holderName {
-		l.mu.Unlock()
-		return fmt.Errorf("lock %s is held by %s, not %s", lockName, lockInfo.CurrentHolder, holderName)
-	}
-	
-	// Update lock info before releasing
-	if lockInfo.IsHeld {
-		heldTime := time.Since(lockInfo.AcquiredAt)
-		lockInfo.TotalHeldTime += heldTime
-		lockInfo.IsHeld = false
-		lockInfo.LastReleased = time.Now()
-		
-		// Update deadlock detection info
-		if l.config.DeadlockDetectionEnabled {
-			delete(l.lockHolders, lockName)
+		// Check if the lock is already held
+		if lockInfo.IsHeld {
+			// Record the lock acquisition attempt in the lock graph
+			lm.recordLockAcquisitionAttempt(holderID, lockInfo.CurrentHolder)
 			
-			if locks, exists := l.holderLocks[holderName]; exists {
-				newLocks := make([]string, 0, len(locks)-1)
-				for _, lock := range locks {
-					if lock != lockName {
-						newLocks = append(newLocks, lock)
-					}
-				}
+			// Wait for the lock to be released
+			for lockInfo.IsHeld {
+				// Unlock the mutex while waiting
+				lockInfo.mu.Unlock()
 				
-				if len(newLocks) == 0 {
-					delete(l.holderLocks, holderName)
-				} else {
-					l.holderLocks[holderName] = newLocks
-				}
+				// Sleep for a short time
+				time.Sleep(10 * time.Millisecond)
+				
+				// Lock the mutex again
+				lockInfo.mu.Lock()
 			}
 		}
 		
-		l.logger.Debug("Released lock",
-			zap.String("lock", lockName),
-			zap.String("holder", holderName),
-			zap.Duration("heldTime", heldTime),
-		)
-	}
-	
-	l.mu.Unlock()
-	
-	// Release the lock
-	lockInfo.Lock.Unlock()
-	
-	return nil
-}
-
-// checkForDeadlock checks if acquiring a lock would cause a deadlock
-func (l *LockManager) checkForDeadlock(lockName string, holderName string) error {
-	// If the holder doesn't hold any locks, there can't be a deadlock
-	holderLocks, exists := l.holderLocks[holderName]
-	if !exists || len(holderLocks) == 0 {
-		return nil
-	}
-	
-	// Check if the lock is already held by someone else
-	currentHolder, lockHeld := l.lockHolders[lockName]
-	if !lockHeld {
-		return nil
-	}
-	
-	// If the lock is already held by this holder, there's no deadlock
-	if currentHolder == holderName {
-		return nil
-	}
-	
-	// Check if the current holder is waiting for any locks held by this holder
-	visited := make(map[string]bool)
-	return l.detectCycle(currentHolder, holderName, visited)
-}
-
-// detectCycle detects cycles in the lock dependency graph
-func (l *LockManager) detectCycle(current string, target string, visited map[string]bool) error {
-	if current == target {
-		return fmt.Errorf("deadlock detected: circular lock dependency")
-	}
-	
-	if visited[current] {
-		return nil
-	}
-	
-	visited[current] = true
-	
-	// Check locks held by the current holder
-	locks, exists := l.holderLocks[current]
-	if !exists {
-		return nil
-	}
-	
-	// Check if any of the locks held by the current holder are waiting for locks held by other holders
-	for _, lockName := range locks {
-		nextHolder, exists := l.lockHolders[lockName]
-		if !exists {
-			continue
-		}
+		// Mark the lock as held
+		lockInfo.IsHeld = true
+		lockInfo.CurrentHolder = holderID
+		lockInfo.AcquiredAt = time.Now()
+		lockInfo.LastAcquired = lockInfo.AcquiredAt
 		
-		if err := l.detectCycle(nextHolder, target, visited); err != nil {
-			return err
-		}
+		// Update statistics
+		atomic.AddInt64(&lockInfo.AcquisitionCount, 1)
+		atomic.AddInt64(&lm.totalAcquisitions, 1)
+		
+		// Unlock the mutex
+		lockInfo.mu.Unlock()
+		
+		// Signal that the lock has been acquired
+		close(acquired)
+	}()
+	
+	// Wait for the lock to be acquired or the timeout to expire
+	select {
+	case <-acquired:
+		// Lock acquired
+		lm.logger.Debug("Acquired lock",
+			zap.String("lockID", lockID),
+			zap.String("holderID", holderID),
+		)
+		return nil
+	case <-ctx.Done():
+		// Timeout
+		atomic.AddInt64(&lm.totalTimeouts, 1)
+		return fmt.Errorf("timeout acquiring lock %s: %w", lockID, ctx.Err())
 	}
+}
+
+// ReleaseLock releases a lock
+func (lm *LockManager) ReleaseLock(lockID, holderID string) error {
+	// Get the lock info
+	lockInfo, err := lm.getLockInfo(lockID)
+	if err != nil {
+		return err
+	}
+	
+	// Lock the mutex
+	lockInfo.mu.Lock()
+	defer lockInfo.mu.Unlock()
+	
+	// Check if the lock is held
+	if !lockInfo.IsHeld {
+		return fmt.Errorf("lock %s is not held", lockID)
+	}
+	
+	// Check if the holder is correct
+	if lockInfo.CurrentHolder != holderID {
+		return fmt.Errorf("lock %s is held by %s, not %s", lockID, lockInfo.CurrentHolder, holderID)
+	}
+	
+	// Calculate the held time
+	heldTime := time.Since(lockInfo.AcquiredAt)
+	
+	// Update statistics
+	atomic.AddInt64(&lockInfo.TotalHeldTime, int64(heldTime))
+	
+	// Mark the lock as released
+	lockInfo.IsHeld = false
+	lockInfo.CurrentHolder = ""
+	lockInfo.LastReleased = time.Now()
+	
+	// Remove the holder from the lock graph
+	lm.removeLockHolder(holderID)
+	
+	lm.logger.Debug("Released lock",
+		zap.String("lockID", lockID),
+		zap.String("holderID", holderID),
+		zap.Duration("heldTime", heldTime),
+	)
 	
 	return nil
-}
-
-// GetLockInfo gets information about a lock
-func (l *LockManager) GetLockInfo(lockName string) (*LockInfo, error) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	
-	lockInfo, exists := l.locks[lockName]
-	if !exists {
-		return nil, fmt.Errorf("lock %s not registered", lockName)
-	}
-	
-	// Create a copy to avoid race conditions
-	infoCopy := &LockInfo{
-		AcquisitionCount: lockInfo.AcquisitionCount,
-		TotalHeldTime:    lockInfo.TotalHeldTime,
-		LastAcquired:     lockInfo.LastAcquired,
-		LastReleased:     lockInfo.LastReleased,
-		IsHeld:           lockInfo.IsHeld,
-		CurrentHolder:    lockInfo.CurrentHolder,
-		AcquiredAt:       lockInfo.AcquiredAt,
-	}
-	
-	return infoCopy, nil
-}
-
-// GetAllLockInfo gets information about all locks
-func (l *LockManager) GetAllLockInfo() map[string]*LockInfo {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	
-	// Create a copy to avoid race conditions
-	infoCopy := make(map[string]*LockInfo)
-	for name, lockInfo := range l.locks {
-		infoCopy[name] = &LockInfo{
-			AcquisitionCount: lockInfo.AcquisitionCount,
-			TotalHeldTime:    lockInfo.TotalHeldTime,
-			LastAcquired:     lockInfo.LastAcquired,
-			LastReleased:     lockInfo.LastReleased,
-			IsHeld:           lockInfo.IsHeld,
-			CurrentHolder:    lockInfo.CurrentHolder,
-			AcquiredAt:       lockInfo.AcquiredAt,
-		}
-	}
-	
-	return infoCopy
-}
-
-// GetLockHolders gets the current lock holders
-func (l *LockManager) GetLockHolders() map[string]string {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	
-	// Create a copy to avoid race conditions
-	holdersCopy := make(map[string]string)
-	for name, holder := range l.lockHolders {
-		holdersCopy[name] = holder
-	}
-	
-	return holdersCopy
-}
-
-// GetHolderLocks gets the locks held by a holder
-func (l *LockManager) GetHolderLocks(holderName string) []string {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	
-	locks, exists := l.holderLocks[holderName]
-	if !exists {
-		return nil
-	}
-	
-	// Create a copy to avoid race conditions
-	locksCopy := make([]string, len(locks))
-	copy(locksCopy, locks)
-	
-	return locksCopy
 }
 
 // IsLockHeld checks if a lock is held
-func (l *LockManager) IsLockHeld(lockName string) (bool, string, error) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	
-	lockInfo, exists := l.locks[lockName]
-	if !exists {
-		return false, "", fmt.Errorf("lock %s not registered", lockName)
+func (lm *LockManager) IsLockHeld(lockID string) (bool, error) {
+	// Get the lock info
+	lockInfo, err := lm.getLockInfo(lockID)
+	if err != nil {
+		return false, err
 	}
 	
-	return lockInfo.IsHeld, lockInfo.CurrentHolder, nil
-}
-
-// ResetStatistics resets the lock statistics
-func (l *LockManager) ResetStatistics() {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+	// Lock the mutex
+	lockInfo.mu.Lock()
+	defer lockInfo.mu.Unlock()
 	
-	for _, lockInfo := range l.locks {
-		lockInfo.AcquisitionCount = 0
-		lockInfo.TotalHeldTime = 0
-		lockInfo.LastAcquired = time.Time{}
-		lockInfo.LastReleased = time.Time{}
-	}
+	return lockInfo.IsHeld, nil
 }
 
-// GetStatistics gets the lock statistics
-func (l *LockManager) GetStatistics() map[string]interface{} {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+// GetLockHolder gets the holder of a lock
+func (lm *LockManager) GetLockHolder(lockID string) (string, error) {
+	// Get the lock info
+	lockInfo, err := lm.getLockInfo(lockID)
+	if err != nil {
+		return "", err
+	}
+	
+	// Lock the mutex
+	lockInfo.mu.Lock()
+	defer lockInfo.mu.Unlock()
+	
+	if !lockInfo.IsHeld {
+		return "", fmt.Errorf("lock %s is not held", lockID)
+	}
+	
+	return lockInfo.CurrentHolder, nil
+}
+
+// GetLockInfo gets information about a lock
+func (lm *LockManager) GetLockInfo(lockID string) (map[string]interface{}, error) {
+	// Get the lock info
+	lockInfo, err := lm.getLockInfo(lockID)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Lock the mutex
+	lockInfo.mu.Lock()
+	defer lockInfo.mu.Unlock()
+	
+	// Create the result
+	result := make(map[string]interface{})
+	result["acquisitionCount"] = atomic.LoadInt64(&lockInfo.AcquisitionCount)
+	result["totalHeldTime"] = time.Duration(atomic.LoadInt64(&lockInfo.TotalHeldTime))
+	result["lastAcquired"] = lockInfo.LastAcquired
+	result["lastReleased"] = lockInfo.LastReleased
+	result["isHeld"] = lockInfo.IsHeld
+	result["currentHolder"] = lockInfo.CurrentHolder
+	
+	if lockInfo.IsHeld {
+		result["acquiredAt"] = lockInfo.AcquiredAt
+		result["heldTime"] = time.Since(lockInfo.AcquiredAt)
+	}
+	
+	return result, nil
+}
+
+// GetStats gets statistics about the lock manager
+func (lm *LockManager) GetStats() map[string]interface{} {
+	lm.locksMutex.RLock()
+	defer lm.locksMutex.RUnlock()
 	
 	stats := make(map[string]interface{})
-	stats["lockCount"] = len(l.locks)
-	stats["deadlockDetectionEnabled"] = l.config.DeadlockDetectionEnabled
-	stats["defaultTimeout"] = l.config.LockTimeout
+	stats["totalLocks"] = atomic.LoadInt64(&lm.totalLocks)
+	stats["totalAcquisitions"] = atomic.LoadInt64(&lm.totalAcquisitions)
+	stats["totalTimeouts"] = atomic.LoadInt64(&lm.totalTimeouts)
+	stats["totalDeadlocks"] = atomic.LoadInt64(&lm.totalDeadlocks)
 	
-	lockStats := make(map[string]interface{})
-	for name, lockInfo := range l.locks {
-		lockStats[name] = map[string]interface{}{
-			"acquisitionCount": lockInfo.AcquisitionCount,
-			"totalHeldTime":    lockInfo.TotalHeldTime,
-			"lastAcquired":     lockInfo.LastAcquired,
-			"lastReleased":     lockInfo.LastReleased,
-			"isHeld":           lockInfo.IsHeld,
-			"currentHolder":    lockInfo.CurrentHolder,
-			"acquiredAt":       lockInfo.AcquiredAt,
+	// Get lock counts
+	heldLocks := 0
+	for _, lockInfo := range lm.locks {
+		lockInfo.mu.Lock()
+		if lockInfo.IsHeld {
+			heldLocks++
 		}
+		lockInfo.mu.Unlock()
 	}
-	stats["locks"] = lockStats
+	stats["heldLocks"] = heldLocks
 	
 	return stats
+}
+
+// Shutdown shuts down the lock manager
+func (lm *LockManager) Shutdown() {
+	// Cancel the context
+	lm.cancelFunc()
+	
+	// Wait for goroutines to finish
+	lm.wg.Wait()
+	
+	lm.logger.Info("Lock manager shutdown complete")
+}
+
+// getLockInfo gets the lock info for a lock
+func (lm *LockManager) getLockInfo(lockID string) (*LockInfo, error) {
+	lm.locksMutex.RLock()
+	lockInfo, exists := lm.locks[lockID]
+	lm.locksMutex.RUnlock()
+	
+	if !exists {
+		return nil, fmt.Errorf("lock %s does not exist", lockID)
+	}
+	
+	return lockInfo, nil
+}
+
+// recordLockAcquisitionAttempt records a lock acquisition attempt in the lock graph
+func (lm *LockManager) recordLockAcquisitionAttempt(waiter, holder string) {
+	lm.lockGraphMutex.Lock()
+	defer lm.lockGraphMutex.Unlock()
+	
+	// Initialize the waiter's entry if it doesn't exist
+	if _, exists := lm.lockGraph[waiter]; !exists {
+		lm.lockGraph[waiter] = make(map[string]bool)
+	}
+	
+	// Record that waiter is waiting for holder
+	lm.lockGraph[waiter][holder] = true
+}
+
+// removeLockHolder removes a holder from the lock graph
+func (lm *LockManager) removeLockHolder(holder string) {
+	lm.lockGraphMutex.Lock()
+	defer lm.lockGraphMutex.Unlock()
+	
+	// Remove the holder from the lock graph
+	delete(lm.lockGraph, holder)
+	
+	// Remove the holder from all waiters
+	for waiter, holders := range lm.lockGraph {
+		delete(holders, holder)
+		
+		// Remove the waiter if it's not waiting for any holders
+		if len(holders) == 0 {
+			delete(lm.lockGraph, waiter)
+		}
+	}
+}
+
+// detectDeadlocks detects deadlocks in the lock graph
+func (lm *LockManager) detectDeadlocks() [][]string {
+	lm.lockGraphMutex.RLock()
+	defer lm.lockGraphMutex.RUnlock()
+	
+	deadlocks := make([][]string, 0)
+	
+	// Check for cycles in the lock graph
+	for waiter := range lm.lockGraph {
+		visited := make(map[string]bool)
+		path := make([]string, 0)
+		
+		if lm.detectCycle(waiter, visited, path, &deadlocks) {
+			// Deadlock detected
+			atomic.AddInt64(&lm.totalDeadlocks, 1)
+		}
+	}
+	
+	return deadlocks
+}
+
+// detectCycle detects a cycle in the lock graph starting from the given node
+func (lm *LockManager) detectCycle(node string, visited map[string]bool, path []string, deadlocks *[][]string) bool {
+	// Mark the node as visited
+	visited[node] = true
+	
+	// Add the node to the path
+	path = append(path, node)
+	
+	// Check all nodes that this node is waiting for
+	for holder := range lm.lockGraph[node] {
+		// If the holder is already in the path, we have a cycle
+		for i, pathNode := range path {
+			if pathNode == holder {
+				// Extract the cycle
+				cycle := append([]string{}, path[i:]...)
+				cycle = append(cycle, holder)
+				
+				// Add the cycle to the deadlocks
+				*deadlocks = append(*deadlocks, cycle)
+				
+				return true
+			}
+		}
+		
+		// If the holder hasn't been visited, check it recursively
+		if !visited[holder] {
+			if lm.detectCycle(holder, visited, path, deadlocks) {
+				return true
+			}
+		}
+	}
+	
+	return false
+}
+
+// deadlockDetectionLoop runs the deadlock detection loop
+func (lm *LockManager) deadlockDetectionLoop() {
+	defer lm.wg.Done()
+	
+	ticker := time.NewTicker(lm.config.DeadlockDetectionInterval)
+	defer ticker.Stop()
+	
+	for {
+		select {
+		case <-ticker.C:
+			// Detect deadlocks
+			deadlocks := lm.detectDeadlocks()
+			
+			// Log deadlocks
+			for _, cycle := range deadlocks {
+				lm.logger.Warn("Deadlock detected",
+					zap.Strings("cycle", cycle),
+				)
+			}
+			
+			// Check for long-held locks
+			lm.checkLongHeldLocks()
+		case <-lm.ctx.Done():
+			return
+		}
+	}
+}
+
+// checkLongHeldLocks checks for locks that have been held for a long time
+func (lm *LockManager) checkLongHeldLocks() {
+	lm.locksMutex.RLock()
+	defer lm.locksMutex.RUnlock()
+	
+	now := time.Now()
+	
+	for lockID, lockInfo := range lm.locks {
+		lockInfo.mu.Lock()
+		
+		if lockInfo.IsHeld && now.Sub(lockInfo.AcquiredAt) > lm.config.MaxLockHoldTime {
+			lm.logger.Warn("Lock held for a long time",
+				zap.String("lockID", lockID),
+				zap.String("holder", lockInfo.CurrentHolder),
+				zap.Duration("heldTime", now.Sub(lockInfo.AcquiredAt)),
+			)
+		}
+		
+		lockInfo.mu.Unlock()
+	}
+}
+
+// ForceReleaseLock forcibly releases a lock (use with caution)
+func (lm *LockManager) ForceReleaseLock(lockID string) error {
+	// Get the lock info
+	lockInfo, err := lm.getLockInfo(lockID)
+	if err != nil {
+		return err
+	}
+	
+	// Lock the mutex
+	lockInfo.mu.Lock()
+	defer lockInfo.mu.Unlock()
+	
+	// Check if the lock is held
+	if !lockInfo.IsHeld {
+		return fmt.Errorf("lock %s is not held", lockID)
+	}
+	
+	// Get the current holder
+	holder := lockInfo.CurrentHolder
+	
+	// Calculate the held time
+	heldTime := time.Since(lockInfo.AcquiredAt)
+	
+	// Update statistics
+	atomic.AddInt64(&lockInfo.TotalHeldTime, int64(heldTime))
+	
+	// Mark the lock as released
+	lockInfo.IsHeld = false
+	lockInfo.CurrentHolder = ""
+	lockInfo.LastReleased = time.Now()
+	
+	// Remove the holder from the lock graph
+	lm.removeLockHolder(holder)
+	
+	lm.logger.Warn("Forcibly released lock",
+		zap.String("lockID", lockID),
+		zap.String("holder", holder),
+		zap.Duration("heldTime", heldTime),
+	)
+	
+	return nil
+}
+
+// AcquireMultipleLocks acquires multiple locks atomically
+func (lm *LockManager) AcquireMultipleLocks(lockIDs []string, holderID string) error {
+	return lm.AcquireMultipleLocksWithTimeout(lockIDs, holderID, lm.config.LockTimeout)
+}
+
+// AcquireMultipleLocksWithTimeout acquires multiple locks atomically with a timeout
+func (lm *LockManager) AcquireMultipleLocksWithTimeout(lockIDs []string, holderID string, timeout time.Duration) error {
+	// Create a context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	
+	// Sort the lock IDs to prevent deadlocks
+	sortedLockIDs := make([]string, len(lockIDs))
+	copy(sortedLockIDs, lockIDs)
+	sort.Strings(sortedLockIDs)
+	
+	// Acquire the locks in order
+	acquired := make([]string, 0, len(sortedLockIDs))
+	
+	// Function to release acquired locks in case of failure
+	releaseAcquired := func() {
+		for _, lockID := range acquired {
+			lm.ReleaseLock(lockID, holderID)
+		}
+	}
+	
+	// Try to acquire all locks
+	for _, lockID := range sortedLockIDs {
+		// Check if the context is cancelled
+		if ctx.Err() != nil {
+			releaseAcquired()
+			return fmt.Errorf("timeout acquiring locks: %w", ctx.Err())
+		}
+		
+		// Acquire the lock
+		if err := lm.AcquireLockWithTimeout(lockID, holderID, timeout); err != nil {
+			releaseAcquired()
+			return fmt.Errorf("failed to acquire lock %s: %w", lockID, err)
+		}
+		
+		// Add the lock to the acquired list
+		acquired = append(acquired, lockID)
+	}
+	
+	return nil
+}
+
+// ReleaseMultipleLocks releases multiple locks
+func (lm *LockManager) ReleaseMultipleLocks(lockIDs []string, holderID string) error {
+	// Release the locks in reverse order
+	for i := len(lockIDs) - 1; i >= 0; i-- {
+		if err := lm.ReleaseLock(lockIDs[i], holderID); err != nil {
+			return fmt.Errorf("failed to release lock %s: %w", lockIDs[i], err)
+		}
+	}
+	
+	return nil
 }
 
