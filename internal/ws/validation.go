@@ -90,7 +90,7 @@ func (v *MessageValidator) ValidateMessage(message Message) error {
 // ValidateBinaryMessage validates a binary message against its schema
 func (v *MessageValidator) ValidateBinaryMessage(message *WebSocketMessage) error {
 	// Check if schema exists for message type
-	schema, ok := v.schemas[message.Type]
+	_, ok := v.schemas[message.Type]
 	if !ok {
 		return fmt.Errorf("no schema registered for message type: %s", message.Type)
 	}
