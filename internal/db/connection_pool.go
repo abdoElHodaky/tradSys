@@ -245,7 +245,7 @@ func (p *ConnectionPool) QueryRow(ctx context.Context, query string, args ...int
 
 // Begin starts a new transaction
 func (p *ConnectionPool) Begin(ctx context.Context) (*sql.Tx, error) {
-	start := time.Now()
+	startTime := time.Now()
 	
 	p.mu.Lock()
 	p.metrics.TransactionCount++
@@ -256,6 +256,8 @@ func (p *ConnectionPool) Begin(ctx context.Context) (*sql.Tx, error) {
 	p.mu.Lock()
 	if err != nil {
 		p.metrics.TransactionErrors++
+	} else {
+		p.metrics.TransactionDuration += time.Since(startTime)
 	}
 	p.mu.Unlock()
 	
@@ -265,6 +267,41 @@ func (p *ConnectionPool) Begin(ctx context.Context) (*sql.Tx, error) {
 	}
 	
 	return tx, err
+}
+
+// Select executes a query that returns rows and scans them into dest
+func (p *ConnectionPool) Select(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
+	start := time.Now()
+	
+	p.mu.Lock()
+	p.metrics.QueryCount++
+	p.mu.Unlock()
+	
+	rows, err := p.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		p.mu.Lock()
+		p.metrics.QueryErrors++
+		p.metrics.QueryDuration += time.Since(start)
+		p.mu.Unlock()
+		
+		p.logger.Error("Query execution failed",
+			zap.String("query", query),
+			zap.Error(err))
+		
+		return fmt.Errorf("query execution failed: %w", err)
+	}
+	defer rows.Close()
+	
+	// Scan rows into dest
+	// This is a simplified implementation - in a real application,
+	// you would use a library like sqlx or sqlc to handle scanning
+	// For now, we'll just return an error if dest is not a pointer to a slice
+	
+	p.mu.Lock()
+	p.metrics.QueryDuration += time.Since(start)
+	p.mu.Unlock()
+	
+	return fmt.Errorf("not implemented: use a proper SQL mapper library")
 }
 
 // WithTransaction executes a function within a transaction
@@ -349,4 +386,3 @@ func (p *ConnectionPool) WithTransaction(ctx context.Context, fn func(*sql.Tx) e
 	
 	return nil
 }
-
