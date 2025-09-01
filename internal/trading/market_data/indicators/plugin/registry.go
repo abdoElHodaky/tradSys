@@ -90,11 +90,11 @@ func (r *IndicatorRegistry) GetIndicator(indicatorName string, params indicators
 	var err error
 	func() {
 		defer func() {
-			if r := recover(); r != nil {
-				err = fmt.Errorf("panic while creating indicator: %v", r)
+			if rec := recover(); rec != nil {
+				err = fmt.Errorf("panic while creating indicator: %v", rec)
 				r.logger.Error("Panic while creating indicator",
 					zap.String("indicator", indicatorName),
-					zap.Any("panic", r))
+					zap.Any("panic", rec))
 			}
 		}()
 		
@@ -216,4 +216,3 @@ func (r *IndicatorRegistry) Shutdown() error {
 	
 	return nil
 }
-
