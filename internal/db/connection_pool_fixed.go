@@ -328,7 +328,11 @@ func (p *ConnectionPool) WithTransaction(ctx context.Context, fn func(*sql.Tx) e
 	err = fn(tx)
 	
 	// Handle panic
+
 	if rec := recover(); rec != nil {
+
+	if r := recover(); r != nil {
+
 		// Attempt to roll back the transaction
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
 			p.logger.Error("Failed to roll back transaction after panic",
@@ -340,13 +344,21 @@ func (p *ConnectionPool) WithTransaction(ctx context.Context, fn func(*sql.Tx) e
 		p.mu.Unlock()
 		
 		// Re-throw the original panic
+ 
 		if err, ok := rec.(error); ok {
+
+		if err, ok := r.(error); ok {
+
 			p.logger.Error("Panic in transaction",
 				zap.Error(err))
 			return err
 		}
 		
+ 
 		return fmt.Errorf("panic in transaction: %v", rec)
+
+		return fmt.Errorf("panic in transaction: %v", r)
+
 	}
 	
 	// Handle error
@@ -386,3 +398,4 @@ func (p *ConnectionPool) WithTransaction(ctx context.Context, fn func(*sql.Tx) e
 	
 	return nil
 }
+
