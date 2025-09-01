@@ -2,7 +2,10 @@ package order_matching
 
 import (
 	"container/heap"
+	"context"
+	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -51,117 +54,77 @@ const (
 
 // Order represents an order in the order book
 type Order struct {
-	// ID is the unique identifier for the order
+	// Order ID
 	ID string
-	// Symbol is the trading symbol
-	Symbol string
-	// Side is the side of the order (buy or sell)
-	Side OrderSide
-	// Type is the type of the order
-	Type OrderType
-	// Price is the price of the order
-	Price float64
-	// Quantity is the quantity of the order
-	Quantity float64
-	// FilledQuantity is the filled quantity of the order
-	FilledQuantity float64
-	// Status is the status of the order
-	Status OrderStatus
-	// CreatedAt is the time the order was created
-	CreatedAt time.Time
-	// UpdatedAt is the time the order was last updated
-	UpdatedAt time.Time
-	// ClientOrderID is the client order ID
-	ClientOrderID string
-	// UserID is the user ID
-	UserID string
-	// StopPrice is the stop price for stop orders
-	StopPrice float64
-	// TimeInForce is the time in force for the order
-	TimeInForce string
-	// Index is the index in the heap
-	Index int
-}
 
-// Trade represents a trade
-type Trade struct {
-	// ID is the unique identifier for the trade
-	ID string
-	// Symbol is the trading symbol
-	Symbol string
-	// Price is the price of the trade
-	Price float64
-	// Quantity is the quantity of the trade
-	Quantity float64
-	// BuyOrderID is the buy order ID
-	BuyOrderID string
-	// SellOrderID is the sell order ID
-	SellOrderID string
-	// Timestamp is the time the trade was executed
+	// Order details
+	Symbol    string
+	Type      OrderType
+	Side      OrderSide
+	Price     float64
+	Size      float64
 	Timestamp time.Time
-	// TakerSide is the side of the taker
-	TakerSide OrderSide
-	// MakerSide is the side of the maker
-	MakerSide OrderSide
-	// TakerFee is the fee for the taker
-	TakerFee float64
-	// MakerFee is the fee for the maker
-	MakerFee float64
+	Status    OrderStatus
+
+	// Stop price for stop orders
+	StopPrice float64
+
+	// Remaining size
+	RemainingSize float64
+
+	// User ID
+	UserID string
+
+	// Index in the heap
+	Index int
+
+	// Metadata
+	Metadata map[string]interface{}
 }
 
-// OrderBook represents an order book for a symbol
-type OrderBook struct {
-	// Symbol is the trading symbol
-	Symbol string
-	// Bids is the buy orders
-	Bids *OrderHeap
-	// Asks is the sell orders
-	Asks *OrderHeap
-	// Orders is a map of order ID to order
-	Orders map[string]*Order
-	// StopBids is the stop buy orders
-	StopBids *OrderHeap
-	// StopAsks is the stop sell orders
-	StopAsks *OrderHeap
-	// LastPrice is the last traded price
-	LastPrice float64
-	// Mutex for thread safety
-	mu sync.RWMutex
-	// Logger
-	logger *zap.Logger
+// NewOrder creates a new order
+func NewOrder(symbol string, orderType OrderType, side OrderSide, price, size float64, userID string) *Order {
+	return &Order{
+		ID:            uuid.New().String(),
+		Symbol:        symbol,
+		Type:          orderType,
+		Side:          side,
+		Price:         price,
+		Size:          size,
+		RemainingSize: size,
+		Timestamp:     time.Now(),
+		Status:        OrderStatusNew,
+		UserID:        userID,
+		Index:         -1,
+		Metadata:      make(map[string]interface{}),
+	}
+}
+
+// NewStopOrder creates a new stop order
+func NewStopOrder(symbol string, orderType OrderType, side OrderSide, price, stopPrice, size float64, userID string) *Order {
+	order := NewOrder(symbol, orderType, side, price, size, userID)
+	order.StopPrice = stopPrice
+	return order
 }
 
 // OrderHeap is a heap of orders
 type OrderHeap struct {
-	// Orders is the slice of orders
 	Orders []*Order
-	// Side is the side of the orders
-	Side OrderSide
+	Less   func(i, j int) bool
 }
 
 // Len returns the length of the heap
-func (h OrderHeap) Len() int { return len(h.Orders) }
+func (h *OrderHeap) Len() int {
+	return len(h.Orders)
+}
 
 // Less returns whether the order at index i is less than the order at index j
-func (h OrderHeap) Less(i, j int) bool {
-	if h.Side == OrderSideBuy {
-		// For buy orders, higher prices have higher priority
-		if h.Orders[i].Price == h.Orders[j].Price {
-			// If prices are equal, older orders have higher priority
-			return h.Orders[i].CreatedAt.Before(h.Orders[j].CreatedAt)
-		}
-		return h.Orders[i].Price > h.Orders[j].Price
-	}
-	// For sell orders, lower prices have higher priority
-	if h.Orders[i].Price == h.Orders[j].Price {
-		// If prices are equal, older orders have higher priority
-		return h.Orders[i].CreatedAt.Before(h.Orders[j].CreatedAt)
-	}
-	return h.Orders[i].Price < h.Orders[j].Price
+func (h *OrderHeap) Less(i, j int) bool {
+	return h.Less(i, j)
 }
 
 // Swap swaps the orders at indices i and j
-func (h OrderHeap) Swap(i, j int) {
+func (h *OrderHeap) Swap(i, j int) {
 	h.Orders[i], h.Orders[j] = h.Orders[j], h.Orders[i]
 	h.Orders[i].Index = i
 	h.Orders[j].Index = j
@@ -194,485 +157,481 @@ func (h *OrderHeap) Peek() *Order {
 	return h.Orders[0]
 }
 
+// OrderBook represents an order book for a symbol
+type OrderBook struct {
+	// Symbol
+	Symbol string
+
+	// Buy and sell orders
+	BuyOrders  *OrderHeap
+	SellOrders *OrderHeap
+
+	// Stop orders
+	BuyStopOrders  *OrderHeap
+	SellStopOrders *OrderHeap
+
+	// Order map for quick lookup
+	OrderMap map[string]*Order
+
+	// Last price
+	LastPrice float64
+
+	// Mutex for thread safety
+	mu sync.RWMutex
+
+	// Logger
+	logger *zap.Logger
+}
+
 // NewOrderBook creates a new order book
 func NewOrderBook(symbol string, logger *zap.Logger) *OrderBook {
-	bids := &OrderHeap{
-		Orders: make([]*Order, 0),
-		Side:   OrderSideBuy,
+	if logger == nil {
+		logger = zap.NewNop()
 	}
-	asks := &OrderHeap{
+
+	// Create buy orders heap (highest price first)
+	buyOrders := &OrderHeap{
 		Orders: make([]*Order, 0),
-		Side:   OrderSideSell,
+		Less: func(i, j int) bool {
+			h := buyOrders.Orders
+			// Higher price has higher priority
+			if h[i].Price != h[j].Price {
+				return h[i].Price > h[j].Price
+			}
+			// Earlier timestamp has higher priority
+			return h[i].Timestamp.Before(h[j].Timestamp)
+		},
 	}
-	stopBids := &OrderHeap{
+
+	// Create sell orders heap (lowest price first)
+	sellOrders := &OrderHeap{
 		Orders: make([]*Order, 0),
-		Side:   OrderSideBuy,
+		Less: func(i, j int) bool {
+			h := sellOrders.Orders
+			// Lower price has higher priority
+			if h[i].Price != h[j].Price {
+				return h[i].Price < h[j].Price
+			}
+			// Earlier timestamp has higher priority
+			return h[i].Timestamp.Before(h[j].Timestamp)
+		},
 	}
-	stopAsks := &OrderHeap{
+
+	// Create buy stop orders heap (lowest stop price first)
+	buyStopOrders := &OrderHeap{
 		Orders: make([]*Order, 0),
-		Side:   OrderSideSell,
+		Less: func(i, j int) bool {
+			h := buyStopOrders.Orders
+			// Lower stop price has higher priority
+			if h[i].StopPrice != h[j].StopPrice {
+				return h[i].StopPrice < h[j].StopPrice
+			}
+			// Earlier timestamp has higher priority
+			return h[i].Timestamp.Before(h[j].Timestamp)
+		},
 	}
-	heap.Init(bids)
-	heap.Init(asks)
-	heap.Init(stopBids)
-	heap.Init(stopAsks)
+
+	// Create sell stop orders heap (highest stop price first)
+	sellStopOrders := &OrderHeap{
+		Orders: make([]*Order, 0),
+		Less: func(i, j int) bool {
+			h := sellStopOrders.Orders
+			// Higher stop price has higher priority
+			if h[i].StopPrice != h[j].StopPrice {
+				return h[i].StopPrice > h[j].StopPrice
+			}
+			// Earlier timestamp has higher priority
+			return h[i].Timestamp.Before(h[j].Timestamp)
+		},
+	}
+
+	// Initialize the heaps
+	heap.Init(buyOrders)
+	heap.Init(sellOrders)
+	heap.Init(buyStopOrders)
+	heap.Init(sellStopOrders)
 
 	return &OrderBook{
-		Symbol:    symbol,
-		Bids:      bids,
-		Asks:      asks,
-		Orders:    make(map[string]*Order),
-		StopBids:  stopBids,
-		StopAsks:  stopAsks,
-		LastPrice: 0,
-		logger:    logger,
+		Symbol:         symbol,
+		BuyOrders:      buyOrders,
+		SellOrders:     sellOrders,
+		BuyStopOrders:  buyStopOrders,
+		SellStopOrders: sellStopOrders,
+		OrderMap:       make(map[string]*Order),
+		LastPrice:      0,
+		logger:         logger,
 	}
 }
 
 // AddOrder adds an order to the order book
-func (ob *OrderBook) AddOrder(order *Order) ([]*Trade, error) {
+func (ob *OrderBook) AddOrder(order *Order) error {
 	ob.mu.Lock()
 	defer ob.mu.Unlock()
 
-	// Generate an ID if not provided
-	if order.ID == "" {
-		order.ID = uuid.New().String()
+	// Check if order already exists
+	if _, exists := ob.OrderMap[order.ID]; exists {
+		return fmt.Errorf("order %s already exists", order.ID)
 	}
 
-	// Set created time if not provided
-	if order.CreatedAt.IsZero() {
-		order.CreatedAt = time.Now()
+	// Add order to the map
+	ob.OrderMap[order.ID] = order
+
+	// Add order to the appropriate heap
+	switch {
+	case order.Type == OrderTypeLimit && order.Side == OrderSideBuy:
+		heap.Push(ob.BuyOrders, order)
+	case order.Type == OrderTypeLimit && order.Side == OrderSideSell:
+		heap.Push(ob.SellOrders, order)
+	case (order.Type == OrderTypeStopLimit || order.Type == OrderTypeStopMarket) && order.Side == OrderSideBuy:
+		heap.Push(ob.BuyStopOrders, order)
+	case (order.Type == OrderTypeStopLimit || order.Type == OrderTypeStopMarket) && order.Side == OrderSideSell:
+		heap.Push(ob.SellStopOrders, order)
+	case order.Type == OrderTypeMarket:
+		// Market orders are executed immediately
+		return ob.executeMarketOrder(order)
+	default:
+		return fmt.Errorf("invalid order type: %s", order.Type)
 	}
 
-	// Set updated time
-	order.UpdatedAt = time.Now()
+	ob.logger.Debug("Added order to order book",
+		zap.String("symbol", ob.Symbol),
+		zap.String("orderID", order.ID),
+		zap.String("type", string(order.Type)),
+		zap.String("side", string(order.Side)),
+		zap.Float64("price", order.Price),
+		zap.Float64("size", order.Size),
+	)
 
-	// Set status to new
-	order.Status = OrderStatusNew
-
-	// Add to orders map
-	ob.Orders[order.ID] = order
-
-	// Handle stop orders
-	if order.Type == OrderTypeStopLimit || order.Type == OrderTypeStopMarket {
-		if order.Side == OrderSideBuy {
-			if ob.LastPrice > 0 && order.StopPrice <= ob.LastPrice {
-				// Stop price triggered, convert to limit/market order
-				if order.Type == OrderTypeStopLimit {
-					order.Type = OrderTypeLimit
-				} else {
-					order.Type = OrderTypeMarket
-				}
-			} else {
-				// Add to stop bids
-				heap.Push(ob.StopBids, order)
-				return nil, nil
-			}
-		} else {
-			if ob.LastPrice > 0 && order.StopPrice >= ob.LastPrice {
-				// Stop price triggered, convert to limit/market order
-				if order.Type == OrderTypeStopLimit {
-					order.Type = OrderTypeLimit
-				} else {
-					order.Type = OrderTypeMarket
-				}
-			} else {
-				// Add to stop asks
-				heap.Push(ob.StopAsks, order)
-				return nil, nil
-			}
-		}
+	// Check for matching orders
+	if order.Type == OrderTypeLimit {
+		ob.matchOrders()
 	}
 
-	// Process the order
-	return ob.processOrder(order)
+	// Check for triggered stop orders
+	ob.checkStopOrders()
+
+	return nil
 }
 
-// processOrder processes an order and returns any trades that were executed
-func (ob *OrderBook) processOrder(order *Order) ([]*Trade, error) {
-	trades := make([]*Trade, 0)
-
-	// Handle market orders
-	if order.Type == OrderTypeMarket {
-		if order.Side == OrderSideBuy {
-			// Process market buy order
-			for ob.Asks.Len() > 0 && order.Quantity > order.FilledQuantity {
-				bestAsk := ob.Asks.Peek()
-				trade := ob.matchOrders(order, bestAsk)
-				trades = append(trades, trade)
-
-				// Update order status
-				if bestAsk.Status == OrderStatusFilled {
-					heap.Pop(ob.Asks)
-				}
-			}
-		} else {
-			// Process market sell order
-			for ob.Bids.Len() > 0 && order.Quantity > order.FilledQuantity {
-				bestBid := ob.Bids.Peek()
-				trade := ob.matchOrders(order, bestBid)
-				trades = append(trades, trade)
-
-				// Update order status
-				if bestBid.Status == OrderStatusFilled {
-					heap.Pop(ob.Bids)
-				}
-			}
-		}
-
-		// If market order is not fully filled, cancel the remaining quantity
-		if order.Quantity > order.FilledQuantity {
-			order.Status = OrderStatusPartiallyFilled
-			ob.logger.Warn("Market order not fully filled",
-				zap.String("order_id", order.ID),
-				zap.Float64("quantity", order.Quantity),
-				zap.Float64("filled_quantity", order.FilledQuantity))
-		} else {
-			order.Status = OrderStatusFilled
-		}
-	} else if order.Type == OrderTypeLimit {
-		// Handle limit orders
-		if order.Side == OrderSideBuy {
-			// Process limit buy order
-			for ob.Asks.Len() > 0 && order.Quantity > order.FilledQuantity {
-				bestAsk := ob.Asks.Peek()
-				// Check if the best ask price is less than or equal to the buy price
-				if bestAsk.Price <= order.Price {
-					trade := ob.matchOrders(order, bestAsk)
-					trades = append(trades, trade)
-
-					// Update order status
-					if bestAsk.Status == OrderStatusFilled {
-						heap.Pop(ob.Asks)
-					}
-				} else {
-					break
-				}
-			}
-
-			// If limit order is not fully filled, add it to the order book
-			if order.Quantity > order.FilledQuantity {
-				if order.FilledQuantity > 0 {
-					order.Status = OrderStatusPartiallyFilled
-				}
-				heap.Push(ob.Bids, order)
-			} else {
-				order.Status = OrderStatusFilled
-			}
-		} else {
-			// Process limit sell order
-			for ob.Bids.Len() > 0 && order.Quantity > order.FilledQuantity {
-				bestBid := ob.Bids.Peek()
-				// Check if the best bid price is greater than or equal to the sell price
-				if bestBid.Price >= order.Price {
-					trade := ob.matchOrders(order, bestBid)
-					trades = append(trades, trade)
-
-					// Update order status
-					if bestBid.Status == OrderStatusFilled {
-						heap.Pop(ob.Bids)
-					}
-				} else {
-					break
-				}
-			}
-
-			// If limit order is not fully filled, add it to the order book
-			if order.Quantity > order.FilledQuantity {
-				if order.FilledQuantity > 0 {
-					order.Status = OrderStatusPartiallyFilled
-				}
-				heap.Push(ob.Asks, order)
-			} else {
-				order.Status = OrderStatusFilled
-			}
-		}
-	}
-
-	// Update last price if trades were executed
-	if len(trades) > 0 {
-		ob.LastPrice = trades[len(trades)-1].Price
-		// Check stop orders
-		ob.checkStopOrders()
-	}
-
-	return trades, nil
-}
-
-// matchOrders matches two orders and creates a trade
-func (ob *OrderBook) matchOrders(taker *Order, maker *Order) *Trade {
-	// Calculate the trade quantity
-	tradeQuantity := taker.Quantity - taker.FilledQuantity
-	remainingMakerQuantity := maker.Quantity - maker.FilledQuantity
-	if tradeQuantity > remainingMakerQuantity {
-		tradeQuantity = remainingMakerQuantity
-	}
-
-	// Calculate the trade price (maker's price)
-	tradePrice := maker.Price
-
-	// Update filled quantities
-	taker.FilledQuantity += tradeQuantity
-	maker.FilledQuantity += tradeQuantity
-
-	// Update order statuses
-	if maker.FilledQuantity >= maker.Quantity {
-		maker.Status = OrderStatusFilled
-	} else {
-		maker.Status = OrderStatusPartiallyFilled
-	}
-
-	if taker.FilledQuantity >= taker.Quantity {
-		taker.Status = OrderStatusFilled
-	} else {
-		taker.Status = OrderStatusPartiallyFilled
-	}
-
-	// Update timestamps
-	now := time.Now()
-	taker.UpdatedAt = now
-	maker.UpdatedAt = now
-
-	// Create trade
-	trade := &Trade{
-		ID:         uuid.New().String(),
-		Symbol:     ob.Symbol,
-		Price:      tradePrice,
-		Quantity:   tradeQuantity,
-		BuyOrderID: "",
-		SellOrderID: "",
-		Timestamp:  now,
-		TakerSide:  taker.Side,
-		MakerSide:  maker.Side,
-		TakerFee:   0, // Fees would be calculated based on fee schedule
-		MakerFee:   0, // Fees would be calculated based on fee schedule
-	}
-
-	// Set buy and sell order IDs
-	if taker.Side == OrderSideBuy {
-		trade.BuyOrderID = taker.ID
-		trade.SellOrderID = maker.ID
-	} else {
-		trade.BuyOrderID = maker.ID
-		trade.SellOrderID = taker.ID
-	}
-
-	return trade
-}
-
-// checkStopOrders checks if any stop orders should be triggered
-func (ob *OrderBook) checkStopOrders() {
-	// Check stop buy orders
-	triggeredStopBuys := make([]*Order, 0)
-	for ob.StopBids.Len() > 0 {
-		stopBuy := ob.StopBids.Peek()
-		if stopBuy.StopPrice <= ob.LastPrice {
-			// Stop price triggered
-			heap.Pop(ob.StopBids)
-			triggeredStopBuys = append(triggeredStopBuys, stopBuy)
-		} else {
-			break
-		}
-	}
-
-	// Check stop sell orders
-	triggeredStopSells := make([]*Order, 0)
-	for ob.StopAsks.Len() > 0 {
-		stopSell := ob.StopAsks.Peek()
-		if stopSell.StopPrice >= ob.LastPrice {
-			// Stop price triggered
-			heap.Pop(ob.StopAsks)
-			triggeredStopSells = append(triggeredStopSells, stopSell)
-		} else {
-			break
-		}
-	}
-
-	// Process triggered stop orders
-	for _, stopBuy := range triggeredStopBuys {
-		if stopBuy.Type == OrderTypeStopLimit {
-			stopBuy.Type = OrderTypeLimit
-		} else {
-			stopBuy.Type = OrderTypeMarket
-		}
-		ob.processOrder(stopBuy)
-	}
-
-	for _, stopSell := range triggeredStopSells {
-		if stopSell.Type == OrderTypeStopLimit {
-			stopSell.Type = OrderTypeLimit
-		} else {
-			stopSell.Type = OrderTypeMarket
-		}
-		ob.processOrder(stopSell)
-	}
-}
-
-// CancelOrder cancels an order
+// CancelOrder cancels an order in the order book
 func (ob *OrderBook) CancelOrder(orderID string) error {
 	ob.mu.Lock()
 	defer ob.mu.Unlock()
 
-	order, exists := ob.Orders[orderID]
+	// Find the order
+	order, exists := ob.OrderMap[orderID]
 	if !exists {
-		return ErrOrderNotFound
+		return fmt.Errorf("order %s not found", orderID)
 	}
 
-	if order.Status == OrderStatusFilled || order.Status == OrderStatusCancelled {
-		return ErrInvalidOrderStatus
+	// Check if order can be cancelled
+	if order.Status != OrderStatusNew && order.Status != OrderStatusPartiallyFilled {
+		return fmt.Errorf("order %s cannot be cancelled: %s", orderID, order.Status)
+	}
+
+	// Remove order from the map
+	delete(ob.OrderMap, orderID)
+
+	// Remove order from the appropriate heap
+	switch {
+	case order.Type == OrderTypeLimit && order.Side == OrderSideBuy:
+		if order.Index >= 0 && order.Index < len(ob.BuyOrders.Orders) {
+			heap.Remove(ob.BuyOrders, order.Index)
+		}
+	case order.Type == OrderTypeLimit && order.Side == OrderSideSell:
+		if order.Index >= 0 && order.Index < len(ob.SellOrders.Orders) {
+			heap.Remove(ob.SellOrders, order.Index)
+		}
+	case (order.Type == OrderTypeStopLimit || order.Type == OrderTypeStopMarket) && order.Side == OrderSideBuy:
+		if order.Index >= 0 && order.Index < len(ob.BuyStopOrders.Orders) {
+			heap.Remove(ob.BuyStopOrders, order.Index)
+		}
+	case (order.Type == OrderTypeStopLimit || order.Type == OrderTypeStopMarket) && order.Side == OrderSideSell:
+		if order.Index >= 0 && order.Index < len(ob.SellStopOrders.Orders) {
+			heap.Remove(ob.SellStopOrders, order.Index)
+		}
 	}
 
 	// Update order status
 	order.Status = OrderStatusCancelled
-	order.UpdatedAt = time.Now()
 
-	// Remove from appropriate heap
-	if order.Type == OrderTypeLimit {
-		if order.Side == OrderSideBuy {
-			// Find and remove from bids
-			for i, o := range ob.Bids.Orders {
-				if o.ID == orderID {
-					heap.Remove(ob.Bids, i)
-					break
-				}
-			}
-		} else {
-			// Find and remove from asks
-			for i, o := range ob.Asks.Orders {
-				if o.ID == orderID {
-					heap.Remove(ob.Asks, i)
-					break
-				}
-			}
+	ob.logger.Debug("Cancelled order",
+		zap.String("symbol", ob.Symbol),
+		zap.String("orderID", order.ID),
+		zap.String("type", string(order.Type)),
+		zap.String("side", string(order.Side)),
+		zap.Float64("price", order.Price),
+		zap.Float64("size", order.Size),
+	)
+
+	return nil
+}
+
+// GetOrder gets an order from the order book
+func (ob *OrderBook) GetOrder(orderID string) (*Order, error) {
+	ob.mu.RLock()
+	defer ob.mu.RUnlock()
+
+	// Find the order
+	order, exists := ob.OrderMap[orderID]
+	if !exists {
+		return nil, fmt.Errorf("order %s not found", orderID)
+	}
+
+	// Create a copy to avoid race conditions
+	orderCopy := *order
+
+	return &orderCopy, nil
+}
+
+// GetOrderBook gets the order book
+func (ob *OrderBook) GetOrderBook(depth int) map[string]interface{} {
+	ob.mu.RLock()
+	defer ob.mu.RUnlock()
+
+	// Create a copy of the order book
+	result := make(map[string]interface{})
+	result["symbol"] = ob.Symbol
+	result["lastPrice"] = ob.LastPrice
+
+	// Get buy orders
+	buyOrders := make([]map[string]interface{}, 0, depth)
+	for i := 0; i < len(ob.BuyOrders.Orders) && i < depth; i++ {
+		order := ob.BuyOrders.Orders[i]
+		buyOrders = append(buyOrders, map[string]interface{}{
+			"price": order.Price,
+			"size":  order.RemainingSize,
+		})
+	}
+	result["buyOrders"] = buyOrders
+
+	// Get sell orders
+	sellOrders := make([]map[string]interface{}, 0, depth)
+	for i := 0; i < len(ob.SellOrders.Orders) && i < depth; i++ {
+		order := ob.SellOrders.Orders[i]
+		sellOrders = append(sellOrders, map[string]interface{}{
+			"price": order.Price,
+			"size":  order.RemainingSize,
+		})
+	}
+	result["sellOrders"] = sellOrders
+
+	return result
+}
+
+// executeMarketOrder executes a market order
+func (ob *OrderBook) executeMarketOrder(order *Order) error {
+	// Check if there are matching orders
+	var matchingOrders *OrderHeap
+	if order.Side == OrderSideBuy {
+		matchingOrders = ob.SellOrders
+	} else {
+		matchingOrders = ob.BuyOrders
+	}
+
+	// Execute the market order
+	remainingSize := order.Size
+	for remainingSize > 0 && matchingOrders.Len() > 0 {
+		// Get the best matching order
+		matchingOrder := matchingOrders.Peek()
+		if matchingOrder == nil {
+			break
 		}
-	} else if order.Type == OrderTypeStopLimit || order.Type == OrderTypeStopMarket {
-		if order.Side == OrderSideBuy {
-			// Find and remove from stop bids
-			for i, o := range ob.StopBids.Orders {
-				if o.ID == orderID {
-					heap.Remove(ob.StopBids, i)
-					break
-				}
-			}
+
+		// Calculate the matched size
+		matchedSize := min(remainingSize, matchingOrder.RemainingSize)
+		remainingSize -= matchedSize
+		matchingOrder.RemainingSize -= matchedSize
+
+		// Update the last price
+		ob.LastPrice = matchingOrder.Price
+
+		// Create a trade
+		ob.createTrade(order, matchingOrder, matchedSize, matchingOrder.Price)
+
+		// Remove the matching order if it's fully filled
+		if matchingOrder.RemainingSize == 0 {
+			heap.Pop(matchingOrders)
+			matchingOrder.Status = OrderStatusFilled
+			delete(ob.OrderMap, matchingOrder.ID)
 		} else {
-			// Find and remove from stop asks
-			for i, o := range ob.StopAsks.Orders {
-				if o.ID == orderID {
-					heap.Remove(ob.StopAsks, i)
-					break
-				}
-			}
+			matchingOrder.Status = OrderStatusPartiallyFilled
 		}
+	}
+
+	// Update the order status
+	if remainingSize == 0 {
+		order.Status = OrderStatusFilled
+	} else if remainingSize < order.Size {
+		order.Status = OrderStatusPartiallyFilled
+		order.RemainingSize = remainingSize
+	} else {
+		order.Status = OrderStatusRejected
+		return fmt.Errorf("market order could not be fully executed")
 	}
 
 	return nil
 }
 
-// GetOrder gets an order by ID
-func (ob *OrderBook) GetOrder(orderID string) (*Order, error) {
-	ob.mu.RLock()
-	defer ob.mu.RUnlock()
+// matchOrders matches buy and sell orders
+func (ob *OrderBook) matchOrders() {
+	// Match orders until there are no more matches
+	for ob.BuyOrders.Len() > 0 && ob.SellOrders.Len() > 0 {
+		// Get the best buy and sell orders
+		bestBuy := ob.BuyOrders.Peek()
+		bestSell := ob.SellOrders.Peek()
 
-	order, exists := ob.Orders[orderID]
-	if !exists {
-		return nil, ErrOrderNotFound
+		// Check if the orders match
+		if bestBuy.Price < bestSell.Price {
+			break
+		}
+
+		// Calculate the matched size
+		matchedSize := min(bestBuy.RemainingSize, bestSell.RemainingSize)
+
+		// Update the last price
+		ob.LastPrice = bestSell.Price
+
+		// Create a trade
+		ob.createTrade(bestBuy, bestSell, matchedSize, bestSell.Price)
+
+		// Update the orders
+		bestBuy.RemainingSize -= matchedSize
+		bestSell.RemainingSize -= matchedSize
+
+		// Remove the orders if they're fully filled
+		if bestBuy.RemainingSize == 0 {
+			heap.Pop(ob.BuyOrders)
+			bestBuy.Status = OrderStatusFilled
+			delete(ob.OrderMap, bestBuy.ID)
+		} else {
+			bestBuy.Status = OrderStatusPartiallyFilled
+		}
+
+		if bestSell.RemainingSize == 0 {
+			heap.Pop(ob.SellOrders)
+			bestSell.Status = OrderStatusFilled
+			delete(ob.OrderMap, bestSell.ID)
+		} else {
+			bestSell.Status = OrderStatusPartiallyFilled
+		}
 	}
-
-	return order, nil
 }
 
-// GetOrderBook gets the order book
-func (ob *OrderBook) GetOrderBook(depth int) ([][]float64, [][]float64) {
-	ob.mu.RLock()
-	defer ob.mu.RUnlock()
+// checkStopOrders checks if any stop orders should be triggered
+func (ob *OrderBook) checkStopOrders() {
+	// Check buy stop orders
+	for ob.BuyStopOrders.Len() > 0 {
+		// Get the best buy stop order
+		bestBuyStop := ob.BuyStopOrders.Peek()
 
-	// Create a copy of the bids and asks
-	bids := make([]*Order, len(ob.Bids.Orders))
-	asks := make([]*Order, len(ob.Asks.Orders))
-	copy(bids, ob.Bids.Orders)
-	copy(asks, ob.Asks.Orders)
-
-	// Sort bids and asks
-	bidPrices := make(map[float64]float64)
-	askPrices := make(map[float64]float64)
-
-	for _, bid := range bids {
-		bidPrices[bid.Price] += bid.Quantity - bid.FilledQuantity
-	}
-
-	for _, ask := range asks {
-		askPrices[ask.Price] += ask.Quantity - ask.FilledQuantity
-	}
-
-	// Convert to arrays
-	bidArray := make([][]float64, 0, len(bidPrices))
-	askArray := make([][]float64, 0, len(askPrices))
-
-	for price, quantity := range bidPrices {
-		bidArray = append(bidArray, []float64{price, quantity})
-	}
-
-	for price, quantity := range askPrices {
-		askArray = append(askArray, []float64{price, quantity})
-	}
-
-	// Sort bids in descending order
-	for i := 0; i < len(bidArray); i++ {
-		for j := i + 1; j < len(bidArray); j++ {
-			if bidArray[i][0] < bidArray[j][0] {
-				bidArray[i], bidArray[j] = bidArray[j], bidArray[i]
-			}
+		// Check if the stop price is reached
+		if ob.LastPrice == 0 || ob.LastPrice < bestBuyStop.StopPrice {
+			break
 		}
+
+		// Remove the stop order
+		heap.Pop(ob.BuyStopOrders)
+		delete(ob.OrderMap, bestBuyStop.ID)
+
+		// Convert to a limit or market order
+		var newOrder *Order
+		if bestBuyStop.Type == OrderTypeStopLimit {
+			newOrder = NewOrder(bestBuyStop.Symbol, OrderTypeLimit, bestBuyStop.Side, bestBuyStop.Price, bestBuyStop.Size, bestBuyStop.UserID)
+		} else {
+			newOrder = NewOrder(bestBuyStop.Symbol, OrderTypeMarket, bestBuyStop.Side, 0, bestBuyStop.Size, bestBuyStop.UserID)
+		}
+
+		// Add the new order
+		ob.AddOrder(newOrder)
 	}
 
-	// Sort asks in ascending order
-	for i := 0; i < len(askArray); i++ {
-		for j := i + 1; j < len(askArray); j++ {
-			if askArray[i][0] > askArray[j][0] {
-				askArray[i], askArray[j] = askArray[j], askArray[i]
-			}
-		}
-	}
+	// Check sell stop orders
+	for ob.SellStopOrders.Len() > 0 {
+		// Get the best sell stop order
+		bestSellStop := ob.SellStopOrders.Peek()
 
-	// Limit to depth
-	if depth > 0 {
-		if len(bidArray) > depth {
-			bidArray = bidArray[:depth]
+		// Check if the stop price is reached
+		if ob.LastPrice == 0 || ob.LastPrice > bestSellStop.StopPrice {
+			break
 		}
-		if len(askArray) > depth {
-			askArray = askArray[:depth]
-		}
-	}
 
-	return bidArray, askArray
+		// Remove the stop order
+		heap.Pop(ob.SellStopOrders)
+		delete(ob.OrderMap, bestSellStop.ID)
+
+		// Convert to a limit or market order
+		var newOrder *Order
+		if bestSellStop.Type == OrderTypeStopLimit {
+			newOrder = NewOrder(bestSellStop.Symbol, OrderTypeLimit, bestSellStop.Side, bestSellStop.Price, bestSellStop.Size, bestSellStop.UserID)
+		} else {
+			newOrder = NewOrder(bestSellStop.Symbol, OrderTypeMarket, bestSellStop.Side, 0, bestSellStop.Size, bestSellStop.UserID)
+		}
+
+		// Add the new order
+		ob.AddOrder(newOrder)
+	}
 }
 
-// Engine represents an order matching engine
-type Engine struct {
-	// OrderBooks is a map of symbol to order book
+// createTrade creates a trade between two orders
+func (ob *OrderBook) createTrade(buyOrder, sellOrder *Order, size, price float64) {
+	ob.logger.Info("Trade executed",
+		zap.String("symbol", ob.Symbol),
+		zap.String("buyOrderID", buyOrder.ID),
+		zap.String("sellOrderID", sellOrder.ID),
+		zap.Float64("price", price),
+		zap.Float64("size", size),
+	)
+}
+
+// min returns the minimum of two float64 values
+func min(a, b float64) float64 {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// OrderMatchingEngine is an order matching engine
+type OrderMatchingEngine struct {
+	// Order books by symbol
 	OrderBooks map[string]*OrderBook
+
 	// Mutex for thread safety
 	mu sync.RWMutex
+
 	// Logger
 	logger *zap.Logger
-	// Trade channel
-	TradeChannel chan *Trade
+
+	// Statistics
+	ordersProcessed uint64
+	tradesExecuted  uint64
+	
+	// Memory management
+	cleanupInterval time.Duration
+	lastCleanup     time.Time
 }
 
-// NewEngine creates a new order matching engine
-func NewEngine(logger *zap.Logger) *Engine {
-	return &Engine{
-		OrderBooks:   make(map[string]*OrderBook),
-		logger:       logger,
-		TradeChannel: make(chan *Trade, 1000),
+// NewOrderMatchingEngine creates a new order matching engine
+func NewOrderMatchingEngine(logger *zap.Logger) *OrderMatchingEngine {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
+	return &OrderMatchingEngine{
+		OrderBooks:      make(map[string]*OrderBook),
+		logger:          logger,
+		cleanupInterval: 1 * time.Hour,
+		lastCleanup:     time.Now(),
 	}
 }
 
 // GetOrderBook gets an order book for a symbol
-func (e *Engine) GetOrderBook(symbol string) *OrderBook {
+func (e *OrderMatchingEngine) GetOrderBook(symbol string) *OrderBook {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 
+	// Check if the order book exists
 	orderBook, exists := e.OrderBooks[symbol]
 	if !exists {
 		return nil
@@ -682,116 +641,184 @@ func (e *Engine) GetOrderBook(symbol string) *OrderBook {
 }
 
 // CreateOrderBook creates an order book for a symbol
-func (e *Engine) CreateOrderBook(symbol string) *OrderBook {
+func (e *OrderMatchingEngine) CreateOrderBook(symbol string) *OrderBook {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	orderBook, exists := e.OrderBooks[symbol]
-	if exists {
+	// Check if the order book already exists
+	if orderBook, exists := e.OrderBooks[symbol]; exists {
 		return orderBook
 	}
 
-	orderBook = NewOrderBook(symbol, e.logger)
+	// Create a new order book
+	orderBook := NewOrderBook(symbol, e.logger)
 	e.OrderBooks[symbol] = orderBook
+
+	e.logger.Info("Created order book",
+		zap.String("symbol", symbol),
+	)
 
 	return orderBook
 }
 
-// PlaceOrder places an order
-func (e *Engine) PlaceOrder(order *Order) ([]*Trade, error) {
-	e.mu.RLock()
-	orderBook, exists := e.OrderBooks[order.Symbol]
-	e.mu.RUnlock()
+// PlaceOrder places an order in the order matching engine
+func (e *OrderMatchingEngine) PlaceOrder(order *Order) error {
+	// Increment orders processed
+	atomic.AddUint64(&e.ordersProcessed, 1)
 
-	if !exists {
-		e.mu.Lock()
-		orderBook = NewOrderBook(order.Symbol, e.logger)
-		e.OrderBooks[order.Symbol] = orderBook
-		e.mu.Unlock()
+	// Get the order book
+	orderBook := e.GetOrderBook(order.Symbol)
+	if orderBook == nil {
+		// Create a new order book
+		orderBook = e.CreateOrderBook(order.Symbol)
 	}
 
-	trades, err := orderBook.AddOrder(order)
-	if err != nil {
-		return nil, err
-	}
-
-	// Send trades to trade channel
-	for _, trade := range trades {
-		select {
-		case e.TradeChannel <- trade:
-		default:
-			e.logger.Warn("Trade channel full, dropping trade",
-				zap.String("trade_id", trade.ID),
-				zap.String("symbol", trade.Symbol),
-				zap.Float64("price", trade.Price),
-				zap.Float64("quantity", trade.Quantity))
-		}
-	}
-
-	return trades, nil
+	// Add the order to the order book
+	return orderBook.AddOrder(order)
 }
 
-// CancelOrder cancels an order
-func (e *Engine) CancelOrder(symbol, orderID string) error {
-	e.mu.RLock()
-	orderBook, exists := e.OrderBooks[symbol]
-	e.mu.RUnlock()
-
-	if !exists {
-		return ErrSymbolNotFound
+// CancelOrder cancels an order in the order matching engine
+func (e *OrderMatchingEngine) CancelOrder(symbol, orderID string) error {
+	// Get the order book
+	orderBook := e.GetOrderBook(symbol)
+	if orderBook == nil {
+		return fmt.Errorf("order book for symbol %s not found", symbol)
 	}
 
+	// Cancel the order
 	return orderBook.CancelOrder(orderID)
 }
 
-// GetOrder gets an order
-func (e *Engine) GetOrder(symbol, orderID string) (*Order, error) {
-	e.mu.RLock()
-	orderBook, exists := e.OrderBooks[symbol]
-	e.mu.RUnlock()
-
-	if !exists {
-		return nil, ErrSymbolNotFound
+// GetOrder gets an order from the order matching engine
+func (e *OrderMatchingEngine) GetOrder(symbol, orderID string) (*Order, error) {
+	// Get the order book
+	orderBook := e.GetOrderBook(symbol)
+	if orderBook == nil {
+		return nil, fmt.Errorf("order book for symbol %s not found", symbol)
 	}
 
+	// Get the order
 	return orderBook.GetOrder(orderID)
 }
 
-// GetMarketData gets market data for a symbol
-func (e *Engine) GetMarketData(symbol string, depth int) ([][]float64, [][]float64, float64, error) {
+// GetOrderBookSnapshot gets a snapshot of an order book
+func (e *OrderMatchingEngine) GetOrderBookSnapshot(symbol string, depth int) (map[string]interface{}, error) {
+	// Get the order book
+	orderBook := e.GetOrderBook(symbol)
+	if orderBook == nil {
+		return nil, fmt.Errorf("order book for symbol %s not found", symbol)
+	}
+
+	// Get the order book snapshot
+	return orderBook.GetOrderBook(depth), nil
+}
+
+// GetStats gets the order matching engine statistics
+func (e *OrderMatchingEngine) GetStats() map[string]interface{} {
 	e.mu.RLock()
-	orderBook, exists := e.OrderBooks[symbol]
-	e.mu.RUnlock()
+	defer e.mu.RUnlock()
 
-	if !exists {
-		return nil, nil, 0, ErrSymbolNotFound
+	stats := make(map[string]interface{})
+	stats["ordersProcessed"] = atomic.LoadUint64(&e.ordersProcessed)
+	stats["tradesExecuted"] = atomic.LoadUint64(&e.tradesExecuted)
+	stats["orderBookCount"] = len(e.OrderBooks)
+	stats["lastCleanup"] = e.lastCleanup
+
+	return stats
+}
+
+// Cleanup performs cleanup operations to prevent memory leaks
+func (e *OrderMatchingEngine) Cleanup(ctx context.Context) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	// Check if cleanup is needed
+	if time.Since(e.lastCleanup) < e.cleanupInterval {
+		return
 	}
 
-	bids, asks := orderBook.GetOrderBook(depth)
-	return bids, asks, orderBook.LastPrice, nil
-}
+	e.logger.Info("Starting order matching engine cleanup")
 
-// Errors
-var (
-	ErrOrderNotFound     = NewError("order not found")
-	ErrInvalidOrderStatus = NewError("invalid order status")
-	ErrSymbolNotFound    = NewError("symbol not found")
-)
+	// Cleanup each order book
+	for symbol, orderBook := range e.OrderBooks {
+		// Skip if context is cancelled
+		if ctx.Err() != nil {
+			e.logger.Warn("Cleanup cancelled",
+				zap.Error(ctx.Err()),
+			)
+			return
+		}
 
-// Error represents an error
-type Error struct {
-	Message string
-}
+		// Lock the order book
+		orderBook.mu.Lock()
 
-// NewError creates a new error
-func NewError(message string) *Error {
-	return &Error{
-		Message: message,
+		// Remove filled and cancelled orders from the map
+		for orderID, order := range orderBook.OrderMap {
+			if order.Status == OrderStatusFilled || order.Status == OrderStatusCancelled {
+				delete(orderBook.OrderMap, orderID)
+			}
+		}
+
+		// Rebuild the heaps to remove any nil entries
+		e.rebuildHeap(orderBook.BuyOrders)
+		e.rebuildHeap(orderBook.SellOrders)
+		e.rebuildHeap(orderBook.BuyStopOrders)
+		e.rebuildHeap(orderBook.SellStopOrders)
+
+		// Unlock the order book
+		orderBook.mu.Unlock()
+
+		e.logger.Debug("Cleaned up order book",
+			zap.String("symbol", symbol),
+		)
 	}
+
+	// Update last cleanup time
+	e.lastCleanup = time.Now()
+
+	e.logger.Info("Completed order matching engine cleanup")
 }
 
-// Error returns the error message
-func (e *Error) Error() string {
-	return e.Message
+// rebuildHeap rebuilds a heap to remove nil entries
+func (e *OrderMatchingEngine) rebuildHeap(h *OrderHeap) {
+	// Create a new slice without nil entries
+	orders := make([]*Order, 0, len(h.Orders))
+	for _, order := range h.Orders {
+		if order != nil {
+			order.Index = -1 // Reset index
+			orders = append(orders, order)
+		}
+	}
+
+	// Replace the orders slice
+	h.Orders = orders
+
+	// Rebuild the heap
+	heap.Init(h)
+}
+
+// SetCleanupInterval sets the cleanup interval
+func (e *OrderMatchingEngine) SetCleanupInterval(interval time.Duration) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	e.cleanupInterval = interval
+}
+
+// StartPeriodicCleanup starts periodic cleanup
+func (e *OrderMatchingEngine) StartPeriodicCleanup(ctx context.Context) {
+	go func() {
+		ticker := time.NewTicker(e.cleanupInterval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				e.Cleanup(ctx)
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 }
 
