@@ -17,8 +17,8 @@ type MarketDataRepositoryParams struct {
 	DB     *sqlx.DB `optional:"true"`
 }
 
-// MarketDataRepository provides database operations for market data
-type MarketDataRepository struct {
+// SQLXMarketDataRepository provides database operations for market data using sqlx
+type SQLXMarketDataRepository struct {
 	logger *zap.Logger
 	db     *sqlx.DB
 }
@@ -48,16 +48,16 @@ type Symbol struct {
 	UpdatedAt         time.Time `db:"updated_at"`
 }
 
-// NewMarketDataRepository creates a new market data repository with fx dependency injection
-func NewMarketDataRepository(p MarketDataRepositoryParams) *MarketDataRepository {
-	return &MarketDataRepository{
+// NewSQLXMarketDataRepository creates a new market data repository with fx dependency injection
+func NewSQLXMarketDataRepository(p MarketDataRepositoryParams) *SQLXMarketDataRepository {
+	return &SQLXMarketDataRepository{
 		logger: p.Logger,
 		db:     p.DB,
 	}
 }
 
 // GetMarketData retrieves market data for a symbol and interval
-func (r *MarketDataRepository) GetMarketData(ctx context.Context, symbol, interval string) (*MarketData, error) {
+func (r *SQLXMarketDataRepository) GetMarketData(ctx context.Context, symbol, interval string) (*MarketData, error) {
 	if r.db == nil {
 		r.logger.Warn("Database connection not available")
 		return nil, nil
@@ -85,7 +85,7 @@ func (r *MarketDataRepository) GetMarketData(ctx context.Context, symbol, interv
 }
 
 // GetHistoricalData retrieves historical market data for a symbol and interval
-func (r *MarketDataRepository) GetHistoricalData(ctx context.Context, symbol, interval string, startTime, endTime time.Time, limit int) ([]*MarketData, error) {
+func (r *SQLXMarketDataRepository) GetHistoricalData(ctx context.Context, symbol, interval string, startTime, endTime time.Time, limit int) ([]*MarketData, error) {
 	if r.db == nil {
 		r.logger.Warn("Database connection not available")
 		return nil, nil
@@ -115,7 +115,7 @@ func (r *MarketDataRepository) GetHistoricalData(ctx context.Context, symbol, in
 }
 
 // GetSymbols retrieves available trading symbols
-func (r *MarketDataRepository) GetSymbols(ctx context.Context, filter string) ([]*Symbol, error) {
+func (r *SQLXMarketDataRepository) GetSymbols(ctx context.Context, filter string) ([]*Symbol, error) {
 	if r.db == nil {
 		r.logger.Warn("Database connection not available")
 		return nil, nil
@@ -145,7 +145,7 @@ func (r *MarketDataRepository) GetSymbols(ctx context.Context, filter string) ([
 }
 
 // SaveMarketData saves market data to the database
-func (r *MarketDataRepository) SaveMarketData(ctx context.Context, data *MarketData) error {
+func (r *SQLXMarketDataRepository) SaveMarketData(ctx context.Context, data *MarketData) error {
 	if r.db == nil {
 		r.logger.Warn("Database connection not available")
 		return nil
@@ -181,8 +181,8 @@ func (r *MarketDataRepository) SaveMarketData(ctx context.Context, data *MarketD
 	return nil
 }
 
-// MarketDataRepositoryModule provides the market data repository module for fx
-var MarketDataRepositoryModule = fx.Options(
-	fx.Provide(NewMarketDataRepository),
+// SQLXMarketDataRepositoryModule provides the market data repository module for fx
+var SQLXMarketDataRepositoryModule = fx.Options(
+	fx.Provide(NewSQLXMarketDataRepository),
 )
 

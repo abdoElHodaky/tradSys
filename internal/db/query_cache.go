@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/patrickmn/go-cache"
+	cache "github.com/patrickmn/go-cache"
 	"go.uber.org/zap"
 )
 
@@ -279,3 +279,4 @@ func (qc *QueryCache) WithCache(ctx context.Context, key string, dest interface{
 	// Store in cache
 	return qc.Set(ctx, key, dest, ttl)
 }
+
