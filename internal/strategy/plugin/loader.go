@@ -564,8 +564,8 @@ func (w *StrategyPluginWrapper) CreateStrategy(config strategy.StrategyConfig, l
 	
 	func() {
 		defer func() {
-			if r := recover(); r != nil {
-				err = fmt.Errorf("panic in plugin %s: %v", w.Info.Name, r)
+			if rec := recover(); rec != nil {
+				err = fmt.Errorf("panic in plugin %s: %v", w.Info.Name, rec)
 			}
 		}()
 		strat, err = w.CreateFunc(config, logger)
