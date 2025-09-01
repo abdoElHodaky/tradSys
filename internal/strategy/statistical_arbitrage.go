@@ -3,680 +3,418 @@ package strategy
 import (
 	"context"
 	"fmt"
+	"math"
+	"sync"
 	"time"
-	
-	"github.com/abdoElHodaky/tradSys/internal/db/models"
-	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
-	"github.com/abdoElHodaky/tradSys/internal/marketdata"
-	"github.com/abdoElHodaky/tradSys/internal/orders"
-	"github.com/abdoElHodaky/tradSys/internal/statistics"
-	"github.com/google/uuid"
+
+	"github.com/abdoElHodaky/tradSys/internal/models"
+	"github.com/abdoElHodaky/tradSys/internal/trading/market_data"
 	"go.uber.org/zap"
 )
 
-// StatisticalArbitrageStrategy implements a pairs trading strategy
+// StatisticalArbitrageStrategy implements a statistical arbitrage trading strategy
 type StatisticalArbitrageStrategy struct {
-	*BaseStrategy
+	BaseStrategy
+	params StatisticalArbitrageParams
 	
-	// Strategy parameters
-	pairID          string
-	symbol1         string
-	symbol2         string
-	ratio           float64
-	zScoreEntry     float64
-	zScoreExit      float64
-	positionSize    float64
-	maxPositions    int
-	lookbackPeriod  int
-	updateInterval  time.Duration
+	// Pair symbols
+	symbol1 string
+	symbol2 string
 	
-	// Strategy state
-	prices1         []float64
-	prices2         []float64
-	spread          []float64
-	positions       map[string]*models.PairPosition
-	spreadMean      float64
-	spreadStdDev    float64
-	currentZScore   float64
-	lastUpdate      time.Time
+	// Price history
+	priceHistory1 []float64
+	priceHistory2 []float64
 	
-	// Services
-	orderService    orders.OrderService
-	pairRepo        *repositories.PairRepository
-	statsRepo       *repositories.PairStatisticsRepository
-	positionRepo    *repositories.PairPositionRepository
+	// Spread history
+	spreadHistory []float64
+	
+	// Statistics
+	spreadMean   float64
+	spreadStdDev float64
+	
+	// Position tracking
+	position struct {
+		InPosition bool
+		Quantity1  float64
+		Quantity2  float64
+		EntrySpread float64
+		EntryTime   time.Time
+	}
+	
+	// Mutex for thread safety
+	mu sync.RWMutex
+	
+	// Logger
+	logger *zap.Logger
 }
 
 // StatisticalArbitrageParams contains parameters for the statistical arbitrage strategy
 type StatisticalArbitrageParams struct {
-	Name           string
-	PairID         string
-	Symbol1        string
-	Symbol2        string
-	Ratio          float64
-	ZScoreEntry    float64
-	ZScoreExit     float64
-	PositionSize   float64
-	MaxPositions   int
+	// Pair symbols
+	Symbol1 string
+	Symbol2 string
+	
+	// Entry/exit thresholds in standard deviations
+	EntryThreshold float64
+	ExitThreshold  float64
+	
+	// Position sizing
+	MaxPosition float64
+	
+	// Risk management
+	StopLoss       float64
+	TakeProfit     float64
+	MaxHoldingTime time.Duration
+	
+	// Lookback period for calculating statistics
 	LookbackPeriod int
-	UpdateInterval time.Duration
+	
+	// Minimum number of data points required before trading
+	MinDataPoints int
+	
+	// Rebalancing frequency
+	RebalanceInterval time.Duration
+	
+	// Execution parameters
+	ExecutionDelay time.Duration
 }
 
 // NewStatisticalArbitrageStrategy creates a new statistical arbitrage strategy
-func NewStatisticalArbitrageStrategy(
-	logger *zap.Logger,
-	params StatisticalArbitrageParams,
-	orderService orders.OrderService,
-	pairRepo *repositories.PairRepository,
-	statsRepo *repositories.PairStatisticsRepository,
-	positionRepo *repositories.PairPositionRepository,
-) *StatisticalArbitrageStrategy {
+func NewStatisticalArbitrageStrategy(params StatisticalArbitrageParams, logger *zap.Logger) *StatisticalArbitrageStrategy {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+	
 	return &StatisticalArbitrageStrategy{
-		BaseStrategy:   NewBaseStrategy(params.Name, logger),
-		pairID:         params.PairID,
+		BaseStrategy: BaseStrategy{
+			name:        "StatisticalArbitrage",
+			description: "Statistical arbitrage strategy for trading correlated pairs",
+			symbols:     map[string]bool{params.Symbol1: true, params.Symbol2: true},
+			active:      false,
+			logger:      logger,
+		},
+		params:         params,
 		symbol1:        params.Symbol1,
 		symbol2:        params.Symbol2,
-		ratio:          params.Ratio,
-		zScoreEntry:    params.ZScoreEntry,
-		zScoreExit:     params.ZScoreExit,
-		positionSize:   params.PositionSize,
-		maxPositions:   params.MaxPositions,
-		lookbackPeriod: params.LookbackPeriod,
-		updateInterval: params.UpdateInterval,
-		positions:      make(map[string]*models.PairPosition),
-		orderService:   orderService,
-		pairRepo:       pairRepo,
-		statsRepo:      statsRepo,
-		positionRepo:   positionRepo,
+		priceHistory1:  make([]float64, 0, params.LookbackPeriod),
+		priceHistory2:  make([]float64, 0, params.LookbackPeriod),
+		spreadHistory:  make([]float64, 0, params.LookbackPeriod),
+		logger:         logger,
 	}
 }
 
-// Initialize initializes the strategy
+// Initialize prepares the strategy for trading
 func (s *StatisticalArbitrageStrategy) Initialize(ctx context.Context) error {
-	if err := s.BaseStrategy.Initialize(ctx); err != nil {
-		return err
-	}
-	
-	// Load historical data for both symbols
-	// This would typically come from a market data service
-	// For now, we'll just initialize empty slices
-	s.prices1 = make([]float64, 0, s.lookbackPeriod)
-	s.prices2 = make([]float64, 0, s.lookbackPeriod)
-	s.spread = make([]float64, 0, s.lookbackPeriod)
-	
-	// Load open positions
-	positions, err := s.positionRepo.GetOpenPositions(ctx, s.pairID)
-	if err != nil {
-		s.logger.Error("Failed to load open positions",
-			zap.Error(err),
-			zap.String("pair_id", s.pairID))
-	} else {
-		for _, pos := range positions {
-			s.positions[fmt.Sprintf("%d", pos.ID)] = pos
-		}
-		s.logger.Info("Loaded open positions",
-			zap.Int("count", len(positions)),
-			zap.String("pair_id", s.pairID))
-	}
-	
-	s.logger.Info("Statistical arbitrage strategy initialized",
-		zap.String("pair_id", s.pairID),
+	s.logger.Info("Initializing statistical arbitrage strategy",
 		zap.String("symbol1", s.symbol1),
 		zap.String("symbol2", s.symbol2),
-		zap.Float64("ratio", s.ratio),
-		zap.Float64("z_score_entry", s.zScoreEntry),
-		zap.Float64("z_score_exit", s.zScoreExit))
+		zap.Float64("entryThreshold", s.params.EntryThreshold),
+		zap.Float64("exitThreshold", s.params.ExitThreshold))
 	
+	// Initialize price histories
+	s.mu.Lock()
+	s.priceHistory1 = make([]float64, 0, s.params.LookbackPeriod)
+	s.priceHistory2 = make([]float64, 0, s.params.LookbackPeriod)
+	s.spreadHistory = make([]float64, 0, s.params.LookbackPeriod)
+	s.mu.Unlock()
+	
+	s.active = true
 	return nil
 }
 
-// Start starts the strategy
-func (s *StatisticalArbitrageStrategy) Start(ctx context.Context) error {
-	if err := s.BaseStrategy.Start(ctx); err != nil {
-		return err
-	}
-	
-	s.logger.Info("Statistical arbitrage strategy started",
-		zap.String("pair_id", s.pairID),
-		zap.String("symbol1", s.symbol1),
-		zap.String("symbol2", s.symbol2))
-	
-	return nil
-}
-
-// Stop stops the strategy
-func (s *StatisticalArbitrageStrategy) Stop(ctx context.Context) error {
-	if err := s.BaseStrategy.Stop(ctx); err != nil {
-		return err
-	}
-	
-	s.logger.Info("Statistical arbitrage strategy stopped",
-		zap.String("pair_id", s.pairID))
-	
-	return nil
-}
-
-// OnMarketData processes market data updates
+// OnMarketData processes new market data
 func (s *StatisticalArbitrageStrategy) OnMarketData(ctx context.Context, data *marketdata.MarketDataResponse) error {
-	if !s.IsRunning() {
+	if !s.active {
 		return nil
 	}
 	
-	// Check if this data is for one of our symbols
-	if data.Symbol != s.symbol1 && data.Symbol != s.symbol2 {
+	symbol := data.Symbol
+	price := data.LastPrice
+	
+	// Update price history for the relevant symbol
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	
+	switch symbol {
+	case s.symbol1:
+		s.updatePriceHistory1(price)
+	case s.symbol2:
+		s.updatePriceHistory2(price)
+	default:
+		// Ignore data for other symbols
 		return nil
 	}
 	
-	// Update price series
-	if data.Symbol == s.symbol1 {
-		s.updatePriceSeries(ctx, &s.prices1, data.Price)
-	} else if data.Symbol == s.symbol2 {
-		s.updatePriceSeries(ctx, &s.prices2, data.Price)
-	}
-	
-	// Only proceed if we have enough data for both symbols
-	if len(s.prices1) < s.lookbackPeriod || len(s.prices2) < s.lookbackPeriod {
+	// Check if we have enough data for both symbols
+	if len(s.priceHistory1) == 0 || len(s.priceHistory2) == 0 {
 		return nil
 	}
 	
-	// Check if it's time to update statistics
-	if time.Since(s.lastUpdate) >= s.updateInterval {
-		if err := s.updateStatistics(ctx); err != nil {
-			s.logger.Error("Failed to update statistics",
-				zap.Error(err),
-				zap.String("pair_id", s.pairID))
-			return err
-		}
-		
-		// Check for trading signals
-		if err := s.checkForEntrySignals(ctx); err != nil {
-			s.logger.Error("Failed to check for entry signals",
-				zap.Error(err),
-				zap.String("pair_id", s.pairID))
-			return err
-		}
-		
-		if err := s.checkForExitSignals(ctx); err != nil {
-			s.logger.Error("Failed to check for exit signals",
-				zap.Error(err),
-				zap.String("pair_id", s.pairID))
-			return err
-		}
-		
-		s.lastUpdate = time.Now()
-	}
+	// Calculate current spread
+	currentSpread := s.calculateSpread(s.priceHistory1[len(s.priceHistory1)-1], s.priceHistory2[len(s.priceHistory2)-1])
 	
-	return nil
-}
-
-// updatePriceSeries updates a price series with a new price
-func (s *StatisticalArbitrageStrategy) updatePriceSeries(ctx context.Context, prices *[]float64, price float64) {
-	// Add the new price
-	*prices = append(*prices, price)
+	// Update spread history
+	s.updateSpreadHistory(currentSpread)
 	
-	// Trim the series if it exceeds the lookback period
-	if len(*prices) > s.lookbackPeriod {
-		*prices = (*prices)[len(*prices)-s.lookbackPeriod:]
+	// Check if we have enough data points to calculate statistics
+	if len(s.spreadHistory) < s.params.MinDataPoints {
+		return nil
 	}
-}
-
-// updateStatistics updates the statistical measures
-func (s *StatisticalArbitrageStrategy) updateStatistics(ctx context.Context) error {
-	// Ensure we have enough data
-	if len(s.prices1) < s.lookbackPeriod || len(s.prices2) < s.lookbackPeriod {
-		return fmt.Errorf("insufficient data for statistical analysis")
-	}
-	
-	// Calculate correlation
-	correlation, err := statistics.CalculateCorrelation(s.prices1, s.prices2)
-	if err != nil {
-		return fmt.Errorf("failed to calculate correlation: %w", err)
-	}
-	
-	// Calculate cointegration
-	cointegration, isCointegrated, err := statistics.EngleGrangerTest(s.prices1, s.prices2)
-	if err != nil {
-		return fmt.Errorf("failed to perform cointegration test: %w", err)
-	}
-	
-	// Calculate spread
-	spread, err := statistics.CalculateSpread(s.prices1, s.prices2, s.ratio)
-	if err != nil {
-		return fmt.Errorf("failed to calculate spread: %w", err)
-	}
-	s.spread = spread
 	
 	// Calculate spread statistics
-	spreadMean, err := statistics.CalculateMean(s.spread)
-	if err != nil {
-		return fmt.Errorf("failed to calculate spread mean: %w", err)
-	}
-	s.spreadMean = spreadMean
+	s.calculateSpreadStatistics()
 	
-	spreadStdDev, err := statistics.CalculateStdDev(s.spread, s.spreadMean)
-	if err != nil {
-		return fmt.Errorf("failed to calculate spread standard deviation: %w", err)
-	}
-	s.spreadStdDev = spreadStdDev
-	
-	// Calculate current z-score
-	currentSpread := s.prices1[len(s.prices1)-1] - (s.ratio * s.prices2[len(s.prices2)-1])
-	s.currentZScore = statistics.CalculateZScore(currentSpread, s.spreadMean, s.spreadStdDev)
-	
-	// Save statistics to database
-	stats := &models.PairStatistics{
-		PairID:        s.pairID,
-		Timestamp:     time.Now(),
-		Correlation:   correlation,
-		Cointegration: cointegration,
-		SpreadMean:    s.spreadMean,
-		SpreadStdDev:  s.spreadStdDev,
-		CurrentZScore: s.currentZScore,
-		SpreadValue:   currentSpread,
-	}
-	
-	if err := s.statsRepo.Create(ctx, stats); err != nil {
-		return fmt.Errorf("failed to save pair statistics: %w", err)
-	}
-	
-	// Update pair in database with latest statistics
-	pair, err := s.pairRepo.GetPair(ctx, s.pairID)
-	if err != nil {
-		return fmt.Errorf("failed to get pair: %w", err)
-	}
-	
-	pair.Correlation = correlation
-	pair.Cointegration = cointegration
-	
-	if err := s.pairRepo.UpdatePair(ctx, pair); err != nil {
-		return fmt.Errorf("failed to update pair: %w", err)
-	}
-	
-	s.logger.Debug("Updated pair statistics",
-		zap.String("pair_id", s.pairID),
-		zap.Float64("correlation", correlation),
-		zap.Float64("cointegration", cointegration),
-		zap.Bool("is_cointegrated", isCointegrated),
-		zap.Float64("spread_mean", s.spreadMean),
-		zap.Float64("spread_std_dev", s.spreadStdDev),
-		zap.Float64("current_z_score", s.currentZScore))
-	
-	return nil
-}
-
-// checkForEntrySignals checks for entry signals
-func (s *StatisticalArbitrageStrategy) checkForEntrySignals(ctx context.Context) error {
-	// If we have reached max positions, don't enter new ones
-	if len(s.positions) >= s.maxPositions {
-		return nil
-	}
-	
-	// Check for entry signals based on z-score
-	if s.currentZScore <= -s.zScoreEntry {
-		// Z-score is below negative threshold, go long pair (buy symbol1, sell symbol2)
-		return s.enterLongPosition(ctx)
-	} else if s.currentZScore >= s.zScoreEntry {
-		// Z-score is above positive threshold, go short pair (sell symbol1, buy symbol2)
-		return s.enterShortPosition(ctx)
+	// Check for trading signals
+	if s.position.InPosition {
+		s.checkExitSignal(ctx, currentSpread)
+	} else {
+		s.checkEntrySignal(ctx, currentSpread)
 	}
 	
 	return nil
 }
 
-// checkForExitSignals checks for exit signals
-func (s *StatisticalArbitrageStrategy) checkForExitSignals(ctx context.Context) error {
-	// Check each position for exit signals
-	for id, position := range s.positions {
-		if position.Status != "open" {
-			continue
+// updatePriceHistory1 updates the price history for symbol1
+func (s *StatisticalArbitrageStrategy) updatePriceHistory1(price float64) {
+	s.priceHistory1 = append(s.priceHistory1, price)
+	if len(s.priceHistory1) > s.params.LookbackPeriod {
+		s.priceHistory1 = s.priceHistory1[1:]
+	}
+}
+
+// updatePriceHistory2 updates the price history for symbol2
+func (s *StatisticalArbitrageStrategy) updatePriceHistory2(price float64) {
+	s.priceHistory2 = append(s.priceHistory2, price)
+	if len(s.priceHistory2) > s.params.LookbackPeriod {
+		s.priceHistory2 = s.priceHistory2[1:]
+	}
+}
+
+// updateSpreadHistory updates the spread history
+func (s *StatisticalArbitrageStrategy) updateSpreadHistory(spread float64) {
+	s.spreadHistory = append(s.spreadHistory, spread)
+	if len(s.spreadHistory) > s.params.LookbackPeriod {
+		s.spreadHistory = s.spreadHistory[1:]
+	}
+}
+
+// calculateSpread calculates the spread between two prices
+func (s *StatisticalArbitrageStrategy) calculateSpread(price1, price2 float64) float64 {
+	return price1 - price2
+}
+
+// calculateSpreadStatistics calculates the mean and standard deviation of the spread
+func (s *StatisticalArbitrageStrategy) calculateSpreadStatistics() {
+	var sum float64
+	for _, spread := range s.spreadHistory {
+		sum += spread
+	}
+	s.spreadMean = sum / float64(len(s.spreadHistory))
+	
+	var sumSquaredDiff float64
+	for _, spread := range s.spreadHistory {
+		diff := spread - s.spreadMean
+		sumSquaredDiff += diff * diff
+	}
+	s.spreadStdDev = math.Sqrt(sumSquaredDiff / float64(len(s.spreadHistory)))
+}
+
+// checkEntrySignal checks for entry signals
+func (s *StatisticalArbitrageStrategy) checkEntrySignal(ctx context.Context, currentSpread float64) {
+	// Calculate z-score
+	zScore := (currentSpread - s.spreadMean) / s.spreadStdDev
+	
+	// Check for entry conditions
+	if zScore > s.params.EntryThreshold {
+		// Spread is too high, expect it to decrease
+		// Short symbol1, long symbol2
+		s.enterPosition(ctx, -s.params.MaxPosition, s.params.MaxPosition, currentSpread)
+	} else if zScore < -s.params.EntryThreshold {
+		// Spread is too low, expect it to increase
+		// Long symbol1, short symbol2
+		s.enterPosition(ctx, s.params.MaxPosition, -s.params.MaxPosition, currentSpread)
+	}
+}
+
+// checkExitSignal checks for exit signals
+func (s *StatisticalArbitrageStrategy) checkExitSignal(ctx context.Context, currentSpread float64) {
+	// Calculate z-score
+	zScore := (currentSpread - s.spreadMean) / s.spreadStdDev
+	
+	// Check for exit conditions
+	if s.position.Quantity1 > 0 {
+		// We are long symbol1, short symbol2
+		// Exit when spread has increased enough (z-score close to 0 or positive)
+		if zScore > -s.params.ExitThreshold {
+			s.exitPosition(ctx)
 		}
-		
-		// Update position with current prices
-		position.CurrentPrice1 = s.prices1[len(s.prices1)-1]
-		position.CurrentPrice2 = s.prices2[len(s.prices2)-1]
-		position.CurrentSpread = position.CurrentPrice1 - (s.ratio * position.CurrentPrice2)
-		position.CurrentZScore = statistics.CalculateZScore(position.CurrentSpread, s.spreadMean, s.spreadStdDev)
-		
-		// Calculate current P&L
-		pnl1 := position.Quantity1 * (position.CurrentPrice1 - position.EntryPrice1)
-		pnl2 := position.Quantity2 * (position.EntryPrice2 - position.CurrentPrice2)
-		position.PnL = pnl1 + pnl2
-		
-		// Update position in database
-		if err := s.positionRepo.Update(ctx, position); err != nil {
-			s.logger.Error("Failed to update position",
-				zap.Error(err),
-				zap.String("pair_id", s.pairID),
-				zap.String("position_id", id))
-		}
-		
-		// Check for exit signals
-		if position.EntryZScore < 0 && position.CurrentZScore >= -s.zScoreExit {
-			// Long position and z-score has mean-reverted
-			return s.exitPosition(ctx, id, position)
-		} else if position.EntryZScore > 0 && position.CurrentZScore <= s.zScoreExit {
-			// Short position and z-score has mean-reverted
-			return s.exitPosition(ctx, id, position)
+	} else if s.position.Quantity1 < 0 {
+		// We are short symbol1, long symbol2
+		// Exit when spread has decreased enough (z-score close to 0 or negative)
+		if zScore < s.params.ExitThreshold {
+			s.exitPosition(ctx)
 		}
 	}
 	
-	return nil
+	// Check stop loss
+	spreadChange := currentSpread - s.position.EntrySpread
+	if (s.position.Quantity1 > 0 && spreadChange < -s.params.StopLoss) ||
+		(s.position.Quantity1 < 0 && spreadChange > s.params.StopLoss) {
+		s.logger.Info("Exiting position due to stop loss",
+			zap.Float64("entrySpread", s.position.EntrySpread),
+			zap.Float64("currentSpread", currentSpread),
+			zap.Float64("spreadChange", spreadChange),
+			zap.Float64("stopLoss", s.params.StopLoss))
+		s.exitPosition(ctx)
+	}
+	
+	// Check take profit
+	if (s.position.Quantity1 > 0 && spreadChange > s.params.TakeProfit) ||
+		(s.position.Quantity1 < 0 && spreadChange < -s.params.TakeProfit) {
+		s.logger.Info("Exiting position due to take profit",
+			zap.Float64("entrySpread", s.position.EntrySpread),
+			zap.Float64("currentSpread", currentSpread),
+			zap.Float64("spreadChange", spreadChange),
+			zap.Float64("takeProfit", s.params.TakeProfit))
+		s.exitPosition(ctx)
+	}
+	
+	// Check max holding time
+	if time.Since(s.position.EntryTime) > s.params.MaxHoldingTime {
+		s.logger.Info("Exiting position due to max holding time",
+			zap.Time("entryTime", s.position.EntryTime),
+			zap.Duration("holdingTime", time.Since(s.position.EntryTime)),
+			zap.Duration("maxHoldingTime", s.params.MaxHoldingTime))
+		s.exitPosition(ctx)
+	}
 }
 
-// enterLongPosition enters a long pair position
-func (s *StatisticalArbitrageStrategy) enterLongPosition(ctx context.Context) error {
-	// Calculate position sizes
-	qty1 := s.positionSize
-	qty2 := s.positionSize * s.ratio
+// enterPosition enters a new position
+func (s *StatisticalArbitrageStrategy) enterPosition(ctx context.Context, quantity1, quantity2, entrySpread float64) {
+	s.logger.Info("Entering position",
+		zap.Float64("quantity1", quantity1),
+		zap.Float64("quantity2", quantity2),
+		zap.Float64("entrySpread", entrySpread))
 	
-	// Create buy order for symbol1
-	buyOrder := &models.Order{
-		OrderID:    uuid.New().String(),
-		Symbol:     s.symbol1,
-		Side:       models.OrderSideBuy,
-		Type:       models.OrderTypeMarket,
-		Quantity:   qty1,
-		Price:      s.prices1[len(s.prices1)-1],
-		Strategy:   s.name,
-		Timestamp:  time.Now(),
+	// Create orders for both symbols
+	if quantity1 > 0 {
+		// Buy order for symbol1
+		buyOrder := &models.Order{
+			Symbol:   s.symbol1,
+			Side:     "buy",
+			Type:     "market",
+			Quantity: quantity1,
+		}
+		
+		// Sell order for symbol2
+		sellOrder := &models.Order{
+			Symbol:   s.symbol2,
+			Side:     "sell",
+			Type:     "market",
+			Quantity: math.Abs(quantity2),
+		}
+		
+		// Submit orders
+		// Note: In a real implementation, these would be submitted to the broker
+		// s.SubmitOrder(ctx, buyOrder)
+		// s.SubmitOrder(ctx, sellOrder)
+	} else {
+		// Sell order for symbol1
+		sellOrder := &models.Order{
+			Symbol:   s.symbol1,
+			Side:     "sell",
+			Type:     "market",
+			Quantity: math.Abs(quantity1),
+		}
+		
+		// Buy order for symbol2
+		buyOrder := &models.Order{
+			Symbol:   s.symbol2,
+			Side:     "buy",
+			Type:     "market",
+			Quantity: quantity2,
+		}
+		
+		// Submit orders
+		// Note: In a real implementation, these would be submitted to the broker
+		// s.SubmitOrder(ctx, sellOrder)
+		// s.SubmitOrder(ctx, buyOrder)
 	}
 	
-	// Create sell order for symbol2
-	sellOrder := &models.Order{
-		OrderID:    uuid.New().String(),
-		Symbol:     s.symbol2,
-		Side:       models.OrderSideSell,
-		Type:       models.OrderTypeMarket,
-		Quantity:   qty2,
-		Price:      s.prices2[len(s.prices2)-1],
-		Strategy:   s.name,
-		Timestamp:  time.Now(),
-	}
-	
-	// Submit orders
-	// In a real implementation, you would use the order service to submit these orders
-	// and handle the responses. For simplicity, we'll assume they're executed immediately.
-	
-	// Create and store position
-	position := &models.PairPosition{
-		PairID:         s.pairID,
-		EntryTimestamp: time.Now(),
-		Symbol1:        s.symbol1,
-		Symbol2:        s.symbol2,
-		Quantity1:      qty1,
-		Quantity2:      qty2,
-		EntryPrice1:    s.prices1[len(s.prices1)-1],
-		EntryPrice2:    s.prices2[len(s.prices2)-1],
-		CurrentPrice1:  s.prices1[len(s.prices1)-1],
-		CurrentPrice2:  s.prices2[len(s.prices2)-1],
-		EntrySpread:    s.prices1[len(s.prices1)-1] - (s.ratio * s.prices2[len(s.prices2)-1]),
-		CurrentSpread:  s.prices1[len(s.prices1)-1] - (s.ratio * s.prices2[len(s.prices2)-1]),
-		EntryZScore:    s.currentZScore,
-		CurrentZScore:  s.currentZScore,
-		Status:         "open",
-	}
-	
-	// Save position to database
-	if err := s.positionRepo.Create(ctx, position); err != nil {
-		s.logger.Error("Failed to create position",
-			zap.Error(err),
-			zap.String("pair_id", s.pairID))
-		return err
-	}
-	
-	// Add to local positions map
-	s.positions[fmt.Sprintf("%d", position.ID)] = position
-	
-	s.logger.Info("Entered long pair position",
-		zap.String("pair_id", s.pairID),
-		zap.String("symbol1", s.symbol1),
-		zap.String("symbol2", s.symbol2),
-		zap.Float64("quantity1", qty1),
-		zap.Float64("quantity2", qty2),
-		zap.Float64("entry_price1", position.EntryPrice1),
-		zap.Float64("entry_price2", position.EntryPrice2),
-		zap.Float64("entry_z_score", position.EntryZScore))
-	
-	return nil
+	// Update position state
+	s.position.InPosition = true
+	s.position.Quantity1 = quantity1
+	s.position.Quantity2 = quantity2
+	s.position.EntrySpread = entrySpread
+	s.position.EntryTime = time.Now()
 }
 
-// enterShortPosition enters a short pair position
-func (s *StatisticalArbitrageStrategy) enterShortPosition(ctx context.Context) error {
-	// Calculate position sizes
-	qty1 := s.positionSize
-	qty2 := s.positionSize * s.ratio
+// exitPosition exits the current position
+func (s *StatisticalArbitrageStrategy) exitPosition(ctx context.Context) {
+	s.logger.Info("Exiting position",
+		zap.Float64("quantity1", s.position.Quantity1),
+		zap.Float64("quantity2", s.position.Quantity2))
 	
-	// Create sell order for symbol1
-	sellOrder := &models.Order{
-		OrderID:    uuid.New().String(),
-		Symbol:     s.symbol1,
-		Side:       models.OrderSideSell,
-		Type:       models.OrderTypeMarket,
-		Quantity:   qty1,
-		Price:      s.prices1[len(s.prices1)-1],
-		Strategy:   s.name,
-		Timestamp:  time.Now(),
-	}
-	
-	// Create buy order for symbol2
-	buyOrder := &models.Order{
-		OrderID:    uuid.New().String(),
-		Symbol:     s.symbol2,
-		Side:       models.OrderSideBuy,
-		Type:       models.OrderTypeMarket,
-		Quantity:   qty2,
-		Price:      s.prices2[len(s.prices2)-1],
-		Strategy:   s.name,
-		Timestamp:  time.Now(),
-	}
-	
-	// Submit orders
-	// In a real implementation, you would use the order service to submit these orders
-	// and handle the responses. For simplicity, we'll assume they're executed immediately.
-	
-	// Create and store position
-	position := &models.PairPosition{
-		PairID:         s.pairID,
-		EntryTimestamp: time.Now(),
-		Symbol1:        s.symbol1,
-		Symbol2:        s.symbol2,
-		Quantity1:      -qty1, // Negative quantity indicates short position
-		Quantity2:      qty2,
-		EntryPrice1:    s.prices1[len(s.prices1)-1],
-		EntryPrice2:    s.prices2[len(s.prices2)-1],
-		CurrentPrice1:  s.prices1[len(s.prices1)-1],
-		CurrentPrice2:  s.prices2[len(s.prices2)-1],
-		EntrySpread:    s.prices1[len(s.prices1)-1] - (s.ratio * s.prices2[len(s.prices2)-1]),
-		CurrentSpread:  s.prices1[len(s.prices1)-1] - (s.ratio * s.prices2[len(s.prices2)-1]),
-		EntryZScore:    s.currentZScore,
-		CurrentZScore:  s.currentZScore,
-		Status:         "open",
-	}
-	
-	// Save position to database
-	if err := s.positionRepo.Create(ctx, position); err != nil {
-		s.logger.Error("Failed to create position",
-			zap.Error(err),
-			zap.String("pair_id", s.pairID))
-		return err
-	}
-	
-	// Add to local positions map
-	s.positions[fmt.Sprintf("%d", position.ID)] = position
-	
-	s.logger.Info("Entered short pair position",
-		zap.String("pair_id", s.pairID),
-		zap.String("symbol1", s.symbol1),
-		zap.String("symbol2", s.symbol2),
-		zap.Float64("quantity1", -qty1),
-		zap.Float64("quantity2", qty2),
-		zap.Float64("entry_price1", position.EntryPrice1),
-		zap.Float64("entry_price2", position.EntryPrice2),
-		zap.Float64("entry_z_score", position.EntryZScore))
-	
-	return nil
-}
-
-// exitPosition exits a position
-func (s *StatisticalArbitrageStrategy) exitPosition(ctx context.Context, id string, position *models.PairPosition) error {
-	// Create orders to close the position
+	// Create orders to close positions
 	var order1, order2 *models.Order
 	
-	if position.Quantity1 > 0 {
-		// Long position in symbol1, need to sell
+	if s.position.Quantity1 > 0 {
+		// Sell order to close long position in symbol1
 		order1 = &models.Order{
-			OrderID:    uuid.New().String(),
-			Symbol:     position.Symbol1,
-			Side:       models.OrderSideSell,
-			Type:       models.OrderTypeMarket,
-			Quantity:   math.Abs(position.Quantity1),
-			Price:      s.prices1[len(s.prices1)-1],
-			Strategy:   s.name,
-			Timestamp:  time.Now(),
+			Symbol:   s.symbol1,
+			Side:     "sell",
+			Type:     "market",
+			Quantity: math.Abs(s.position.Quantity1),
 		}
 	} else {
-		// Short position in symbol1, need to buy
+		// Buy order to close short position in symbol1
 		order1 = &models.Order{
-			OrderID:    uuid.New().String(),
-			Symbol:     position.Symbol1,
-			Side:       models.OrderSideBuy,
-			Type:       models.OrderTypeMarket,
-			Quantity:   math.Abs(position.Quantity1),
-			Price:      s.prices1[len(s.prices1)-1],
-			Strategy:   s.name,
-			Timestamp:  time.Now(),
+			Symbol:   s.symbol1,
+			Side:     "buy",
+			Type:     "market",
+			Quantity: math.Abs(s.position.Quantity1),
 		}
 	}
 	
-	if position.Quantity2 > 0 {
-		// Long position in symbol2, need to sell
+	if s.position.Quantity2 > 0 {
+		// Sell order to close long position in symbol2
 		order2 = &models.Order{
-			OrderID:    uuid.New().String(),
-			Symbol:     position.Symbol2,
-			Side:       models.OrderSideSell,
-			Type:       models.OrderTypeMarket,
-			Quantity:   math.Abs(position.Quantity2),
-			Price:      s.prices2[len(s.prices2)-1],
-			Strategy:   s.name,
-			Timestamp:  time.Now(),
+			Symbol:   s.symbol2,
+			Side:     "sell",
+			Type:     "market",
+			Quantity: math.Abs(s.position.Quantity2),
 		}
 	} else {
-		// Short position in symbol2, need to buy
+		// Buy order to close short position in symbol2
 		order2 = &models.Order{
-			OrderID:    uuid.New().String(),
-			Symbol:     position.Symbol2,
-			Side:       models.OrderSideBuy,
-			Type:       models.OrderTypeMarket,
-			Quantity:   math.Abs(position.Quantity2),
-			Price:      s.prices2[len(s.prices2)-1],
-			Strategy:   s.name,
-			Timestamp:  time.Now(),
+			Symbol:   s.symbol2,
+			Side:     "buy",
+			Type:     "market",
+			Quantity: math.Abs(s.position.Quantity2),
 		}
 	}
 	
 	// Submit orders
-	// In a real implementation, you would use the order service to submit these orders
-	// and handle the responses. For simplicity, we'll assume they're executed immediately.
+	// Note: In a real implementation, these would be submitted to the broker
+	// s.SubmitOrder(ctx, order1)
+	// s.SubmitOrder(ctx, order2)
 	
-	// Update position
-	position.Status = "closed"
-	position.ExitTimestamp = time.Now()
+	// Reset position state
+	s.position.InPosition = false
+	s.position.Quantity1 = 0
+	s.position.Quantity2 = 0
+}
+
+// Shutdown cleans up resources
+func (s *StatisticalArbitrageStrategy) Shutdown(ctx context.Context) error {
+	s.logger.Info("Shutting down statistical arbitrage strategy")
 	
-	// Calculate final P&L
-	pnl1 := position.Quantity1 * (position.CurrentPrice1 - position.EntryPrice1)
-	pnl2 := position.Quantity2 * (position.EntryPrice2 - position.CurrentPrice2)
-	position.PnL = pnl1 + pnl2
-	
-	// Update position in database
-	if err := s.positionRepo.Update(ctx, position); err != nil {
-		s.logger.Error("Failed to update position",
-			zap.Error(err),
-			zap.String("pair_id", s.pairID),
-			zap.String("position_id", id))
-		return err
+	// Exit any open positions
+	if s.position.InPosition {
+		s.exitPosition(ctx)
 	}
 	
-	// Remove from local positions map
-	delete(s.positions, id)
-	
-	s.logger.Info("Exited pair position",
-		zap.String("pair_id", s.pairID),
-		zap.String("position_id", id),
-		zap.Float64("entry_z_score", position.EntryZScore),
-		zap.Float64("exit_z_score", position.CurrentZScore),
-		zap.Float64("pnl", position.PnL))
-	
+	s.active = false
 	return nil
 }
 
-// GetParameters returns the strategy parameters
-func (s *StatisticalArbitrageStrategy) GetParameters() map[string]interface{} {
-	params := s.BaseStrategy.GetParameters()
-	params["pair_id"] = s.pairID
-	params["symbol1"] = s.symbol1
-	params["symbol2"] = s.symbol2
-	params["ratio"] = s.ratio
-	params["z_score_entry"] = s.zScoreEntry
-	params["z_score_exit"] = s.zScoreExit
-	params["position_size"] = s.positionSize
-	params["max_positions"] = s.maxPositions
-	params["lookback_period"] = s.lookbackPeriod
-	params["update_interval"] = s.updateInterval.String()
-	return params
-}
-
-// SetParameters sets the strategy parameters
-func (s *StatisticalArbitrageStrategy) SetParameters(params map[string]interface{}) error {
-	if err := s.BaseStrategy.SetParameters(params); err != nil {
-		return err
-	}
-	
-	if v, ok := params["z_score_entry"]; ok {
-		if val, ok := v.(float64); ok {
-			s.zScoreEntry = val
-		}
-	}
-	
-	if v, ok := params["z_score_exit"]; ok {
-		if val, ok := v.(float64); ok {
-			s.zScoreExit = val
-		}
-	}
-	
-	if v, ok := params["position_size"]; ok {
-		if val, ok := v.(float64); ok {
-			s.positionSize = val
-		}
-	}
-	
-	if v, ok := params["max_positions"]; ok {
-		if val, ok := v.(int); ok {
-			s.maxPositions = val
-		}
-	}
-	
-	if v, ok := params["lookback_period"]; ok {
-		if val, ok := v.(int); ok {
-			s.lookbackPeriod = val
-		}
-	}
-	
-	if v, ok := params["update_interval"]; ok {
-		if val, ok := v.(string); ok {
-			if d, err := time.ParseDuration(val); err == nil {
-				s.updateInterval = d
-			}
-		}
-	}
-	
-	s.logger.Info("Statistical arbitrage strategy parameters updated",
-		zap.String("pair_id", s.pairID),
-		zap.Float64("z_score_entry", s.zScoreEntry),
-		zap.Float64("z_score_exit", s.zScoreExit),
-		zap.Float64("position_size", s.positionSize),
-		zap.Int("max_positions", s.maxPositions),
-		zap.Int("lookback_period", s.lookbackPeriod),
-		zap.Duration("update_interval", s.updateInterval))
-	
-	return nil
-}

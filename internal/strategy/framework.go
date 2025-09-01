@@ -2,435 +2,297 @@ package strategy
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/db/models"
-	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
-	"github.com/abdoElHodaky/tradSys/proto/marketdata"
-	"github.com/abdoElHodaky/tradSys/proto/orders"
+	"github.com/abdoElHodaky/tradSys/internal/models"
+	"github.com/abdoElHodaky/tradSys/internal/trading/market_data"
 	"go.uber.org/zap"
 )
 
-// Strategy represents a trading strategy
+// Strategy defines the interface for trading strategies
 type Strategy interface {
-	// Initialize initializes the strategy
-	Initialize(ctx context.Context) error
-
-	// Start starts the strategy
-	Start(ctx context.Context) error
-
-	// Stop stops the strategy
-	Stop(ctx context.Context) error
-
-	// OnMarketData processes market data updates
-	OnMarketData(ctx context.Context, data *marketdata.MarketDataResponse) error
-
-	// OnOrderUpdate processes order updates
-	OnOrderUpdate(ctx context.Context, order *orders.OrderResponse) error
-
-	// GetName returns the name of the strategy
+	// GetName returns the strategy name
 	GetName() string
-
-	// GetParameters returns the strategy parameters
-	GetParameters() map[string]interface{}
-
-	// SetParameters sets the strategy parameters
-	SetParameters(params map[string]interface{}) error
+	
+	// GetDescription returns the strategy description
+	GetDescription() string
+	
+	// GetSymbols returns the symbols this strategy trades
+	GetSymbols() []string
+	
+	// Initialize prepares the strategy for trading
+	Initialize(ctx context.Context) error
+	
+	// OnMarketData processes new market data
+	OnMarketData(ctx context.Context, data *marketdata.MarketDataResponse) error
+	
+	// OnOrderUpdate processes order updates
+	OnOrderUpdate(ctx context.Context, order *models.Order) error
+	
+	// Shutdown cleans up resources
+	Shutdown(ctx context.Context) error
 }
 
-// StrategyManager manages trading strategies
-type StrategyManager struct {
-	logger       *zap.Logger
-	strategies   map[string]Strategy
-	running      map[string]bool
-	mu           sync.RWMutex
-	orderService orders.OrderService
-	pairRepo     *repositories.PairRepository
-	statsRepo    *repositories.PairStatisticsRepository
-	positionRepo *repositories.PairPositionRepository
-}
-
-// NewStrategyManager creates a new strategy manager
-func NewStrategyManager(
-	logger *zap.Logger,
-	orderService orders.OrderService,
-	pairRepo *repositories.PairRepository,
-	statsRepo *repositories.PairStatisticsRepository,
-	positionRepo *repositories.PairPositionRepository,
-) *StrategyManager {
-	return &StrategyManager{
-		logger:       logger,
-		strategies:   make(map[string]Strategy),
-		running:      make(map[string]bool),
-		orderService: orderService,
-		pairRepo:     pairRepo,
-		statsRepo:    statsRepo,
-		positionRepo: positionRepo,
-	}
-}
-
-// RegisterStrategy registers a strategy
-func (m *StrategyManager) RegisterStrategy(strategy Strategy) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	name := strategy.GetName()
-	if _, exists := m.strategies[name]; exists {
-		return ErrStrategyAlreadyRegistered
-	}
-
-	m.strategies[name] = strategy
-	m.running[name] = false
-
-	m.logger.Info("Strategy registered", zap.String("name", name))
-
-	return nil
-}
-
-// UnregisterStrategy unregisters a strategy
-func (m *StrategyManager) UnregisterStrategy(name string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if _, exists := m.strategies[name]; !exists {
-		return ErrStrategyNotFound
-	}
-
-	// Stop the strategy if it's running
-	if m.running[name] {
-		m.mu.Unlock()
-		if err := m.StopStrategy(context.Background(), name); err != nil {
-			m.mu.Lock()
-			return err
-		}
-		m.mu.Lock()
-	}
-
-	delete(m.strategies, name)
-	delete(m.running, name)
-
-	m.logger.Info("Strategy unregistered", zap.String("name", name))
-
-	return nil
-}
-
-// StartStrategy starts a strategy
-func (m *StrategyManager) StartStrategy(ctx context.Context, name string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	strategy, exists := m.strategies[name]
-	if !exists {
-		return ErrStrategyNotFound
-	}
-
-	if m.running[name] {
-		return ErrStrategyAlreadyRunning
-	}
-
-	if err := strategy.Start(ctx); err != nil {
-		return err
-	}
-
-	m.running[name] = true
-
-	m.logger.Info("Strategy started", zap.String("name", name))
-
-	return nil
-}
-
-// StopStrategy stops a strategy
-func (m *StrategyManager) StopStrategy(ctx context.Context, name string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	strategy, exists := m.strategies[name]
-	if !exists {
-		return ErrStrategyNotFound
-	}
-
-	if !m.running[name] {
-		return ErrStrategyNotRunning
-	}
-
-	if err := strategy.Stop(ctx); err != nil {
-		return err
-	}
-
-	m.running[name] = false
-
-	m.logger.Info("Strategy stopped", zap.String("name", name))
-
-	return nil
-}
-
-// GetStrategy returns a strategy
-func (m *StrategyManager) GetStrategy(name string) (Strategy, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	strategy, exists := m.strategies[name]
-	if !exists {
-		return nil, ErrStrategyNotFound
-	}
-
-	return strategy, nil
-}
-
-// ListStrategies returns a list of registered strategies
-func (m *StrategyManager) ListStrategies() []string {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	var strategies []string
-	for name := range m.strategies {
-		strategies = append(strategies, name)
-	}
-
-	return strategies
-}
-
-// IsStrategyRunning checks if a strategy is running
-func (m *StrategyManager) IsStrategyRunning(name string) (bool, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	if _, exists := m.strategies[name]; !exists {
-		return false, ErrStrategyNotFound
-	}
-
-	return m.running[name], nil
-}
-
-// CreatePairsStrategy creates a new statistical arbitrage strategy
-func (m *StrategyManager) CreatePairsStrategy(ctx context.Context, params StatisticalArbitrageParams) (Strategy, error) {
-	// Create a new statistical arbitrage strategy
-	strategy := NewStatisticalArbitrageStrategy(
-		m.logger,
-		params,
-		m.orderService,
-		m.pairRepo,
-		m.statsRepo,
-		m.positionRepo,
-	)
-
-	// Register the strategy
-	if err := m.RegisterStrategy(strategy); err != nil {
-		return nil, err
-	}
-
-	// Initialize the strategy
-	if err := strategy.Initialize(ctx); err != nil {
-		// Unregister the strategy if initialization fails
-		m.UnregisterStrategy(strategy.GetName())
-		return nil, err
-	}
-
-	return strategy, nil
-}
-
-// ProcessMarketData processes market data updates for all running strategies
-func (m *StrategyManager) ProcessMarketData(ctx context.Context, data *marketdata.MarketDataResponse) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	for name, strategy := range m.strategies {
-		if m.running[name] {
-			go func(s Strategy, d *marketdata.MarketDataResponse) {
-				if err := s.OnMarketData(ctx, d); err != nil {
-					m.logger.Error("Failed to process market data",
-						zap.Error(err),
-						zap.String("strategy", s.GetName()))
-				}
-			}(strategy, data)
-		}
-	}
-}
-
-// ProcessOrderUpdate processes order updates for all running strategies
-func (m *StrategyManager) ProcessOrderUpdate(ctx context.Context, order *orders.OrderResponse) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	for name, strategy := range m.strategies {
-		if m.running[name] {
-			go func(s Strategy, o *orders.OrderResponse) {
-				if err := s.OnOrderUpdate(ctx, o); err != nil {
-					m.logger.Error("Failed to process order update",
-						zap.Error(err),
-						zap.String("strategy", s.GetName()))
-				}
-			}(strategy, order)
-		}
-	}
-}
-
-// BaseStrategy provides a base implementation for strategies
+// BaseStrategy provides common functionality for strategies
 type BaseStrategy struct {
-	name       string
-	logger     *zap.Logger
-	parameters map[string]interface{}
-	running    bool
-	mu         sync.RWMutex
+	// Strategy metadata
+	name        string
+	description string
+	symbols     map[string]bool
+	active      bool
+	
+	// Logger
+	logger *zap.Logger
 }
 
-// NewBaseStrategy creates a new base strategy
-func NewBaseStrategy(name string, logger *zap.Logger) *BaseStrategy {
-	return &BaseStrategy{
-		name:       name,
-		logger:     logger,
-		parameters: make(map[string]interface{}),
-		running:    false,
-	}
-}
-
-// Initialize initializes the strategy
-func (s *BaseStrategy) Initialize(ctx context.Context) error {
-	return nil
-}
-
-// Start starts the strategy
-func (s *BaseStrategy) Start(ctx context.Context) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if s.running {
-		return ErrStrategyAlreadyRunning
-	}
-
-	s.running = true
-
-	return nil
-}
-
-// Stop stops the strategy
-func (s *BaseStrategy) Stop(ctx context.Context) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if !s.running {
-		return ErrStrategyNotRunning
-	}
-
-	s.running = false
-
-	return nil
-}
-
-// OnMarketData processes market data updates
-func (s *BaseStrategy) OnMarketData(ctx context.Context, data *marketdata.MarketDataResponse) error {
-	// To be implemented by derived strategies
-	return nil
-}
-
-// OnOrderUpdate processes order updates
-func (s *BaseStrategy) OnOrderUpdate(ctx context.Context, order *orders.OrderResponse) error {
-	// To be implemented by derived strategies
-	return nil
-}
-
-// GetName returns the name of the strategy
+// GetName returns the strategy name
 func (s *BaseStrategy) GetName() string {
 	return s.name
 }
 
-// GetParameters returns the strategy parameters
-func (s *BaseStrategy) GetParameters() map[string]interface{} {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	// Create a copy to avoid race conditions
-	params := make(map[string]interface{})
-	for k, v := range s.parameters {
-		params[k] = v
-	}
-
-	return params
+// GetDescription returns the strategy description
+func (s *BaseStrategy) GetDescription() string {
+	return s.description
 }
 
-// SetParameters sets the strategy parameters
-func (s *BaseStrategy) SetParameters(params map[string]interface{}) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	// Validate parameters
-	for k, v := range params {
-		// Add validation logic here if needed
-		s.parameters[k] = v
+// GetSymbols returns the symbols this strategy trades
+func (s *BaseStrategy) GetSymbols() []string {
+	symbols := make([]string, 0, len(s.symbols))
+	for symbol := range s.symbols {
+		symbols = append(symbols, symbol)
 	}
+	return symbols
+}
 
+// OnOrderUpdate processes order updates
+func (s *BaseStrategy) OnOrderUpdate(ctx context.Context, order *models.Order) error {
+	// Default implementation does nothing
 	return nil
 }
 
-// IsRunning checks if the strategy is running
-func (s *BaseStrategy) IsRunning() bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	return s.running
+// StrategyManager manages multiple trading strategies
+type StrategyManager struct {
+	// Registered strategies
+	strategies map[string]Strategy
+	
+	// Mutex for thread safety
+	mu sync.RWMutex
+	
+	// Logger
+	logger *zap.Logger
 }
 
-// StrategyResult represents the result of a strategy execution
-type StrategyResult struct {
-	Strategy   string
-	Symbol     string
-	Action     string
-	Quantity   float64
-	Price      float64
-	Timestamp  time.Time
-	Parameters map[string]interface{}
-	Metrics    map[string]float64
+// NewStrategyManager creates a new strategy manager
+func NewStrategyManager(logger *zap.Logger) *StrategyManager {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+	
+	return &StrategyManager{
+		strategies: make(map[string]Strategy),
+		logger:     logger,
+	}
 }
 
-// BacktestResult represents the result of a backtest
-type BacktestResult struct {
-	Strategy       string
-	StartTime      time.Time
-	EndTime        time.Time
-	Symbols        []string
-	InitialCapital float64
-	FinalCapital   float64
-	PnL            float64
-	Trades         []models.Trade
-	Metrics        map[string]float64
+// RegisterStrategy adds a strategy to the manager
+func (m *StrategyManager) RegisterStrategy(strategy Strategy) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	name := strategy.GetName()
+	if _, exists := m.strategies[name]; exists {
+		return fmt.Errorf("strategy with name '%s' already registered", name)
+	}
+	
+	m.strategies[name] = strategy
+	m.logger.Info("Registered strategy", zap.String("name", name))
+	return nil
+}
+
+// UnregisterStrategy removes a strategy from the manager
+func (m *StrategyManager) UnregisterStrategy(name string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	if _, exists := m.strategies[name]; !exists {
+		return fmt.Errorf("strategy with name '%s' not found", name)
+	}
+	
+	delete(m.strategies, name)
+	m.logger.Info("Unregistered strategy", zap.String("name", name))
+	return nil
+}
+
+// GetStrategy returns a strategy by name
+func (m *StrategyManager) GetStrategy(name string) (Strategy, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	strategy, exists := m.strategies[name]
+	if !exists {
+		return nil, fmt.Errorf("strategy with name '%s' not found", name)
+	}
+	
+	return strategy, nil
+}
+
+// GetAllStrategies returns all registered strategies
+func (m *StrategyManager) GetAllStrategies() []Strategy {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	strategies := make([]Strategy, 0, len(m.strategies))
+	for _, strategy := range m.strategies {
+		strategies = append(strategies, strategy)
+	}
+	
+	return strategies
+}
+
+// InitializeAll initializes all registered strategies
+func (m *StrategyManager) InitializeAll(ctx context.Context) error {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	for name, strategy := range m.strategies {
+		if err := strategy.Initialize(ctx); err != nil {
+			m.logger.Error("Failed to initialize strategy",
+				zap.String("name", name),
+				zap.Error(err))
+			return fmt.Errorf("failed to initialize strategy '%s': %w", name, err)
+		}
+	}
+	
+	return nil
+}
+
+// ShutdownAll shuts down all registered strategies
+func (m *StrategyManager) ShutdownAll(ctx context.Context) error {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	var lastErr error
+	for name, strategy := range m.strategies {
+		if err := strategy.Shutdown(ctx); err != nil {
+			m.logger.Error("Failed to shutdown strategy",
+				zap.String("name", name),
+				zap.Error(err))
+			lastErr = err
+		}
+	}
+	
+	return lastErr
+}
+
+// ProcessMarketData distributes market data to relevant strategies
+func (m *StrategyManager) ProcessMarketData(ctx context.Context, data *marketdata.MarketDataResponse) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	symbol := data.Symbol
+	
+	// Find strategies that trade this symbol
+	for _, strategy := range m.strategies {
+		for _, s := range strategy.GetSymbols() {
+			if s == symbol {
+				// Process in a goroutine to avoid blocking
+				go func(s Strategy, d *marketdata.MarketDataResponse) {
+					if err := s.OnMarketData(ctx, d); err != nil {
+						m.logger.Error("Strategy failed to process market data",
+							zap.String("name", s.GetName()),
+							zap.String("symbol", d.Symbol),
+							zap.Error(err))
+					}
+				}(strategy, data)
+				break
+			}
+		}
+	}
+}
+
+// ProcessOrderUpdate distributes order updates to all strategies
+func (m *StrategyManager) ProcessOrderUpdate(ctx context.Context, order *models.Order) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	// Find strategies that trade this symbol
+	for _, strategy := range m.strategies {
+		for _, s := range strategy.GetSymbols() {
+			if s == order.Symbol {
+				if err := strategy.OnOrderUpdate(ctx, order); err != nil {
+					m.logger.Error("Strategy failed to process order update",
+						zap.String("name", strategy.GetName()),
+						zap.String("symbol", order.Symbol),
+						zap.String("orderId", order.ID),
+						zap.Error(err))
+				}
+				break
+			}
+		}
+	}
+}
+
+// OnMarketData processes new market data
+func (s *BaseStrategy) OnMarketData(ctx context.Context, data *marketdata.MarketDataResponse) error {
+	// Default implementation does nothing
+	return nil
+}
+
+// Initialize prepares the strategy for trading
+func (s *BaseStrategy) Initialize(ctx context.Context) error {
+	// Default implementation does nothing
+	return nil
+}
+
+// Shutdown cleans up resources
+func (s *BaseStrategy) Shutdown(ctx context.Context) error {
+	// Default implementation does nothing
+	return nil
+}
+
+// GetPosition gets the current position for a symbol
+func (s *BaseStrategy) GetPosition(ctx context.Context, symbol string) (*models.Position, error) {
+	// This is a placeholder - in a real implementation, this would query the broker
+	return nil, errors.New("not implemented")
+}
+
+// SubmitOrder submits an order to the broker
+func (s *BaseStrategy) SubmitOrder(ctx context.Context, order *models.Order) error {
+	// This is a placeholder - in a real implementation, this would submit to the broker
+	return errors.New("not implemented")
 }
 
 // StatisticalArbitrageParams contains parameters for the statistical arbitrage strategy
 type StatisticalArbitrageParams struct {
-	Name           string
-	PairID         string
-	Symbol1        string
-	Symbol2        string
-	Ratio          float64
-	ZScoreEntry    float64
-	ZScoreExit     float64
-	PositionSize   float64
-	MaxPositions   int
+	// Pair symbols
+	Symbol1 string
+	Symbol2 string
+	
+	// Entry/exit thresholds in standard deviations
+	EntryThreshold float64
+	ExitThreshold  float64
+	
+	// Position sizing
+	MaxPosition float64
+	
+	// Risk management
+	StopLoss       float64
+	TakeProfit     float64
+	MaxHoldingTime time.Duration
+	
+	// Lookback period for calculating statistics
 	LookbackPeriod int
-	UpdateInterval time.Duration
+	
+	// Minimum number of data points required before trading
+	MinDataPoints int
+	
+	// Rebalancing frequency
+	RebalanceInterval time.Duration
+	
+	// Execution parameters
+	ExecutionDelay time.Duration
 }
 
-// Errors
-var (
-	ErrStrategyNotFound          = NewError("strategy not found")
-	ErrStrategyAlreadyRegistered = NewError("strategy already registered")
-	ErrStrategyAlreadyRunning    = NewError("strategy already running")
-	ErrStrategyNotRunning        = NewError("strategy not running")
-	ErrInvalidParameters         = NewError("invalid parameters")
-)
-
-// Error represents a strategy error
-type Error struct {
-	message string
-}
-
-// NewError creates a new error
-func NewError(message string) *Error {
-	return &Error{message: message}
-}
-
-// Error returns the error message
-func (e *Error) Error() string {
-	return e.message
-}

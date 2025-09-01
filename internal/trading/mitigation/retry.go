@@ -2,213 +2,199 @@ package mitigation
 
 import (
 	"context"
-	"math"
-	"math/rand"
+	"errors"
+	"fmt"
+	"net"
 	"time"
 
 	"go.uber.org/zap"
 )
 
-// RetryConfig represents the configuration for a retry mechanism
-type RetryConfig struct {
-	// MaxRetries is the maximum number of retry attempts
-	MaxRetries int
-	// InitialBackoff is the initial backoff duration
-	InitialBackoff time.Duration
-	// MaxBackoff is the maximum backoff duration
-	MaxBackoff time.Duration
-	// BackoffFactor is the factor by which the backoff increases
-	BackoffFactor float64
-	// Jitter is the maximum jitter factor (0.0 to 1.0)
-	Jitter float64
+// RetryableError represents an error that can be retried
+type RetryableError struct {
+	Err       error
+	Temporary bool
+	Timeout   bool
 }
 
-// DefaultRetryConfig returns a default configuration for a retry mechanism
-func DefaultRetryConfig() RetryConfig {
-	return RetryConfig{
-		MaxRetries:     3,
-		InitialBackoff: 100 * time.Millisecond,
-		MaxBackoff:     10 * time.Second,
-		BackoffFactor:  2.0,
-		Jitter:         0.2,
+// Error implements the error interface
+func (e *RetryableError) Error() string {
+	if e.Temporary {
+		return fmt.Sprintf("temporary error: %s", e.Err.Error())
 	}
-}
-
-// RetryStrategy defines the interface for retry strategies
-type RetryStrategy interface {
-	// ShouldRetry determines if a retry should be attempted based on the error and attempt number
-	ShouldRetry(err error, attempt int) bool
-	// NextBackoff calculates the next backoff duration
-	NextBackoff(attempt int) time.Duration
-}
-
-// ExponentialBackoffStrategy implements exponential backoff with jitter
-type ExponentialBackoffStrategy struct {
-	config RetryConfig
-	logger *zap.Logger
-}
-
-// NewExponentialBackoffStrategy creates a new exponential backoff strategy
-func NewExponentialBackoffStrategy(config RetryConfig, logger *zap.Logger) *ExponentialBackoffStrategy {
-	if logger == nil {
-		logger, _ = zap.NewProduction()
+	if e.Timeout {
+		return fmt.Sprintf("timeout error: %s", e.Err.Error())
 	}
-
-	return &ExponentialBackoffStrategy{
-		config: config,
-		logger: logger.With(zap.String("component", "retry_strategy")),
-	}
+	return e.Err.Error()
 }
 
-// ShouldRetry determines if a retry should be attempted
-func (s *ExponentialBackoffStrategy) ShouldRetry(err error, attempt int) bool {
-	if attempt >= s.config.MaxRetries {
+// Unwrap returns the underlying error
+func (e *RetryableError) Unwrap() error {
+	return e.Err
+}
+
+// IsRetryable checks if an error is retryable
+func IsRetryable(err error) bool {
+	if err == nil {
 		return false
 	}
 
-	// Check if the error is retryable
-	if IsRetryableError(err) {
-		return true
+	// Check for RetryableError
+	var retryErr *RetryableError
+	if errors.As(err, &retryErr) {
+		return retryErr.Temporary || retryErr.Timeout
 	}
 
+	// Check for network errors
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return netErr.Temporary() || netErr.Timeout()
+	}
+
+	// Add other error types that should be retried
 	return false
 }
 
-// NextBackoff calculates the next backoff duration
-func (s *ExponentialBackoffStrategy) NextBackoff(attempt int) time.Duration {
-	// Calculate base backoff with exponential increase
-	backoff := float64(s.config.InitialBackoff) * math.Pow(s.config.BackoffFactor, float64(attempt))
-	
-	// Apply maximum backoff limit
-	if backoff > float64(s.config.MaxBackoff) {
-		backoff = float64(s.config.MaxBackoff)
-	}
-	
-	// Apply jitter
-	if s.config.Jitter > 0 {
-		jitter := rand.Float64() * s.config.Jitter * backoff
-		backoff = backoff + jitter
-	}
-	
-	return time.Duration(backoff)
+// RetryConfig holds configuration for retry operations
+type RetryConfig struct {
+	MaxRetries  int
+	InitialWait time.Duration
+	MaxWait     time.Duration
+	Multiplier  float64
+	Logger      *zap.Logger
 }
 
-// Retry executes the given function with retry logic
-func Retry(ctx context.Context, fn func(ctx context.Context) error, strategy RetryStrategy, logger *zap.Logger) error {
-	if logger == nil {
-		logger, _ = zap.NewProduction()
+// DefaultRetryConfig returns a default retry configuration
+func DefaultRetryConfig() RetryConfig {
+	return RetryConfig{
+		MaxRetries:  3,
+		InitialWait: 100 * time.Millisecond,
+		MaxWait:     2 * time.Second,
+		Multiplier:  2.0,
+		Logger:      zap.NewNop(),
 	}
-	
+}
+
+// Retry executes the given function with exponential backoff
+func Retry(ctx context.Context, config RetryConfig, operation func() error) error {
 	var err error
-	attempt := 0
-	
-	for {
-		// Check if context is cancelled
-		if ctx.Err() != nil {
-			return ctx.Err()
+	wait := config.InitialWait
+
+	for attempt := 0; attempt <= config.MaxRetries; attempt++ {
+		// Execute the operation
+		err = operation()
+		if err == nil {
+			return nil
 		}
-		
-		// Execute the function
-		err = fn(ctx)
-		
-		// If no error or we shouldn't retry, return the result
-		if err == nil || !strategy.ShouldRetry(err, attempt) {
+
+		// Check if the error is retryable
+		if !IsRetryable(err) {
+			config.Logger.Debug("Non-retryable error encountered",
+				zap.Error(err),
+				zap.Int("attempt", attempt),
+			)
 			return err
 		}
-		
-		// Calculate backoff duration
-		backoff := strategy.NextBackoff(attempt)
-		
-		logger.Debug("Retrying operation",
-			zap.Int("attempt", attempt+1),
-			zap.Duration("backoff", backoff),
-			zap.Error(err))
-		
-		// Wait for backoff duration or context cancellation
-		select {
-		case <-time.After(backoff):
-			// Continue to next attempt
-		case <-ctx.Done():
+
+		// Check if we've reached max retries
+		if attempt == config.MaxRetries {
+			config.Logger.Debug("Max retries reached",
+				zap.Error(err),
+				zap.Int("maxRetries", config.MaxRetries),
+			)
+			return fmt.Errorf("max retries reached: %w", err)
+		}
+
+		// Check if context is cancelled
+		if ctx.Err() != nil {
+			config.Logger.Debug("Context cancelled during retry",
+				zap.Error(ctx.Err()),
+			)
 			return ctx.Err()
 		}
-		
-		attempt++
-	}
-}
 
-// RetryWithFallback executes the given function with retry logic and falls back to a fallback function if all retries fail
-func RetryWithFallback(
-	ctx context.Context,
-	fn func(ctx context.Context) error,
-	fallback func(ctx context.Context, err error) error,
-	strategy RetryStrategy,
-	logger *zap.Logger,
-) error {
-	err := Retry(ctx, fn, strategy, logger)
-	
-	// If the operation failed after all retries, execute the fallback
-	if err != nil && fallback != nil {
-		logger.Debug("Executing fallback after retry failure", zap.Error(err))
-		return fallback(ctx, err)
+		// Log retry attempt
+		config.Logger.Debug("Retrying operation",
+			zap.Error(err),
+			zap.Int("attempt", attempt+1),
+			zap.Duration("wait", wait),
+		)
+
+		// Wait before next retry with exponential backoff
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(wait):
+			// Calculate next wait time with exponential backoff
+			wait = time.Duration(float64(wait) * config.Multiplier)
+			if wait > config.MaxWait {
+				wait = config.MaxWait
+			}
+		}
 	}
-	
+
 	return err
 }
 
-// IsRetryableError determines if an error is retryable
-func IsRetryableError(err error) bool {
-	// Check for specific error types that are retryable
-	switch err.(type) {
-	case TemporaryError, TimeoutError:
-		return true
+// RetryWithResult executes the given function with exponential backoff and returns a result
+func RetryWithResult[T any](ctx context.Context, config RetryConfig, operation func() (T, error)) (T, error) {
+	var result T
+	var err error
+	wait := config.InitialWait
+
+	for attempt := 0; attempt <= config.MaxRetries; attempt++ {
+		// Execute the operation
+		result, err = operation()
+		if err == nil {
+			return result, nil
+		}
+
+		// Check if the error is retryable
+		if !IsRetryable(err) {
+			config.Logger.Debug("Non-retryable error encountered",
+				zap.Error(err),
+				zap.Int("attempt", attempt),
+			)
+			return result, err
+		}
+
+		// Check if we've reached max retries
+		if attempt == config.MaxRetries {
+			config.Logger.Debug("Max retries reached",
+				zap.Error(err),
+				zap.Int("maxRetries", config.MaxRetries),
+			)
+			return result, fmt.Errorf("max retries reached: %w", err)
+		}
+
+		// Check if context is cancelled
+		if ctx.Err() != nil {
+			config.Logger.Debug("Context cancelled during retry",
+				zap.Error(ctx.Err()),
+			)
+			return result, ctx.Err()
+		}
+
+		// Log retry attempt
+		config.Logger.Debug("Retrying operation",
+			zap.Error(err),
+			zap.Int("attempt", attempt+1),
+			zap.Duration("wait", wait),
+		)
+
+		// Wait before next retry with exponential backoff
+		select {
+		case <-ctx.Done():
+			return result, ctx.Err()
+		case <-time.After(wait):
+			// Calculate next wait time with exponential backoff
+			wait = time.Duration(float64(wait) * config.Multiplier)
+			if wait > config.MaxWait {
+				wait = config.MaxWait
+			}
+		}
 	}
-	
-	// Check if the error implements the Temporary interface
-	if temp, ok := err.(interface{ Temporary() bool }); ok && temp.Temporary() {
-		return true
-	}
-	
-	// Check if the error implements the Timeout interface
-	if timeout, ok := err.(interface{ Timeout() bool }); ok && timeout.Timeout() {
-		return true
-	}
-	
-	return false
-}
 
-// TemporaryError represents a temporary error that can be retried
-type TemporaryError struct {
-	Err error
-}
-
-// Error returns the error message
-func (e TemporaryError) Error() string {
-	if e.Err != nil {
-		return "temporary error: " + e.Err.Error()
-	}
-	return "temporary error"
-}
-
-// Temporary returns true to indicate this is a temporary error
-func (e TemporaryError) Temporary() bool {
-	return true
-}
-
-// TimeoutError represents a timeout error that can be retried
-type TimeoutError struct {
-	Err error
-}
-
-// Error returns the error message
-func (e TimeoutError) Error() string {
-	if e.Err != nil {
-		return "timeout error: " + e.Err.Error()
-	}
-	return "timeout error"
-}
-
-// Timeout returns true to indicate this is a timeout error
-func (e TimeoutError) Timeout() bool {
-	return true
+	return result, err
 }
 
