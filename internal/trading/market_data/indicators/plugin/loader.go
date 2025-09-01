@@ -195,12 +195,12 @@ func (p *pluginWrapper) CreateIndicator(params indicators.IndicatorParams, logge
 
 	func() {
 		defer func() {
-			if r := recover(); r != nil {
-				err = fmt.Errorf("panic in plugin %s: %v", p.info.Name, r)
+			if rec := recover(); rec != nil {
+				err = fmt.Errorf("panic in plugin %s: %v", p.info.Name, rec)
 				logger.Error("Panic in plugin",
 					zap.String("plugin", p.info.Name),
 					zap.String("indicator", p.info.IndicatorName),
-					zap.Any("panic", r))
+					zap.Any("panic", rec))
 			}
 		}()
 
@@ -220,4 +220,3 @@ func (p *pluginWrapper) Cleanup() error {
 type CleanupablePlugin interface {
 	Cleanup() error
 }
-
