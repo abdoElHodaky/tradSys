@@ -135,8 +135,8 @@ func (s *SimpleHistogramSnapshot) Percentile(p float64) float64 {
 	return float64(values[index])
 }
 
-// LatencyTracker provides high-precision latency tracking for HFT operations
-type LatencyTracker struct {
+// Tracker provides high-precision latency tracking for HFT operations
+type Tracker struct {
 	strategyLatencies   map[string]Histogram
 	orderLatencies      Histogram
 	marketDataLatencies Histogram
@@ -144,9 +144,9 @@ type LatencyTracker struct {
 	logger              *zap.Logger
 }
 
-// NewLatencyTracker creates a new latency tracker
-func NewLatencyTracker(logger *zap.Logger) *LatencyTracker {
-	return &LatencyTracker{
+// NewTracker creates a new latency tracker
+func NewTracker(logger *zap.Logger) *Tracker {
+	return &Tracker{
 		strategyLatencies:   make(map[string]Histogram),
 		orderLatencies:      NewSimpleHistogram(),
 		marketDataLatencies: NewSimpleHistogram(),
@@ -155,7 +155,7 @@ func NewLatencyTracker(logger *zap.Logger) *LatencyTracker {
 }
 
 // TrackStrategyExecution tracks the execution time of a strategy
-func (t *LatencyTracker) TrackStrategyExecution(strategyName string, start time.Time) {
+func (t *Tracker) TrackStrategyExecution(strategyName string, start time.Time) {
 	t.mu.RLock()
 	histogram, exists := t.strategyLatencies[strategyName]
 	t.mu.RUnlock()
@@ -180,7 +180,7 @@ func (t *LatencyTracker) TrackStrategyExecution(strategyName string, start time.
 }
 
 // TrackOrderProcessing tracks the processing time of an order
-func (t *LatencyTracker) TrackOrderProcessing(orderID string, start time.Time) {
+func (t *Tracker) TrackOrderProcessing(orderID string, start time.Time) {
 	latencyNs := time.Since(start).Nanoseconds()
 	t.orderLatencies.Update(latencyNs)
 	
@@ -194,7 +194,7 @@ func (t *LatencyTracker) TrackOrderProcessing(orderID string, start time.Time) {
 }
 
 // TrackMarketDataProcessing tracks the processing time of market data
-func (t *LatencyTracker) TrackMarketDataProcessing(symbol string, start time.Time) {
+func (t *Tracker) TrackMarketDataProcessing(symbol string, start time.Time) {
 	latencyNs := time.Since(start).Nanoseconds()
 	t.marketDataLatencies.Update(latencyNs)
 	
@@ -208,7 +208,7 @@ func (t *LatencyTracker) TrackMarketDataProcessing(symbol string, start time.Tim
 }
 
 // GetStrategyLatencyStats returns latency statistics for a strategy
-func (t *LatencyTracker) GetStrategyLatencyStats(strategyName string) (min, max, mean, p95, p99 int64, err error) {
+func (t *Tracker) GetStrategyLatencyStats(strategyName string) (min, max, mean, p95, p99 int64, err error) {
 	t.mu.RLock()
 	histogram, exists := t.strategyLatencies[strategyName]
 	t.mu.RUnlock()
@@ -223,14 +223,14 @@ func (t *LatencyTracker) GetStrategyLatencyStats(strategyName string) (min, max,
 }
 
 // GetOrderLatencyStats returns latency statistics for order processing
-func (t *LatencyTracker) GetOrderLatencyStats() (min, max, mean, p95, p99 int64) {
+func (t *Tracker) GetOrderLatencyStats() (min, max, mean, p95, p99 int64) {
 	snapshot := t.orderLatencies.Snapshot()
 	return snapshot.Min(), snapshot.Max(), int64(snapshot.Mean()), 
 		int64(snapshot.Percentile(0.95)), int64(snapshot.Percentile(0.99))
 }
 
 // GetMarketDataLatencyStats returns latency statistics for market data processing
-func (t *LatencyTracker) GetMarketDataLatencyStats() (min, max, mean, p95, p99 int64) {
+func (t *Tracker) GetMarketDataLatencyStats() (min, max, mean, p95, p99 int64) {
 	snapshot := t.marketDataLatencies.Snapshot()
 	return snapshot.Min(), snapshot.Max(), int64(snapshot.Mean()), 
 		int64(snapshot.Percentile(0.95)), int64(snapshot.Percentile(0.99))
@@ -238,16 +238,16 @@ func (t *LatencyTracker) GetMarketDataLatencyStats() (min, max, mean, p95, p99 i
 
 // Errors
 var (
-	ErrStrategyNotFound = &LatencyError{"strategy not found"}
+	ErrStrategyNotFound = &Error{"strategy not found"}
 )
 
-// LatencyError represents a latency tracking error
-type LatencyError struct {
+// Error represents a latency tracking error
+type Error struct {
 	message string
 }
 
 // Error returns the error message
-func (e *LatencyError) Error() string {
+func (e *Error) Error() string {
 	return e.message
 }
 
