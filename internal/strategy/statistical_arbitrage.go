@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/abdoElHodaky/tradSys/internal/models"
 	"github.com/abdoElHodaky/tradSys/internal/trading/market_data"
 	"go.uber.org/zap"
 )
