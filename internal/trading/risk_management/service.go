@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/abdoElHodaky/tradSys/internal/math"
 	"github.com/abdoElHodaky/tradSys/internal/trading/order_matching"
 	"github.com/abdoElHodaky/tradSys/internal/trading/order_management"
 	"github.com/google/uuid"
@@ -605,7 +606,7 @@ func (s *Service) checkCircuitBreaker(symbol string, price float64, timestamp ti
 		return
 	}
 	
-	percentageChange := abs((price - cb.ReferencePrice) / cb.ReferencePrice * 100)
+	percentageChange := math.Abs((price - cb.ReferencePrice) / cb.ReferencePrice * 100)
 	
 	// Check if circuit breaker should be triggered
 	if percentageChange >= cb.PercentageThreshold {
@@ -816,18 +817,4 @@ func (s *Service) Stop() {
 	s.cancel()
 }
 
-// Helper functions
-func abs(x float64) float64 {
-	if x < 0 {
-		return -x
-	}
-	return x
-}
-
-func min(a, b float64) float64 {
-	if a < b {
-		return a
-	}
-	return b
-}
-
+// Use math.Abs and math.Min from internal/math package instead

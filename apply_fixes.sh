@@ -19,6 +19,6 @@ mv internal/orders/interface_fixed.go internal/orders/interface.go
 mv internal/marketdata/external/manager_fixed.go internal/marketdata/external/manager.go
 mv internal/marketdata/external/module_fixed.go internal/marketdata/external/module.go
 mv internal/marketdata/external/provider_fixed.go internal/marketdata/external/provider.go
-
+mv internal/**_fixed.go internal/**.go
 echo "All files have been replaced with fixed versions."
 

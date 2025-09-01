@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/abdoElHodaky/tradSys/internal/math"
 	"go.uber.org/zap"
 )
 
@@ -143,7 +144,7 @@ func (m *PositionLimitManager) CheckLimit(
 		return errors.New("short position limit exceeded")
 	}
 
-	if limit.MaxNet > 0 && abs(newNet) > limit.MaxNet {
+	if limit.MaxNet > 0 && math.Abs(newNet) > limit.MaxNet {
 		return errors.New("net position limit exceeded")
 	}
 
@@ -213,11 +214,4 @@ func (m *PositionLimitManager) GetAllDefaultLimits() map[string]*PositionLimit {
 	return defaultLimits
 }
 
-// abs returns the absolute value of a float64
-func abs(x float64) float64 {
-	if x < 0 {
-		return -x
-	}
-	return x
-}
-
+// Use math.Abs from internal/math package instead
