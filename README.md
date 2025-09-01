@@ -213,6 +213,35 @@ swag init -g cmd/main.go
 # Open http://localhost:8080/swagger/index.html after starting the server
 ```
 
+## 🔒 Security and Performance Enhancements
+
+Recent updates have significantly improved the platform's security, reliability, and performance:
+
+### Memory Management
+
+- **Resource Manager**: Implemented a dedicated resource manager for automatic cleanup of resources
+- **Memory Leak Prevention**: Fixed memory leaks in order heap operations and added periodic cleanup
+- **Proper Resource Lifecycle**: Enhanced resource lifecycle management with context support
+
+### Concurrency and Thread Safety
+
+- **Lock Manager**: Implemented a sophisticated lock manager with deadlock detection
+- **Atomic Operations**: Added atomic operations for thread-safe counters and statistics
+- **Mutex Usage**: Improved mutex usage for proper synchronization of shared resources
+- **Race Condition Prevention**: Fixed race conditions in critical components
+
+### Performance Monitoring
+
+- **Profiler**: Enhanced profiling capabilities with CPU, memory, block, and mutex profiling
+- **Snapshot System**: Implemented concurrent snapshot creation with compression support
+- **Message Batching**: Added priority-based message batching with compression
+
+### Testing Infrastructure
+
+- **Integration Tests**: Enhanced integration tests for core components
+- **Unit Tests**: Added comprehensive unit tests for resource management, profiling, and message handling
+- **Test Coverage**: Improved test coverage for critical components
+
 ## 🤝 Contributing
 
 1. Fork the repository
