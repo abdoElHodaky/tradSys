@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/architecture/fx/resilience"
+	"github.com/abdoElHodaky/tradSys/internal/math"
 	"github.com/abdoElHodaky/tradSys/proto/orders"
 	"go.uber.org/zap"
 )
@@ -252,7 +253,7 @@ func (v *RiskValidator) validateOrderInternal(order *orders.OrderRequest) (*Risk
 	}
 
 	// Check notional exposure limit
-	if riskLimit.MaxNotionalExposure > 0 && abs(newNotional) > riskLimit.MaxNotionalExposure {
+	if riskLimit.MaxNotionalExposure > 0 && math.Abs(newNotional) > riskLimit.MaxNotionalExposure {
 		return &RiskCheckResult{
 			Passed: false,
 			Reason: "notional exposure limit exceeded",
@@ -309,7 +310,7 @@ func (v *RiskValidator) validateExposureInternal(accountID string) (*RiskCheckRe
 	}
 
 	// Check notional exposure limit
-	if riskLimit.MaxNotionalExposure > 0 && abs(exposure.Notional) > riskLimit.MaxNotionalExposure {
+	if riskLimit.MaxNotionalExposure > 0 && math.Abs(exposure.Notional) > riskLimit.MaxNotionalExposure {
 		return &RiskCheckResult{
 			Passed: false,
 			Reason: "notional exposure limit exceeded",
@@ -321,7 +322,7 @@ func (v *RiskValidator) validateExposureInternal(accountID string) (*RiskCheckRe
 	}
 
 	// Check beta exposure limit
-	if riskLimit.MaxBetaExposure > 0 && abs(exposure.Beta) > riskLimit.MaxBetaExposure {
+	if riskLimit.MaxBetaExposure > 0 && math.Abs(exposure.Beta) > riskLimit.MaxBetaExposure {
 		return &RiskCheckResult{
 			Passed: false,
 			Reason: "beta exposure limit exceeded",
@@ -334,7 +335,7 @@ func (v *RiskValidator) validateExposureInternal(accountID string) (*RiskCheckRe
 
 	// Check sector exposure limits
 	for sector, sectorExposure := range exposure.Sector {
-		if maxExposure, exists := riskLimit.MaxSectorExposure[sector]; exists && abs(sectorExposure) > maxExposure {
+		if maxExposure, exists := riskLimit.MaxSectorExposure[sector]; exists && math.Abs(sectorExposure) > maxExposure {
 			return &RiskCheckResult{
 				Passed: false,
 				Reason: "sector exposure limit exceeded",
@@ -349,7 +350,7 @@ func (v *RiskValidator) validateExposureInternal(accountID string) (*RiskCheckRe
 
 	// Check currency exposure limits
 	for currency, currencyExposure := range exposure.Currency {
-		if maxExposure, exists := riskLimit.MaxCurrencyExposure[currency]; exists && abs(currencyExposure) > maxExposure {
+		if maxExposure, exists := riskLimit.MaxCurrencyExposure[currency]; exists && math.Abs(currencyExposure) > maxExposure {
 			return &RiskCheckResult{
 				Passed: false,
 				Reason: "currency exposure limit exceeded",
@@ -366,4 +367,3 @@ func (v *RiskValidator) validateExposureInternal(accountID string) (*RiskCheckRe
 		Passed: true,
 	}, nil
 }
-
