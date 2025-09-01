@@ -185,3 +185,4 @@ func (r *SQLXMarketDataRepository) SaveMarketData(ctx context.Context, data *Mar
 var SQLXMarketDataRepositoryModule = fx.Options(
 	fx.Provide(NewSQLXMarketDataRepository),
 )
+

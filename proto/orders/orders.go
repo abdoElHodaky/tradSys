@@ -3,6 +3,18 @@
 
 package orders
 
+// OrderType represents the type of order
+type OrderType int32
+
+// OrderSide represents the side of an order (buy/sell)
+type OrderSide int32
+
+// OrderStatus represents the status of an order
+type OrderStatus int32
+
+// TimeInForce represents the time in force for an order
+type TimeInForce int32
+
 // OrderType enum values
 const (
 	OrderType_MARKET     OrderType = 0

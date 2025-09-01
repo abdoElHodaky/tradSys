@@ -386,3 +386,4 @@ func (p *ConnectionPool) WithTransaction(ctx context.Context, fn func(*sql.Tx) e
 	
 	return nil
 }
+

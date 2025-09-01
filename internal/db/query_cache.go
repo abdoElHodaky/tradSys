@@ -279,3 +279,4 @@ func (qc *QueryCache) WithCache(ctx context.Context, key string, dest interface{
 	// Store in cache
 	return qc.Set(ctx, key, dest, ttl)
 }
+
