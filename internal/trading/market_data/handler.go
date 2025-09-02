@@ -109,7 +109,7 @@ type OHLCVUpdate struct {
 // Handler represents a market data handler
 type Handler struct {
 	// Engine is the order matching engine
-	Engine *order_matching.Engine
+	Engine *order_matching.OrderMatchingEngine
 	// Subscriptions is a map of subscription ID to subscription
 	Subscriptions map[string]*Subscription
 	// SymbolSubscriptions is a map of symbol to subscriptions
@@ -131,7 +131,7 @@ type Handler struct {
 }
 
 // NewHandler creates a new market data handler
-func NewHandler(engine *order_matching.Engine, logger *zap.Logger) *Handler {
+func NewHandler(engine *order_matching.OrderMatchingEngine, logger *zap.Logger) *Handler {
 	ctx, cancel := context.WithCancel(context.Background())
 	
 	handler := &Handler{
@@ -482,4 +482,3 @@ func (h *Handler) Stop() {
 		close(subscription.Channel)
 	}
 }
-
