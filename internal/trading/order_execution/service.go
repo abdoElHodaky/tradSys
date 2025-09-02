@@ -195,9 +195,9 @@ func (s *OrderExecutionService) validateOrder(req *OrderRequest) error {
 		if req.StopPrice <= 0 {
 			return errors.New("stop price must be positive for stop-limit orders")
 		}
-	case orders.OrderType_STOP_MARKET:
+	case orders.OrderType_STOP:
 		if req.StopPrice <= 0 {
-			return errors.New("stop price must be positive for stop-market orders")
+			return errors.New("stop price must be positive for stop orders")
 		}
 	}
 	
@@ -224,7 +224,7 @@ func (s *OrderExecutionService) executeOrderInternal(ctx context.Context, req *O
 		ClientOrderID: req.ClientOrderID,
 		UserID:        req.UserID,
 		StopPrice:     req.StopPrice,
-		TimeInForce:   string(req.TimeInForce),
+		TimeInForce:   order_matching.TimeInForce(req.TimeInForce),
 	}
 	
 	// Register callback if provided
@@ -426,4 +426,3 @@ func (s *OrderExecutionService) notifyOrderCallback(order *order_matching.Order)
 		s.mu.Unlock()
 	}
 }
-
