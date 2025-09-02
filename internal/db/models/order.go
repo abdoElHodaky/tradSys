@@ -12,14 +12,14 @@ type OrderStatus string
 
 // Order statuses
 const (
-	OrderStatusNew        OrderStatus = "new"
-	OrderStatusPartial    OrderStatus = "partial"
-	OrderStatusFilled     OrderStatus = "filled"
-	OrderStatusCancelled  OrderStatus = "cancelled"
-	OrderStatusRejected   OrderStatus = "rejected"
-	OrderStatusExpired    OrderStatus = "expired"
-	OrderStatusPending    OrderStatus = "pending"
-	OrderStatusProcessing OrderStatus = "processing"
+	OrderStatusNew        OrderStatus = "NEW"
+	OrderStatusPartial    OrderStatus = "PARTIAL"
+	OrderStatusFilled     OrderStatus = "FILLED"
+	OrderStatusCancelled  OrderStatus = "CANCELLED"
+	OrderStatusRejected   OrderStatus = "REJECTED"
+	OrderStatusExpired    OrderStatus = "EXPIRED"
+	OrderStatusPending    OrderStatus = "PENDING"
+	OrderStatusProcessing OrderStatus = "PROCESSING"
 )
 
 // OrderSide represents the side of an order
@@ -27,8 +27,8 @@ type OrderSide string
 
 // Order sides
 const (
-	OrderSideBuy  OrderSide = "buy"
-	OrderSideSell OrderSide = "sell"
+	OrderSideBuy  OrderSide = "BUY"
+	OrderSideSell OrderSide = "SELL"
 )
 
 // OrderType represents the type of an order
@@ -36,14 +36,14 @@ type OrderType string
 
 // Order types
 const (
-	OrderTypeMarket     OrderType = "market"
-	OrderTypeLimit      OrderType = "limit"
-	OrderTypeStop       OrderType = "stop"
-	OrderTypeStopLimit  OrderType = "stop_limit"
-	OrderTypeTrailing   OrderType = "trailing"
-	OrderTypeIOC        OrderType = "ioc"
-	OrderTypeFOK        OrderType = "fok"
-	OrderTypeConditional OrderType = "conditional"
+	OrderTypeMarket     OrderType = "MARKET"
+	OrderTypeLimit      OrderType = "LIMIT"
+	OrderTypeStop       OrderType = "STOP"
+	OrderTypeStopLimit  OrderType = "STOP_LIMIT"
+	OrderTypeTrailing   OrderType = "TRAILING"
+	OrderTypeIOC        OrderType = "IOC"
+	OrderTypeFOK        OrderType = "FOK"
+	OrderTypeConditional OrderType = "CONDITIONAL"
 )
 
 // Order represents an order in the trading system
@@ -104,4 +104,3 @@ func (oh *OrderHistory) BeforeCreate(tx *gorm.DB) error {
 	}
 	return nil
 }
-
