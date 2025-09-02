@@ -215,7 +215,7 @@ type OrderUpdateRequest struct {
 // Service represents an order management service
 type Service struct {
 	// Engine is the order matching engine
-	Engine *order_matching.Engine
+	Engine *order_matching.OrderMatchingEngine
 	// Orders is a map of order ID to order
 	Orders map[string]*Order
 	// UserOrders is a map of user ID to order IDs
@@ -253,7 +253,7 @@ type orderOperationResult struct {
 }
 
 // NewService creates a new order management service
-func NewService(engine *order_matching.Engine, logger *zap.Logger) *Service {
+func NewService(engine *order_matching.OrderMatchingEngine, logger *zap.Logger) *Service {
 	ctx, cancel := context.WithCancel(context.Background())
 	
 	service := &Service{

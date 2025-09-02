@@ -238,18 +238,18 @@ func (s *mockOrderService) CreateOrder(ctx context.Context, req *orders.CreateOr
 	
 	// Create order response
 	order := &orders.OrderResponse{
-		OrderId:       orderID,
-		ClientOrderId: req.ClientOrderId,
-		Symbol:        req.Symbol,
-		Side:          req.Side,
-		Type:          req.Type,
-		TimeInForce:   req.TimeInForce,
-		Quantity:      req.Quantity,
-		Price:         req.Price,
-		Status:        "NEW",
-		FilledQty:     0,
-		AvgPrice:      0,
-		Timestamp:     time.Now().UnixMilli(),
+		OrderID:        orderID,
+		ClientOrderID:  req.ClientOrderID,
+		Symbol:         req.Symbol,
+		Side:           req.Side,
+		Type:           req.Type,
+		TimeInForce:    req.TimeInForce,
+		Quantity:       req.Quantity,
+		Price:          req.Price,
+		Status:         orders.OrderStatus_NEW,
+		FilledQuantity: 0,
+		AveragePrice:   0,
+		CreatedAt:      time.Now(),
 	}
 	
 	// Store order
@@ -264,13 +264,13 @@ func (s *mockOrderService) CancelOrder(ctx context.Context, req *orders.CancelOr
 	defer s.mu.Unlock()
 	
 	// Find order
-	order, exists := s.orders[req.OrderId]
+	order, exists := s.orders[req.OrderID]
 	if !exists {
-		return nil, fmt.Errorf("order not found: %s", req.OrderId)
+		return nil, fmt.Errorf("order not found: %s", req.OrderID)
 	}
 	
 	// Cancel order
-	order.Status = "CANCELLED"
+	order.Status = orders.OrderStatus_CANCELLED
 	
 	return order, nil
 }
@@ -288,21 +288,21 @@ func (s *mockOrderService) ProcessOrders(ctx context.Context, data *marketdata.M
 		}
 		
 		// Skip orders that are already filled or cancelled
-		if order.Status == "FILLED" || order.Status == "CANCELLED" || order.Status == "REJECTED" {
+		if order.Status == orders.OrderStatus_FILLED || order.Status == orders.OrderStatus_CANCELLED || order.Status == orders.OrderStatus_REJECTED {
 			continue
 		}
 		
 		// Process order based on type
 		switch order.Type {
-		case "MARKET":
+		case orders.OrderType_MARKET:
 			// Market orders are filled immediately at the current price
 			s.fillOrder(orderID, order, data.LastPrice)
 			
-		case "LIMIT":
+		case orders.OrderType_LIMIT:
 			// Limit orders are filled if the price is favorable
-			if order.Side == "BUY" && data.LastPrice <= order.Price {
+			if order.Side == orders.OrderSide_BUY && data.LastPrice <= order.Price {
 				s.fillOrder(orderID, order, data.LastPrice)
-			} else if order.Side == "SELL" && data.LastPrice >= order.Price {
+			} else if order.Side == orders.OrderSide_SELL && data.LastPrice >= order.Price {
 				s.fillOrder(orderID, order, data.LastPrice)
 			}
 		}
@@ -312,16 +312,16 @@ func (s *mockOrderService) ProcessOrders(ctx context.Context, data *marketdata.M
 // fillOrder fills an order
 func (s *mockOrderService) fillOrder(orderID string, order *orders.OrderResponse, price float64) {
 	// Update order
-	order.Status = "FILLED"
-	order.FilledQty = order.Quantity
-	order.AvgPrice = price
+	order.Status = orders.OrderStatus_FILLED
+	order.FilledQuantity = order.Quantity
+	order.AveragePrice = price
 	
 	// Update capital and positions
 	cost := order.Quantity * price
-	if order.Side == "BUY" {
+	if order.Side == orders.OrderSide_BUY {
 		*s.capital -= cost
 		s.positions[order.Symbol] += order.Quantity
-	} else if order.Side == "SELL" {
+	} else if order.Side == orders.OrderSide_SELL {
 		*s.capital += cost
 		s.positions[order.Symbol] -= order.Quantity
 	}
@@ -334,7 +334,7 @@ func (s *mockOrderService) fillOrder(orderID string, order *orders.OrderResponse
 		Side:      models.OrderSide(order.Side),
 		Quantity:  order.Quantity,
 		Price:     price,
-		Timestamp: time.Unix(0, order.Timestamp*int64(time.Millisecond)),
+		Timestamp: time.Unix(0, order.CreatedAt.UnixNano()),
 	}
 	
 	// Add trade to trades

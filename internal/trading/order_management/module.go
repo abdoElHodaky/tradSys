@@ -15,7 +15,7 @@ var Module = fx.Options(
 func NewFxService(
 	lifecycle fx.Lifecycle,
 	logger *zap.Logger,
-	orderEngine *order_matching.Engine,
+	orderEngine *order_matching.OrderMatchingEngine,
 ) *Service {
 	service := NewService(orderEngine, logger)
 	
@@ -33,4 +33,3 @@ func NewFxService(
 	
 	return service
 }
-

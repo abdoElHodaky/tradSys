@@ -3,6 +3,11 @@
 
 package orders
 
+import (
+	"context"
+	"time"
+)
+
 // OrderType represents the type of order
 type OrderType int32
 
@@ -54,3 +59,62 @@ const (
 	TimeInForce_GTD TimeInForce = 4
 )
 
+// CreateOrderRequest represents a request to create an order
+type CreateOrderRequest struct {
+	ClientOrderID string
+	Symbol        string
+	Type          OrderType
+	Side          OrderSide
+	Price         float64
+	StopPrice     float64
+	Amount        float64
+	TimeInForce   TimeInForce
+	Leverage      float64
+	ReduceOnly    bool
+	PostOnly      bool
+	Hidden        bool
+	IcebergQty    float64
+	UserID        string
+}
+
+// CancelOrderRequest represents a request to cancel an order
+type CancelOrderRequest struct {
+	OrderID       string
+	ClientOrderID string
+	Symbol        string
+	UserID        string
+}
+
+// OrderResponse represents an order response
+type OrderResponse struct {
+	OrderID       string
+	ClientOrderID string
+	Symbol        string
+	Type          OrderType
+	Side          OrderSide
+	Price         float64
+	StopPrice     float64
+	Amount        float64
+	FilledAmount  float64
+	RemainingAmount float64
+	Status        OrderStatus
+	TimeInForce   TimeInForce
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	UserID        string
+	Leverage      float64
+	ReduceOnly    bool
+	PostOnly      bool
+	Hidden        bool
+	IcebergQty    float64
+	Fee           float64
+	FeeCurrency   string
+}
+
+// OrderServiceClient represents a client for the order service
+type OrderServiceClient interface {
+	CreateOrder(ctx context.Context, req *CreateOrderRequest) (*OrderResponse, error)
+	CancelOrder(ctx context.Context, req *CancelOrderRequest) (*OrderResponse, error)
+	GetOrder(ctx context.Context, orderID string) (*OrderResponse, error)
+	GetOpenOrders(ctx context.Context, symbol string, userID string) ([]*OrderResponse, error)
+}

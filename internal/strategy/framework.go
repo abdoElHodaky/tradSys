@@ -14,6 +14,34 @@ import (
 
 // Strategy defines the interface for trading strategies
 type Strategy interface {
+	// Name returns the strategy name
+	Name() string
+	
+	// Description returns the strategy description
+	Description() string
+	
+	// Type returns the strategy type
+	Type() string
+	
+	// Initialize initializes the strategy
+	Initialize(ctx context.Context) error
+	
+	// ProcessMarketData processes market data updates
+	ProcessMarketData(ctx context.Context, data *marketdata.MarketDataResponse) error
+	
+	// GenerateSignals generates trading signals
+	GenerateSignals(ctx context.Context) ([]*Signal, error)
+	
+	// IsRunning returns whether the strategy is running
+	IsRunning() bool
+	
+	// Cleanup cleans up the strategy
+	Cleanup() error
+}
+
+// LegacyStrategy defines the interface for trading strategies (legacy version)
+// This is kept for backward compatibility with existing code
+type LegacyStrategy interface {
 	// GetName returns the strategy name
 	GetName() string
 	
@@ -76,7 +104,7 @@ func (s *BaseStrategy) OnOrderUpdate(ctx context.Context, order *models.Order) e
 // StrategyManager manages multiple trading strategies
 type StrategyManager struct {
 	// Registered strategies
-	strategies map[string]Strategy
+	strategies map[string]LegacyStrategy
 	
 	// Mutex for thread safety
 	mu sync.RWMutex
@@ -92,13 +120,13 @@ func NewStrategyManager(logger *zap.Logger) *StrategyManager {
 	}
 	
 	return &StrategyManager{
-		strategies: make(map[string]Strategy),
+		strategies: make(map[string]LegacyStrategy),
 		logger:     logger,
 	}
 }
 
 // RegisterStrategy adds a strategy to the manager
-func (m *StrategyManager) RegisterStrategy(strategy Strategy) error {
+func (m *StrategyManager) RegisterStrategy(strategy LegacyStrategy) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	
@@ -226,7 +254,7 @@ func (m *StrategyManager) ProcessOrderUpdate(ctx context.Context, order *models.
 					m.logger.Error("Strategy failed to process order update",
 						zap.String("name", strategy.GetName()),
 						zap.String("symbol", order.Symbol),
-						zap.String("orderId", order.ID),
+						zap.String("orderID", order.ID),
 						zap.Error(err))
 				}
 				break
@@ -295,4 +323,3 @@ type StatisticalArbitrageParams struct {
 	// Execution parameters
 	ExecutionDelay time.Duration
 }
-

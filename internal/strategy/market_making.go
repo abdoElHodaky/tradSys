@@ -242,11 +242,11 @@ func (s *MarketMakingStrategy) refreshQuotes(ctx context.Context) {
 	// Place new orders
 	if bidQty > 0 {
 		bidRequest := &orders.CreateOrderRequest{
-			ClientOrderId: fmt.Sprintf("%s-BID-%d", s.name, time.Now().UnixNano()),
+			ClientOrderID: fmt.Sprintf("%s-BID-%d", s.name, time.Now().UnixNano()),
 			Symbol:        s.symbol,
-			Side:          "BUY",
-			Type:          "LIMIT",
-			TimeInForce:   "GTC",
+			Side:          orders.OrderSide_BUY,
+			Type:          orders.OrderType_LIMIT,
+			TimeInForce:   orders.TimeInForce_GTC,
 			Quantity:      bidQty,
 			Price:         bidPrice,
 		}
@@ -259,11 +259,11 @@ func (s *MarketMakingStrategy) refreshQuotes(ctx context.Context) {
 				zap.Float64("quantity", bidQty))
 		} else {
 			s.mu.Lock()
-			s.activeOrders[bidResponse.OrderId] = bidResponse
+			s.activeOrders[bidResponse.OrderID] = bidResponse
 			s.mu.Unlock()
 			
 			s.logger.Info("Placed bid order",
-				zap.String("order_id", bidResponse.OrderId),
+				zap.String("order_id", bidResponse.OrderID),
 				zap.Float64("price", bidPrice),
 				zap.Float64("quantity", bidQty))
 		}
@@ -271,11 +271,11 @@ func (s *MarketMakingStrategy) refreshQuotes(ctx context.Context) {
 	
 	if askQty > 0 {
 		askRequest := &orders.CreateOrderRequest{
-			ClientOrderId: fmt.Sprintf("%s-ASK-%d", s.name, time.Now().UnixNano()),
+			ClientOrderID: fmt.Sprintf("%s-ASK-%d", s.name, time.Now().UnixNano()),
 			Symbol:        s.symbol,
-			Side:          "SELL",
-			Type:          "LIMIT",
-			TimeInForce:   "GTC",
+			Side:          orders.OrderSide_SELL,
+			Type:          orders.OrderType_LIMIT,
+			TimeInForce:   orders.TimeInForce_GTC,
 			Quantity:      askQty,
 			Price:         askPrice,
 		}
@@ -288,11 +288,11 @@ func (s *MarketMakingStrategy) refreshQuotes(ctx context.Context) {
 				zap.Float64("quantity", askQty))
 		} else {
 			s.mu.Lock()
-			s.activeOrders[askResponse.OrderId] = askResponse
+			s.activeOrders[askResponse.OrderID] = askResponse
 			s.mu.Unlock()
 			
 			s.logger.Info("Placed ask order",
-				zap.String("order_id", askResponse.OrderId),
+				zap.String("order_id", askResponse.OrderID),
 				zap.Float64("price", askPrice),
 				zap.Float64("quantity", askQty))
 		}

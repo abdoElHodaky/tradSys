@@ -15,7 +15,7 @@ import (
 // StatisticalArbitrageStrategy implements a statistical arbitrage trading strategy
 type StatisticalArbitrageStrategy struct {
 	BaseStrategy
-	params StatisticalArbitrageParams
+	params StatisticalArbitrageStrategyParams
 	
 	// Pair symbols
 	symbol1 string
@@ -48,8 +48,9 @@ type StatisticalArbitrageStrategy struct {
 	logger *zap.Logger
 }
 
-// StatisticalArbitrageParams contains parameters for the statistical arbitrage strategy
-type StatisticalArbitrageParams struct {
+// StatisticalArbitrageStrategyParams contains parameters for the statistical arbitrage strategy
+// This is a renamed version to avoid conflicts with the definition in framework.go
+type StatisticalArbitrageStrategyParams struct {
 	// Pair symbols
 	Symbol1 string
 	Symbol2 string
@@ -80,7 +81,7 @@ type StatisticalArbitrageParams struct {
 }
 
 // NewStatisticalArbitrageStrategy creates a new statistical arbitrage strategy
-func NewStatisticalArbitrageStrategy(params StatisticalArbitrageParams, logger *zap.Logger) *StatisticalArbitrageStrategy {
+func NewStatisticalArbitrageStrategy(params StatisticalArbitrageStrategyParams, logger *zap.Logger) *StatisticalArbitrageStrategy {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
@@ -301,16 +302,16 @@ func (s *StatisticalArbitrageStrategy) enterPosition(ctx context.Context, quanti
 		// Buy order for symbol1
 		buyOrder := &models.Order{
 			Symbol:   s.symbol1,
-			Side:     "buy",
-			Type:     "market",
+			Side:     "BUY",
+			Type:     "MARKET",
 			Quantity: quantity1,
 		}
 		
 		// Sell order for symbol2
 		sellOrder := &models.Order{
 			Symbol:   s.symbol2,
-			Side:     "sell",
-			Type:     "market",
+			Side:     "SELL",
+			Type:     "MARKET",
 			Quantity: math.Abs(quantity2),
 		}
 		
@@ -322,16 +323,16 @@ func (s *StatisticalArbitrageStrategy) enterPosition(ctx context.Context, quanti
 		// Sell order for symbol1
 		sellOrder := &models.Order{
 			Symbol:   s.symbol1,
-			Side:     "sell",
-			Type:     "market",
+			Side:     "SELL",
+			Type:     "MARKET",
 			Quantity: math.Abs(quantity1),
 		}
 		
 		// Buy order for symbol2
 		buyOrder := &models.Order{
 			Symbol:   s.symbol2,
-			Side:     "buy",
-			Type:     "market",
+			Side:     "BUY",
+			Type:     "MARKET",
 			Quantity: quantity2,
 		}
 		
@@ -362,16 +363,16 @@ func (s *StatisticalArbitrageStrategy) exitPosition(ctx context.Context) {
 		// Sell order to close long position in symbol1
 		order1 = &models.Order{
 			Symbol:   s.symbol1,
-			Side:     "sell",
-			Type:     "market",
+			Side:     "SELL",
+			Type:     "MARKET",
 			Quantity: math.Abs(s.position.Quantity1),
 		}
 	} else {
 		// Buy order to close short position in symbol1
 		order1 = &models.Order{
 			Symbol:   s.symbol1,
-			Side:     "buy",
-			Type:     "market",
+			Side:     "BUY",
+			Type:     "MARKET",
 			Quantity: math.Abs(s.position.Quantity1),
 		}
 	}
@@ -380,16 +381,16 @@ func (s *StatisticalArbitrageStrategy) exitPosition(ctx context.Context) {
 		// Sell order to close long position in symbol2
 		order2 = &models.Order{
 			Symbol:   s.symbol2,
-			Side:     "sell",
-			Type:     "market",
+			Side:     "SELL",
+			Type:     "MARKET",
 			Quantity: math.Abs(s.position.Quantity2),
 		}
 	} else {
 		// Buy order to close short position in symbol2
 		order2 = &models.Order{
 			Symbol:   s.symbol2,
-			Side:     "buy",
-			Type:     "market",
+			Side:     "BUY",
+			Type:     "MARKET",
 			Quantity: math.Abs(s.position.Quantity2),
 		}
 	}
@@ -417,4 +418,3 @@ func (s *StatisticalArbitrageStrategy) Shutdown(ctx context.Context) error {
 	s.active = false
 	return nil
 }
-
