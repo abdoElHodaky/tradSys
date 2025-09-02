@@ -62,7 +62,7 @@ func (m *OptimizedStrategyManager) RegisterStrategy(ctx context.Context, strateg
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	name := strategy.GetName()
+	name := strategy.Name()
 	if _, exists := m.strategies[name]; exists {
 		return fmt.Errorf("strategy already registered: %s", name)
 	}
@@ -166,7 +166,7 @@ func (m *OptimizedStrategyManager) ProcessMarketData(ctx context.Context, data *
 				// Process the market data
 				if err := strategy.ProcessMarketData(ctx, dataCopy); err != nil {
 					m.logger.Error("Failed to process market data",
-						zap.String("strategy", strategy.GetName()),
+						zap.String("strategy", strategy.Name()),
 						zap.Error(err),
 					)
 				}
@@ -186,7 +186,7 @@ func (m *OptimizedStrategyManager) ProcessMarketData(ctx context.Context, data *
 			// Process the market data
 			if err := strategy.ProcessMarketData(ctx, dataCopy); err != nil {
 				m.logger.Error("Failed to process market data",
-					zap.String("strategy", strategy.GetName()),
+					zap.String("strategy", strategy.Name()),
 					zap.Error(err),
 				)
 			}
@@ -231,7 +231,7 @@ func (m *OptimizedStrategyManager) ProcessOrder(ctx context.Context, order *orde
 				// Process the order
 				if err := strategy.ProcessOrder(ctx, orderCopy); err != nil {
 					m.logger.Error("Failed to process order",
-						zap.String("strategy", strategy.GetName()),
+						zap.String("strategy", strategy.Name()),
 						zap.Error(err),
 					)
 				}
@@ -251,7 +251,7 @@ func (m *OptimizedStrategyManager) ProcessOrder(ctx context.Context, order *orde
 			// Process the order
 			if err := strategy.ProcessOrder(ctx, orderCopy); err != nil {
 				m.logger.Error("Failed to process order",
-					zap.String("strategy", strategy.GetName()),
+					zap.String("strategy", strategy.Name()),
 					zap.Error(err),
 				)
 			}
@@ -375,7 +375,7 @@ func (m *ParallelStrategyManager) RegisterStrategy(ctx context.Context, strategy
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	name := strategy.GetName()
+	name := strategy.Name()
 	if _, exists := m.strategies[name]; exists {
 		return fmt.Errorf("strategy already registered: %s", name)
 	}
@@ -480,7 +480,7 @@ func (m *ParallelStrategyManager) ProcessMarketData(ctx context.Context, data *m
 			// Process the market data
 			if err := strategy.ProcessMarketData(ctx, &dataCopy); err != nil {
 				m.logger.Error("Failed to process market data",
-					zap.String("strategy", strategy.GetName()),
+					zap.String("strategy", strategy.Name()),
 					zap.Error(err),
 				)
 			}
@@ -533,7 +533,7 @@ func (m *ParallelStrategyManager) ProcessOrder(ctx context.Context, order *order
 			// Process the order
 			if err := strategy.ProcessOrder(ctx, &orderCopy); err != nil {
 				m.logger.Error("Failed to process order",
-					zap.String("strategy", strategy.GetName()),
+					zap.String("strategy", strategy.Name()),
 					zap.Error(err),
 				)
 			}
