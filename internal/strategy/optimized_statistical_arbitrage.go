@@ -2,7 +2,6 @@ package strategy
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -297,4 +296,3 @@ func (s *OptimizedStatisticalArbitrageStrategy) GetStats() map[string]interface{
 
 	return stats
 }
-
