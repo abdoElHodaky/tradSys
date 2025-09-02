@@ -12,6 +12,33 @@ import (
 	"go.uber.org/zap"
 )
 
+// Strategy defines the interface for trading strategies
+type Strategy interface {
+	// Name returns the strategy name
+	Name() string
+	
+	// Description returns the strategy description
+	Description() string
+	
+	// Type returns the strategy type
+	Type() string
+	
+	// Initialize initializes the strategy
+	Initialize(ctx context.Context) error
+	
+	// ProcessMarketData processes market data updates
+	ProcessMarketData(ctx context.Context, data *marketdata.MarketDataResponse) error
+	
+	// GenerateSignals generates trading signals
+	GenerateSignals(ctx context.Context) ([]*Signal, error)
+	
+	// IsRunning returns whether the strategy is running
+	IsRunning() bool
+	
+	// Cleanup cleans up the strategy
+	Cleanup() error
+}
+
 // LegacyStrategy defines the interface for trading strategies (legacy version)
 // This is kept for backward compatibility with existing code
 type LegacyStrategy interface {
