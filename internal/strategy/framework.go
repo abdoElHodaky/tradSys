@@ -227,7 +227,7 @@ func (m *StrategyManager) ProcessOrderUpdate(ctx context.Context, order *models.
 					m.logger.Error("Strategy failed to process order update",
 						zap.String("name", strategy.GetName()),
 						zap.String("symbol", order.Symbol),
-						zap.String("orderId", order.ID),
+						zap.String("orderID", order.ID),
 						zap.Error(err))
 				}
 				break
