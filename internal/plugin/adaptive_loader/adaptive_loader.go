@@ -174,7 +174,7 @@ func (l *AdaptivePluginLoader) StartPluginScanner(ctx context.Context, scanInter
 	}
 	
 	// Start the worker pool if not already running
-	if l.workerPool != nil && atomic.LoadInt32(&l.workerPool.running) == 0 {
+	if l.workerPool != nil && atomic.LoadInt64(&l.workerPool.running) == 0 {
 		l.workerPool.Start()
 		l.logger.Info("Started worker pool for plugin operations")
 	}
@@ -268,7 +268,7 @@ func (l *AdaptivePluginLoader) StopPluginScanner() {
 	}
 	
 	// Stop the worker pool if it's running
-	if l.workerPool != nil && atomic.LoadInt32(&l.workerPool.running) == 1 {
+	if l.workerPool != nil && atomic.LoadInt64(&l.workerPool.running) == 1 {
 		l.workerPool.Stop()
 		l.logger.Info("Stopped worker pool for plugin operations")
 	}
