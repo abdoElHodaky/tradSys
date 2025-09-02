@@ -2,7 +2,6 @@ package strategy
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"sync"
 	"time"
@@ -299,16 +298,15 @@ func (s *StatisticalArbitrageStrategy) enterPosition(ctx context.Context, quanti
 	
 	// Create orders for both symbols
 	if quantity1 > 0 {
-		// Buy order for symbol1
-		buyOrder := &models.Order{
+		// Create orders for long symbol1, short symbol2
+		buyOrder1 := &models.Order{
 			Symbol:   s.symbol1,
 			Side:     "BUY",
 			Type:     "MARKET",
 			Quantity: quantity1,
 		}
 		
-		// Sell order for symbol2
-		sellOrder := &models.Order{
+		sellOrder2 := &models.Order{
 			Symbol:   s.symbol2,
 			Side:     "SELL",
 			Type:     "MARKET",
@@ -317,19 +315,18 @@ func (s *StatisticalArbitrageStrategy) enterPosition(ctx context.Context, quanti
 		
 		// Submit orders
 		// Note: In a real implementation, these would be submitted to the broker
-		// s.SubmitOrder(ctx, buyOrder)
-		// s.SubmitOrder(ctx, sellOrder)
+		// s.SubmitOrder(ctx, buyOrder1)
+		// s.SubmitOrder(ctx, sellOrder2)
 	} else {
-		// Sell order for symbol1
-		sellOrder := &models.Order{
+		// Create orders for short symbol1, long symbol2
+		sellOrder1 := &models.Order{
 			Symbol:   s.symbol1,
 			Side:     "SELL",
 			Type:     "MARKET",
 			Quantity: math.Abs(quantity1),
 		}
 		
-		// Buy order for symbol2
-		buyOrder := &models.Order{
+		buyOrder2 := &models.Order{
 			Symbol:   s.symbol2,
 			Side:     "BUY",
 			Type:     "MARKET",
@@ -338,8 +335,8 @@ func (s *StatisticalArbitrageStrategy) enterPosition(ctx context.Context, quanti
 		
 		// Submit orders
 		// Note: In a real implementation, these would be submitted to the broker
-		// s.SubmitOrder(ctx, sellOrder)
-		// s.SubmitOrder(ctx, buyOrder)
+		// s.SubmitOrder(ctx, sellOrder1)
+		// s.SubmitOrder(ctx, buyOrder2)
 	}
 	
 	// Update position state
@@ -357,11 +354,10 @@ func (s *StatisticalArbitrageStrategy) exitPosition(ctx context.Context) {
 		zap.Float64("quantity2", s.position.Quantity2))
 	
 	// Create orders to close positions
-	var order1, order2 *models.Order
 	
 	if s.position.Quantity1 > 0 {
 		// Sell order to close long position in symbol1
-		order1 = &models.Order{
+		closeOrder1 := &models.Order{
 			Symbol:   s.symbol1,
 			Side:     "SELL",
 			Type:     "MARKET",
@@ -369,7 +365,7 @@ func (s *StatisticalArbitrageStrategy) exitPosition(ctx context.Context) {
 		}
 	} else {
 		// Buy order to close short position in symbol1
-		order1 = &models.Order{
+		closeOrder1 := &models.Order{
 			Symbol:   s.symbol1,
 			Side:     "BUY",
 			Type:     "MARKET",
@@ -379,7 +375,7 @@ func (s *StatisticalArbitrageStrategy) exitPosition(ctx context.Context) {
 	
 	if s.position.Quantity2 > 0 {
 		// Sell order to close long position in symbol2
-		order2 = &models.Order{
+		closeOrder2 := &models.Order{
 			Symbol:   s.symbol2,
 			Side:     "SELL",
 			Type:     "MARKET",
@@ -387,7 +383,7 @@ func (s *StatisticalArbitrageStrategy) exitPosition(ctx context.Context) {
 		}
 	} else {
 		// Buy order to close short position in symbol2
-		order2 = &models.Order{
+		closeOrder2 := &models.Order{
 			Symbol:   s.symbol2,
 			Side:     "BUY",
 			Type:     "MARKET",
@@ -397,8 +393,8 @@ func (s *StatisticalArbitrageStrategy) exitPosition(ctx context.Context) {
 	
 	// Submit orders
 	// Note: In a real implementation, these would be submitted to the broker
-	// s.SubmitOrder(ctx, order1)
-	// s.SubmitOrder(ctx, order2)
+	// s.SubmitOrder(ctx, closeOrder1)
+	// s.SubmitOrder(ctx, closeOrder2)
 	
 	// Reset position state
 	s.position.InPosition = false

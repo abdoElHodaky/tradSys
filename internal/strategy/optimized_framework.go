@@ -6,7 +6,6 @@ import (
 	"sort"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/trading/market_data"
 	"github.com/abdoElHodaky/tradSys/internal/trading/order"
@@ -602,4 +601,3 @@ func (m *ParallelStrategyManager) Shutdown(ctx context.Context) error {
 
 	return nil
 }
-
