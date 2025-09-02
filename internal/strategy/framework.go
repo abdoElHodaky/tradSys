@@ -12,8 +12,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// Strategy defines the interface for trading strategies
-type Strategy interface {
+// LegacyStrategy defines the interface for trading strategies (legacy version)
+// This is kept for backward compatibility with existing code
+type LegacyStrategy interface {
 	// GetName returns the strategy name
 	GetName() string
 	
@@ -76,7 +77,7 @@ func (s *BaseStrategy) OnOrderUpdate(ctx context.Context, order *models.Order) e
 // StrategyManager manages multiple trading strategies
 type StrategyManager struct {
 	// Registered strategies
-	strategies map[string]Strategy
+	strategies map[string]LegacyStrategy
 	
 	// Mutex for thread safety
 	mu sync.RWMutex
@@ -92,13 +93,13 @@ func NewStrategyManager(logger *zap.Logger) *StrategyManager {
 	}
 	
 	return &StrategyManager{
-		strategies: make(map[string]Strategy),
+		strategies: make(map[string]LegacyStrategy),
 		logger:     logger,
 	}
 }
 
 // RegisterStrategy adds a strategy to the manager
-func (m *StrategyManager) RegisterStrategy(strategy Strategy) error {
+func (m *StrategyManager) RegisterStrategy(strategy LegacyStrategy) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	
@@ -295,4 +296,3 @@ type StatisticalArbitrageParams struct {
 	// Execution parameters
 	ExecutionDelay time.Duration
 }
-
