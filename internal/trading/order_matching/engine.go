@@ -13,43 +13,57 @@ import (
 )
 
 // OrderType represents the type of order
-type OrderType string
+type OrderType int32
 
 const (
-	// OrderTypeLimit represents a limit order
-	OrderTypeLimit OrderType = "limit"
 	// OrderTypeMarket represents a market order
-	OrderTypeMarket OrderType = "market"
+	OrderTypeMarket OrderType = 0
+	// OrderTypeLimit represents a limit order
+	OrderTypeLimit OrderType = 1
+	// OrderTypeStop represents a stop order
+	OrderTypeStop OrderType = 2
 	// OrderTypeStopLimit represents a stop limit order
-	OrderTypeStopLimit OrderType = "stop_limit"
-	// OrderTypeStopMarket represents a stop market order
-	OrderTypeStopMarket OrderType = "stop_market"
+	OrderTypeStopLimit OrderType = 3
+	// OrderTypeTrailing represents a trailing order
+	OrderTypeTrailing OrderType = 4
+	// OrderTypeIOC represents an immediate-or-cancel order
+	OrderTypeIOC OrderType = 5
+	// OrderTypeFOK represents a fill-or-kill order
+	OrderTypeFOK OrderType = 6
+	// OrderTypeConditional represents a conditional order
+	OrderTypeConditional OrderType = 7
 )
 
 // OrderSide represents the side of an order
-type OrderSide string
+type OrderSide int32
 
 const (
 	// OrderSideBuy represents a buy order
-	OrderSideBuy OrderSide = "buy"
+	OrderSideBuy OrderSide = 0
 	// OrderSideSell represents a sell order
-	OrderSideSell OrderSide = "sell"
+	OrderSideSell OrderSide = 1
 )
 
 // OrderStatus represents the status of an order
-type OrderStatus string
+type OrderStatus int32
 
 const (
 	// OrderStatusNew represents a new order
-	OrderStatusNew OrderStatus = "new"
+	OrderStatusNew OrderStatus = 0
 	// OrderStatusPartiallyFilled represents a partially filled order
-	OrderStatusPartiallyFilled OrderStatus = "partially_filled"
+	OrderStatusPartiallyFilled OrderStatus = 1
 	// OrderStatusFilled represents a filled order
-	OrderStatusFilled OrderStatus = "filled"
+	OrderStatusFilled OrderStatus = 2
 	// OrderStatusCancelled represents a cancelled order
-	OrderStatusCancelled OrderStatus = "cancelled"
+	OrderStatusCancelled OrderStatus = 3
 	// OrderStatusRejected represents a rejected order
-	OrderStatusRejected OrderStatus = "rejected"
+	OrderStatusRejected OrderStatus = 4
+	// OrderStatusExpired represents an expired order
+	OrderStatusExpired OrderStatus = 5
+	// OrderStatusPending represents a pending order
+	OrderStatusPending OrderStatus = 6
+	// OrderStatusProcessing represents a processing order
+	OrderStatusProcessing OrderStatus = 7
 )
 
 // Order represents an order in the order book
@@ -321,7 +335,7 @@ func (e *OrderMatchingEngine) PlaceOrder(order *Order) error {
 	orderBook.OrderMap[order.ID] = order
 
 	// Handle stop orders
-	if order.Type == OrderTypeStopLimit || order.Type == OrderTypeStopMarket {
+	if order.Type == OrderTypeStopLimit || order.Type == OrderTypeStop {
 		return e.placeStopOrder(orderBook, order)
 	}
 
@@ -568,7 +582,7 @@ func (e *OrderMatchingEngine) checkStopOrders(orderBook *OrderBook) {
 			heap.Pop(orderBook.BuyStopOrders)
 
 			// Convert to a market or limit order
-			if topOrder.Type == OrderTypeStopMarket {
+			if topOrder.Type == OrderTypeStop {
 				topOrder.Type = OrderTypeMarket
 			} else {
 				topOrder.Type = OrderTypeLimit
@@ -593,7 +607,7 @@ func (e *OrderMatchingEngine) checkStopOrders(orderBook *OrderBook) {
 			heap.Pop(orderBook.SellStopOrders)
 
 			// Convert to a market or limit order
-			if topOrder.Type == OrderTypeStopMarket {
+			if topOrder.Type == OrderTypeStop {
 				topOrder.Type = OrderTypeMarket
 			} else {
 				topOrder.Type = OrderTypeLimit
@@ -850,4 +864,3 @@ func (e *OrderMatchingEngine) rebuildHeap(h *OrderHeap) {
 	// Heapify the new heap
 	heap.Init(h)
 }
-
