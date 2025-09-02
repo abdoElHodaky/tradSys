@@ -13,61 +13,73 @@ import (
 )
 
 // OrderStatus represents the status of an order
-type OrderStatus string
+type OrderStatus int32
 
 const (
 	// OrderStatusNew represents a new order
-	OrderStatusNew OrderStatus = "new"
-	// OrderStatusPending represents a pending order
-	OrderStatusPending OrderStatus = "pending"
+	OrderStatusNew OrderStatus = 0
 	// OrderStatusPartiallyFilled represents a partially filled order
-	OrderStatusPartiallyFilled OrderStatus = "partially_filled"
+	OrderStatusPartiallyFilled OrderStatus = 1
 	// OrderStatusFilled represents a filled order
-	OrderStatusFilled OrderStatus = "filled"
+	OrderStatusFilled OrderStatus = 2
 	// OrderStatusCancelled represents a cancelled order
-	OrderStatusCancelled OrderStatus = "cancelled"
+	OrderStatusCancelled OrderStatus = 3
 	// OrderStatusRejected represents a rejected order
-	OrderStatusRejected OrderStatus = "rejected"
+	OrderStatusRejected OrderStatus = 4
 	// OrderStatusExpired represents an expired order
-	OrderStatusExpired OrderStatus = "expired"
+	OrderStatusExpired OrderStatus = 5
+	// OrderStatusPending represents a pending order
+	OrderStatusPending OrderStatus = 6
+	// OrderStatusProcessing represents a processing order
+	OrderStatusProcessing OrderStatus = 7
 )
 
 // OrderType represents the type of order
-type OrderType string
+type OrderType int32
 
 const (
-	// OrderTypeLimit represents a limit order
-	OrderTypeLimit OrderType = "limit"
 	// OrderTypeMarket represents a market order
-	OrderTypeMarket OrderType = "market"
+	OrderTypeMarket OrderType = 0
+	// OrderTypeLimit represents a limit order
+	OrderTypeLimit OrderType = 1
+	// OrderTypeStop represents a stop order
+	OrderTypeStop OrderType = 2
 	// OrderTypeStopLimit represents a stop limit order
-	OrderTypeStopLimit OrderType = "stop_limit"
-	// OrderTypeStopMarket represents a stop market order
-	OrderTypeStopMarket OrderType = "stop_market"
+	OrderTypeStopLimit OrderType = 3
+	// OrderTypeTrailing represents a trailing order
+	OrderTypeTrailing OrderType = 4
+	// OrderTypeIOC represents an immediate-or-cancel order
+	OrderTypeIOC OrderType = 5
+	// OrderTypeFOK represents a fill-or-kill order
+	OrderTypeFOK OrderType = 6
+	// OrderTypeConditional represents a conditional order
+	OrderTypeConditional OrderType = 7
 )
 
 // OrderSide represents the side of an order
-type OrderSide string
+type OrderSide int32
 
 const (
 	// OrderSideBuy represents a buy order
-	OrderSideBuy OrderSide = "buy"
+	OrderSideBuy OrderSide = 0
 	// OrderSideSell represents a sell order
-	OrderSideSell OrderSide = "sell"
+	OrderSideSell OrderSide = 1
 )
 
 // TimeInForce represents the time in force of an order
-type TimeInForce string
+type TimeInForce int32
 
 const (
 	// TimeInForceGTC represents a good-till-cancelled order
-	TimeInForceGTC TimeInForce = "GTC"
+	TimeInForceGTC TimeInForce = 0
 	// TimeInForceIOC represents an immediate-or-cancel order
-	TimeInForceIOC TimeInForce = "IOC"
+	TimeInForceIOC TimeInForce = 1
 	// TimeInForceFOK represents a fill-or-kill order
-	TimeInForceFOK TimeInForce = "FOK"
+	TimeInForceFOK TimeInForce = 2
 	// TimeInForceDay represents a day order
-	TimeInForceDay TimeInForce = "DAY"
+	TimeInForceDay TimeInForce = 3
+	// TimeInForceGTD represents a good-till-date order
+	TimeInForceGTD TimeInForce = 4
 )
 
 // Order represents an order
@@ -943,7 +955,7 @@ func (s *Service) validateOrderRequest(request *OrderRequest) error {
 	if request.Side != OrderSideBuy && request.Side != OrderSideSell {
 		return ErrInvalidRequest
 	}
-	if request.Type != OrderTypeLimit && request.Type != OrderTypeMarket && request.Type != OrderTypeStopLimit && request.Type != OrderTypeStopMarket {
+	if request.Type != OrderTypeLimit && request.Type != OrderTypeMarket && request.Type != OrderTypeStopLimit && request.Type != OrderTypeStop {
 		return ErrInvalidRequest
 	}
 	if request.Quantity <= 0 {
@@ -956,14 +968,14 @@ func (s *Service) validateOrderRequest(request *OrderRequest) error {
 	}
 
 	// Check stop price for stop orders
-	if (request.Type == OrderTypeStopLimit || request.Type == OrderTypeStopMarket) && request.StopPrice <= 0 {
+	if (request.Type == OrderTypeStopLimit || request.Type == OrderTypeStop) && request.StopPrice <= 0 {
 		return ErrInvalidRequest
 	}
 
 	// Check time in force
-	if request.TimeInForce == "" {
+	if request.TimeInForce < 0 {
 		request.TimeInForce = TimeInForceGTC
-	} else if request.TimeInForce != TimeInForceGTC && request.TimeInForce != TimeInForceIOC && request.TimeInForce != TimeInForceFOK && request.TimeInForce != TimeInForceDay {
+	} else if request.TimeInForce != TimeInForceGTC && request.TimeInForce != TimeInForceIOC && request.TimeInForce != TimeInForceFOK && request.TimeInForce != TimeInForceDay && request.TimeInForce != TimeInForceGTD {
 		return ErrInvalidRequest
 	}
 
