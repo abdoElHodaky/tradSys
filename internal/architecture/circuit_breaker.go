@@ -8,7 +8,7 @@ import (
 )
 
 // CircuitBreakerState represents the state of a circuit breaker
-type CircuitBreakerState int32
+type CircuitBreakerState int64
 
 const (
 	// CircuitClosed indicates the circuit is closed and requests are allowed
@@ -23,7 +23,7 @@ const (
 // cascading failures in distributed systems
 type CircuitBreaker struct {
 	name           string
-	state          int32 // atomic
+	state          int64 // atomic
 	failureCount   int64 // atomic
 	successCount   int64 // atomic
 	lastFailure    int64 // atomic, unix timestamp
@@ -60,7 +60,7 @@ func NewCircuitBreaker(options CircuitBreakerOptions) *CircuitBreaker {
 	
 	return &CircuitBreaker{
 		name:               options.Name,
-		state:              int32(CircuitClosed),
+		state:              int64(CircuitClosed),
 		failureThreshold:   options.FailureThreshold,
 		resetTimeout:       options.ResetTimeout,
 		halfOpenMaxRequests: options.HalfOpenMaxRequests,
@@ -88,7 +88,7 @@ func (cb *CircuitBreaker) Execute(fn func() error) error {
 
 // allowRequest checks if a request should be allowed based on the circuit state
 func (cb *CircuitBreaker) allowRequest() bool {
-	state := CircuitBreakerState(atomic.LoadInt32(&cb.state))
+	state := CircuitBreakerState(atomic.LoadInt64(&cb.state))
 	
 	switch state {
 	case CircuitClosed:
@@ -114,7 +114,7 @@ func (cb *CircuitBreaker) allowRequest() bool {
 
 // recordSuccess records a successful request
 func (cb *CircuitBreaker) recordSuccess() {
-	state := CircuitBreakerState(atomic.LoadInt32(&cb.state))
+	state := CircuitBreakerState(atomic.LoadInt64(&cb.state))
 	
 	switch state {
 	case CircuitClosed:
@@ -133,7 +133,7 @@ func (cb *CircuitBreaker) recordSuccess() {
 func (cb *CircuitBreaker) recordFailure() {
 	atomic.StoreInt64(&cb.lastFailure, time.Now().Unix())
 	
-	state := CircuitBreakerState(atomic.LoadInt32(&cb.state))
+	state := CircuitBreakerState(atomic.LoadInt64(&cb.state))
 	
 	switch state {
 	case CircuitClosed:
@@ -150,7 +150,7 @@ func (cb *CircuitBreaker) recordFailure() {
 
 // tryTransitionState attempts to transition the circuit from one state to another
 func (cb *CircuitBreaker) tryTransitionState(from, to CircuitBreakerState) bool {
-	if atomic.CompareAndSwapInt32(&cb.state, int32(from), int32(to)) {
+	if atomic.CompareAndSwapInt64(&cb.state, int64(from), int64(to)) {
 		cb.onStateChange(cb.name, from, to)
 		return true
 	}
@@ -159,16 +159,15 @@ func (cb *CircuitBreaker) tryTransitionState(from, to CircuitBreakerState) bool 
 
 // State returns the current state of the circuit breaker
 func (cb *CircuitBreaker) State() CircuitBreakerState {
-	return CircuitBreakerState(atomic.LoadInt32(&cb.state))
+	return CircuitBreakerState(atomic.LoadInt64(&cb.state))
 }
 
 // Reset resets the circuit breaker to closed state
 func (cb *CircuitBreaker) Reset() {
-	oldState := CircuitBreakerState(atomic.SwapInt32(&cb.state, int32(CircuitClosed)))
+	oldState := CircuitBreakerState(atomic.SwapInt64(&cb.state, int64(CircuitClosed)))
 	if oldState != CircuitClosed {
 		cb.onStateChange(cb.name, oldState, CircuitClosed)
 	}
 	atomic.StoreInt64(&cb.failureCount, 0)
 	atomic.StoreInt64(&cb.successCount, 0)
 }
-
