@@ -238,15 +238,15 @@ func (s *mockOrderService) CreateOrder(ctx context.Context, req *orders.CreateOr
 	
 	// Create order response
 	order := &orders.OrderResponse{
-		OrderID:       orderID,
-		ClientOrderID: req.ClientOrderID,
-		Symbol:        req.Symbol,
-		Side:          req.Side,
-		Type:          req.Type,
-		TimeInForce:   req.TimeInForce,
-		Quantity:      req.Quantity,
-		Price:         req.Price,
-		Status:        orders.OrderStatus_NEW,
+		OrderID:        orderID,
+		ClientOrderID:  req.ClientOrderID,
+		Symbol:         req.Symbol,
+		Side:           req.Side,
+		Type:           req.Type,
+		TimeInForce:    req.TimeInForce,
+		Quantity:       req.Quantity,
+		Price:          req.Price,
+		Status:         orders.OrderStatus_NEW,
 		FilledQuantity: 0,
 		AveragePrice:   0,
 		CreatedAt:      time.Now(),
@@ -334,7 +334,7 @@ func (s *mockOrderService) fillOrder(orderID string, order *orders.OrderResponse
 		Side:      models.OrderSide(order.Side),
 		Quantity:  order.Quantity,
 		Price:     price,
-		Timestamp: time.Unix(0, order.Timestamp*int64(time.Millisecond)),
+		Timestamp: time.Unix(0, order.CreatedAt.UnixNano()),
 	}
 	
 	// Add trade to trades

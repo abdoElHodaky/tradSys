@@ -302,16 +302,16 @@ func (s *StatisticalArbitrageStrategy) enterPosition(ctx context.Context, quanti
 		// Buy order for symbol1
 		buyOrder := &models.Order{
 			Symbol:   s.symbol1,
-			Side:     "buy",
-			Type:     "market",
+			Side:     "BUY",
+			Type:     "MARKET",
 			Quantity: quantity1,
 		}
 		
 		// Sell order for symbol2
 		sellOrder := &models.Order{
 			Symbol:   s.symbol2,
-			Side:     "sell",
-			Type:     "market",
+			Side:     "SELL",
+			Type:     "MARKET",
 			Quantity: math.Abs(quantity2),
 		}
 		
@@ -323,16 +323,16 @@ func (s *StatisticalArbitrageStrategy) enterPosition(ctx context.Context, quanti
 		// Sell order for symbol1
 		sellOrder := &models.Order{
 			Symbol:   s.symbol1,
-			Side:     "sell",
-			Type:     "market",
+			Side:     "SELL",
+			Type:     "MARKET",
 			Quantity: math.Abs(quantity1),
 		}
 		
 		// Buy order for symbol2
 		buyOrder := &models.Order{
 			Symbol:   s.symbol2,
-			Side:     "buy",
-			Type:     "market",
+			Side:     "BUY",
+			Type:     "MARKET",
 			Quantity: quantity2,
 		}
 		
@@ -363,16 +363,16 @@ func (s *StatisticalArbitrageStrategy) exitPosition(ctx context.Context) {
 		// Sell order to close long position in symbol1
 		order1 = &models.Order{
 			Symbol:   s.symbol1,
-			Side:     "sell",
-			Type:     "market",
+			Side:     "SELL",
+			Type:     "MARKET",
 			Quantity: math.Abs(s.position.Quantity1),
 		}
 	} else {
 		// Buy order to close short position in symbol1
 		order1 = &models.Order{
 			Symbol:   s.symbol1,
-			Side:     "buy",
-			Type:     "market",
+			Side:     "BUY",
+			Type:     "MARKET",
 			Quantity: math.Abs(s.position.Quantity1),
 		}
 	}
@@ -381,16 +381,16 @@ func (s *StatisticalArbitrageStrategy) exitPosition(ctx context.Context) {
 		// Sell order to close long position in symbol2
 		order2 = &models.Order{
 			Symbol:   s.symbol2,
-			Side:     "sell",
-			Type:     "market",
+			Side:     "SELL",
+			Type:     "MARKET",
 			Quantity: math.Abs(s.position.Quantity2),
 		}
 	} else {
 		// Buy order to close short position in symbol2
 		order2 = &models.Order{
 			Symbol:   s.symbol2,
-			Side:     "buy",
-			Type:     "market",
+			Side:     "BUY",
+			Type:     "MARKET",
 			Quantity: math.Abs(s.position.Quantity2),
 		}
 	}
