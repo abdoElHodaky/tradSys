@@ -15,7 +15,7 @@ type WorkerPool struct {
 	size         int
 	taskQueue    chan Task
 	wg           sync.WaitGroup
-	activeWorkers int32 // atomic
+	activeWorkers int64 // atomic
 	ctx          context.Context
 	cancel       context.CancelFunc
 	started      bool
@@ -116,13 +116,13 @@ func (wp *WorkerPool) worker() {
 			}
 			
 			// Increment active workers count
-			atomic.AddInt32(&wp.activeWorkers, 1)
+			atomic.AddInt64(&wp.activeWorkers, 1)
 			
 			// Execute task
 			_ = task()
 			
 			// Decrement active workers count
-			atomic.AddInt32(&wp.activeWorkers, -1)
+			atomic.AddInt64(&wp.activeWorkers, -1)
 			
 		case <-wp.ctx.Done():
 			// Context cancelled, exit worker
@@ -133,7 +133,7 @@ func (wp *WorkerPool) worker() {
 
 // ActiveWorkers returns the number of currently active workers
 func (wp *WorkerPool) ActiveWorkers() int {
-	return int(atomic.LoadInt32(&wp.activeWorkers))
+	return int(atomic.LoadInt64(&wp.activeWorkers))
 }
 
 // QueueSize returns the current size of the task queue
@@ -150,4 +150,3 @@ func (wp *WorkerPool) QueueCapacity() int {
 func (wp *WorkerPool) Size() int {
 	return wp.size
 }
-

@@ -59,8 +59,8 @@ type WorkerPool struct {
 	tasks chan Task
 
 	// Worker management
-	workerCount int32
-	running     int32
+	workerCount int64
+	running     int64
 	stopCh      chan struct{}
 	wg          sync.WaitGroup
 
@@ -91,7 +91,7 @@ func NewWorkerPool(config WorkerPoolConfig, logger *zap.Logger) *WorkerPool {
 // Start starts the worker pool
 func (p *WorkerPool) Start() error {
 	// Check if already running
-	if !atomic.CompareAndSwapInt32(&p.running, 0, 1) {
+	if !atomic.CompareAndSwapInt64(&p.running, 0, 1) {
 		return fmt.Errorf("worker pool already running")
 	}
 
@@ -111,7 +111,7 @@ func (p *WorkerPool) Start() error {
 // Stop stops the worker pool
 func (p *WorkerPool) Stop() {
 	// Check if already stopped
-	if !atomic.CompareAndSwapInt32(&p.running, 1, 0) {
+	if !atomic.CompareAndSwapInt64(&p.running, 1, 0) {
 		return
 	}
 
@@ -129,7 +129,7 @@ func (p *WorkerPool) Stop() {
 // Submit submits a task to the worker pool
 func (p *WorkerPool) Submit(ctx context.Context, task func() error, timeout time.Duration) error {
 	// Check if running
-	if atomic.LoadInt32(&p.running) == 0 {
+	if atomic.LoadInt64(&p.running) == 0 {
 		return fmt.Errorf("worker pool not running")
 	}
 
@@ -165,7 +165,7 @@ func (p *WorkerPool) Submit(ctx context.Context, task func() error, timeout time
 // SubmitAsync submits a task to the worker pool without waiting for the result
 func (p *WorkerPool) SubmitAsync(ctx context.Context, task func() error, timeout time.Duration) error {
 	// Check if running
-	if atomic.LoadInt32(&p.running) == 0 {
+	if atomic.LoadInt64(&p.running) == 0 {
 		return fmt.Errorf("worker pool not running")
 	}
 
@@ -191,11 +191,11 @@ func (p *WorkerPool) SubmitAsync(ctx context.Context, task func() error, timeout
 // startWorker starts a new worker
 func (p *WorkerPool) startWorker() {
 	p.wg.Add(1)
-	atomic.AddInt32(&p.workerCount, 1)
+	atomic.AddInt64(&p.workerCount, 1)
 
 	go func() {
 		defer func() {
-			atomic.AddInt32(&p.workerCount, -1)
+			atomic.AddInt64(&p.workerCount, -1)
 			p.wg.Done()
 
 			// Handle panics
@@ -220,11 +220,11 @@ func (p *WorkerPool) startWorker() {
 				p.executeTask(task)
 			case <-time.After(p.config.WorkerIdleTimeout):
 				// Worker idle timeout
-				workerCount := atomic.LoadInt32(&p.workerCount)
+				workerCount := atomic.LoadInt64(&p.workerCount)
 				if workerCount > 1 {
 					// Only exit if there are other workers
 					p.logger.Debug("Worker idle timeout",
-						zap.Int32("workerCount", workerCount),
+						zap.Int64("workerCount", workerCount),
 					)
 					return
 				}
@@ -302,8 +302,8 @@ func (p *WorkerPool) executeTask(task Task) {
 	}
 
 	// Start a new worker if needed
-	workerCount := atomic.LoadInt32(&p.workerCount)
-	if workerCount < int32(p.config.MaxWorkers) {
+	workerCount := atomic.LoadInt64(&p.workerCount)
+	if workerCount < int64(p.config.MaxWorkers) {
 		p.startWorker()
 	}
 }
@@ -311,8 +311,8 @@ func (p *WorkerPool) executeTask(task Task) {
 // GetStats gets the worker pool statistics
 func (p *WorkerPool) GetStats() map[string]interface{} {
 	stats := make(map[string]interface{})
-	stats["running"] = atomic.LoadInt32(&p.running) == 1
-	stats["workerCount"] = atomic.LoadInt32(&p.workerCount)
+	stats["running"] = atomic.LoadInt64(&p.running) == 1
+	stats["workerCount"] = atomic.LoadInt64(&p.workerCount)
 	stats["completedTasks"] = atomic.LoadUint64(&p.completedTasks)
 	stats["failedTasks"] = atomic.LoadUint64(&p.failedTasks)
 	stats["timeoutTasks"] = atomic.LoadUint64(&p.timeoutTasks)
@@ -330,12 +330,12 @@ func (p *WorkerPool) GetStats() map[string]interface{} {
 
 // IsRunning returns whether the worker pool is running
 func (p *WorkerPool) IsRunning() bool {
-	return atomic.LoadInt32(&p.running) == 1
+	return atomic.LoadInt64(&p.running) == 1
 }
 
 // GetWorkerCount returns the number of workers
 func (p *WorkerPool) GetWorkerCount() int {
-	return int(atomic.LoadInt32(&p.workerCount))
+	return int(atomic.LoadInt64(&p.workerCount))
 }
 
 // GetCompletedTasks returns the number of completed tasks
@@ -366,4 +366,3 @@ func (p *WorkerPool) GetAverageTaskTime() time.Duration {
 	}
 	return time.Duration(atomic.LoadInt64(&p.totalTaskTime)) / time.Duration(completedTasks)
 }
-
