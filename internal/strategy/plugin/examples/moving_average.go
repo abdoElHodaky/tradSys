@@ -237,18 +237,18 @@ func (s *MovingAverageStrategy) GenerateOrders(ctx context.Context, signals []*s
 	return orders, nil
 }
 
-// GetName returns the name of the strategy
-func (s *MovingAverageStrategy) GetName() string {
+// Name returns the name of the strategy
+func (s *MovingAverageStrategy) Name() string {
 	return "MovingAverageCrossover"
 }
 
-// GetDescription returns the description of the strategy
-func (s *MovingAverageStrategy) GetDescription() string {
+// Description returns the description of the strategy
+func (s *MovingAverageStrategy) Description() string {
 	return fmt.Sprintf("Moving average crossover strategy (short: %d, long: %d)", s.shortPeriod, s.longPeriod)
 }
 
-// GetType returns the type of the strategy
-func (s *MovingAverageStrategy) GetType() string {
+// Type returns the type of the strategy
+func (s *MovingAverageStrategy) Type() string {
 	return "moving_average_crossover"
 }
 
