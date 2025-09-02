@@ -175,7 +175,7 @@ func (s *MovingAverageStrategy) GenerateSignals(ctx context.Context) ([]*strateg
 				Symbol:    symbol,
 				Direction: signal,
 				Strength:  1.0,
-				Reason:    fmt.Sprintf("Moving average crossover: short(%.2f) %s long(%.2f)", shortMA, signal == "BUY" ? ">" : "<", longMA),
+				Reason:    fmt.Sprintf("Moving average crossover: short(%.2f) %s long(%.2f)", shortMA, getComparisonSymbol(signal), longMA),
 				Timestamp: time.Now().Unix(),
 			})
 			
@@ -184,6 +184,13 @@ func (s *MovingAverageStrategy) GenerateSignals(ctx context.Context) ([]*strateg
 	}
 	
 	return signals, nil
+}
+// getComparisonSymbol returns the comparison symbol based on signal direction
+func getComparisonSymbol(signal string) string {
+	if signal == "BUY" {
+		return ">"
+	}
+	return "<"
 }
 
 // GenerateOrders generates orders based on signals
@@ -251,4 +258,3 @@ func (s *MovingAverageStrategy) Cleanup() error {
 	s.initialized = false
 	return nil
 }
-
