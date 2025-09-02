@@ -88,7 +88,7 @@ type SnapshotManager struct {
 
 	// Snapshot creation tracking
 	snapshotCreationLock  sync.Mutex
-	snapshotCreationCount int32
+	snapshotCreationCount int64
 	snapshotSemaphore     chan struct{}
 
 	// Statistics
@@ -345,17 +345,17 @@ func (sm *SnapshotManager) shouldCreateSnapshot(aggregate eventsourcing.Aggregat
 // createSnapshotConcurrently creates a snapshot concurrently
 func (sm *SnapshotManager) createSnapshotConcurrently(ctx context.Context, aggregate eventsourcing.Aggregate) {
 	// Check if we're already creating too many snapshots
-	currentCount := atomic.LoadInt32(&sm.snapshotCreationCount)
-	if currentCount >= int32(sm.config.MaxConcurrentSnapshots) {
+	currentCount := atomic.LoadInt64(&sm.snapshotCreationCount)
+	if currentCount >= int64(sm.config.MaxConcurrentSnapshots) {
 		sm.logger.Debug("Too many concurrent snapshots, skipping",
-			zap.Int32("currentCount", currentCount),
+			zap.Int64("currentCount", currentCount),
 			zap.Int("maxConcurrent", sm.config.MaxConcurrentSnapshots),
 		)
 		return
 	}
 
 	// Increment the snapshot creation count
-	atomic.AddInt32(&sm.snapshotCreationCount, 1)
+	atomic.AddInt64(&sm.snapshotCreationCount, 1)
 
 	// Create a copy of the aggregate to avoid race conditions
 	aggregateCopy := aggregate.Copy()
@@ -364,7 +364,7 @@ func (sm *SnapshotManager) createSnapshotConcurrently(ctx context.Context, aggre
 	sm.wg.Add(1)
 	go func() {
 		defer sm.wg.Done()
-		defer atomic.AddInt32(&sm.snapshotCreationCount, -1)
+		defer atomic.AddInt64(&sm.snapshotCreationCount, -1)
 
 		// Create a new context with timeout
 		snapshotCtx, cancel := context.WithTimeout(sm.ctx, 30*time.Second)
@@ -454,7 +454,7 @@ func (sm *SnapshotManager) GetStats() map[string]interface{} {
 	stats["snapshotsLoaded"] = atomic.LoadInt64(&sm.snapshotsLoaded)
 	stats["snapshotsDeleted"] = atomic.LoadInt64(&sm.snapshotsDeleted)
 	stats["eventsProcessed"] = atomic.LoadInt64(&sm.eventsProcessed)
-	stats["concurrentSnapshots"] = atomic.LoadInt32(&sm.snapshotCreationCount)
+	stats["concurrentSnapshots"] = atomic.LoadInt64(&sm.snapshotCreationCount)
 
 	return stats
 }
@@ -505,4 +505,3 @@ func (sm *SnapshotManager) decompressData(data []byte) ([]byte, error) {
 
 	return buf.Bytes(), nil
 }
-
