@@ -13,7 +13,7 @@ import (
 )
 
 // OrderType represents the type of order
-type OrderType int32
+type OrderType int64
 
 const (
 	// OrderTypeMarket represents a market order
@@ -35,7 +35,7 @@ const (
 )
 
 // OrderSide represents the side of an order
-type OrderSide int32
+type OrderSide int64
 
 const (
 	// OrderSideBuy represents a buy order
@@ -45,7 +45,7 @@ const (
 )
 
 // OrderStatus represents the status of an order
-type OrderStatus int32
+type OrderStatus int64
 
 const (
 	// OrderStatusNew represents a new order
