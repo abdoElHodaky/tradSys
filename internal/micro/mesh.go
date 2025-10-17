@@ -50,10 +50,11 @@ func ConfigureMesh(service gomicro.Service, opts MeshOptions, logger *zap.Logger
 	}
 
 	// Apply wrappers to the client
-	service.Client().Init(
-		client.Wrap(wrappers...),
-		client.Retries(3),
-	)
+	clientOptions := []client.Option{client.Retries(3)}
+	for _, wrapper := range wrappers {
+		clientOptions = append(clientOptions, client.Wrap(wrapper))
+	}
+	service.Client().Init(clientOptions...)
 
 	// Configure server wrappers
 	var serverWrappers []server.HandlerWrapper
