@@ -9,7 +9,7 @@ import (
 
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/store"
-	"github.com/nats-io/nats.go"
+	nats "github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 )
 
@@ -416,4 +416,3 @@ func (b *NatsEventBus) SubscribeToAggregate(aggregateType string, handler events
 	
 	return nil
 }
-

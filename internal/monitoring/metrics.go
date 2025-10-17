@@ -1,9 +1,11 @@
 package monitoring
 
 import (
+	"strconv"
 	"sync"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"go.uber.org/zap"
@@ -257,4 +259,47 @@ func (c *MetricsCollector) GetMetrics() map[string]interface{} {
 	// This is just a placeholder for direct metrics access
 	
 	return metrics
+}
+
+// GinMiddleware returns a Gin middleware function for collecting HTTP metrics
+func (c *MetricsCollector) GinMiddleware() gin.HandlerFunc {
+	// Initialize HTTP metrics if not already done
+	httpRequestsTotal := promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_requests_total",
+			Help: "Total number of HTTP requests",
+		},
+		[]string{"method", "endpoint", "status_code"},
+	)
+	
+	httpRequestDuration := promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name: "http_request_duration_seconds",
+			Help: "HTTP request duration in seconds",
+		},
+		[]string{"method", "endpoint", "status_code"},
+	)
+
+	return func(c *gin.Context) {
+		start := time.Now()
+		
+		// Process request
+		c.Next()
+		
+		// Record metrics
+		duration := time.Since(start).Seconds()
+		statusCode := strconv.Itoa(c.Writer.Status())
+		
+		httpRequestsTotal.WithLabelValues(
+			c.Request.Method,
+			c.FullPath(),
+			statusCode,
+		).Inc()
+		
+		httpRequestDuration.WithLabelValues(
+			c.Request.Method,
+			c.FullPath(),
+			statusCode,
+		).Observe(duration)
+	}
 }

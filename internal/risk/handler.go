@@ -113,8 +113,7 @@ func (h *Handler) UpdateRiskLimits(ctx context.Context, req *risk.UpdateRiskLimi
 	return nil
 }
 
-// Module provides the risk module for fx
-var Module = fx.Options(
+// HandlerModule provides the risk handler module for fx
+var HandlerModule = fx.Options(
 	fx.Provide(NewHandler),
 )
-

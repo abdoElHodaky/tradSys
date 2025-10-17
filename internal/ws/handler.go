@@ -103,8 +103,7 @@ func (h *Handler) GetConnections(ctx context.Context, req *ws.GetConnectionsRequ
 	return nil
 }
 
-// Module provides the WebSocket module for fx
-var Module = fx.Options(
+// HandlerModule provides the WebSocket handler module for fx
+var HandlerModule = fx.Options(
 	fx.Provide(NewHandler),
 )
-

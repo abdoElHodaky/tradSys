@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/patrickmn/go-cache"
+	cache "github.com/patrickmn/go-cache"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -64,5 +64,3 @@ func (m *Manager) GetMarketData(symbol, interval string) (float64, float64, int6
 	// For now, just return placeholder values
 	return 100.0, 1000.0, time.Now().Unix() * 1000, nil
 }
-
-

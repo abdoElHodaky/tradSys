@@ -172,8 +172,7 @@ func (h *Handler) GetOrders(ctx context.Context, req *orders.GetOrdersRequest, r
 	return nil
 }
 
-// Module provides the orders module for fx
-var Module = fx.Options(
+// HandlerModule provides the orders handler module for fx
+var HandlerModule = fx.Options(
 	fx.Provide(NewHandler),
 )
-

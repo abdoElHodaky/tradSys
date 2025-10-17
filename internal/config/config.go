@@ -26,6 +26,7 @@ type Config struct {
 	Tracing     TracingConfig
 	Metrics     MetricsConfig
 	Resilience  ResilienceConfig
+	Gateway     GatewayConfig
 }
 
 // ServerConfig represents the server configuration
@@ -118,6 +119,18 @@ type RetryConfig struct {
 	Delay      time.Duration
 }
 
+// GatewayConfig represents the gateway configuration
+type GatewayConfig struct {
+	Address            string
+	ReadTimeout        time.Duration
+	WriteTimeout       time.Duration
+	MaxHeaderBytes     int
+	RateLimitRequests  int
+	RateLimitBurst     int
+	CircuitBreakerThreshold int
+	CircuitBreakerTimeout   time.Duration
+}
+
 // LoadConfig loads the application configuration
 func LoadConfig(configPath string, logger *zap.Logger) (*Config, error) {
 	// Set default configuration values
@@ -184,6 +197,16 @@ func LoadConfig(configPath string, logger *zap.Logger) (*Config, error) {
 				MaxRetries: 3,
 				Delay:      1 * time.Second,
 			},
+		},
+		Gateway: GatewayConfig{
+			Address:                 ":8000",
+			ReadTimeout:             5 * time.Second,
+			WriteTimeout:            10 * time.Second,
+			MaxHeaderBytes:          1 << 20, // 1MB
+			RateLimitRequests:       100,
+			RateLimitBurst:          200,
+			CircuitBreakerThreshold: 5,
+			CircuitBreakerTimeout:   30 * time.Second,
 		},
 	}
 

@@ -10,8 +10,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// Module provides the market data service components
-var Module = fx.Options(
+// CQRSModule provides the market data service CQRS components
+var CQRSModule = fx.Options(
 	// Provide the market data service
 	fx.Provide(NewService),
 	
@@ -117,4 +117,3 @@ type GetMarketDataQuery struct {
 func (q *GetMarketDataQuery) QueryName() string {
 	return "GetMarketData"
 }
-

@@ -146,8 +146,7 @@ func (h *Handler) GetSymbols(ctx context.Context, req *marketdata.SymbolsRequest
 	return nil
 }
 
-// Module provides the market data module for fx
-var Module = fx.Options(
+// HandlerModule provides the market data handler module for fx
+var HandlerModule = fx.Options(
 	fx.Provide(NewHandler),
 )
-

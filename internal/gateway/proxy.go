@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/config"
-	"github.com/abdoElHodaky/tradSys/internal/micro"
 	"github.com/gin-gonic/gin"
+	"go-micro.dev/v4/registry"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -22,14 +22,14 @@ type ProxyParams struct {
 
 	Logger   *zap.Logger
 	Config   *config.Config
-	Registry *micro.Registry
+	Registry registry.Registry
 }
 
 // ServiceProxy handles forwarding requests to microservices
 type ServiceProxy struct {
 	logger   *zap.Logger
 	config   *config.Config
-	registry *micro.Registry
+	registry registry.Registry
 	client   *http.Client
 }
 
@@ -236,4 +236,3 @@ func (p *ServiceProxy) ReverseProxy(serviceName string) gin.HandlerFunc {
 		proxy.ServeHTTP(c.Writer, c.Request)
 	}
 }
-
