@@ -20,6 +20,9 @@ type Config struct {
 	JWT         JWTConfig
 	Services    ServicesConfig
 	Logging     LoggingConfig
+	Registry    RegistryConfig
+	Service     ServiceConfig
+	Broker      BrokerConfig
 }
 
 // ServerConfig represents the server configuration
@@ -61,6 +64,26 @@ type LoggingConfig struct {
 	OutputPath string
 }
 
+// RegistryConfig represents the service registry configuration
+type RegistryConfig struct {
+	Type      string
+	Addresses []string
+}
+
+// ServiceConfig represents the microservice configuration
+type ServiceConfig struct {
+	Name        string
+	Version     string
+	Address     string
+	Environment string
+}
+
+// BrokerConfig represents the message broker configuration
+type BrokerConfig struct {
+	Type      string
+	Addresses []string
+}
+
 // LoadConfig loads the application configuration
 func LoadConfig(configPath string, logger *zap.Logger) (*Config, error) {
 	// Set default configuration values
@@ -94,6 +117,20 @@ func LoadConfig(configPath string, logger *zap.Logger) (*Config, error) {
 		Logging: LoggingConfig{
 			Level:      "info",
 			OutputPath: "stdout",
+		},
+		Registry: RegistryConfig{
+			Type:      "consul",
+			Addresses: []string{"localhost:8500"},
+		},
+		Service: ServiceConfig{
+			Name:        "trading-system",
+			Version:     "1.0.0",
+			Address:     "localhost:8080",
+			Environment: "development",
+		},
+		Broker: BrokerConfig{
+			Type:      "nats",
+			Addresses: []string{"localhost:4222"},
 		},
 	}
 
