@@ -15,6 +15,19 @@ var Module = fx.Options(
 	fx.Provide(NewMarketDataRepository),
 )
 
+// Individual repository modules for specific services
+var OrderRepositoryModule = fx.Options(
+	fx.Provide(NewOrderRepository),
+)
+
+var RiskRepositoryModule = fx.Options(
+	fx.Provide(NewRiskRepository),
+)
+
+var MarketDataRepositoryModule = fx.Options(
+	fx.Provide(NewMarketDataRepository),
+)
+
 // Repositories contains all repositories
 type Repositories struct {
 	OrderRepository     *OrderRepository
@@ -37,4 +50,3 @@ func NewRepositories(
 		MarketDataRepository: NewMarketDataRepository(db, logger),
 	}
 }
-

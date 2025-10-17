@@ -3,27 +3,23 @@ package main
 import (
 	"net/http"
 
+	"github.com/abdoElHodaky/tradSys/internal/common"
 	"github.com/abdoElHodaky/tradSys/internal/config"
 	"github.com/abdoElHodaky/tradSys/internal/micro"
 	"github.com/abdoElHodaky/tradSys/internal/ws"
-	"github.com/abdoElHodaky/tradSys/proto/ws"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
 func main() {
-	logger, _ := zap.NewProduction()
-	defer logger.Sync()
-
-	app := fx.New(
-		fx.Supply(logger),
+	app := common.MicroserviceApp("websocket",
 		config.Module,
 		micro.Module,
 		ws.ServerModule,
 		ws.Module,
 		fx.Provide(newGinEngine),
-		fx.Invoke(registerWsHandler),
+		common.RegisterServiceHandler("websocket", ws.RegisterWebSocketServiceHandler),
 		fx.Invoke(setupRoutes),
 	)
 
@@ -35,19 +31,7 @@ func newGinEngine() *gin.Engine {
 	return r
 }
 
-func registerWsHandler(
-	lc fx.Lifecycle,
-	logger *zap.Logger,
-	service *micro.Service,
-	handler *ws.Handler,
-) {
-	// Register the handler with the service
-	if err := ws.RegisterWebSocketServiceHandler(service.Server(), handler); err != nil {
-		logger.Fatal("Failed to register handler", zap.Error(err))
-	}
 
-	logger.Info("WebSocket service registered")
-}
 
 func setupRoutes(
 	lc fx.Lifecycle,
@@ -83,4 +67,3 @@ func setupRoutes(
 		},
 	})
 }
-
