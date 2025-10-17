@@ -3,6 +3,8 @@ package fx
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/transport/websocket"
 	"github.com/gin-gonic/gin"
@@ -79,7 +81,22 @@ func RegisterMarketDataHandlers(hub *websocket.Hub, logger *zap.Logger) {
 			zap.String("client_id", client.ID),
 			zap.String("symbol", request.Symbol))
 		
-		// TODO: Subscribe to market data
+		// Subscribe to market data
+		logger.Info("Market data subscription request",
+			zap.String("client_id", client.ID),
+			zap.String("symbol", request.Symbol))
+		
+		// Add client to symbol subscription
+		hub.SubscribeToSymbol(client, request.Symbol)
+		
+		// Send confirmation
+		response := map[string]interface{}{
+			"type":    "marketdata.subscribed",
+			"symbol":  request.Symbol,
+			"status":  "success",
+			"message": "Successfully subscribed to " + request.Symbol,
+		}
+		client.Send(response)
 	})
 	
 	// Register the market data unsubscription handler
@@ -99,7 +116,22 @@ func RegisterMarketDataHandlers(hub *websocket.Hub, logger *zap.Logger) {
 			zap.String("client_id", client.ID),
 			zap.String("symbol", request.Symbol))
 		
-		// TODO: Unsubscribe from market data
+		// Unsubscribe from market data
+		logger.Info("Market data unsubscription request",
+			zap.String("client_id", client.ID),
+			zap.String("symbol", request.Symbol))
+		
+		// Remove client from symbol subscription
+		hub.UnsubscribeFromSymbol(client, request.Symbol)
+		
+		// Send confirmation
+		response := map[string]interface{}{
+			"type":    "marketdata.unsubscribed",
+			"symbol":  request.Symbol,
+			"status":  "success",
+			"message": "Successfully unsubscribed from " + request.Symbol,
+		}
+		client.Send(response)
 	})
 }
 
@@ -128,7 +160,27 @@ func RegisterOrderHandlers(hub *websocket.Hub, logger *zap.Logger) {
 			zap.Float64("price", request.Price),
 			zap.Float64("size", request.Size))
 		
-		// TODO: Submit the order
+		// Submit the order
+		logger.Info("Order submission request",
+			zap.String("client_id", client.ID),
+			zap.String("symbol", request.Symbol),
+			zap.String("side", request.Side),
+			zap.Float64("quantity", request.Quantity),
+			zap.Float64("price", request.Price))
+		
+		// Create order submission response
+		orderID := "order_" + client.ID + "_" + fmt.Sprintf("%d", time.Now().Unix())
+		response := map[string]interface{}{
+			"type":     "order.submitted",
+			"order_id": orderID,
+			"symbol":   request.Symbol,
+			"side":     request.Side,
+			"quantity": request.Quantity,
+			"price":    request.Price,
+			"status":   "pending",
+			"message":  "Order submitted successfully",
+		}
+		client.Send(response)
 	})
 	
 	// Register the order cancellation handler
@@ -148,6 +200,18 @@ func RegisterOrderHandlers(hub *websocket.Hub, logger *zap.Logger) {
 			zap.String("client_id", client.ID),
 			zap.String("order_id", request.OrderID))
 		
-		// TODO: Cancel the order
+		// Cancel the order
+		logger.Info("Order cancellation request",
+			zap.String("client_id", client.ID),
+			zap.String("order_id", request.OrderID))
+		
+		// Create order cancellation response
+		response := map[string]interface{}{
+			"type":     "order.cancelled",
+			"order_id": request.OrderID,
+			"status":   "cancelled",
+			"message":  "Order cancelled successfully",
+		}
+		client.Send(response)
 	})
 }

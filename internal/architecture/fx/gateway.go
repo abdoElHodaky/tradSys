@@ -5,6 +5,7 @@ import (
 
 	"github.com/abdoElHodaky/tradSys/internal/architecture/discovery"
 	"github.com/abdoElHodaky/tradSys/internal/architecture/gateway"
+	"github.com/abdoElHodaky/tradSys/internal/common"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -36,6 +37,15 @@ func registerGatewayHooks(
 			
 			// Add middleware
 			apiGateway.Use(gin.Logger())
+			apiGateway.Use(gin.Recovery())
+			
+			// Add correlation middleware for request tracing
+			correlationMiddleware := common.NewCorrelationMiddleware(logger)
+			apiGateway.Use(correlationMiddleware.Handler())
+			
+			// Add health check routes
+			healthHandler := common.NewHealthHandler("api-gateway", "1.0.0", logger)
+			healthHandler.RegisterRoutes(apiGateway.GetRouter())
 			
 			// Add routes
 			addGatewayRoutes(apiGateway)
@@ -93,4 +103,3 @@ func addGatewayRoutes(apiGateway *gateway.APIGateway) {
 		Middlewares: []gin.HandlerFunc{},
 	})
 }
-

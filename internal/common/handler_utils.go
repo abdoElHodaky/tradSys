@@ -70,7 +70,9 @@ func (h *HandlerUtils) CreatedResponse(c *gin.Context, data interface{}) {
 
 // ErrorResponse sends an error response
 func (h *HandlerUtils) ErrorResponse(c *gin.Context, statusCode int, err error) {
-	h.logger.Error("API error", 
+	// Use correlation-aware logging
+	logger := LogWithCorrelationFromGin(h.logger, c)
+	logger.Error("API error", 
 		zap.Error(err),
 		zap.String("path", c.Request.URL.Path),
 		zap.String("method", c.Request.Method),
@@ -194,7 +196,9 @@ func (h *HandlerUtils) CalculatePagination(page, pageSize int, total int64) Pagi
 
 // LogRequest logs incoming requests
 func (h *HandlerUtils) LogRequest(c *gin.Context, message string) {
-	h.logger.Info(message,
+	// Use correlation-aware logging
+	logger := LogWithCorrelationFromGin(h.logger, c)
+	logger.Info(message,
 		zap.String("method", c.Request.Method),
 		zap.String("path", c.Request.URL.Path),
 		zap.String("client_ip", c.ClientIP()),
