@@ -43,22 +43,23 @@ func (s *Service) ValidateOrder(ctx context.Context, symbol string, side risk.Or
 	// Implementation would go here
 	// For now, just return a placeholder response
 	response := &risk.ValidateOrderResponse{
-		Valid:              true,
-		MaxAllowedQuantity: 10.0,
-		MaxAllowedNotional: 500000.0,
+		IsValid:         true,
+		RejectionReason: "",
 	}
 
 	// Check if the order exceeds position limits
-	if quantity > response.MaxAllowedQuantity {
-		response.Valid = false
-		response.Reason = "Order quantity exceeds maximum allowed"
+	maxAllowedQuantity := 10.0
+	if quantity > maxAllowedQuantity {
+		response.IsValid = false
+		response.RejectionReason = "Order quantity exceeds maximum allowed"
 	}
 
 	// Check if the order exceeds notional value limits
+	maxAllowedNotional := 500000.0
 	notionalValue := quantity * price
-	if notionalValue > response.MaxAllowedNotional {
-		response.Valid = false
-		response.Reason = "Order notional value exceeds maximum allowed"
+	if notionalValue > maxAllowedNotional {
+		response.IsValid = false
+		response.RejectionReason = "Order notional value exceeds maximum allowed"
 	}
 
 	return response, nil
@@ -75,11 +76,11 @@ func (s *Service) GetPositions(ctx context.Context, accountID, symbol string) ([
 	positions := []*risk.Position{
 		{
 			Symbol:        "BTC-USD",
-			Quantity:      1.5,
-			AveragePrice:  48000.0,
+			Size:          1.5,
+			EntryPrice:    48000.0,
+			CurrentPrice:  50000.0,
 			UnrealizedPnl: 3000.0,
 			RealizedPnl:   1000.0,
-			UpdatedAt:     1625097600000,
 		},
 	}
 
@@ -106,13 +107,14 @@ func (s *Service) GetRiskLimits(ctx context.Context, symbol, accountID string) (
 	// Implementation would go here
 	// For now, just return placeholder risk limits
 	limits := &risk.RiskLimits{
-		Symbol:            symbol,
 		MaxPositionSize:   10.0,
-		MaxNotionalValue:  500000.0,
+		MaxOrderSize:      5.0,
 		MaxLeverage:       5.0,
-		MaxDailyVolume:    100.0,
-		MaxDailyTrades:    100,
-		MaxDrawdownPercent: 10.0,
+		MaxDailyLoss:      1000.0,
+		MaxTotalLoss:      10000.0,
+		MinMarginLevel:    100.0,
+		MarginCallLevel:   50.0,
+		LiquidationLevel:  25.0,
 	}
 
 	return limits, nil
@@ -124,7 +126,7 @@ func (s *Service) UpdateRiskLimits(ctx context.Context, symbol, accountID string
 		zap.String("symbol", symbol),
 		zap.String("account_id", accountID),
 		zap.Float64("max_position_size", limits.MaxPositionSize),
-		zap.Float64("max_notional_value", limits.MaxNotionalValue))
+		zap.Float64("max_order_size", limits.MaxOrderSize))
 
 	// Implementation would go here
 	// For now, just return the updated limits
@@ -135,4 +137,3 @@ func (s *Service) UpdateRiskLimits(ctx context.Context, symbol, accountID string
 var ServiceModule = fx.Options(
 	fx.Provide(NewService),
 )
-

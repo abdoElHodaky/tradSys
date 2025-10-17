@@ -1,43 +1,61 @@
 package main
 
 import (
-	"github.com/abdoElHodaky/tradSys/internal/config"
-	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
-	"github.com/abdoElHodaky/tradSys/internal/micro"
+	"context"
+	"log"
+	"net"
+
 	"github.com/abdoElHodaky/tradSys/internal/risk"
-	"github.com/abdoElHodaky/tradSys/proto/risk"
-	"go.uber.org/fx"
+	pb "github.com/abdoElHodaky/tradSys/proto/risk"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 func main() {
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
 
-	app := fx.New(
-		fx.Supply(logger),
-		config.Module,
-		micro.Module,
-		repositories.RiskRepositoryModule,
-		risk.Module,
-		risk.ServiceModule,
-		fx.Invoke(registerRiskHandler),
-	)
+	// Create a gRPC server
+	s := grpc.NewServer()
 
-	app.Run()
-}
+	// Create and register the risk handler
+	handler := risk.NewHandler(logger)
+	pb.RegisterRiskServiceServer(s, &riskServiceServer{handler: handler})
 
-func registerRiskHandler(
-	lc fx.Lifecycle,
-	logger *zap.Logger,
-	service *micro.Service,
-	handler *risk.Handler,
-) {
-	// Register the handler with the service
-	if err := risk.RegisterRiskServiceHandler(service.Server(), handler); err != nil {
-		logger.Fatal("Failed to register handler", zap.Error(err))
+	// Listen on port 50051
+	lis, err := net.Listen("tcp", ":50051")
+	if err != nil {
+		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	logger.Info("Risk service registered")
+	logger.Info("Risk service starting on :50051")
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("Failed to serve: %v", err)
+	}
 }
 
+// riskServiceServer wraps the handler to implement the gRPC interface
+type riskServiceServer struct {
+	pb.UnimplementedRiskServiceServer
+	handler *risk.Handler
+}
+
+func (s *riskServiceServer) ValidateOrder(ctx context.Context, req *pb.ValidateOrderRequest) (*pb.ValidateOrderResponse, error) {
+	return s.handler.ValidateOrder(ctx, req)
+}
+
+func (s *riskServiceServer) GetAccountRisk(ctx context.Context, req *pb.AccountRiskRequest) (*pb.AccountRiskResponse, error) {
+	return s.handler.GetAccountRisk(ctx, req)
+}
+
+func (s *riskServiceServer) GetPositionRisk(ctx context.Context, req *pb.PositionRiskRequest) (*pb.PositionRiskResponse, error) {
+	return s.handler.GetPositionRisk(ctx, req)
+}
+
+func (s *riskServiceServer) GetOrderRisk(ctx context.Context, req *pb.OrderRiskRequest) (*pb.OrderRiskResponse, error) {
+	return s.handler.GetOrderRisk(ctx, req)
+}
+
+func (s *riskServiceServer) UpdateRiskLimits(ctx context.Context, req *pb.UpdateRiskLimitsRequest) (*pb.UpdateRiskLimitsResponse, error) {
+	return s.handler.UpdateRiskLimits(ctx, req)
+}

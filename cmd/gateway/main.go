@@ -4,7 +4,6 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/config"
 	"github.com/abdoElHodaky/tradSys/internal/gateway"
 	"github.com/abdoElHodaky/tradSys/internal/micro"
-	"github.com/abdoElHodaky/tradSys/internal/monitoring"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -17,7 +16,6 @@ func main() {
 		fx.Supply(logger),
 		config.Module,
 		micro.Module,
-		monitoring.MetricsModule,
 		gateway.Module,
 		fx.Invoke(func(server *gateway.Server) {
 			// This function is invoked when the application starts
@@ -28,4 +26,3 @@ func main() {
 
 	app.Run()
 }
-

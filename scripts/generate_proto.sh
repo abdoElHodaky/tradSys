@@ -9,9 +9,9 @@ export PATH=$PATH:$(go env GOPATH)/bin
 
 # Generate Protocol Buffers code
 echo "Generating Protocol Buffers code..."
-protoc --go_out=. --go-grpc_out=. proto/marketdata/marketdata.proto
-protoc --go_out=. --go-grpc_out=. proto/orders/orders.proto
-protoc --go_out=. --go-grpc_out=. proto/risk/risk.proto
-protoc --go_out=. --go-grpc_out=. proto/ws/message.proto
+protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative proto/marketdata/marketdata.proto
+protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative proto/orders/orders.proto
+protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative proto/risk/risk.proto
+protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative proto/ws/message.proto
 
 echo "Protocol Buffers code generation complete."

@@ -2,7 +2,7 @@ module github.com/abdoElHodaky/tradSys
 
 go 1.23.0
 
-toolchain go1.24.9
+toolchain go1.23.4
 
 require (
 	github.com/ThreeDotsLabs/watermill v1.2.0-rc.11
@@ -28,7 +28,7 @@ require (
 	go.uber.org/zap v1.25.0
 	golang.org/x/crypto v0.39.0
 	golang.org/x/time v0.1.0
-	google.golang.org/grpc v1.58.2
+	google.golang.org/grpc v1.64.0
 	google.golang.org/protobuf v1.36.6
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.25.10
@@ -57,7 +57,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/hashicorp/go-hclog v1.6.2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hashicorp/raft v1.7.3 // indirect
@@ -118,7 +118,7 @@ require (
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/text v0.26.0 // indirect
 	golang.org/x/tools v0.33.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230711160842-782d3b101e98 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240318140521-94a12d6c2237 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect

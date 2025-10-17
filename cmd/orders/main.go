@@ -1,43 +1,61 @@
 package main
 
 import (
-	"github.com/abdoElHodaky/tradSys/internal/config"
-	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
-	"github.com/abdoElHodaky/tradSys/internal/micro"
+	"context"
+	"log"
+	"net"
+
 	"github.com/abdoElHodaky/tradSys/internal/orders"
-	"github.com/abdoElHodaky/tradSys/proto/orders"
-	"go.uber.org/fx"
+	pb "github.com/abdoElHodaky/tradSys/proto/orders"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 func main() {
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
 
-	app := fx.New(
-		fx.Supply(logger),
-		config.Module,
-		micro.Module,
-		repositories.OrderRepositoryModule,
-		orders.Module,
-		orders.ServiceModule,
-		fx.Invoke(registerOrderHandler),
-	)
+	// Create a gRPC server
+	s := grpc.NewServer()
 
-	app.Run()
-}
+	// Create and register the orders handler
+	handler := orders.NewHandler(logger)
+	pb.RegisterOrderServiceServer(s, &orderServiceServer{handler: handler})
 
-func registerOrderHandler(
-	lc fx.Lifecycle,
-	logger *zap.Logger,
-	service *micro.Service,
-	handler *orders.Handler,
-) {
-	// Register the handler with the service
-	if err := orders.RegisterOrderServiceHandler(service.Server(), handler); err != nil {
-		logger.Fatal("Failed to register handler", zap.Error(err))
+	// Listen on port 50052
+	lis, err := net.Listen("tcp", ":50052")
+	if err != nil {
+		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	logger.Info("Order service registered")
+	logger.Info("Orders service starting on :50052")
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("Failed to serve: %v", err)
+	}
 }
 
+// orderServiceServer wraps the handler to implement the gRPC interface
+type orderServiceServer struct {
+	pb.UnimplementedOrderServiceServer
+	handler *orders.Handler
+}
+
+func (s *orderServiceServer) CreateOrder(ctx context.Context, req *pb.CreateOrderRequest) (*pb.OrderResponse, error) {
+	return s.handler.CreateOrder(ctx, req)
+}
+
+func (s *orderServiceServer) GetOrder(ctx context.Context, req *pb.GetOrderRequest) (*pb.OrderResponse, error) {
+	return s.handler.GetOrder(ctx, req)
+}
+
+func (s *orderServiceServer) CancelOrder(ctx context.Context, req *pb.CancelOrderRequest) (*pb.OrderResponse, error) {
+	return s.handler.CancelOrder(ctx, req)
+}
+
+func (s *orderServiceServer) GetOrders(ctx context.Context, req *pb.GetOrdersRequest) (*pb.GetOrdersResponse, error) {
+	return s.handler.GetOrders(ctx, req)
+}
+
+func (s *orderServiceServer) StreamOrders(req *pb.StreamOrdersRequest, stream pb.OrderService_StreamOrdersServer) error {
+	return s.handler.StreamOrders(req, stream)
+}

@@ -54,8 +54,8 @@ func NewServiceProxy(p ProxyParams) *ServiceProxy {
 func (p *ServiceProxy) ForwardToService(serviceName, path string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get service endpoint from registry
-		endpoint, err := p.registry.GetServiceEndpoint(serviceName)
-		if err != nil {
+		services, err := p.registry.GetService(serviceName)
+		if err != nil || len(services) == 0 {
 			p.logger.Error("Failed to get service endpoint",
 				zap.String("service", serviceName),
 				zap.Error(err))
@@ -64,6 +64,19 @@ func (p *ServiceProxy) ForwardToService(serviceName, path string) gin.HandlerFun
 			})
 			return
 		}
+		
+		// Use the first available service node
+		service := services[0]
+		if len(service.Nodes) == 0 {
+			p.logger.Error("No service nodes available",
+				zap.String("service", serviceName))
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"error": "Service unavailable",
+			})
+			return
+		}
+		
+		endpoint := service.Nodes[0].Address
 
 		// Create target URL
 		targetPath := path
@@ -177,8 +190,8 @@ func (p *ServiceProxy) ForwardToService(serviceName, path string) gin.HandlerFun
 func (p *ServiceProxy) ReverseProxy(serviceName string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get service endpoint from registry
-		endpoint, err := p.registry.GetServiceEndpoint(serviceName)
-		if err != nil {
+		services, err := p.registry.GetService(serviceName)
+		if err != nil || len(services) == 0 {
 			p.logger.Error("Failed to get service endpoint",
 				zap.String("service", serviceName),
 				zap.Error(err))
@@ -187,6 +200,19 @@ func (p *ServiceProxy) ReverseProxy(serviceName string) gin.HandlerFunc {
 			})
 			return
 		}
+		
+		// Use the first available service node
+		service := services[0]
+		if len(service.Nodes) == 0 {
+			p.logger.Error("No service nodes available",
+				zap.String("service", serviceName))
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"error": "Service unavailable",
+			})
+			return
+		}
+		
+		endpoint := service.Nodes[0].Address
 
 		// Parse target URL
 		target, err := url.Parse(endpoint)

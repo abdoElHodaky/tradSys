@@ -1,44 +1,57 @@
 package main
 
 import (
-	"github.com/abdoElHodaky/tradSys/internal/config"
-	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
+	"context"
+	"log"
+	"net"
+
 	"github.com/abdoElHodaky/tradSys/internal/marketdata"
-	"github.com/abdoElHodaky/tradSys/internal/micro"
-	"github.com/abdoElHodaky/tradSys/proto/marketdata"
-	"go-micro.dev/v4"
-	"go.uber.org/fx"
+	pb "github.com/abdoElHodaky/tradSys/proto/marketdata"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 func main() {
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
 
-	app := fx.New(
-		fx.Supply(logger),
-		config.Module,
-		micro.Module,
-		repositories.MarketDataRepositoryModule,
-		marketdata.Module,
-		marketdata.ServiceModule,
-		fx.Invoke(registerMarketDataHandler),
-	)
+	// Create a gRPC server
+	s := grpc.NewServer()
 
-	app.Run()
-}
+	// Create and register the market data handler
+	handler := marketdata.NewHandler(logger)
+	pb.RegisterMarketDataServiceServer(s, &marketDataServiceServer{handler: handler})
 
-func registerMarketDataHandler(
-	lc fx.Lifecycle,
-	logger *zap.Logger,
-	service *micro.Service,
-	handler *marketdata.Handler,
-) {
-	// Register the handler with the service
-	if err := marketdata.RegisterMarketDataServiceHandler(service.Server(), handler); err != nil {
-		logger.Fatal("Failed to register handler", zap.Error(err))
+	// Listen on port 50053
+	lis, err := net.Listen("tcp", ":50053")
+	if err != nil {
+		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	logger.Info("Market data service registered")
+	logger.Info("Market Data service starting on :50053")
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("Failed to serve: %v", err)
+	}
 }
 
+// marketDataServiceServer wraps the handler to implement the gRPC interface
+type marketDataServiceServer struct {
+	pb.UnimplementedMarketDataServiceServer
+	handler *marketdata.Handler
+}
+
+func (s *marketDataServiceServer) GetMarketData(ctx context.Context, req *pb.MarketDataRequest) (*pb.MarketDataResponse, error) {
+	return s.handler.GetMarketData(ctx, req)
+}
+
+func (s *marketDataServiceServer) StreamMarketData(req *pb.MarketDataRequest, stream pb.MarketDataService_StreamMarketDataServer) error {
+	return s.handler.StreamMarketData(req, stream)
+}
+
+func (s *marketDataServiceServer) GetHistoricalData(ctx context.Context, req *pb.HistoricalDataRequest) (*pb.HistoricalDataResponse, error) {
+	return s.handler.GetHistoricalData(ctx, req)
+}
+
+func (s *marketDataServiceServer) GetSymbols(ctx context.Context, req *pb.SymbolsRequest) (*pb.SymbolsResponse, error) {
+	return s.handler.GetSymbols(ctx, req)
+}
