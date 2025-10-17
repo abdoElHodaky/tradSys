@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httputil"
@@ -53,10 +54,10 @@ func NewServiceProxy(p ProxyParams) *ServiceProxy {
 // ForwardToService creates a handler that forwards requests to the appropriate microservice
 func (p *ServiceProxy) ForwardToService(serviceName, path string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get service endpoint from registry
-		endpoint, err := p.registry.GetServiceEndpoint(serviceName)
+		// Get service from registry
+		services, err := p.registry.GetService(serviceName)
 		if err != nil {
-			p.logger.Error("Failed to get service endpoint",
+			p.logger.Error("Failed to get service from registry",
 				zap.String("service", serviceName),
 				zap.Error(err))
 			c.JSON(http.StatusServiceUnavailable, gin.H{
@@ -64,6 +65,30 @@ func (p *ServiceProxy) ForwardToService(serviceName, path string) gin.HandlerFun
 			})
 			return
 		}
+		
+		if len(services) == 0 {
+			p.logger.Error("No instances found for service",
+				zap.String("service", serviceName))
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"error": "Service unavailable",
+			})
+			return
+		}
+		
+		// Get the first available node from the first service
+		service := services[0]
+		if len(service.Nodes) == 0 {
+			p.logger.Error("No nodes found for service",
+				zap.String("service", serviceName))
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"error": "Service unavailable",
+			})
+			return
+		}
+		
+		// Use the first node's address
+		node := service.Nodes[0]
+		endpoint := fmt.Sprintf("http://%s", node.Address)
 
 		// Create target URL
 		targetPath := path
@@ -176,10 +201,10 @@ func (p *ServiceProxy) ForwardToService(serviceName, path string) gin.HandlerFun
 // ReverseProxy creates a reverse proxy handler for a service
 func (p *ServiceProxy) ReverseProxy(serviceName string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get service endpoint from registry
-		endpoint, err := p.registry.GetServiceEndpoint(serviceName)
+		// Get service from registry
+		services, err := p.registry.GetService(serviceName)
 		if err != nil {
-			p.logger.Error("Failed to get service endpoint",
+			p.logger.Error("Failed to get service from registry",
 				zap.String("service", serviceName),
 				zap.Error(err))
 			c.JSON(http.StatusServiceUnavailable, gin.H{
@@ -187,6 +212,30 @@ func (p *ServiceProxy) ReverseProxy(serviceName string) gin.HandlerFunc {
 			})
 			return
 		}
+		
+		if len(services) == 0 {
+			p.logger.Error("No instances found for service",
+				zap.String("service", serviceName))
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"error": "Service unavailable",
+			})
+			return
+		}
+		
+		// Get the first available node from the first service
+		service := services[0]
+		if len(service.Nodes) == 0 {
+			p.logger.Error("No nodes found for service",
+				zap.String("service", serviceName))
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"error": "Service unavailable",
+			})
+			return
+		}
+		
+		// Use the first node's address
+		node := service.Nodes[0]
+		endpoint := fmt.Sprintf("http://%s", node.Address)
 
 		// Parse target URL
 		target, err := url.Parse(endpoint)

@@ -5,7 +5,7 @@ import (
 
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"github.com/abdoElHodaky/tradSys/internal/marketdata/external"
-	"github.com/abdoElHodaky/tradSys/proto/marketdata"
+	marketdatapb "github.com/abdoElHodaky/tradSys/proto/marketdata"
 	"github.com/patrickmn/go-cache"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -23,7 +23,7 @@ type HandlerParams struct {
 
 // Handler implements the MarketDataService handler
 type Handler struct {
-	marketdata.UnimplementedMarketDataServiceServer
+	marketdatapb.UnimplementedMarketDataServiceServer
 	logger         *zap.Logger
 	repository     *repositories.MarketDataRepository
 	externalManager *external.Manager
@@ -41,31 +41,33 @@ func NewHandler(p HandlerParams) *Handler {
 }
 
 // GetMarketData implements the MarketDataService.GetMarketData method
-func (h *Handler) GetMarketData(ctx context.Context, req *marketdata.MarketDataRequest, rsp *marketdata.MarketDataResponse) error {
+func (h *Handler) GetMarketData(ctx context.Context, req *marketdatapb.MarketDataRequest) (*marketdatapb.MarketDataResponse, error) {
 	h.logger.Info("GetMarketData called", 
 		zap.String("symbol", req.Symbol),
 		zap.String("interval", req.Interval))
 	
 	// Implementation would go here
 	// For now, just return a placeholder response
-	rsp.Symbol = req.Symbol
-	rsp.Interval = req.Interval
-	rsp.Price = 100.0
-	rsp.Volume = 1000.0
-	rsp.Timestamp = 1625097600000
+	rsp := &marketdatapb.MarketDataResponse{
+		Symbol:    req.Symbol,
+		Interval:  req.Interval,
+		Price:     100.0,
+		Volume:    1000.0,
+		Timestamp: 1625097600000,
+	}
 	
-	return nil
+	return rsp, nil
 }
 
 // StreamMarketData implements the MarketDataService.StreamMarketData method
-func (h *Handler) StreamMarketData(ctx context.Context, req *marketdata.MarketDataRequest, stream marketdata.MarketDataService_StreamMarketDataStream) error {
+func (h *Handler) StreamMarketData(req *marketdatapb.MarketDataRequest, stream marketdatapb.MarketDataService_StreamMarketDataServer) error {
 	h.logger.Info("StreamMarketData called", 
 		zap.String("symbol", req.Symbol),
 		zap.String("interval", req.Interval))
 	
 	// Implementation would go here
 	// For now, just return a placeholder response
-	rsp := &marketdata.MarketDataResponse{
+	rsp := &marketdatapb.MarketDataResponse{
 		Symbol:    req.Symbol,
 		Interval:  req.Interval,
 		Price:     100.0,
@@ -84,66 +86,68 @@ func (h *Handler) StreamMarketData(ctx context.Context, req *marketdata.MarketDa
 }
 
 // GetHistoricalData implements the MarketDataService.GetHistoricalData method
-func (h *Handler) GetHistoricalData(ctx context.Context, req *marketdata.HistoricalDataRequest, rsp *marketdata.HistoricalDataResponse) error {
+func (h *Handler) GetHistoricalData(ctx context.Context, req *marketdatapb.HistoricalDataRequest) (*marketdatapb.HistoricalDataResponse, error) {
 	h.logger.Info("GetHistoricalData called", 
 		zap.String("symbol", req.Symbol),
 		zap.String("interval", req.Interval))
 	
 	// Implementation would go here
 	// For now, just return a placeholder response
-	rsp.Symbol = req.Symbol
-	rsp.Interval = req.Interval
-	
-	// Create some sample data points
-	rsp.Data = []*marketdata.MarketDataResponse{
-		{
-			Symbol:    req.Symbol,
-			Interval:  req.Interval,
-			Price:     100.0,
-			Volume:    1000.0,
-			Timestamp: 1625097600000,
-		},
-		{
-			Symbol:    req.Symbol,
-			Interval:  req.Interval,
-			Price:     101.0,
-			Volume:    1100.0,
-			Timestamp: 1625097660000,
+	rsp := &marketdatapb.HistoricalDataResponse{
+		Symbol:   req.Symbol,
+		Interval: req.Interval,
+		Data: []*marketdatapb.MarketDataResponse{
+			{
+				Symbol:    req.Symbol,
+				Interval:  req.Interval,
+				Price:     100.0,
+				Volume:    1000.0,
+				Timestamp: 1625097600000,
+			},
+			{
+				Symbol:    req.Symbol,
+				Interval:  req.Interval,
+				Price:     101.0,
+				Volume:    1100.0,
+				Timestamp: 1625097660000,
+			},
 		},
 	}
 	
-	return nil
+	return rsp, nil
 }
 
 // GetSymbols implements the MarketDataService.GetSymbols method
-func (h *Handler) GetSymbols(ctx context.Context, req *marketdata.SymbolsRequest, rsp *marketdata.SymbolsResponse) error {
+func (h *Handler) GetSymbols(ctx context.Context, req *marketdatapb.SymbolsRequest) (*marketdatapb.SymbolsResponse, error) {
 	h.logger.Info("GetSymbols called", 
 		zap.String("filter", req.Filter))
 	
 	// Implementation would go here
 	// For now, just return placeholder symbols
-	rsp.Symbols = []*marketdata.Symbol{
-		{
-			Name:              "BTC-USD",
-			BaseCurrency:      "BTC",
-			QuoteCurrency:     "USD",
-			PriceIncrement:    0.01,
-			QuantityIncrement: 0.00001,
-			MinOrderSize:      0.001,
-			MaxOrderSize:      100.0,
-		},
-		{
-			Name:              "ETH-USD",
-			BaseCurrency:      "ETH",
-			QuoteCurrency:     "USD",
-			PriceIncrement:    0.01,
-			QuantityIncrement: 0.0001,
-			MinOrderSize:      0.01,
-			MaxOrderSize:      1000.0,
+	rsp := &marketdatapb.SymbolsResponse{
+		Symbols: []*marketdatapb.Symbol{
+			{
+				Name:              "BTC-USD",
+				BaseCurrency:      "BTC",
+				QuoteCurrency:     "USD",
+				PriceIncrement:    0.01,
+				QuantityIncrement: 0.00001,
+				MinOrderSize:      0.001,
+				MaxOrderSize:      100.0,
+			},
+			{
+				Name:              "ETH-USD",
+				BaseCurrency:      "ETH",
+				QuoteCurrency:     "USD",
+				PriceIncrement:    0.01,
+				QuantityIncrement: 0.0001,
+				MinOrderSize:      0.01,
+				MaxOrderSize:      1000.0,
+			},
 		},
 	}
 	
-	return nil
+	return rsp, nil
 }
 
 // HandlerModule provides the market data handler module for fx

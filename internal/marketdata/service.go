@@ -98,7 +98,7 @@ func (s *Service) persistCachedMarketData() {
 	// Create a batch of market data entries
 	marketDataEntries := make([]*db.MarketData, 0, len(items))
 	
-	for key, item := range items {
+	for _, item := range items {
 		// Skip expired items
 		if item.Expired() {
 			continue
@@ -559,3 +559,9 @@ func randomString(length int) string {
 	return string(result)
 }
 
+// AddMarketDataSource adds a market data source
+func (s *Service) AddMarketDataSource(ctx context.Context, source string, config map[string]interface{}) error {
+	s.logger.Info("Adding market data source", zap.String("source", source))
+	// TODO: Implement actual market data source addition logic
+	return nil
+}

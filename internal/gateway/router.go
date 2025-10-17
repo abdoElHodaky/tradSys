@@ -55,8 +55,8 @@ func (r *Router) registerHealthRoutes() {
 func (r *Router) registerAuthRoutes(authMiddleware *auth.Middleware) {
 	auth := r.engine.Group("/auth")
 	{
-		auth.POST("/login", authMiddleware.LoginHandler)
-		auth.POST("/refresh", authMiddleware.RefreshHandler)
+		auth.POST("/login", authMiddleware.LoginHandler())
+		auth.POST("/refresh", authMiddleware.RefreshHandler())
 	}
 }
 
@@ -134,5 +134,3 @@ func (r *Router) registerAPIRoutes(authMiddleware *auth.Middleware) {
 		}
 	}
 }
-
-

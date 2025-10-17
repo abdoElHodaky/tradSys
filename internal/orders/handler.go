@@ -4,8 +4,6 @@ import (
 	"context"
 
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
-	"github.com/abdoElHodaky/tradSys/proto/orders"
-	"github.com/abdoElHodaky/tradSys/proto/risk"
 	"github.com/google/uuid"
 	"go.uber.org/fx"
 	"go.uber.org/zap"

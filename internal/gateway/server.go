@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/auth"
 	"github.com/abdoElHodaky/tradSys/internal/config"
 	"github.com/abdoElHodaky/tradSys/internal/monitoring"
 	"github.com/gin-contrib/cors"
