@@ -124,8 +124,8 @@ func (s *Server) Router() *gin.Engine {
 	return s.router
 }
 
-// Module provides the API Gateway module for fx
-var Module = fx.Options(
+// gatewayModule provides the API Gateway module for fx (internal)
+var gatewayModule = fx.Options(
 	fx.Provide(NewServer),
 	fx.Provide(NewServiceProxy),
 	fx.Provide(NewRouter),

@@ -128,8 +128,8 @@ type Provider interface {
 	GetOHLCV(ctx context.Context, symbol, interval string, limit int) ([]OHLCVData, error)
 }
 
-// Manager represents a market data provider manager
-type Manager struct {
+// ProviderManager represents a market data provider manager (deprecated - use Manager from manager.go)
+type ProviderManager struct {
 	// Providers is a map of provider name to provider
 	Providers map[string]Provider
 	// DefaultProvider is the default provider
@@ -140,16 +140,16 @@ type Manager struct {
 	mu sync.RWMutex
 }
 
-// NewManager creates a new market data provider manager
-func NewManager(logger *zap.Logger) *Manager {
-	return &Manager{
+// NewProviderManager creates a new market data provider manager (deprecated - use NewManager from manager.go)
+func NewProviderManager(logger *zap.Logger) *ProviderManager {
+	return &ProviderManager{
 		Providers: make(map[string]Provider),
 		logger:    logger,
 	}
 }
 
 // RegisterProvider registers a provider
-func (m *Manager) RegisterProvider(provider Provider) {
+func (m *ProviderManager) RegisterProvider(provider Provider) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	
@@ -162,7 +162,7 @@ func (m *Manager) RegisterProvider(provider Provider) {
 }
 
 // SetDefaultProvider sets the default provider
-func (m *Manager) SetDefaultProvider(name string) error {
+func (m *ProviderManager) SetDefaultProvider(name string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	
@@ -175,7 +175,7 @@ func (m *Manager) SetDefaultProvider(name string) error {
 }
 
 // GetProvider gets a provider by name
-func (m *Manager) GetProvider(name string) (Provider, error) {
+func (m *ProviderManager) GetProvider(name string) (Provider, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	
@@ -188,7 +188,7 @@ func (m *Manager) GetProvider(name string) (Provider, error) {
 }
 
 // GetDefaultProvider gets the default provider
-func (m *Manager) GetDefaultProvider() (Provider, error) {
+func (m *ProviderManager) GetDefaultProvider() (Provider, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	
@@ -205,7 +205,7 @@ func (m *Manager) GetDefaultProvider() (Provider, error) {
 }
 
 // ConnectAll connects to all providers
-func (m *Manager) ConnectAll(ctx context.Context) error {
+func (m *ProviderManager) ConnectAll(ctx context.Context) error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	
@@ -222,7 +222,7 @@ func (m *Manager) ConnectAll(ctx context.Context) error {
 }
 
 // DisconnectAll disconnects from all providers
-func (m *Manager) DisconnectAll(ctx context.Context) error {
+func (m *ProviderManager) DisconnectAll(ctx context.Context) error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	
@@ -237,4 +237,3 @@ func (m *Manager) DisconnectAll(ctx context.Context) error {
 	
 	return nil
 }
-

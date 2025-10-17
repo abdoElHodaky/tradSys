@@ -262,6 +262,25 @@ func LoadConfig(configPath string, logger *zap.Logger) (*Config, error) {
 		config.Logging.OutputPath = v.GetString("logging.output_path")
 	}
 
+	// Registry configuration
+	if v.IsSet("registry.type") {
+		config.Registry.Type = v.GetString("registry.type")
+	}
+	if v.IsSet("registry.addresses") {
+		config.Registry.Addresses = v.GetStringSlice("registry.addresses")
+	}
+
+	// Service configuration
+	if v.IsSet("service.name") {
+		config.Service.Name = v.GetString("service.name")
+	}
+	if v.IsSet("service.version") {
+		config.Service.Version = v.GetString("service.version")
+	}
+	if v.IsSet("service.address") {
+		config.Service.Address = v.GetString("service.address")
+	}
+
 	return config, nil
 }
 

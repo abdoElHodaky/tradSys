@@ -11,10 +11,10 @@ func MigrateSchema(db *gorm.DB, logger *zap.Logger) error {
 	logger.Info("Running database migrations")
 
 	// Define all models to migrate
-	models := []interface{}{
-		&models.Order{},
-		&models.Trade{},
-		&models.Position{},
+	modelsToMigrate := []interface{}{
+		&Order{},
+		&Trade{},
+		&Position{},
 		&models.Quote{},
 		&models.OHLCV{},
 		&models.MarketDepth{},
@@ -30,7 +30,7 @@ func MigrateSchema(db *gorm.DB, logger *zap.Logger) error {
 	}
 
 	// Run migrations
-	err := db.AutoMigrate(models...)
+	err := db.AutoMigrate(modelsToMigrate...)
 	if err != nil {
 		logger.Error("Database migration failed", zap.Error(err))
 		return err
@@ -39,4 +39,3 @@ func MigrateSchema(db *gorm.DB, logger *zap.Logger) error {
 	logger.Info("Database migration completed successfully")
 	return nil
 }
-

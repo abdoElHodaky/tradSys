@@ -100,8 +100,8 @@ func (w *zapGormWriter) Printf(format string, args ...interface{}) {
 	w.zapLogger.Debug("gorm", zap.String("msg", msg))
 }
 
-// InitializeDatabase initializes the database with optimizations
-func InitializeDatabase(db *gorm.DB, logger *zap.Logger) error {
+// initializeDatabase initializes the database with optimizations (internal helper)
+func initializeDatabase(db *gorm.DB, logger *zap.Logger) error {
 	// Enable connection pooling
 	sqlDB, err := db.DB()
 	if err != nil {
@@ -211,4 +211,3 @@ func createIndexes(db *gorm.DB, logger *zap.Logger) error {
 
 	return nil
 }
-

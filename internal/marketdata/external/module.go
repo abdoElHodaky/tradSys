@@ -1,14 +1,16 @@
 package external
 
 import (
+	"context"
+	
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
 // Module provides the external market data module for the fx application
 var Module = fx.Options(
-	fx.Provide(NewManager),
-	fx.Provide(NewBinanceProvider),
+	fx.Provide(NewFxManager),
+	fx.Provide(NewFxBinanceProvider),
 )
 
 // NewFxManager creates a new market data provider manager for the fx application
@@ -16,19 +18,19 @@ func NewFxManager(
 	lifecycle fx.Lifecycle,
 	logger *zap.Logger,
 	binanceProvider *BinanceProvider,
-) *Manager {
-	manager := NewManager(logger)
+) *ProviderManager {
+	manager := NewProviderManager(logger)
 	
 	// Register providers
 	manager.RegisterProvider(binanceProvider)
 	
 	// Register lifecycle hooks
 	lifecycle.Append(fx.Hook{
-		OnStart: func(ctx fx.Context) error {
+		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting market data provider manager")
 			return manager.ConnectAll(ctx)
 		},
-		OnStop: func(ctx fx.Context) error {
+		OnStop: func(ctx context.Context) error {
 			logger.Info("Stopping market data provider manager")
 			return manager.DisconnectAll(ctx)
 		},
@@ -47,4 +49,3 @@ func NewFxBinanceProvider(
 	
 	return NewBinanceProvider(apiKey, apiSecret, logger)
 }
-
