@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/architecture/discovery"
+	"github.com/asim/go-micro/v3/registry"
 	"github.com/gin-gonic/gin"
-	"github.com/micro/go-micro/registry"
 	"go.uber.org/zap"
 )
 
@@ -33,14 +33,14 @@ type Route struct {
 }
 
 // NewAPIGateway creates a new API gateway
-func NewAPIGateway(discovery *discovery.ServiceDiscovery, logger *zap.Logger) *APIGateway {
+func NewAPIGateway(serviceDiscovery *discovery.ServiceDiscovery, logger *zap.Logger) *APIGateway {
 	// Create a new gin router
 	router := gin.New()
 	router.Use(gin.Recovery())
 	
 	// Create a service selector with round-robin strategy
 	selector := discovery.NewServiceSelector(
-		discovery,
+		serviceDiscovery,
 		logger,
 		discovery.NewRoundRobinStrategy(),
 	)
@@ -57,7 +57,7 @@ func NewAPIGateway(discovery *discovery.ServiceDiscovery, logger *zap.Logger) *A
 	
 	return &APIGateway{
 		router:      router,
-		discovery:   discovery,
+		discovery:   serviceDiscovery,
 		selector:    selector,
 		logger:      logger,
 		httpClient:  httpClient,
@@ -247,4 +247,3 @@ func (lb *LoadBalancer) Forward(ctx context.Context, serviceName string, req *ht
 	}
 	return client.Do(serviceReq)
 }
-

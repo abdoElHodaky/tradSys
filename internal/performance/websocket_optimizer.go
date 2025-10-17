@@ -1,6 +1,7 @@
 package performance
 
 import (
+	"net/http"
 	"sync"
 	"time"
 
@@ -52,7 +53,7 @@ type WebSocketOptimizerOptions struct {
 // DefaultWebSocketOptimizerOptions returns default WebSocket optimizer options
 func DefaultWebSocketOptimizerOptions() WebSocketOptimizerOptions {
 	return WebSocketOptimizerOptions{
-		CompressionLevel:     websocket.DefaultCompressionLevel,
+		CompressionLevel:     6, // Default compression level
 		WriteBufferSize:      4096,
 		ReadBufferSize:       4096,
 		WriteDeadline:        10 * time.Second,
@@ -99,7 +100,7 @@ func (o *WebSocketOptimizer) GetUpgrader() *websocket.Upgrader {
 		ReadBufferSize:    o.readBufferSize,
 		WriteBufferSize:   o.writeBufferSize,
 		EnableCompression: o.enableCompression,
-		CheckOrigin:       func(r *websocket.Request) bool { return true }, // Allow all origins
+		CheckOrigin:       func(r *http.Request) bool { return true }, // Allow all origins
 	}
 }
 
@@ -153,7 +154,9 @@ func (o *WebSocketOptimizer) NewBatchedWriter(conn *websocket.Conn) *BatchedWrit
 	}
 
 	// Start the timer
-	writer.timer = time.AfterFunc(o.batchInterval, writer.Flush)
+	writer.timer = time.AfterFunc(o.batchInterval, func() {
+		writer.Flush()
+	})
 
 	return writer
 }
@@ -243,4 +246,3 @@ func (o *WebSocketOptimizer) StartPinger(conn *websocket.Conn, done chan struct{
 		}
 	}
 }
-

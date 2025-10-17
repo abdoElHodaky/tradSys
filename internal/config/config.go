@@ -20,6 +20,12 @@ type Config struct {
 	JWT         JWTConfig
 	Services    ServicesConfig
 	Logging     LoggingConfig
+	Registry    RegistryConfig
+	Service     ServiceConfig
+	Broker      BrokerConfig
+	Tracing     TracingConfig
+	Metrics     MetricsConfig
+	Resilience  ResilienceConfig
 }
 
 // ServerConfig represents the server configuration
@@ -61,6 +67,57 @@ type LoggingConfig struct {
 	OutputPath string
 }
 
+// RegistryConfig represents the registry configuration
+type RegistryConfig struct {
+	Type    string
+	Address string
+}
+
+// ServiceConfig represents the service configuration
+type ServiceConfig struct {
+	Name    string
+	Version string
+	Address string
+}
+
+// BrokerConfig represents the broker configuration
+type BrokerConfig struct {
+	Type    string
+	Address string
+}
+
+// TracingConfig represents the tracing configuration
+type TracingConfig struct {
+	Enabled bool
+	Address string
+}
+
+// MetricsConfig represents the metrics configuration
+type MetricsConfig struct {
+	Enabled bool
+	Address string
+}
+
+// ResilienceConfig represents the resilience configuration
+type ResilienceConfig struct {
+	CircuitBreaker CircuitBreakerConfig
+	Retry          RetryConfig
+}
+
+// CircuitBreakerConfig represents the circuit breaker configuration
+type CircuitBreakerConfig struct {
+	Enabled           bool
+	FailureThreshold  int
+	RecoveryTimeout   time.Duration
+	SuccessThreshold  int
+}
+
+// RetryConfig represents the retry configuration
+type RetryConfig struct {
+	MaxRetries int
+	Delay      time.Duration
+}
+
 // LoadConfig loads the application configuration
 func LoadConfig(configPath string, logger *zap.Logger) (*Config, error) {
 	// Set default configuration values
@@ -94,6 +151,39 @@ func LoadConfig(configPath string, logger *zap.Logger) (*Config, error) {
 		Logging: LoggingConfig{
 			Level:      "info",
 			OutputPath: "stdout",
+		},
+		Registry: RegistryConfig{
+			Type:    "memory",
+			Address: "localhost:8500",
+		},
+		Service: ServiceConfig{
+			Name:    "trading-service",
+			Version: "1.0.0",
+			Address: "localhost:8080",
+		},
+		Broker: BrokerConfig{
+			Type:    "nats",
+			Address: "localhost:4222",
+		},
+		Tracing: TracingConfig{
+			Enabled: false,
+			Address: "localhost:14268",
+		},
+		Metrics: MetricsConfig{
+			Enabled: false,
+			Address: "localhost:9090",
+		},
+		Resilience: ResilienceConfig{
+			CircuitBreaker: CircuitBreakerConfig{
+				Enabled:           true,
+				FailureThreshold:  5,
+				RecoveryTimeout:   30 * time.Second,
+				SuccessThreshold:  3,
+			},
+			Retry: RetryConfig{
+				MaxRetries: 3,
+				Delay:      1 * time.Second,
+			},
 		},
 	}
 

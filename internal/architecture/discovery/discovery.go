@@ -9,11 +9,17 @@ import (
 	"go.uber.org/zap"
 )
 
+// Service represents a service in the registry
+type Service = registry.Service
+
+// Node represents a service node in the registry
+type Node = registry.Node
+
 // ServiceDiscovery provides service discovery functionality
 type ServiceDiscovery struct {
 	registry registry.Registry
 	logger   *zap.Logger
-	cache    map[string][]*registry.Service
+	cache    map[string][]*Service
 	cacheTTL time.Duration
 	cacheMu  sync.RWMutex
 }
@@ -23,13 +29,13 @@ func NewServiceDiscovery(registry registry.Registry, logger *zap.Logger) *Servic
 	return &ServiceDiscovery{
 		registry: registry,
 		logger:   logger,
-		cache:    make(map[string][]*registry.Service),
+		cache:    make(map[string][]*Service),
 		cacheTTL: 30 * time.Second,
 	}
 }
 
 // RegisterService registers a service with the registry
-func (d *ServiceDiscovery) RegisterService(ctx context.Context, service *registry.Service) error {
+func (d *ServiceDiscovery) RegisterService(ctx context.Context, service *Service) error {
 	d.logger.Info("Registering service",
 		zap.String("name", service.Name),
 		zap.Int("nodes", len(service.Nodes)))
@@ -38,7 +44,7 @@ func (d *ServiceDiscovery) RegisterService(ctx context.Context, service *registr
 }
 
 // DeregisterService deregisters a service from the registry
-func (d *ServiceDiscovery) DeregisterService(ctx context.Context, service *registry.Service) error {
+func (d *ServiceDiscovery) DeregisterService(ctx context.Context, service *Service) error {
 	d.logger.Info("Deregistering service",
 		zap.String("name", service.Name),
 		zap.Int("nodes", len(service.Nodes)))
@@ -47,7 +53,7 @@ func (d *ServiceDiscovery) DeregisterService(ctx context.Context, service *regis
 }
 
 // GetService gets a service from the registry
-func (d *ServiceDiscovery) GetService(ctx context.Context, name string) ([]*registry.Service, error) {
+func (d *ServiceDiscovery) GetService(ctx context.Context, name string) ([]*Service, error) {
 	// Check the cache
 	d.cacheMu.RLock()
 	services, ok := d.cache[name]
@@ -80,7 +86,7 @@ func (d *ServiceDiscovery) GetService(ctx context.Context, name string) ([]*regi
 }
 
 // ListServices lists all services in the registry
-func (d *ServiceDiscovery) ListServices(ctx context.Context) ([]*registry.Service, error) {
+func (d *ServiceDiscovery) ListServices(ctx context.Context) ([]*Service, error) {
 	return d.registry.ListServices()
 }
 
@@ -98,7 +104,7 @@ type ServiceSelector struct {
 
 // SelectionStrategy represents a strategy for selecting a service node
 type SelectionStrategy interface {
-	Select(nodes []*registry.Node) (*registry.Node, error)
+	Select(nodes []*Node) (*Node, error)
 }
 
 // NewServiceSelector creates a new service selector
@@ -111,7 +117,7 @@ func NewServiceSelector(discovery *ServiceDiscovery, logger *zap.Logger, strateg
 }
 
 // Select selects a node for a service
-func (s *ServiceSelector) Select(ctx context.Context, name string) (*registry.Node, error) {
+func (s *ServiceSelector) Select(ctx context.Context, name string) (*Node, error) {
 	// Get the service
 	services, err := s.discovery.GetService(ctx, name)
 	if err != nil {
@@ -141,7 +147,7 @@ func NewRoundRobinStrategy() *RoundRobinStrategy {
 }
 
 // Select selects a node using round-robin strategy
-func (s *RoundRobinStrategy) Select(nodes []*registry.Node) (*registry.Node, error) {
+func (s *RoundRobinStrategy) Select(nodes []*Node) (*Node, error) {
 	if len(nodes) == 0 {
 		return nil, registry.ErrNotFound
 	}
@@ -167,7 +173,7 @@ func NewRandomStrategy() *RandomStrategy {
 }
 
 // Select selects a node using random strategy
-func (s *RandomStrategy) Select(nodes []*registry.Node) (*registry.Node, error) {
+func (s *RandomStrategy) Select(nodes []*Node) (*Node, error) {
 	if len(nodes) == 0 {
 		return nil, registry.ErrNotFound
 	}
@@ -175,4 +181,3 @@ func (s *RandomStrategy) Select(nodes []*registry.Node) (*registry.Node, error) 
 	// Get a random node
 	return nodes[time.Now().UnixNano()%int64(len(nodes))], nil
 }
-

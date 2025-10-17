@@ -99,18 +99,18 @@ func (h *Hub) Run() {
 	}
 }
 
-// Register registers a client
-func (h *Hub) Register(client *Client) {
+// RegisterClient registers a client
+func (h *Hub) RegisterClient(client *Client) {
 	h.Register <- client
 }
 
-// Unregister unregisters a client
-func (h *Hub) Unregister(client *Client) {
+// UnregisterClient unregisters a client
+func (h *Hub) UnregisterClient(client *Client) {
 	h.Unregister <- client
 }
 
-// Broadcast broadcasts a message to all clients
-func (h *Hub) Broadcast(message *Message) {
+// BroadcastMessage broadcasts a message to all clients
+func (h *Hub) BroadcastMessage(message *Message) {
 	h.Broadcast <- message
 }
 
@@ -178,4 +178,3 @@ func (h *Hub) BroadcastToClients(clientIDs []string, msg *Message) {
 	}
 	h.mu.RUnlock()
 }
-

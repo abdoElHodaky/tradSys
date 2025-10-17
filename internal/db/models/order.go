@@ -105,3 +105,49 @@ func (oh *OrderHistory) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
+// Trade represents a trade execution
+type Trade struct {
+	ID        string    `gorm:"primaryKey;type:varchar(36)" json:"id"`
+	OrderID   string    `gorm:"type:varchar(36);index" json:"order_id"`
+	Symbol    string    `gorm:"type:varchar(20);index" json:"symbol"`
+	Side      OrderSide `gorm:"type:varchar(10)" json:"side"`
+	Quantity  float64   `gorm:"type:decimal(20,8)" json:"quantity"`
+	Price     float64   `gorm:"type:decimal(20,8)" json:"price"`
+	Fee       float64   `gorm:"type:decimal(20,8)" json:"fee"`
+	Timestamp int64     `gorm:"index" json:"timestamp"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// BeforeCreate is a GORM hook that runs before creating a new trade
+func (t *Trade) BeforeCreate(tx *gorm.DB) error {
+	if t.ID == "" {
+		t.ID = uuid.New().String()
+	}
+	if t.Timestamp == 0 {
+		t.Timestamp = time.Now().Unix() * 1000
+	}
+	return nil
+}
+
+// Position represents a trading position
+type Position struct {
+	ID           string    `gorm:"primaryKey;type:varchar(36)" json:"id"`
+	Symbol       string    `gorm:"type:varchar(20);index" json:"symbol"`
+	Side         OrderSide `gorm:"type:varchar(10)" json:"side"`
+	Size         float64   `gorm:"type:decimal(20,8)" json:"size"`
+	EntryPrice   float64   `gorm:"type:decimal(20,8)" json:"entry_price"`
+	CurrentPrice float64   `gorm:"type:decimal(20,8)" json:"current_price"`
+	UnrealizedPL float64   `gorm:"type:decimal(20,8)" json:"unrealized_pl"`
+	RealizedPL   float64   `gorm:"type:decimal(20,8)" json:"realized_pl"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+// BeforeCreate is a GORM hook that runs before creating a new position
+func (p *Position) BeforeCreate(tx *gorm.DB) error {
+	if p.ID == "" {
+		p.ID = uuid.New().String()
+	}
+	return nil
+}

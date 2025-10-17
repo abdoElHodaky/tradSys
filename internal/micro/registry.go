@@ -26,11 +26,11 @@ func NewRegistry(p RegistryParams) registry.Registry {
 	switch p.Config.Registry.Type {
 	case "etcd":
 		reg = registry.NewRegistry(
-			registry.Addrs(p.Config.Registry.Addresses...),
+			registry.Addrs(p.Config.Registry.Address),
 		)
 	case "consul":
 		reg = registry.NewRegistry(
-			registry.Addrs(p.Config.Registry.Addresses...),
+			registry.Addrs(p.Config.Registry.Address),
 		)
 	case "kubernetes":
 		reg = registry.NewRegistry()
@@ -59,4 +59,3 @@ func NewRegistry(p RegistryParams) registry.Registry {
 var RegistryModule = fx.Options(
 	fx.Provide(NewRegistry),
 )
-

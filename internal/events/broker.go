@@ -26,11 +26,11 @@ func NewBroker(p BrokerParams) broker.Broker {
 	switch p.Config.Broker.Type {
 	case "nats":
 		b = broker.NewBroker(
-			broker.Addrs(p.Config.Broker.Addresses...),
+			broker.Addrs(p.Config.Broker.Address),
 		)
 	case "kafka":
 		b = broker.NewBroker(
-			broker.Addrs(p.Config.Broker.Addresses...),
+			broker.Addrs(p.Config.Broker.Address),
 		)
 	default:
 		// Default to HTTP broker
@@ -63,4 +63,3 @@ func NewBroker(p BrokerParams) broker.Broker {
 var BrokerModule = fx.Options(
 	fx.Provide(NewBroker),
 )
-

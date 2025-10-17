@@ -21,7 +21,7 @@ type ServerParams struct {
 	Lifecycle fx.Lifecycle
 	Logger    *zap.Logger
 	Config    *config.Config
-	Metrics   *monitoring.MetricsService `optional:"true"`
+	Metrics   *monitoring.MetricsCollector `optional:"true"`
 }
 
 // Server represents the API Gateway server
@@ -35,7 +35,7 @@ type Server struct {
 // NewServer creates a new API Gateway server with fx dependency injection
 func NewServer(p ServerParams) *Server {
 	// Set Gin mode based on configuration
-	if p.Config.Service.Environment == "production" {
+	if p.Config.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 

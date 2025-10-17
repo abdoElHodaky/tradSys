@@ -1,6 +1,7 @@
 package market_data
 
 import (
+	"context"
 	"github.com/abdoElHodaky/tradSys/internal/trading/order_matching"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -20,11 +21,11 @@ func NewFxHandler(
 	handler := NewHandler(orderEngine, logger)
 	
 	lifecycle.Append(fx.Hook{
-		OnStart: func(ctx fx.Context) error {
+		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting market data handler")
 			return nil
 		},
-		OnStop: func(ctx fx.Context) error {
+		OnStop: func(ctx context.Context) error {
 			logger.Info("Stopping market data handler")
 			handler.Stop()
 			return nil
@@ -33,4 +34,3 @@ func NewFxHandler(
 	
 	return handler
 }
-
