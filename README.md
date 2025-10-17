@@ -84,7 +84,7 @@ TradSys follows a modern microservices architecture designed for high-frequency 
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **Backend Framework** | Go + Gin | High-performance HTTP server |
+| **Backend Framework** | Go + Gin → Fiber | High-performance HTTP server (migrating to Fiber) |
 | **Communication** | gRPC + WebSockets | Internal services & real-time client communication |
 | **Service Mesh** | go-micro | Service discovery, resilience, load balancing |
 | **Event Streaming** | NATS | Asynchronous messaging & event sourcing |
@@ -148,6 +148,37 @@ We've recently completed a comprehensive codebase improvement initiative:
 - Integrated service discovery with load balancing
 - Added circuit breaker patterns for resilience
 - Implemented health checking for downstream services
+
+## 🔄 **Framework Migration: Gin → Fiber**
+
+### **Migration Status: Phase 1 - Assessment & PoC**
+
+We're currently migrating from Gin to Fiber framework to achieve significant performance improvements for our high-frequency trading platform.
+
+#### **Why Fiber?**
+- **6% Performance Boost**: 36,000 RPS vs Gin's 34,000 RPS
+- **Lower Resource Usage**: Reduced CPU and memory consumption
+- **Zero-Allocation Router**: Minimizes garbage collection pressure
+- **Fasthttp Foundation**: Built on Go's fastest HTTP implementation
+- **Express.js Familiarity**: Minimal learning curve for developers
+- **Excellent WebSocket Support**: Critical for real-time market data
+
+#### **Migration Phases**
+1. **🔍 Assessment & PoC** (2 weeks) - Performance validation ← **Current Phase**
+2. **🏗️ Infrastructure Migration** (3 weeks) - Core framework setup
+3. **🔧 Middleware Migration** (2 weeks) - Auth, rate limiting, CORS
+4. **🔌 WebSocket Migration** (2 weeks) - Real-time data streaming
+5. **🔗 Service Integration** (2 weeks) - Microservices, fx integration
+6. **🧪 Testing & Validation** (2 weeks) - Performance benchmarking
+7. **🚀 Deployment** (1 week) - Production rollout
+
+#### **Expected Performance Gains**
+- **Latency**: ≥5% reduction in response time
+- **Throughput**: ≥6% increase in RPS
+- **Memory**: ≤10% reduction in usage
+- **WebSocket**: ≥10% improvement in message throughput
+
+📋 **Detailed Plan**: See [OPTIMAL_FRAMEWORK_REFACTORING_PLAN.md](./OPTIMAL_FRAMEWORK_REFACTORING_PLAN.md)
 
 #### ✅ **Phase 5: Configuration Management**
 - Unified configuration structures across services
