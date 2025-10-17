@@ -13,7 +13,7 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
-	"github.com/abdoElHodaky/tradSys/internal/db/models"
+	"github.com/abdoElHodaky/tradSys/fiber-migration/phase1/models"
 )
 
 // FiberService represents a proof of concept Fiber-based trading service

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/abdoElHodaky/tradSys/internal/db/models"
+	"github.com/abdoElHodaky/tradSys/fiber-migration/phase1/models"
 )
 
 // GinServer represents the baseline Gin implementation for benchmarking

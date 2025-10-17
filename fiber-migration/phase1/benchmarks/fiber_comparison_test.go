@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/abdoElHodaky/tradSys/internal/db/models"
+	"github.com/abdoElHodaky/tradSys/fiber-migration/phase1/models"
 )
 
 // FiberServer represents the Fiber implementation for benchmarking
@@ -266,9 +267,9 @@ func BenchmarkGinMemoryAllocation(b *testing.B) {
 	b.ReportAllocs()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			req, _ := http.NewRequest("GET", "/api/pairs/", nil)
-			resp, _ := server.router.Test(req, -1)
-			resp.Body.Close()
+			req := httptest.NewRequest("GET", "/api/pairs/", nil)
+			w := httptest.NewRecorder()
+			server.router.ServeHTTP(w, req)
 		}
 	})
 }
@@ -281,9 +282,9 @@ func BenchmarkComparison(b *testing.B) {
 	b.Run("Gin-HealthCheck", func(b *testing.B) {
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				req, _ := http.NewRequest("GET", "/health", nil)
-				resp, _ := ginServer.router.Test(req, -1)
-				resp.Body.Close()
+				req := httptest.NewRequest("GET", "/health", nil)
+				w := httptest.NewRecorder()
+				ginServer.router.ServeHTTP(w, req)
 			}
 		})
 	})
@@ -306,10 +307,10 @@ func BenchmarkComparison(b *testing.B) {
 		
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				req, _ := http.NewRequest("POST", "/api/orders/", bytes.NewBuffer(jsonData))
+				req := httptest.NewRequest("POST", "/api/orders/", bytes.NewBuffer(jsonData))
 				req.Header.Set("Content-Type", "application/json")
-				resp, _ := ginServer.router.Test(req, -1)
-				resp.Body.Close()
+				w := httptest.NewRecorder()
+				ginServer.router.ServeHTTP(w, req)
 			}
 		})
 	})
