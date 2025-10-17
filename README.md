@@ -1,27 +1,171 @@
-# High-Frequency Trading Platform
+# TradSys - High-Frequency Trading Platform
 
-A high-performance trading platform built with Go, Gin, and WebSockets for real-time market data and order execution.
+A high-performance, microservices-based trading platform built with Go, featuring real-time market data streaming, low-latency order execution, and advanced risk management.
 
-## Architecture
+## 🏗️ Architecture Overview
 
-The platform follows a microservices architecture with the following components:
+TradSys follows a modern microservices architecture designed for high-frequency trading requirements:
 
-1. **API Gateway**: Entry point for all client requests, handles authentication, rate limiting, and request routing
-2. **Market Data Service**: Provides real-time and historical market data
-3. **Order Service**: Handles order creation, execution, and management
-4. **Risk Service**: Monitors positions and validates orders against risk parameters
-5. **WebSocket Service**: Streams real-time data to clients
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Web Client    │    │  Mobile Client  │    │  Trading Bot    │
+└─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
+          │                      │                      │
+          └──────────────────────┼──────────────────────┘
+                                 │
+                    ┌─────────────▼───────────────┐
+                    │       API Gateway           │
+                    │  • Authentication           │
+                    │  • Rate Limiting            │
+                    │  • Request Routing          │
+                    │  • Circuit Breaker          │
+                    └─────────────┬───────────────┘
+                                  │
+        ┌─────────────────────────┼─────────────────────────┐
+        │                         │                         │
+┌───────▼────────┐    ┌───────────▼────────┐    ┌───────────▼────────┐
+│ Market Data    │    │   Order Service    │    │   Risk Service     │
+│ Service        │    │                    │    │                    │
+│ • Real-time    │    │ • Order Creation   │    │ • Position Limits  │
+│ • Historical   │    │ • Execution        │    │ • Risk Validation  │
+│ • Symbols      │    │ • Management       │    │ • Circuit Breakers │
+└───────┬────────┘    └───────────┬────────┘    └───────────┬────────┘
+        │                         │                         │
+        └─────────────────────────┼─────────────────────────┘
+                                  │
+                    ┌─────────────▼───────────────┐
+                    │    WebSocket Service        │
+                    │  • Real-time Streaming      │
+                    │  • Market Data Push         │
+                    │  • Order Updates            │
+                    └─────────────┬───────────────┘
+                                  │
+                    ┌─────────────▼───────────────┐
+                    │      Data Layer             │
+                    │  • PostgreSQL (GORM)       │
+                    │  • In-memory Cache          │
+                    │  • NATS Messaging           │
+                    └─────────────────────────────┘
+```
 
-## Technology Stack
+### Core Services
 
-- **Backend Framework**: Go with Gin
-- **Communication**: gRPC for internal services, WebSockets for client communication
-- **Service Mesh**: go-micro for service discovery and resilience
-- **Event Streaming**: NATS for asynchronous messaging
-- **Database**: PostgreSQL for persistent storage
-- **Caching**: In-memory caching with go-cache
-- **Observability**: Distributed tracing with Jaeger, metrics with Prometheus
-- **Deployment**: Kubernetes for orchestration
+1. **🌐 API Gateway** (`cmd/gateway/`)
+   - Entry point for all client requests
+   - Authentication & authorization
+   - Rate limiting & circuit breaker
+   - Service discovery & load balancing
+
+2. **📊 Market Data Service** (`cmd/marketdata/`)
+   - Real-time market data streaming
+   - Historical data retrieval
+   - Symbol management
+   - OHLCV data processing
+
+3. **📋 Order Service** (`cmd/orders/`)
+   - Order lifecycle management
+   - Trading strategy execution
+   - Order validation & routing
+   - Execution reporting
+
+4. **⚠️ Risk Service** (`cmd/risk/`)
+   - Real-time risk monitoring
+   - Position limit enforcement
+   - Pre-trade risk checks
+   - Circuit breaker management
+
+5. **🔌 WebSocket Service** (`cmd/ws/`)
+   - Real-time data streaming
+   - Client connection management
+   - Market data subscriptions
+   - Order status updates
+
+## 🛠️ Technology Stack
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Backend Framework** | Go + Gin | High-performance HTTP server |
+| **Communication** | gRPC + WebSockets | Internal services & real-time client communication |
+| **Service Mesh** | go-micro | Service discovery, resilience, load balancing |
+| **Event Streaming** | NATS | Asynchronous messaging & event sourcing |
+| **Database** | PostgreSQL + GORM | Persistent storage with ORM |
+| **Caching** | go-cache | In-memory caching for performance |
+| **Observability** | Jaeger + Prometheus | Distributed tracing & metrics |
+| **Dependency Injection** | Uber FX | Clean dependency management |
+| **Configuration** | Viper | Environment-based configuration |
+
+## 📁 Project Structure
+
+```
+tradSys/
+├── cmd/                          # Service entry points
+│   ├── gateway/                  # API Gateway service
+│   ├── marketdata/               # Market Data service
+│   ├── orders/                   # Order Management service
+│   ├── risk/                     # Risk Management service
+│   └── ws/                       # WebSocket service
+├── internal/                     # Internal packages
+│   ├── api/                      # API handlers & middleware
+│   ├── auth/                     # Authentication & authorization
+│   ├── common/                   # Shared utilities & patterns
+│   ├── config/                   # Configuration management
+│   ├── db/                       # Database models & repositories
+│   ├── gateway/                  # Gateway-specific logic
+│   ├── marketdata/               # Market data processing
+│   ├── micro/                    # Microservice utilities
+│   ├── orders/                   # Order management logic
+│   ├── risk/                     # Risk management logic
+│   ├── statistics/               # Statistical analysis
+│   ├── strategy/                 # Trading strategies
+│   ├── transport/                # Transport layer (WebSocket, etc.)
+│   └── ws/                       # WebSocket handlers
+├── proto/                        # Protocol Buffer definitions
+├── tests/                        # Test files
+├── config/                       # Configuration files
+└── docs/                         # Documentation
+```
+
+## 🚀 Recent Improvements
+
+### Codebase Modernization (2025-10-17)
+
+We've recently completed a comprehensive codebase improvement initiative:
+
+#### ✅ **Phase 1-2: Repository Unification**
+- Consolidated duplicate market data repositories
+- Standardized to GORM for consistent database access
+- Implemented camelCase naming conventions
+- Unified error handling patterns
+
+#### ✅ **Phase 3: Service Registration Simplification**
+- Created common service registration utilities
+- Standardized fx.Module patterns across services
+- Implemented consistent lifecycle management
+- Added unified error handling for service startup
+
+#### ✅ **Phase 4: Service Forwarding Implementation**
+- Replaced placeholder service forwarding with actual proxy implementation
+- Integrated service discovery with load balancing
+- Added circuit breaker patterns for resilience
+- Implemented health checking for downstream services
+
+#### ✅ **Phase 5: Configuration Management**
+- Unified configuration structures across services
+- Standardized environment variable naming
+- Added configuration validation
+- Resolved merge conflicts and duplications
+
+#### ✅ **Phase 6: TODO Cleanup**
+- Completed WebSocket functionality implementation
+- Added missing imports and dependencies
+- Prepared market data subscription handlers
+- Enhanced order management via WebSocket
+
+#### ✅ **Phase 7: Handler Pattern Optimization**
+- Created common handler utilities (`HandlerUtils`)
+- Implemented standardized API response formats
+- Added unified request validation middleware
+- Created generic pagination and error handling patterns
 
 ## Features
 
@@ -116,4 +260,3 @@ The platform is optimized for high-frequency trading with the following features
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
