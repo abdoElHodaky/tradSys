@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/architecture/discovery"
+	"github.com/asim/go-micro/v3/registry"
 	"github.com/gin-gonic/gin"
-	"github.com/micro/go-micro/registry"
 	"go.uber.org/zap"
 )
 
@@ -247,4 +247,3 @@ func (lb *LoadBalancer) Forward(ctx context.Context, serviceName string, req *ht
 	}
 	return client.Do(serviceReq)
 }
-
