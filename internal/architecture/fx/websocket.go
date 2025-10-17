@@ -2,6 +2,7 @@ package fx
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/abdoElHodaky/tradSys/internal/transport/websocket"
 	"github.com/gin-gonic/gin"
@@ -150,4 +151,3 @@ func RegisterOrderHandlers(hub *websocket.Hub, logger *zap.Logger) {
 		// TODO: Cancel the order
 	})
 }
-
