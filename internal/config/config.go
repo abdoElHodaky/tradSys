@@ -23,6 +23,7 @@ type Config struct {
 	Registry    RegistryConfig
 	Service     ServiceConfig
 	Broker      BrokerConfig
+	Gateway     GatewayConfig
 }
 
 // ServerConfig represents the server configuration
@@ -84,6 +85,14 @@ type BrokerConfig struct {
 	Addresses []string
 }
 
+// GatewayConfig represents the API gateway configuration
+type GatewayConfig struct {
+	Port        int
+	Address     string
+	Environment string
+	TLSEnabled  bool
+}
+
 // LoadConfig loads the application configuration
 func LoadConfig(configPath string, logger *zap.Logger) (*Config, error) {
 	// Set default configuration values
@@ -131,6 +140,12 @@ func LoadConfig(configPath string, logger *zap.Logger) (*Config, error) {
 		Broker: BrokerConfig{
 			Type:      "nats",
 			Addresses: []string{"localhost:4222"},
+		},
+		Gateway: GatewayConfig{
+			Port:        8080,
+			Address:     "localhost:8080",
+			Environment: "development",
+			TLSEnabled:  false,
 		},
 	}
 
