@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
@@ -303,3 +304,8 @@ func (c *MetricsCollector) GinMiddleware() gin.HandlerFunc {
 		).Observe(duration)
 	}
 }
+
+// MetricsModule provides the metrics collector for dependency injection
+var MetricsModule = fx.Module("metrics",
+	fx.Provide(NewMetricsCollector),
+)

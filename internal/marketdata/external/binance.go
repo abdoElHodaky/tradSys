@@ -177,19 +177,19 @@ func (p *BinanceProvider) handleWebSocketMessages(conn *websocket.Conn, key stri
 				continue
 			}
 			
-			// Convert string arrays to float arrays
-			bids := make([][]float64, len(orderBookUpdate.Bids))
+			// Convert string arrays to PriceLevel arrays
+			bids := make([]PriceLevel, len(orderBookUpdate.Bids))
 			for i, bid := range orderBookUpdate.Bids {
 				price, _ := strconv.ParseFloat(bid[0], 64)
 				quantity, _ := strconv.ParseFloat(bid[1], 64)
-				bids[i] = []float64{price, quantity}
+				bids[i] = PriceLevel{Price: price, Quantity: quantity}
 			}
 			
-			asks := make([][]float64, len(orderBookUpdate.Asks))
+			asks := make([]PriceLevel, len(orderBookUpdate.Asks))
 			for i, ask := range orderBookUpdate.Asks {
 				price, _ := strconv.ParseFloat(ask[0], 64)
 				quantity, _ := strconv.ParseFloat(ask[1], 64)
-				asks[i] = []float64{price, quantity}
+				asks[i] = PriceLevel{Price: price, Quantity: quantity}
 			}
 			
 			// Create order book data
@@ -507,19 +507,19 @@ func (p *BinanceProvider) GetOrderBook(ctx context.Context, symbol string) (*Ord
 		return nil, err
 	}
 	
-	// Convert string arrays to float arrays
-	bids := make([][]float64, len(response.Bids))
+	// Convert string arrays to PriceLevel arrays
+	bids := make([]PriceLevel, len(response.Bids))
 	for i, bid := range response.Bids {
 		price, _ := strconv.ParseFloat(bid[0], 64)
 		quantity, _ := strconv.ParseFloat(bid[1], 64)
-		bids[i] = []float64{price, quantity}
+		bids[i] = PriceLevel{Price: price, Quantity: quantity}
 	}
 	
-	asks := make([][]float64, len(response.Asks))
+	asks := make([]PriceLevel, len(response.Asks))
 	for i, ask := range response.Asks {
 		price, _ := strconv.ParseFloat(ask[0], 64)
 		quantity, _ := strconv.ParseFloat(ask[1], 64)
-		asks[i] = []float64{price, quantity}
+		asks[i] = PriceLevel{Price: price, Quantity: quantity}
 	}
 	
 	return &OrderBookData{
@@ -699,4 +699,3 @@ func (p *BinanceProvider) GetOHLCV(ctx context.Context, symbol, interval string,
 	
 	return ohlcvData, nil
 }
-

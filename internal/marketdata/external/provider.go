@@ -19,14 +19,20 @@ const (
 	MarketDataTypeOHLCV MarketDataType = "ohlcv"
 )
 
+// PriceLevel represents a price level in the order book
+type PriceLevel struct {
+	Price    float64
+	Quantity float64
+}
+
 // OrderBookData represents order book data
 type OrderBookData struct {
 	// Symbol is the trading symbol
 	Symbol string
 	// Bids is the bids
-	Bids [][]float64
+	Bids []PriceLevel
 	// Asks is the asks
-	Asks [][]float64
+	Asks []PriceLevel
 	// Timestamp is the time of the update
 	Timestamp time.Time
 }
