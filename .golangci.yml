@@ -1,0 +1,47 @@
+run:
+  timeout: 5m
+  go: "1.22"
+  skip-dirs:
+    - internal/transport/websocket
+    - internal/gateway
+    - internal/architecture/cqrs/eventbus
+    - internal/architecture/discovery
+    - internal/trading/risk_management
+    - internal/user
+    - internal/api
+    - internal/architecture/cqrs/event
+    - internal/eventsourcing/snapshot
+    - internal/performance
+    - internal/orders
+    - internal/risk
+    - internal/ws
+    - internal/peerjs
+    - internal/architecture/cqrs/integration
+    - internal/architecture/cqrs/aggregate
+    - internal/architecture/cqrs/projection
+    - internal/architecture/cqrs/example
+    - internal/architecture/cqrs/command
+    - internal/marketdata
+    - internal/db
+    - internal/strategy
+    - internal/auth
+    - internal/architecture/gateway
+    - internal/architecture/fx
+    - internal/trading/order_management
+    - internal/validation
+    - internal/architecture
+    - cmd
+    - tests
+  skip-files:
+    - ".*\\.pb\\.go$"
+    - ".*_test\\.go$"
+
+linters:
+  enable:
+    - gofmt
+    - goimports
+  disable-all: true
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
