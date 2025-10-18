@@ -1,6 +1,7 @@
 package order_matching
 
 import (
+	"context"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -18,11 +19,11 @@ func NewFxEngine(
 	engine := NewEngine(logger)
 	
 	lifecycle.Append(fx.Hook{
-		OnStart: func(ctx fx.Context) error {
+		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting order matching engine")
 			return nil
 		},
-		OnStop: func(ctx fx.Context) error {
+		OnStop: func(ctx context.Context) error {
 			logger.Info("Stopping order matching engine")
 			return nil
 		},
@@ -30,4 +31,3 @@ func NewFxEngine(
 	
 	return engine
 }
-
