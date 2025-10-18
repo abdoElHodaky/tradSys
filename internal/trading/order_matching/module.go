@@ -6,8 +6,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// Module provides the order matching module for the fx application
-var Module = fx.Options(
+// OrderMatchingModule provides the order matching module for the fx application
+var OrderMatchingModule = fx.Options(
 	fx.Provide(NewEngine),
 )
 

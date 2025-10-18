@@ -35,8 +35,7 @@ func (m *Manager) GetMarketData(symbol, interval string) (float64, float64, int6
 	return 100.0, 1000.0, time.Now().Unix() * 1000, nil
 }
 
-// Module provides the external market data module for fx
-var Module = fx.Options(
+// ManagerModule provides the external market data manager for fx
+var ManagerModule = fx.Options(
 	fx.Provide(NewManager),
 )
-

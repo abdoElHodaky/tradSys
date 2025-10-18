@@ -1,14 +1,15 @@
 package risk_management
 
 import (
+	"context"
 	"github.com/abdoElHodaky/tradSys/internal/trading/order_matching"
 	"github.com/abdoElHodaky/tradSys/internal/trading/order_management"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
-// Module provides the risk management module for the fx application
-var Module = fx.Options(
+// RiskManagementModule provides the risk management module for the fx application
+var RiskManagementModule = fx.Options(
 	fx.Provide(NewService),
 )
 
@@ -22,11 +23,11 @@ func NewFxService(
 	service := NewService(orderEngine, orderService, logger)
 	
 	lifecycle.Append(fx.Hook{
-		OnStart: func(ctx fx.Context) error {
+		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting risk management service")
 			return nil
 		},
-		OnStop: func(ctx fx.Context) error {
+		OnStop: func(ctx context.Context) error {
 			logger.Info("Stopping risk management service")
 			service.Stop()
 			return nil
@@ -35,4 +36,3 @@ func NewFxService(
 	
 	return service
 }
-

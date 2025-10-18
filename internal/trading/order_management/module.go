@@ -7,8 +7,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// Module provides the order management module for the fx application
-var Module = fx.Options(
+// OrderManagementModule provides the order management module for the fx application
+var OrderManagementModule = fx.Options(
 	fx.Provide(NewService),
 )
 
