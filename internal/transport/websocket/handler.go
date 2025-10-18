@@ -81,7 +81,7 @@ func (h *WebSocketHandler) HandleConnection(c *gin.Context) {
 	client := NewClient(clientID, conn, h.hub, h.logger)
 	
 	// Register the client with the hub
-	h.hub.Register <- client
+	h.hub.Register(client)
 	
 	// Start the client's read and write pumps
 	go client.ReadPump()
@@ -99,4 +99,3 @@ func (h *WebSocketHandler) RegisterRoutes(router *gin.Engine) {
 	// Register the orders WebSocket route
 	router.GET("/ws/orders", h.HandleConnection)
 }
-

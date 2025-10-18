@@ -12,14 +12,14 @@ type Hub struct {
 	// Clients is a map of client ID to client
 	Clients map[string]*Client
 	
-	// Register is a channel for registering clients
-	Register chan *Client
+	// register is a channel for registering clients
+	register chan *Client
 	
-	// Unregister is a channel for unregistering clients
-	Unregister chan *Client
+	// unregister is a channel for unregistering clients
+	unregister chan *Client
 	
-	// Broadcast is a channel for broadcasting messages to all clients
-	Broadcast chan *Message
+	// broadcast is a channel for broadcasting messages to all clients
+	broadcast chan *Message
 	
 	// MessageHandlers is a map of message type to handler
 	MessageHandlers map[string]MessageHandler
@@ -50,9 +50,9 @@ type MessageHandler func(client *Client, msg *Message)
 func NewHub(logger *zap.Logger) *Hub {
 	return &Hub{
 		Clients:         make(map[string]*Client),
-		Register:        make(chan *Client),
-		Unregister:      make(chan *Client),
-		Broadcast:       make(chan *Message),
+		register:        make(chan *Client),
+		unregister:      make(chan *Client),
+		broadcast:       make(chan *Message),
 		MessageHandlers: make(map[string]MessageHandler),
 		Logger:          logger,
 	}
@@ -62,7 +62,7 @@ func NewHub(logger *zap.Logger) *Hub {
 func (h *Hub) Run() {
 	for {
 		select {
-		case client := <-h.Register:
+		case client := <-h.register:
 			// Register the client
 			h.mu.Lock()
 			h.Clients[client.ID] = client
@@ -70,7 +70,7 @@ func (h *Hub) Run() {
 			
 			h.Logger.Info("Client registered", zap.String("client_id", client.ID))
 			
-		case client := <-h.Unregister:
+		case client := <-h.unregister:
 			// Unregister the client
 			h.mu.Lock()
 			if _, ok := h.Clients[client.ID]; ok {
@@ -81,7 +81,7 @@ func (h *Hub) Run() {
 			
 			h.Logger.Info("Client unregistered", zap.String("client_id", client.ID))
 			
-		case message := <-h.Broadcast:
+		case message := <-h.broadcast:
 			// Broadcast the message to all clients
 			h.mu.RLock()
 			for _, client := range h.Clients {
@@ -90,7 +90,7 @@ func (h *Hub) Run() {
 				default:
 					// Client's send buffer is full, unregister the client
 					h.mu.RUnlock()
-					h.Unregister <- client
+					h.Unregister(client)
 					h.mu.RLock()
 				}
 			}
@@ -101,17 +101,17 @@ func (h *Hub) Run() {
 
 // Register registers a client
 func (h *Hub) Register(client *Client) {
-	h.Register <- client
+	h.register <- client
 }
 
 // Unregister unregisters a client
 func (h *Hub) Unregister(client *Client) {
-	h.Unregister <- client
+	h.unregister <- client
 }
 
 // Broadcast broadcasts a message to all clients
 func (h *Hub) Broadcast(message *Message) {
-	h.Broadcast <- message
+	h.broadcast <- message
 }
 
 // RegisterMessageHandler registers a message handler
@@ -178,4 +178,3 @@ func (h *Hub) BroadcastToClients(clientIDs []string, msg *Message) {
 	}
 	h.mu.RUnlock()
 }
-

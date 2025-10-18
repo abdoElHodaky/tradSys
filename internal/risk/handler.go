@@ -42,9 +42,7 @@ func (h *Handler) ValidateOrder(ctx context.Context, req *risk.ValidateOrderRequ
 
 	// Implementation would go here
 	// For now, just return a placeholder response
-	rsp.Valid = true
-	rsp.MaxAllowedQuantity = 10.0
-	rsp.MaxAllowedNotional = 500000.0
+	rsp.IsValid = true
 
 	return nil
 }
