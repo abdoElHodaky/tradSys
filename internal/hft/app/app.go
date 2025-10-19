@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -66,4 +65,3 @@ func (a *App) Stop(ctx context.Context) error {
 func (a *App) GetRouter() *gin.Engine {
 	return a.router
 }
-

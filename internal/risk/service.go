@@ -131,8 +131,4 @@ func (s *Service) UpdateRiskLimits(ctx context.Context, symbol, accountID string
 	return limits, nil
 }
 
-// ServiceModule provides the risk service module for fx
-var ServiceModule = fx.Options(
-	fx.Provide(NewService),
-)
-
+// ServiceModule is defined in module.go to avoid duplication

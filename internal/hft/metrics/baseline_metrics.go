@@ -138,6 +138,18 @@ func (m *BaselineMetrics) UpdateActiveConnections(count int) {
 	m.ActiveConnections.Set(float64(count))
 }
 
+// RecordHTTPRequest records HTTP request metrics
+func (m *BaselineMetrics) RecordHTTPRequest(method, path string, statusCode int, duration time.Duration) {
+	// For now, just record the latency as order latency
+	// This can be expanded to have dedicated HTTP metrics
+	m.RecordOrderLatency(duration)
+	
+	// Record errors for non-2xx status codes
+	if statusCode >= 400 {
+		m.RecordError()
+	}
+}
+
 // UpdateThroughputMetrics updates throughput metrics
 func (m *BaselineMetrics) UpdateThroughputMetrics() {
 	m.mu.Lock()

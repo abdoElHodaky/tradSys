@@ -150,8 +150,4 @@ func (s *Service) GetOrders(ctx context.Context, symbol string, status orders.Or
 	return orderList, nil
 }
 
-// ServiceModule provides the order service module for fx
-var ServiceModule = fx.Options(
-	fx.Provide(NewService),
-)
-
+// ServiceModule is defined in module.go to avoid duplication

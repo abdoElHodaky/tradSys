@@ -107,19 +107,4 @@ func HFTSecurityHeadersMiddleware() gin.HandlerFunc {
 	}
 }
 
-// HFTCompressionMiddleware provides optimized compression for HFT responses
-func HFTCompressionMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// Check if client accepts compression
-		acceptEncoding := c.GetHeader("Accept-Encoding")
-		
-		// For HFT, we might want to disable compression for ultra-low latency
-		// or use minimal compression levels
-		if strings.Contains(acceptEncoding, "gzip") {
-			// Set minimal compression for balance between size and speed
-			c.Header("Content-Encoding", "gzip")
-		}
-		
-		c.Next()
-	}
-}
+// HFTCompressionMiddleware is now defined in advanced.go to avoid duplication

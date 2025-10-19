@@ -21,6 +21,11 @@ type Config struct {
 	Logging      LoggingConfig      `yaml:"logging"`
 	Metrics      MetricsConfig      `yaml:"metrics"`
 	Security     SecurityConfig     `yaml:"security"`
+	// Microservice compatibility fields
+	Service      ServiceConfig      `yaml:"service"`
+	Registry     RegistryConfig     `yaml:"registry"`
+	Tracing      TracingConfig      `yaml:"tracing"`
+	Resilience   ResilienceConfig   `yaml:"resilience"`
 }
 
 // ServerConfig contains HTTP server configuration
@@ -160,6 +165,50 @@ type RateLimitConfig struct {
 	RPS     int  `yaml:"rps"`
 }
 
+// Microservice compatibility configuration types
+type ServiceConfig struct {
+	Name    string        `yaml:"name"`
+	Version string        `yaml:"version"`
+	Port    int           `yaml:"port"`
+	Address string        `yaml:"address"`
+	Timeout time.Duration `yaml:"timeout"`
+}
+
+type RegistryConfig struct {
+	Type      string        `yaml:"type"`
+	Address   string        `yaml:"address"`
+	Addresses []string      `yaml:"addresses"`
+	Timeout   time.Duration `yaml:"timeout"`
+	Interval  time.Duration `yaml:"interval"`
+}
+
+type TracingConfig struct {
+	Enabled     bool    `yaml:"enabled"`
+	ServiceName string  `yaml:"service_name"`
+	Endpoint    string  `yaml:"endpoint"`
+	SampleRate  float64 `yaml:"sample_rate"`
+}
+
+type ResilienceConfig struct {
+	CircuitBreaker        CircuitBreakerConfig `yaml:"circuit_breaker"`
+	Retry                 RetryConfig          `yaml:"retry"`
+	CircuitBreakerEnabled bool                 `yaml:"circuit_breaker_enabled"`
+	RateLimitingEnabled   bool                 `yaml:"rate_limiting_enabled"`
+}
+
+type CircuitBreakerConfig struct {
+	Enabled                bool          `yaml:"enabled"`
+	FailureThreshold       int           `yaml:"failure_threshold"`
+	RecoveryTimeout        time.Duration `yaml:"recovery_timeout"`
+	RequestVolumeThreshold int           `yaml:"request_volume_threshold"`
+}
+
+type RetryConfig struct {
+	MaxAttempts int           `yaml:"max_attempts"`
+	Delay       time.Duration `yaml:"delay"`
+	MaxDelay    time.Duration `yaml:"max_delay"`
+}
+
 // Load loads configuration from file and environment variables
 func Load() (*Config, error) {
 	configPath := os.Getenv("TRADSYS_CONFIG_PATH")
@@ -295,6 +344,38 @@ func GetDefault() *Config {
 			RateLimit: RateLimitConfig{
 				Enabled: true,
 				RPS:     1000,
+			},
+		},
+		// Microservice compatibility defaults
+		Service: ServiceConfig{
+			Name:    "tradsys",
+			Version: "2.0.0",
+			Port:    8080,
+			Timeout: 30 * time.Second,
+		},
+		Registry: RegistryConfig{
+			Type:     "consul",
+			Address:  "localhost:8500",
+			Timeout:  5 * time.Second,
+			Interval: 10 * time.Second,
+		},
+		Tracing: TracingConfig{
+			Enabled:     false,
+			ServiceName: "tradsys",
+			Endpoint:    "http://localhost:14268/api/traces",
+			SampleRate:  0.1,
+		},
+		Resilience: ResilienceConfig{
+			CircuitBreaker: CircuitBreakerConfig{
+				Enabled:           true,
+				FailureThreshold:  5,
+				RecoveryTimeout:   30 * time.Second,
+				RequestVolumeThreshold: 20,
+			},
+			Retry: RetryConfig{
+				MaxAttempts: 3,
+				Delay:       100 * time.Millisecond,
+				MaxDelay:    1 * time.Second,
 			},
 		},
 	}
