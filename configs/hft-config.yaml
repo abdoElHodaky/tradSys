@@ -1,0 +1,102 @@
+# HFT Trading System Configuration
+# Environment: development, staging, production
+environment: development
+
+# Database Configuration
+database:
+  driver: sqlite3
+  dsn: "trading.db"
+  max_conns: 10
+  enable_wal: true
+
+# WebSocket Configuration
+websocket:
+  port: 8080
+  read_buffer_size: 4096
+  write_buffer_size: 4096
+  ping_interval: 30s
+  binary_protocol: true
+
+# Security Configuration
+security:
+  jwt_secret: "your-jwt-secret-key-change-in-production"
+  token_expiry: 24h
+  enable_tls: false
+  tls_cert_file: ""
+  tls_key_file: ""
+
+# Rate Limiting Configuration
+rate_limit:
+  requests_per_second: 1000
+  burst_size: 100
+  window_size: 1s
+
+# Circuit Breaker Configuration
+circuit_breaker:
+  max_failures: 5
+  reset_timeout: 30s
+  failure_ratio: 0.5
+
+# Timeout Configuration
+timeouts:
+  http_read: 5s
+  http_write: 10s
+  grpc_request: 10s
+
+# Garbage Collection Configuration
+gc:
+  gc_percent: 200
+  memory_limit: 2147483648  # 2GB
+  max_procs: 0  # 0 = use all CPUs
+  enable_memory_limit: true
+  soft_memory_limit: 1610612736  # 1.5GB
+  enable_gc_monitoring: true
+  gc_stats_interval: 30s
+  enable_ballast_heap: false
+  ballast_size: 1073741824  # 1GB
+
+# Memory Management Configuration
+memory:
+  enable_object_pools: true
+  enable_buffer_pools: true
+  enable_string_pools: true
+  max_heap_size: 2147483648  # 2GB
+  gc_target_percentage: 200
+  enable_memory_monitoring: true
+  monitoring_interval: 10s
+  enable_memory_profiling: false
+  enable_leak_detection: true
+  leak_detection_threshold: 104857600  # 100MB
+
+# Monitoring Configuration
+monitoring:
+  enable_prometheus: true
+  enable_custom_metrics: true
+  metrics_interval: 10s
+  enable_health_checks: true
+  health_check_interval: 30s
+  enable_alerting: true
+  enable_performance_monitoring: true
+  performance_interval: 5s
+  enable_dashboard: true
+  dashboard_port: 9090
+  dashboard_path: "/dashboard"
+  
+  # Alert Thresholds
+  alert_thresholds:
+    max_latency: 100ms
+    max_error_rate: 0.01  # 1%
+    max_memory_usage: 1073741824  # 1GB
+    max_gc_pause_time: 10ms
+    min_throughput: 1000  # requests/sec
+
+# Gin Framework Configuration
+gin:
+  enable_recovery: true
+  enable_logger: true
+  enable_cors: true
+  enable_compression: true
+  compression_level: 1  # Fastest compression for HFT
+  max_multipart_memory: 8388608  # 8MB
+  enable_trusted_proxies: false
+  trusted_proxies: []

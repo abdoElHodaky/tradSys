@@ -74,7 +74,7 @@ func (c *Client) ReadPump() {
 	config := DefaultClientConfig()
 	
 	defer func() {
-		c.Hub.Unregister <- c
+		c.Hub.Unregister(c)
 		c.Conn.Close()
 	}()
 	
@@ -183,4 +183,3 @@ func (c *Client) SendMessage(msg *Message) {
 	// Send the message
 	c.Send <- payload
 }
-

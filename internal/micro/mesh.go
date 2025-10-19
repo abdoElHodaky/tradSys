@@ -4,7 +4,6 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/config"
 	gomicro "go-micro.dev/v4"
 	"go-micro.dev/v4/client"
-	"go-micro.dev/v4/client/selector"
 	"go-micro.dev/v4/server"
 	"go.uber.org/zap"
 )
@@ -51,13 +50,11 @@ func ConfigureMesh(service gomicro.Service, opts MeshOptions, logger *zap.Logger
 	}
 
 	// Apply wrappers to the client
-	service.Client().Init(
-		client.Wrap(wrappers...),
-		client.Retries(3),
-		client.Selector(selector.NewSelector(
-			selector.SetStrategy(selector.RoundRobin),
-		)),
-	)
+	clientOptions := []client.Option{client.Retries(3)}
+	for _, wrapper := range wrappers {
+		clientOptions = append(clientOptions, client.Wrap(wrapper))
+	}
+	service.Client().Init(clientOptions...)
 
 	// Configure server wrappers
 	var serverWrappers []server.HandlerWrapper
@@ -89,4 +86,3 @@ func NewMeshOptions(config *config.Config) MeshOptions {
 		EnableRateLimiting:  config.Resilience.RateLimitingEnabled,
 	}
 }
-

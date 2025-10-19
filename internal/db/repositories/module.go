@@ -6,8 +6,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// Module provides the repositories module for the fx application
-var Module = fx.Options(
+// RepositoriesModule provides the repositories module for the fx application
+var RepositoriesModule = fx.Options(
 	fx.Provide(NewOrderRepository),
 	fx.Provide(NewTradeRepository),
 	fx.Provide(NewPositionRepository),

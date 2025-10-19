@@ -1,0 +1,324 @@
+# TradSys Exchange Integration Configuration
+
+# Exchange Adapters Configuration
+exchanges:
+  # Binance configuration
+  binance:
+    enabled: true
+    type: "crypto"
+    name: "Binance"
+    
+    # Connection settings
+    connection:
+      api_url: "https://api.binance.com"
+      ws_url: "wss://stream.binance.com:9443"
+      testnet_api_url: "https://testnet.binance.vision"
+      testnet_ws_url: "wss://testnet.binance.vision"
+      use_testnet: false
+      
+    # Authentication
+    auth:
+      api_key: "${BINANCE_API_KEY}"
+      secret_key: "${BINANCE_SECRET_KEY}"
+      
+    # Rate limits (requests per minute)
+    rate_limits:
+      orders: 1200
+      market_data: 6000
+      account_info: 1200
+      
+    # Trading settings
+    trading:
+      enable_spot_trading: true
+      enable_futures_trading: false
+      enable_margin_trading: false
+      default_order_type: "limit"
+      
+    # Symbols to trade
+    symbols:
+      - "BTCUSDT"
+      - "ETHUSDT"
+      - "ADAUSDT"
+      - "DOTUSDT"
+      
+  # Coinbase Pro configuration
+  coinbase:
+    enabled: true
+    type: "crypto"
+    name: "Coinbase Pro"
+    
+    # Connection settings
+    connection:
+      api_url: "https://api.exchange.coinbase.com"
+      ws_url: "wss://ws-feed.exchange.coinbase.com"
+      sandbox_api_url: "https://api-public.sandbox.exchange.coinbase.com"
+      sandbox_ws_url: "wss://ws-feed-public.sandbox.exchange.coinbase.com"
+      use_sandbox: false
+      
+    # Authentication
+    auth:
+      api_key: "${COINBASE_API_KEY}"
+      secret_key: "${COINBASE_SECRET_KEY}"
+      passphrase: "${COINBASE_PASSPHRASE}"
+      
+    # Rate limits
+    rate_limits:
+      orders: 300
+      market_data: 1000
+      account_info: 300
+      
+    # Trading settings
+    trading:
+      enable_spot_trading: true
+      enable_futures_trading: false
+      enable_margin_trading: false
+      
+    # Symbols to trade
+    symbols:
+      - "BTC-USD"
+      - "ETH-USD"
+      - "ADA-USD"
+      - "DOT-USD"
+
+# FIX Protocol Configuration
+fix_protocol:
+  # Global FIX settings
+  global:
+    begin_string: "FIX.4.4"
+    heartbeat_interval: 30
+    logon_timeout: 30
+    logout_timeout: 10
+    
+  # FIX sessions
+  sessions:
+    # Example institutional exchange
+    institutional_exchange:
+      enabled: false
+      session_id: "TRADSYS-INSTEX"
+      sender_comp_id: "TRADSYS"
+      target_comp_id: "INSTEX"
+      
+      # Connection settings
+      connection:
+        host: "fix.institutional-exchange.com"
+        port: 9876
+        use_ssl: true
+        
+      # Authentication
+      auth:
+        username: "${FIX_USERNAME}"
+        password: "${FIX_PASSWORD}"
+        
+      # Session settings
+      settings:
+        heartbeat_interval: 30
+        begin_string: "FIX.4.4"
+        reset_on_logon: true
+        reset_on_logout: true
+        
+      # Message settings
+      messages:
+        validate_length_and_checksum: true
+        validate_fields_out_of_order: true
+        validate_fields_have_values: true
+        validate_user_defined_fields: true
+
+# Market Data Configuration
+market_data:
+  # Aggregation settings
+  aggregation:
+    enabled: true
+    min_sources: 2
+    confidence_threshold: 0.8
+    max_staleness: "5s"
+    
+  # Data sources priority (1 = highest)
+  source_priority:
+    binance: 1
+    coinbase: 2
+    kraken: 3
+    
+  # Subscription settings
+  subscriptions:
+    # Order book subscriptions
+    order_book:
+      enabled: true
+      depth: 20
+      update_frequency: "100ms"
+      
+    # Trade subscriptions
+    trades:
+      enabled: true
+      max_history: 1000
+      
+    # Ticker subscriptions
+    ticker:
+      enabled: true
+      update_frequency: "1s"
+      
+    # Kline/Candlestick subscriptions
+    klines:
+      enabled: true
+      intervals: ["1m", "5m", "15m", "1h", "4h", "1d"]
+
+# Session Management
+session_management:
+  # Connection settings
+  connection:
+    connect_timeout: "30s"
+    read_timeout: "30s"
+    write_timeout: "30s"
+    keepalive_interval: "30s"
+    
+  # Reconnection settings
+  reconnection:
+    enable_auto_reconnect: true
+    max_reconnect_attempts: 10
+    reconnect_delay: "5s"
+    exponential_backoff: true
+    max_reconnect_delay: "5m"
+    
+  # Health monitoring
+  health:
+    heartbeat_interval: "30s"
+    health_check_interval: "10s"
+    unhealthy_threshold: 3
+    
+# Performance Configuration
+performance:
+  # Connection pooling
+  connection_pooling:
+    max_connections_per_exchange: 10
+    max_idle_connections: 5
+    connection_max_lifetime: "1h"
+    
+  # Message processing
+  message_processing:
+    workers_per_exchange: 4
+    message_queue_size: 10000
+    batch_processing: true
+    batch_size: 100
+    batch_timeout: "10ms"
+    
+  # Latency optimization
+  latency:
+    enable_tcp_nodelay: true
+    enable_tcp_keepalive: true
+    tcp_keepalive_time: "30s"
+    tcp_keepalive_interval: "10s"
+    tcp_keepalive_probes: 3
+
+# Error Handling
+error_handling:
+  # Retry configuration
+  retry:
+    max_retries: 3
+    retry_delay: "1s"
+    exponential_backoff: true
+    max_retry_delay: "30s"
+    
+  # Error classification
+  classification:
+    # Temporary errors (retry)
+    temporary_errors:
+      - "connection_timeout"
+      - "read_timeout"
+      - "rate_limit_exceeded"
+      - "server_error"
+      
+    # Permanent errors (don't retry)
+    permanent_errors:
+      - "authentication_failed"
+      - "invalid_symbol"
+      - "insufficient_balance"
+      - "order_rejected"
+      
+  # Circuit breaker
+  circuit_breaker:
+    enabled: true
+    failure_threshold: 5
+    recovery_timeout: "1m"
+    half_open_max_calls: 3
+
+# Monitoring and Logging
+monitoring:
+  # Metrics collection
+  metrics:
+    enabled: true
+    collection_interval: "1s"
+    
+    # Exchange-specific metrics
+    exchange_metrics:
+      - "connection_status"
+      - "message_latency"
+      - "order_fill_rate"
+      - "market_data_updates"
+      - "error_rate"
+      
+  # Logging
+  logging:
+    level: "info"
+    log_file: "/var/log/tradsys/exchanges.log"
+    enable_message_logging: false  # Set to true for debugging
+    max_message_log_size: "100MB"
+    
+  # Alerting
+  alerting:
+    enabled: true
+    alert_channels: ["email", "slack"]
+    
+    # Alert conditions
+    conditions:
+      - name: "exchange_disconnected"
+        condition: "connection_status == 'disconnected'"
+        severity: "critical"
+        
+      - name: "high_latency"
+        condition: "message_latency > 1000ms"
+        severity: "warning"
+        
+      - name: "high_error_rate"
+        condition: "error_rate > 0.05"
+        severity: "warning"
+
+# Security Configuration
+security:
+  # API key management
+  api_keys:
+    encryption_enabled: true
+    key_rotation_interval: "30d"
+    
+  # Network security
+  network:
+    enable_ip_whitelist: false
+    allowed_ips: []
+    enable_ssl_verification: true
+    min_tls_version: "1.2"
+    
+  # Data protection
+  data_protection:
+    encrypt_sensitive_data: true
+    mask_api_keys_in_logs: true
+    enable_audit_logging: true
+
+# Testing Configuration
+testing:
+  # Paper trading
+  paper_trading:
+    enabled: false
+    initial_balance: 100000.0
+    enable_slippage_simulation: true
+    slippage_factor: 0.001
+    
+  # Simulation
+  simulation:
+    enabled: false
+    historical_data_source: "binance"
+    simulation_speed: 1.0  # 1x real-time
+    
+  # Load testing
+  load_testing:
+    enabled: false
+    max_orders_per_second: 1000
+    test_duration: "5m"
+

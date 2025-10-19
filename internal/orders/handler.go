@@ -10,6 +10,8 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // HandlerParams contains the parameters for creating an order handler
@@ -66,23 +68,22 @@ func (h *Handler) CreateOrder(ctx context.Context, req *orders.CreateOrderReques
 			return err
 		}
 
-		if !validateRsp.Valid {
+		if !validateRsp.IsValid {
 			h.logger.Warn("Order validation failed",
-				zap.String("reason", validateRsp.Reason),
-				zap.Float64("max_allowed_quantity", validateRsp.MaxAllowedQuantity))
-			return grpc.Errorf(grpc.Code(400), "Order validation failed: %s", validateRsp.Reason)
+				zap.String("reason", validateRsp.RejectionReason))
+			return status.Errorf(codes.InvalidArgument, "Order validation failed: %s", validateRsp.RejectionReason)
 		}
 	}
 
 	// Implementation would go here
 	// For now, just return a placeholder response
-	rsp.OrderId = uuid.New().String()
+	rsp.Id = uuid.New().String()
 	rsp.Symbol = req.Symbol
 	rsp.Type = req.Type
 	rsp.Side = req.Side
 	rsp.Status = orders.OrderStatus_PENDING
 	rsp.Quantity = req.Quantity
-	rsp.FilledQuantity = 0
+	rsp.FilledQty = 0
 	rsp.Price = req.Price
 	rsp.StopPrice = req.StopPrice
 	rsp.CreatedAt = 1625097600000
@@ -95,11 +96,11 @@ func (h *Handler) CreateOrder(ctx context.Context, req *orders.CreateOrderReques
 // GetOrder implements the OrderService.GetOrder method
 func (h *Handler) GetOrder(ctx context.Context, req *orders.GetOrderRequest, rsp *orders.OrderResponse) error {
 	h.logger.Info("GetOrder called",
-		zap.String("order_id", req.OrderId))
+		zap.String("order_id", req.Id))
 
 	// Implementation would go here
 	// For now, just return a placeholder response
-	rsp.OrderId = req.OrderId
+	rsp.Id = req.Id
 	rsp.Symbol = "BTC-USD"
 	rsp.Type = orders.OrderType_LIMIT
 	rsp.Side = orders.OrderSide_BUY
@@ -172,8 +173,7 @@ func (h *Handler) GetOrders(ctx context.Context, req *orders.GetOrdersRequest, r
 	return nil
 }
 
-// Module provides the orders module for fx
-var Module = fx.Options(
+// OrdersModule provides the orders handler module for fx
+var OrdersModule = fx.Options(
 	fx.Provide(NewHandler),
 )
-

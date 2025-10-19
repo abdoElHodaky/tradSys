@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/config"
-	"github.com/abdoElHodaky/tradSys/internal/micro"
 	"github.com/gin-gonic/gin"
+	"go-micro.dev/v4/registry"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -22,14 +22,14 @@ type ProxyParams struct {
 
 	Logger   *zap.Logger
 	Config   *config.Config
-	Registry *micro.Registry
+	Registry registry.Registry
 }
 
 // ServiceProxy handles forwarding requests to microservices
 type ServiceProxy struct {
 	logger   *zap.Logger
 	config   *config.Config
-	registry *micro.Registry
+	registry registry.Registry
 	client   *http.Client
 }
 
@@ -50,11 +50,32 @@ func NewServiceProxy(p ProxyParams) *ServiceProxy {
 	}
 }
 
+// getServiceEndpoint gets the endpoint for a service from the registry
+func (p *ServiceProxy) getServiceEndpoint(serviceName string) (string, error) {
+	services, err := p.registry.GetService(serviceName)
+	if err != nil {
+		return "", err
+	}
+	
+	if len(services) == 0 {
+		return "", registry.ErrNotFound
+	}
+	
+	service := services[0]
+	if len(service.Nodes) == 0 {
+		return "", registry.ErrNotFound
+	}
+	
+	// Use the first available node
+	node := service.Nodes[0]
+	return "http://" + node.Address, nil
+}
+
 // ForwardToService creates a handler that forwards requests to the appropriate microservice
 func (p *ServiceProxy) ForwardToService(serviceName, path string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get service endpoint from registry
-		endpoint, err := p.registry.GetServiceEndpoint(serviceName)
+		endpoint, err := p.getServiceEndpoint(serviceName)
 		if err != nil {
 			p.logger.Error("Failed to get service endpoint",
 				zap.String("service", serviceName),
@@ -177,7 +198,7 @@ func (p *ServiceProxy) ForwardToService(serviceName, path string) gin.HandlerFun
 func (p *ServiceProxy) ReverseProxy(serviceName string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get service endpoint from registry
-		endpoint, err := p.registry.GetServiceEndpoint(serviceName)
+		endpoint, err := p.getServiceEndpoint(serviceName)
 		if err != nil {
 			p.logger.Error("Failed to get service endpoint",
 				zap.String("service", serviceName),
@@ -236,4 +257,3 @@ func (p *ServiceProxy) ReverseProxy(serviceName string) gin.HandlerFunc {
 		proxy.ServeHTTP(c.Writer, c.Request)
 	}
 }
-

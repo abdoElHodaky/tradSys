@@ -98,7 +98,7 @@ func (s *Service) persistCachedMarketData() {
 	// Create a batch of market data entries
 	marketDataEntries := make([]*db.MarketData, 0, len(items))
 	
-	for key, item := range items {
+	for _, item := range items {
 		// Skip expired items
 		if item.Expired() {
 			continue
@@ -530,6 +530,34 @@ func (s *Service) GetHistoricalOHLCV(ctx context.Context, symbol, interval strin
 	return s.MarketDataRepository.GetOHLCVBySymbolAndTimeRange(ctx, symbol, interval, start, end)
 }
 
+// AddMarketDataSource adds a new market data source
+func (s *Service) AddMarketDataSource(ctx context.Context, source string, config interface{}) error {
+	s.logger.Info("Adding market data source", zap.String("source", source))
+	
+	// TODO: Implement actual source addition logic
+	// This would typically involve:
+	// 1. Validating the source configuration
+	// 2. Adding the source to the external manager
+	// 3. Starting any necessary subscriptions
+	
+	return nil
+}
+
+// GetMarketData retrieves market data for a symbol within a time range
+func (s *Service) GetMarketData(ctx context.Context, symbol string, timeRange interface{}) (interface{}, error) {
+	s.logger.Info("Getting market data", zap.String("symbol", symbol))
+	
+	// TODO: Implement actual market data retrieval logic
+	// This would typically involve:
+	// 1. Parsing the time range
+	// 2. Checking cache first
+	// 3. Fetching from database or external provider
+	// 4. Returning the appropriate data format
+	
+	// For now, return ticker data as an example
+	return s.GetTicker(ctx, symbol)
+}
+
 // Stop stops the service
 func (s *Service) Stop() {
 	s.cancel()
@@ -558,4 +586,3 @@ func randomString(length int) string {
 	}
 	return string(result)
 }
-

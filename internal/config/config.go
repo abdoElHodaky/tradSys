@@ -20,6 +20,16 @@ type Config struct {
 	JWT         JWTConfig
 	Services    ServicesConfig
 	Logging     LoggingConfig
+	
+	// Additional fields for microservices architecture
+	Service    ServiceConfig
+	Gateway    GatewayConfig
+	Registry   RegistryConfig
+	Broker     BrokerConfig
+	Tracing    TracingConfig
+	Metrics    MetricsConfig
+	Resilience ResilienceConfig
+	Auth       AuthConfig
 }
 
 // ServerConfig represents the server configuration
@@ -61,6 +71,64 @@ type LoggingConfig struct {
 	OutputPath string
 }
 
+// ServiceConfig represents the service configuration
+type ServiceConfig struct {
+	Name        string `json:"name"`
+	Version     string `json:"version"`
+	Address     string `json:"address"`
+	Environment string `json:"environment"`
+}
+
+// GatewayConfig represents the gateway configuration
+type GatewayConfig struct {
+	Address                 string `json:"address"`
+	ReadTimeout             int    `json:"readTimeout"`
+	WriteTimeout            int    `json:"writeTimeout"`
+	MaxHeaderBytes          int    `json:"maxHeaderBytes"`
+	RateLimitRequests       int    `json:"rateLimitRequests"`
+	RateLimitBurst          int    `json:"rateLimitBurst"`
+	CircuitBreakerThreshold int    `json:"circuitBreakerThreshold"`
+	CircuitBreakerTimeout   int    `json:"circuitBreakerTimeout"`
+}
+
+// RegistryConfig represents the registry configuration
+type RegistryConfig struct {
+	Type      string   `json:"type"`
+	Addresses []string `json:"addresses"`
+}
+
+// BrokerConfig represents the broker configuration
+type BrokerConfig struct {
+	Type      string   `json:"type"`
+	Addresses []string `json:"addresses"`
+}
+
+// TracingConfig represents the tracing configuration
+type TracingConfig struct {
+	Enabled bool   `json:"enabled"`
+	Type    string `json:"type"`
+	Address string `json:"address"`
+}
+
+// MetricsConfig represents the metrics configuration
+type MetricsConfig struct {
+	Enabled bool   `json:"enabled"`
+	Address string `json:"address"`
+}
+
+// ResilienceConfig represents the resilience configuration
+type ResilienceConfig struct {
+	CircuitBreakerEnabled bool `json:"circuitBreakerEnabled"`
+	RateLimitingEnabled   bool `json:"rateLimitingEnabled"`
+}
+
+// AuthConfig represents the auth configuration
+type AuthConfig struct {
+	JWTSecret     string `json:"jwtSecret"`
+	TokenExpiry   int    `json:"tokenExpiry"`
+	RefreshExpiry int    `json:"refreshExpiry"`
+}
+
 // LoadConfig loads the application configuration
 func LoadConfig(configPath string, logger *zap.Logger) (*Config, error) {
 	// Set default configuration values
@@ -94,6 +162,48 @@ func LoadConfig(configPath string, logger *zap.Logger) (*Config, error) {
 		Logging: LoggingConfig{
 			Level:      "info",
 			OutputPath: "stdout",
+		},
+		Service: ServiceConfig{
+			Name:        "tradsys",
+			Version:     "1.0.0",
+			Address:     ":8080",
+			Environment: "development",
+		},
+		Gateway: GatewayConfig{
+			Address:                 ":8000",
+			ReadTimeout:             5000,
+			WriteTimeout:            10000,
+			MaxHeaderBytes:          1 << 20, // 1MB
+			RateLimitRequests:       100,
+			RateLimitBurst:          200,
+			CircuitBreakerThreshold: 5,
+			CircuitBreakerTimeout:   30,
+		},
+		Registry: RegistryConfig{
+			Type:      "mdns",
+			Addresses: []string{},
+		},
+		Broker: BrokerConfig{
+			Type:      "http",
+			Addresses: []string{},
+		},
+		Tracing: TracingConfig{
+			Enabled: false,
+			Type:    "jaeger",
+			Address: "localhost:6831",
+		},
+		Metrics: MetricsConfig{
+			Enabled: false,
+			Address: ":9090",
+		},
+		Resilience: ResilienceConfig{
+			CircuitBreakerEnabled: false,
+			RateLimitingEnabled:   false,
+		},
+		Auth: AuthConfig{
+			JWTSecret:     "default-jwt-secret-change-in-production",
+			TokenExpiry:   3600,
+			RefreshExpiry: 86400,
 		},
 	}
 

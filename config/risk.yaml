@@ -1,0 +1,232 @@
+# TradSys Risk Management Configuration
+
+# Risk Engine Configuration
+risk_engine:
+  # Performance settings
+  performance:
+    max_check_time: "10µs"
+    enable_parallel_checks: true
+    check_workers: 8
+    
+  # VaR (Value at Risk) settings
+  var:
+    confidence_level: 0.95
+    time_horizon_days: 1
+    calculation_method: "parametric"  # parametric, historical, monte_carlo
+    lookback_period_days: 252
+    
+  # Risk calculation intervals
+  intervals:
+    position_risk_update: "1s"
+    portfolio_risk_update: "5s"
+    var_calculation: "1m"
+    stress_test: "1h"
+
+# Default Risk Limits
+default_limits:
+  # Position limits
+  position:
+    max_position_size: 1000000.0
+    max_position_value: 10000000.0  # $10M
+    max_leverage: 10.0
+    concentration_limit: 0.2  # 20% max per symbol
+    
+  # Order limits
+  order:
+    max_order_size: 100000.0
+    max_order_value: 1000000.0  # $1M
+    max_orders_per_second: 100
+    max_daily_orders: 10000
+    
+  # Trading limits
+  trading:
+    max_daily_volume: 100000000.0  # $100M
+    max_daily_trades: 1000
+    max_drawdown: 0.05  # 5%
+    stop_loss_threshold: 0.02  # 2%
+    
+  # Risk metrics limits
+  metrics:
+    max_var: 1000000.0  # $1M
+    max_expected_shortfall: 1500000.0  # $1.5M
+    max_beta: 2.0
+    max_volatility: 0.5  # 50%
+
+# Symbol-Specific Risk Limits
+symbol_limits:
+  # Crypto currencies
+  crypto:
+    max_position_size: 100.0
+    max_order_size: 10.0
+    max_leverage: 5.0
+    volatility_threshold: 0.1  # 10%
+    
+  # Forex pairs
+  forex:
+    max_position_size: 10000000.0  # 10M units
+    max_order_size: 1000000.0   # 1M units
+    max_leverage: 100.0
+    volatility_threshold: 0.05  # 5%
+    
+  # Stocks
+  stocks:
+    max_position_size: 100000.0
+    max_order_size: 10000.0
+    max_leverage: 4.0
+    volatility_threshold: 0.03  # 3%
+
+# Circuit Breaker Configuration
+circuit_breakers:
+  # Global circuit breaker
+  global:
+    enable: true
+    volatility_threshold: 0.2  # 20%
+    volume_spike_threshold: 10.0  # 10x normal volume
+    price_move_threshold: 0.1  # 10%
+    
+  # Symbol-specific circuit breakers
+  symbol:
+    enable: true
+    volatility_window: "5m"
+    price_move_window: "1m"
+    volume_window: "5m"
+    min_recovery_time: "30s"
+    max_recovery_time: "5m"
+    recovery_test_orders: 5
+    
+  # Market-wide circuit breakers
+  market:
+    level_1_threshold: 0.07  # 7% market decline
+    level_2_threshold: 0.13  # 13% market decline
+    level_3_threshold: 0.20  # 20% market decline
+    halt_duration_level_1: "15m"
+    halt_duration_level_2: "15m"
+    halt_duration_level_3: "end_of_day"
+
+# Compliance Configuration
+compliance:
+  # Regulatory reporting
+  reporting:
+    enable_trade_reporting: true
+    enable_position_reporting: true
+    enable_risk_reporting: true
+    reporting_interval: "1h"
+    batch_size: 1000
+    max_retries: 3
+    retry_delay: "30s"
+    
+  # Audit trail
+  audit:
+    enable_audit_trail: true
+    audit_log_file: "/var/log/tradsys/audit.log"
+    audit_retention_days: 2555  # 7 years
+    enable_real_time_monitoring: true
+    
+  # Regulatory destinations
+  destinations:
+    trade_repository: "TRADE_REPO_ENDPOINT"
+    position_authority: "POSITION_AUTH_ENDPOINT"
+    risk_authority: "RISK_AUTH_ENDPOINT"
+    regulatory_authority: "REG_AUTH_ENDPOINT"
+    
+  # Data privacy
+  privacy:
+    enable_data_anonymization: false
+    pii_retention_days: 2555  # 7 years
+    enable_right_to_be_forgotten: true
+
+# Risk Monitoring
+monitoring:
+  # Real-time alerts
+  alerts:
+    enable_risk_alerts: true
+    alert_channels: ["email", "slack", "webhook"]
+    alert_thresholds:
+      high_risk: 0.8
+      critical_risk: 0.95
+      
+  # Risk dashboard
+  dashboard:
+    enable_dashboard: true
+    dashboard_port: 8081
+    update_interval: "1s"
+    historical_data_retention: "30d"
+    
+  # Risk metrics
+  metrics:
+    enable_risk_metrics: true
+    metrics_port: 9091
+    collection_interval: "1s"
+    
+# Stress Testing
+stress_testing:
+  # Scenario testing
+  scenarios:
+    enable_scenario_testing: true
+    test_interval: "1h"
+    scenarios:
+      - name: "market_crash"
+        market_decline: 0.2
+        volatility_spike: 3.0
+      - name: "liquidity_crisis"
+        liquidity_reduction: 0.5
+        spread_widening: 2.0
+      - name: "flash_crash"
+        price_drop: 0.1
+        duration: "1m"
+        
+  # Monte Carlo simulation
+  monte_carlo:
+    enable_monte_carlo: true
+    simulation_runs: 10000
+    time_horizon_days: 1
+    confidence_levels: [0.95, 0.99, 0.999]
+
+# Risk Model Configuration
+risk_models:
+  # Market risk model
+  market_risk:
+    model_type: "var"
+    calculation_method: "parametric"
+    correlation_model: "exponential_weighted"
+    decay_factor: 0.94
+    
+  # Credit risk model
+  credit_risk:
+    enable_credit_risk: false
+    default_probability_model: "merton"
+    recovery_rate: 0.4
+    
+  # Operational risk model
+  operational_risk:
+    enable_operational_risk: true
+    loss_distribution: "lognormal"
+    frequency_distribution: "poisson"
+    
+  # Liquidity risk model
+  liquidity_risk:
+    enable_liquidity_risk: true
+    liquidity_horizon_days: 1
+    bid_ask_spread_threshold: 0.01  # 1%
+
+# Emergency Procedures
+emergency:
+  # Emergency contacts
+  contacts:
+    risk_manager: "risk@tradsys.com"
+    compliance_officer: "compliance@tradsys.com"
+    cto: "cto@tradsys.com"
+    
+  # Emergency actions
+  actions:
+    enable_emergency_halt: true
+    enable_position_liquidation: true
+    enable_risk_override: false  # Requires manual approval
+    
+  # Escalation procedures
+  escalation:
+    level_1_threshold: 0.7  # 70% of risk limit
+    level_2_threshold: 0.9  # 90% of risk limit
+    level_3_threshold: 1.0  # 100% of risk limit
+    escalation_delay: "5m"
+

@@ -61,9 +61,7 @@ func NewService(p ServiceParams) (*Service, error) {
 	p.Lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			// Initialize and start the service
-			if err := service.Init(); err != nil {
-				return err
-			}
+			service.Init()
 
 			// Start the service in a goroutine
 			go func() {
@@ -90,4 +88,3 @@ func NewService(p ServiceParams) (*Service, error) {
 var Module = fx.Options(
 	fx.Provide(NewService),
 )
-

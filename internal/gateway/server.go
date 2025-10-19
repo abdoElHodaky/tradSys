@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/auth"
 	"github.com/abdoElHodaky/tradSys/internal/config"
 	"github.com/abdoElHodaky/tradSys/internal/monitoring"
 	"github.com/gin-contrib/cors"
@@ -21,7 +20,7 @@ type ServerParams struct {
 	Lifecycle fx.Lifecycle
 	Logger    *zap.Logger
 	Config    *config.Config
-	Metrics   *monitoring.MetricsService `optional:"true"`
+	Metrics   *monitoring.MetricsCollector `optional:"true"`
 }
 
 // Server represents the API Gateway server
@@ -55,10 +54,10 @@ func NewServer(p ServerParams) *Server {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Add metrics middleware if available
-	if p.Metrics != nil {
-		router.Use(p.Metrics.GinMiddleware())
-	}
+	// TODO: Add metrics middleware if available
+	// if p.Metrics != nil {
+	//     router.Use(p.Metrics.GinMiddleware())
+	// }
 
 	// Create server
 	server := &Server{
@@ -124,9 +123,4 @@ func (s *Server) Router() *gin.Engine {
 	return s.router
 }
 
-// Module provides the API Gateway module for fx
-var Module = fx.Options(
-	fx.Provide(NewServer),
-	fx.Provide(NewServiceProxy),
-	fx.Provide(NewRouter),
-)
+// Removed duplicate Module declaration - using the one in module.go

@@ -2,16 +2,22 @@ package marketdata
 
 import (
 	"context"
+	"errors"
 	"reflect"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/command"
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/query"
+	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
-// Module provides the market data service components
-var Module = fx.Options(
+// Error definitions
+var (
+	ErrInvalidCommand = errors.New("invalid command")
+	ErrInvalidQuery   = errors.New("invalid query")
+)
+
+// CQRSModule provides the market data service components with CQRS
+var CQRSModule = fx.Options(
 	// Provide the market data service
 	fx.Provide(NewService),
 	
@@ -24,16 +30,16 @@ type ServiceParams struct {
 	fx.In
 	
 	Logger     *zap.Logger
-	CommandBus *command.CommandBus
-	QueryBus   *query.QueryBus
+	CommandBus *cqrs.CommandBus
+	QueryBus   *cqrs.QueryBus
 }
 
 // RegisterHandlers registers command and query handlers for the market data service
 func RegisterHandlers(
 	lifecycle fx.Lifecycle,
 	service *Service,
-	commandBus *command.CommandBus,
-	queryBus *query.QueryBus,
+	commandBus *cqrs.CommandBus,
+	queryBus *cqrs.QueryBus,
 	logger *zap.Logger,
 ) {
 	// Register lifecycle hooks
@@ -57,11 +63,11 @@ func RegisterHandlers(
 }
 
 // registerCommandHandlers registers command handlers for the market data service
-func registerCommandHandlers(service *Service, commandBus *command.CommandBus, logger *zap.Logger) {
+func registerCommandHandlers(service *Service, commandBus *cqrs.CommandBus, logger *zap.Logger) {
 	// Example: Register a command handler for adding a market data source
 	err := commandBus.RegisterHandlerFunc(
 		reflect.TypeOf(&AddMarketDataSourceCommand{}),
-		func(ctx context.Context, cmd command.Command) error {
+		func(ctx context.Context, cmd cqrs.Command) error {
 			addCmd, ok := cmd.(*AddMarketDataSourceCommand)
 			if !ok {
 				return ErrInvalidCommand
@@ -77,11 +83,11 @@ func registerCommandHandlers(service *Service, commandBus *command.CommandBus, l
 }
 
 // registerQueryHandlers registers query handlers for the market data service
-func registerQueryHandlers(service *Service, queryBus *query.QueryBus, logger *zap.Logger) {
+func registerQueryHandlers(service *Service, queryBus *cqrs.QueryBus, logger *zap.Logger) {
 	// Example: Register a query handler for getting market data
 	err := queryBus.RegisterHandlerFunc(
 		reflect.TypeOf(&GetMarketDataQuery{}),
-		func(ctx context.Context, q query.Query) (interface{}, error) {
+		func(ctx context.Context, q cqrs.Query) (interface{}, error) {
 			getQuery, ok := q.(*GetMarketDataQuery)
 			if !ok {
 				return nil, ErrInvalidQuery
@@ -117,4 +123,3 @@ type GetMarketDataQuery struct {
 func (q *GetMarketDataQuery) QueryName() string {
 	return "GetMarketData"
 }
-

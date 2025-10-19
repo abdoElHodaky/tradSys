@@ -9,7 +9,7 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/trading/order_matching"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
-	"github.com/patrickmn/go-cache"
+	cache "github.com/patrickmn/go-cache"
 )
 
 // OrderStatus represents the status of an order
@@ -549,7 +549,12 @@ func (s *Service) PlaceOrder(ctx context.Context, request *OrderRequest) (*Order
 				ExecutedAt:        trade.Timestamp,
 				Fee:               trade.TakerFee,
 				FeeCurrency:       order.Symbol,
-				CounterPartyOrderID: trade.MakerSide == order_matching.OrderSide(order.Side) ? trade.BuyOrderID : trade.SellOrderID,
+				CounterPartyOrderID: func() string {
+					if trade.MakerSide == order_matching.OrderSide(order.Side) {
+						return trade.BuyOrderID
+					}
+					return trade.SellOrderID
+				}(),
 				Metadata:          make(map[string]interface{}),
 			}
 			order.Trades = append(order.Trades, orderTrade)
@@ -604,7 +609,12 @@ func (s *Service) PlaceOrder(ctx context.Context, request *OrderRequest) (*Order
 			ExecutedAt:        trade.Timestamp,
 			Fee:               trade.TakerFee,
 			FeeCurrency:       order.Symbol,
-			CounterPartyOrderID: trade.MakerSide == order_matching.OrderSide(order.Side) ? trade.BuyOrderID : trade.SellOrderID,
+			CounterPartyOrderID: func() string {
+				if trade.MakerSide == order_matching.OrderSide(order.Side) {
+					return trade.BuyOrderID
+				}
+				return trade.SellOrderID
+			}(),
 			Metadata:          make(map[string]interface{}),
 		}
 		order.Trades = append(order.Trades, orderTrade)
@@ -921,7 +931,12 @@ func (s *Service) UpdateOrder(ctx context.Context, request *OrderUpdateRequest) 
 			ExecutedAt:        trade.Timestamp,
 			Fee:               trade.TakerFee,
 			FeeCurrency:       order.Symbol,
-			CounterPartyOrderID: trade.MakerSide == order_matching.OrderSide(order.Side) ? trade.BuyOrderID : trade.SellOrderID,
+			CounterPartyOrderID: func() string {
+				if trade.MakerSide == order_matching.OrderSide(order.Side) {
+					return trade.BuyOrderID
+				}
+				return trade.SellOrderID
+			}(),
 			Metadata:          make(map[string]interface{}),
 		}
 		order.Trades = append(order.Trades, orderTrade)

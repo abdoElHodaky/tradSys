@@ -24,7 +24,7 @@ go.work
 *.swo
 
 # Generated files
-*.pb.go
+# *.pb.go  # Commented out - proto files needed for CI
 
 # Database files
 *.db
@@ -40,4 +40,3 @@ go.work
 # Build artifacts
 bin/
 dist/
-
