@@ -247,20 +247,31 @@ Compliance → Audit Trail → Event Bus → Metrics → Monitoring → Alerts
 - ✅ Strategy performance monitoring and metrics
 - ✅ Risk controls and position management
 
+### Phase 11A: Production Deployment (✅ Complete)
+- ✅ Docker containerization with multi-stage builds
+- ✅ Kubernetes deployment manifests and configurations
+- ✅ Production-ready PostgreSQL with optimized settings
+- ✅ Comprehensive monitoring stack (Prometheus + Grafana)
+- ✅ Automated deployment scripts with health checks
+- ✅ Security hardening and RBAC configurations
+- ✅ Infrastructure as Code with Kubernetes manifests
+
 ### Next Phase (Future Enhancement)
-- 🔄 **Phase 11A**: Production Monitoring & Alerting
 - 🔄 **Phase 12A**: Advanced Analytics & Reporting
-- ⏳ **Phase 13A**: Machine Learning Integration
-- ⏳ **Phase 14A**: Cloud Deployment & Scaling
+- 🔄 **Phase 13A**: Machine Learning Integration
+- ⏳ **Phase 14A**: Multi-Cloud Deployment & Scaling
+- ⏳ **Phase 15A**: Advanced Security & Compliance
 
 ## Installation & Setup
 
 ### Prerequisites
 - Go 1.21 or higher
+- Docker & Docker Compose
+- Kubernetes cluster (for production)
+- kubectl CLI tool
 - Git
-- Make (optional)
 
-### Quick Start
+### Development Setup
 ```bash
 # Clone the repository
 git clone https://github.com/abdoElHodaky/tradSys.git
@@ -277,6 +288,87 @@ go build -o tradsys ./cmd/server
 
 # Run the trading engine
 ./tradsys
+```
+
+### Production Deployment
+
+#### Kubernetes Deployment Architecture
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           Kubernetes Cluster                                    │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐             │
+│  │   Load Balancer │    │     Ingress     │    │   TLS Termination│             │
+│  │   (External)    │───►│   Controller    │───►│   & Routing      │             │
+│  └─────────────────┘    └─────────────────┘    └─────────────────┘             │
+│                                   │                                             │
+│  ┌─────────────────────────────────┼─────────────────────────────────┐           │
+│  │                    TradSys Namespace                              │           │
+│  │                                 │                                 │           │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌───────────┐ │           │
+│  │  │  TradSys    │  │  TradSys    │  │  TradSys    │  │ Service   │ │           │
+│  │  │   Core      │  │   Core      │  │   Core      │  │ Discovery │ │           │
+│  │  │  Pod #1     │  │  Pod #2     │  │  Pod #3     │  │           │ │           │
+│  │  │             │  │             │  │             │  │           │ │           │
+│  │  │ ✅ Order   │  │ ✅ Risk     │  │ ✅ Strategy │  │ ✅ Config │ │           │
+│  │  │   Matching  │  │   Engine    │  │   Engine    │  │   Maps    │ │           │
+│  │  │ ✅ Exchange│  │ ✅ Compliance│  │ ✅ Settlement│  │ ✅ Secrets│ │           │
+│  │  │   Connector │  │   Engine    │  │   Processor │  │           │ │           │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘  └───────────┘ │           │
+│  │                                 │                                 │           │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                │           │
+│  │  │ PostgreSQL  │  │    Redis    │  │  Monitoring │                │           │
+│  │  │ StatefulSet │  │   Cluster   │  │    Stack    │                │           │
+│  │  │             │  │             │  │             │                │           │
+│  │  │ ✅ ACID     │  │ ✅ Caching │  │ ✅ Prometheus│                │           │
+│  │  │   Compliance│  │ ✅ Session │  │ ✅ Grafana   │                │           │
+│  │  │ ✅ Backup   │  │   Storage   │  │ ✅ Alerting │                │           │
+│  │  │ ✅ HA Setup │  │ ✅ Pub/Sub  │  │ ✅ Dashboards│               │           │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘                │           │
+│  └─────────────────────────────────────────────────────────────────────┘           │
+│                                                                                 │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐ │
+│  │                        Infrastructure Layer                                 │ │
+│  │                                                                             │ │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │ │
+│  │  │   Storage   │  │  Networking │  │   Security  │  │   Scaling   │       │ │
+│  │  │             │  │             │  │             │  │             │       │ │
+│  │  │ ✅ SSD      │  │ ✅ CNI      │  │ ✅ RBAC     │  │ ✅ HPA      │       │ │
+│  │  │   Storage   │  │   Plugin    │  │ ✅ Network  │  │ ✅ VPA      │       │ │
+│  │  │ ✅ Backup   │  │ ✅ Service  │  │   Policies  │  │ ✅ Cluster  │       │ │
+│  │  │   Policies  │  │   Mesh      │  │ ✅ Pod      │  │   Autoscaler│       │ │
+│  │  │ ✅ Volume   │  │ ✅ Load     │  │   Security  │  │             │       │ │
+│  │  │   Snapshots │  │   Balancing │  │   Context   │  │             │       │ │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘       │ │
+│  └─────────────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Quick Production Deployment
+```bash
+# Deploy to Kubernetes cluster
+./scripts/deploy.sh deploy
+
+# Verify deployment
+./scripts/deploy.sh verify
+
+# Access services
+kubectl port-forward -n tradsys svc/tradsys-core 8080:80
+kubectl port-forward -n tradsys svc/grafana 3000:3000
+kubectl port-forward -n tradsys svc/prometheus 9090:9090
+```
+
+#### Docker Compose (Development)
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f tradsys
+
+# Stop services
+docker-compose down
 ```
 
 ### Configuration
@@ -442,4 +534,3 @@ For support and questions:
 **⚡ TradSys - Where Speed Meets Precision in Trading Technology**
 
 *A complete, production-ready high-frequency trading system with unified architecture, advanced order matching, real-time risk management, comprehensive compliance, and algorithmic trading capabilities.*
-
