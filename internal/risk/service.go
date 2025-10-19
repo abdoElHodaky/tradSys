@@ -32,7 +32,7 @@ func NewService(p ServiceParams) *Service {
 }
 
 // ValidateOrder validates an order against risk parameters
-func (s *Service) ValidateOrder(ctx context.Context, symbol string, side risk.OrderSide, quantity, price float64, accountID string) (*risk.ValidateOrderResponse, error) {
+func (s *Service) ValidateOrder(ctx context.Context, symbol string, side risk.OrderSide, orderType risk.OrderType, quantity, price float64, accountID string) (*risk.ValidateOrderResponse, error) {
 	s.logger.Info("Validating order",
 		zap.String("symbol", symbol),
 		zap.String("side", side.String()),
@@ -42,23 +42,41 @@ func (s *Service) ValidateOrder(ctx context.Context, symbol string, side risk.Or
 
 	// Implementation would go here
 	// For now, just return a placeholder response
+	maxAllowedQuantity := 10.0
+	maxAllowedNotional := 500000.0
+	
 	response := &risk.ValidateOrderResponse{
-		Valid:              true,
-		MaxAllowedQuantity: 10.0,
-		MaxAllowedNotional: 500000.0,
+		IsValid: true,
+		RiskMetrics: &risk.OrderRiskResponse{
+			AccountId:     accountID,
+			Symbol:        symbol,
+			Side:          side,
+			Type:          orderType,
+			Quantity:      quantity,
+			Price:         price,
+			RequiredMargin: quantity * price * 0.2, // 20% margin requirement
+			AvailableMarginAfter: 50000.0 - (quantity * price * 0.2),
+			MarginLevelAfter: 150.0,
+			RiskLevel:     risk.RiskLevel_LOW,
+			IsAllowed:     true,
+		},
 	}
 
 	// Check if the order exceeds position limits
-	if quantity > response.MaxAllowedQuantity {
-		response.Valid = false
-		response.Reason = "Order quantity exceeds maximum allowed"
+	if quantity > maxAllowedQuantity {
+		response.IsValid = false
+		response.RejectionReason = "Order quantity exceeds maximum allowed"
+		response.RiskMetrics.IsAllowed = false
+		response.RiskMetrics.RejectionReason = "Order quantity exceeds maximum allowed"
 	}
 
 	// Check if the order exceeds notional value limits
 	notionalValue := quantity * price
-	if notionalValue > response.MaxAllowedNotional {
-		response.Valid = false
-		response.Reason = "Order notional value exceeds maximum allowed"
+	if notionalValue > maxAllowedNotional {
+		response.IsValid = false
+		response.RejectionReason = "Order notional value exceeds maximum allowed"
+		response.RiskMetrics.IsAllowed = false
+		response.RiskMetrics.RejectionReason = "Order notional value exceeds maximum allowed"
 	}
 
 	return response, nil
@@ -74,12 +92,13 @@ func (s *Service) GetPositions(ctx context.Context, accountID, symbol string) ([
 	// For now, just return placeholder positions
 	positions := []*risk.Position{
 		{
-			Symbol:        "BTC-USD",
-			Quantity:      1.5,
-			AveragePrice:  48000.0,
-			UnrealizedPnl: 3000.0,
-			RealizedPnl:   1000.0,
-			UpdatedAt:     1625097600000,
+			Symbol:          "BTC-USD",
+			Size:            1.5,
+			EntryPrice:      48000.0,
+			CurrentPrice:    50000.0,
+			LiquidationPrice: 40000.0,
+			UnrealizedPnl:   3000.0,
+			RealizedPnl:     1000.0,
 		},
 	}
 
@@ -106,13 +125,14 @@ func (s *Service) GetRiskLimits(ctx context.Context, symbol, accountID string) (
 	// Implementation would go here
 	// For now, just return placeholder risk limits
 	limits := &risk.RiskLimits{
-		Symbol:            symbol,
 		MaxPositionSize:   10.0,
-		MaxNotionalValue:  500000.0,
+		MaxOrderSize:      5.0,
 		MaxLeverage:       5.0,
-		MaxDailyVolume:    100.0,
-		MaxDailyTrades:    100,
-		MaxDrawdownPercent: 10.0,
+		MaxDailyLoss:      1000.0,
+		MaxTotalLoss:      5000.0,
+		MinMarginLevel:    120.0,
+		MarginCallLevel:   120.0,
+		LiquidationLevel:  100.0,
 	}
 
 	return limits, nil
@@ -124,7 +144,7 @@ func (s *Service) UpdateRiskLimits(ctx context.Context, symbol, accountID string
 		zap.String("symbol", symbol),
 		zap.String("account_id", accountID),
 		zap.Float64("max_position_size", limits.MaxPositionSize),
-		zap.Float64("max_notional_value", limits.MaxNotionalValue))
+		zap.Float64("max_order_size", limits.MaxOrderSize))
 
 	// Implementation would go here
 	// For now, just return the updated limits

@@ -442,7 +442,7 @@ func (cbs *CircuitBreakerSystem) ManualHalt(symbol string, reason string) error 
 	cbs.mu.Lock()
 	defer cbs.mu.Unlock()
 
-	breaker, exists := cbs.breakers[symbol]
+	_, exists := cbs.breakers[symbol]
 	if !exists {
 		return fmt.Errorf("no circuit breaker found for symbol %s", symbol)
 	}
@@ -531,4 +531,3 @@ func (cbs *CircuitBreakerSystem) GetPerformanceMetrics() map[string]interface{} 
 		"global_halt_reason":  string(cbs.globalHaltReason),
 	}
 }
-
