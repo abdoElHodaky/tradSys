@@ -2,7 +2,6 @@ package marketdata
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"sync"
 	"time"
@@ -454,4 +453,3 @@ func (mda *MarketDataAggregator) getTotalSubscribers() int {
 	}
 	return total
 }
-
