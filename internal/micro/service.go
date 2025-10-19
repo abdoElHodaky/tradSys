@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/unified-config"
+	unifiedconfig "github.com/abdoElHodaky/tradSys/internal/unified-config"
 	gomicro "go-micro.dev/v4"
 	"go-micro.dev/v4/registry"
 	"go.uber.org/fx"
@@ -16,7 +16,7 @@ type ServiceParams struct {
 	fx.In
 
 	Logger *zap.Logger
-	Config *config.Config
+	Config *unifiedconfig.Config
 	Lifecycle fx.Lifecycle
 }
 
@@ -24,7 +24,7 @@ type ServiceParams struct {
 type Service struct {
 	gomicro.Service
 	logger *zap.Logger
-	config *config.Config
+	config *unifiedconfig.Config
 }
 
 // NewService creates a new go-micro service with fx dependency injection

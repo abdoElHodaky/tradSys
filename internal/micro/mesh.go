@@ -1,7 +1,7 @@
 package micro
 
 import (
-	"github.com/abdoElHodaky/tradSys/internal/unified-config"
+	unifiedconfig "github.com/abdoElHodaky/tradSys/internal/unified-config"
 	gomicro "go-micro.dev/v4"
 	"go-micro.dev/v4/client"
 	"go-micro.dev/v4/server"
@@ -78,7 +78,7 @@ func ConfigureMesh(service gomicro.Service, opts MeshOptions, logger *zap.Logger
 }
 
 // NewMeshOptions creates mesh options from configuration
-func NewMeshOptions(config *config.Config) MeshOptions {
+func NewMeshOptions(config *unifiedconfig.Config) MeshOptions {
 	return MeshOptions{
 		EnableTracing:       config.Tracing.Enabled,
 		EnableMetrics:       config.Metrics.Enabled,
