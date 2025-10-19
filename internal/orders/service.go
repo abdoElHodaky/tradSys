@@ -48,18 +48,18 @@ func (s *Service) CreateOrder(ctx context.Context, symbol string, orderType orde
 	now := time.Now().Unix() * 1000
 
 	order := &orders.OrderResponse{
-		OrderId:        orderID,
-		Symbol:         symbol,
-		Type:           orderType,
-		Side:           side,
-		Status:         orders.OrderStatus_PENDING,
-		Quantity:       quantity,
-		FilledQuantity: 0,
-		Price:          price,
-		StopPrice:      stopPrice,
-		CreatedAt:      now,
-		UpdatedAt:      now,
-		ClientOrderId:  clientOrderID,
+		Id:            orderID,
+		Symbol:        symbol,
+		Type:          orderType,
+		Side:          side,
+		Status:        orders.OrderStatus_PENDING,
+		Quantity:      quantity,
+		FilledQty:     0,
+		Price:         price,
+		StopPrice:     stopPrice,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+		ClientOrderId: clientOrderID,
 	}
 
 	return order, nil
@@ -72,16 +72,16 @@ func (s *Service) GetOrder(ctx context.Context, orderID string) (*orders.OrderRe
 	// Implementation would go here
 	// For now, just return a placeholder response
 	order := &orders.OrderResponse{
-		OrderId:        orderID,
-		Symbol:         "BTC-USD",
-		Type:           orders.OrderType_LIMIT,
-		Side:           orders.OrderSide_BUY,
-		Status:         orders.OrderStatus_OPEN,
-		Quantity:       1.0,
-		FilledQuantity: 0.5,
-		Price:          50000.0,
-		CreatedAt:      time.Now().Add(-1 * time.Hour).Unix() * 1000,
-		UpdatedAt:      time.Now().Unix() * 1000,
+		Id:        orderID,
+		Symbol:    "BTC-USD",
+		Type:      orders.OrderType_LIMIT,
+		Side:      orders.OrderSide_BUY,
+		Status:    orders.OrderStatus_NEW,
+		Quantity:  1.0,
+		FilledQty: 0.5,
+		Price:     50000.0,
+		CreatedAt: time.Now().Add(-1 * time.Hour).Unix() * 1000,
+		UpdatedAt: time.Now().Unix() * 1000,
 	}
 
 	return order, nil
@@ -94,16 +94,16 @@ func (s *Service) CancelOrder(ctx context.Context, orderID string) (*orders.Orde
 	// Implementation would go here
 	// For now, just return a placeholder response
 	order := &orders.OrderResponse{
-		OrderId:        orderID,
-		Symbol:         "BTC-USD",
-		Type:           orders.OrderType_LIMIT,
-		Side:           orders.OrderSide_BUY,
-		Status:         orders.OrderStatus_CANCELED,
-		Quantity:       1.0,
-		FilledQuantity: 0.5,
-		Price:          50000.0,
-		CreatedAt:      time.Now().Add(-1 * time.Hour).Unix() * 1000,
-		UpdatedAt:      time.Now().Unix() * 1000,
+		Id:        orderID,
+		Symbol:    "BTC-USD",
+		Type:      orders.OrderType_LIMIT,
+		Side:      orders.OrderSide_BUY,
+		Status:    orders.OrderStatus_CANCELLED,
+		Quantity:  1.0,
+		FilledQty: 0.5,
+		Price:     50000.0,
+		CreatedAt: time.Now().Add(-1 * time.Hour).Unix() * 1000,
+		UpdatedAt: time.Now().Unix() * 1000,
 	}
 
 	return order, nil
@@ -122,28 +122,28 @@ func (s *Service) GetOrders(ctx context.Context, symbol string, status orders.Or
 	// For now, just return placeholder responses
 	orderList := []*orders.OrderResponse{
 		{
-			OrderId:        uuid.New().String(),
-			Symbol:         symbol,
-			Type:           orders.OrderType_LIMIT,
-			Side:           orders.OrderSide_BUY,
-			Status:         status,
-			Quantity:       1.0,
-			FilledQuantity: 0.5,
-			Price:          50000.0,
-			CreatedAt:      time.Now().Add(-1 * time.Hour).Unix() * 1000,
-			UpdatedAt:      time.Now().Unix() * 1000,
+			Id:        uuid.New().String(),
+			Symbol:    symbol,
+			Type:      orders.OrderType_LIMIT,
+			Side:      orders.OrderSide_BUY,
+			Status:    status,
+			Quantity:  1.0,
+			FilledQty: 0.5,
+			Price:     50000.0,
+			CreatedAt: time.Now().Add(-1 * time.Hour).Unix() * 1000,
+			UpdatedAt: time.Now().Unix() * 1000,
 		},
 		{
-			OrderId:        uuid.New().String(),
-			Symbol:         symbol,
-			Type:           orders.OrderType_MARKET,
-			Side:           orders.OrderSide_SELL,
-			Status:         status,
-			Quantity:       0.5,
-			FilledQuantity: 0.5,
-			Price:          51000.0,
-			CreatedAt:      time.Now().Add(-30 * time.Minute).Unix() * 1000,
-			UpdatedAt:      time.Now().Unix() * 1000,
+			Id:        uuid.New().String(),
+			Symbol:    symbol,
+			Type:      orders.OrderType_MARKET,
+			Side:      orders.OrderSide_SELL,
+			Status:    status,
+			Quantity:  0.5,
+			FilledQty: 0.5,
+			Price:     51000.0,
+			CreatedAt: time.Now().Add(-30 * time.Minute).Unix() * 1000,
+			UpdatedAt: time.Now().Unix() * 1000,
 		},
 	}
 
