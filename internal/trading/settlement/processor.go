@@ -6,6 +6,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 // SettlementRequest represents a settlement request
@@ -34,8 +36,8 @@ type SettlementResult struct {
 	Latency     time.Duration `json:"latency"`
 }
 
-// SettlementProcessor handles T+0 real-time settlement processing
-type SettlementProcessor struct {
+// Processor handles T+0 real-time settlement processing
+type Processor struct {
 	requests        map[string]*SettlementRequest
 	mutex           sync.RWMutex
 	workers         int
@@ -48,14 +50,16 @@ type SettlementProcessor struct {
 	running         bool
 	ctx             context.Context
 	cancel          context.CancelFunc
+	logger          *zap.Logger
 	wg              sync.WaitGroup
 }
 
-// NewSettlementProcessor creates a new settlement processor
-func NewSettlementProcessor(workers int) *SettlementProcessor {
+// NewProcessor creates a new settlement processor
+func NewProcessor(logger *zap.Logger) *Processor {
+	workers := 10 // Default number of workers
 	ctx, cancel := context.WithCancel(context.Background())
 	
-	sp := &SettlementProcessor{
+	sp := &Processor{
 		requests:     make(map[string]*SettlementRequest),
 		workers:      workers,
 		workerPool:   make(chan struct{}, workers),
@@ -63,6 +67,7 @@ func NewSettlementProcessor(workers int) *SettlementProcessor {
 		metrics:      make(map[string]interface{}),
 		ctx:          ctx,
 		cancel:       cancel,
+		logger:       logger,
 	}
 	
 	// Initialize worker pool
@@ -379,3 +384,28 @@ func (sp *SettlementProcessor) GetPendingSettlements() []*SettlementRequest {
 	return pending
 }
 
+// ProcessTrade processes a trade for settlement (simplified interface for unified engine)
+func (sp *Processor) ProcessTrade(tradeID, symbol string, quantity, price float64) error {
+	request := &SettlementRequest{
+		TradeID:   tradeID,
+		Symbol:    symbol,
+		Quantity:  quantity,
+		Price:     price,
+		Status:    "pending",
+		CreatedAt: time.Now(),
+	}
+	
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	
+	result, err := sp.ProcessSettlement(ctx, request)
+	if err != nil {
+		return err
+	}
+	
+	if !result.Success {
+		return fmt.Errorf("settlement failed: %s", result.Error)
+	}
+	
+	return nil
+}
