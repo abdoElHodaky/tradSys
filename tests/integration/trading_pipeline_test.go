@@ -2,15 +2,13 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
 	"github.com/abdoElHodaky/tradSys/internal/trading/execution"
-	"github.com/abdoElHodaky/tradSys/internal/trading/order_matching"
 	"github.com/abdoElHodaky/tradSys/internal/trading/positions"
 	"github.com/abdoElHodaky/tradSys/internal/trading/price_levels"
 	"github.com/abdoElHodaky/tradSys/internal/trading/settlement"
@@ -92,8 +90,13 @@ func TestTradingPipelineIntegration(t *testing.T) {
 		}
 		
 		result, err := riskEngine.CheckOrderRisk(ctx, buyOrderRisk)
-		require.NoError(t, err)
-		assert.True(t, result.Passed, "Buy order should pass risk check")
+		if err != nil {
+			t.Errorf("Risk check failed: %v", err)
+			return
+		}
+		if !result.Passed {
+			t.Error("Buy order should pass risk check")
+		}
 		
 		sellOrderRisk := &risk.OrderRiskCheck{
 			UserID:       sellOrder.UserID,
@@ -107,8 +110,13 @@ func TestTradingPipelineIntegration(t *testing.T) {
 		}
 		
 		result, err = riskEngine.CheckOrderRisk(ctx, sellOrderRisk)
-		require.NoError(t, err)
-		assert.True(t, result.Passed, "Sell order should pass risk check")
+		if err != nil {
+			t.Errorf("Risk check failed: %v", err)
+			return
+		}
+		if !result.Passed {
+			t.Error("Sell order should pass risk check")
+		}
 	})
 	
 	// Test 2: Trade execution
@@ -116,19 +124,35 @@ func TestTradingPipelineIntegration(t *testing.T) {
 		ctx := context.Background()
 		
 		result, err := executionEngine.ExecuteTrade(ctx, buyOrder, sellOrder, 50050.0)
-		require.NoError(t, err)
-		assert.True(t, result.Success, "Trade execution should succeed")
-		assert.NotNil(t, result.Trade, "Trade should be created")
-		assert.Equal(t, 1.0, result.Trade.Quantity, "Trade quantity should match")
-		assert.Equal(t, 50050.0, result.Trade.Price, "Trade price should match")
-		assert.Less(t, result.LatencyNs, int64(100*time.Microsecond), "Execution latency should be < 100μs")
+		if err != nil {
+			t.Errorf("Trade execution failed: %v", err)
+			return
+		}
+		if !result.Success {
+			t.Error("Trade execution should succeed")
+		}
+		if result.Trade == nil {
+			t.Error("Trade should be created")
+		}
+		if result.Trade.Quantity != 1.0 {
+			t.Errorf("Expected trade quantity 1.0, got %f", result.Trade.Quantity)
+		}
+		if result.Trade.Price != 50050.0 {
+			t.Errorf("Expected trade price 50050.0, got %f", result.Trade.Price)
+		}
+		if result.LatencyNs >= int64(100*time.Microsecond) {
+			t.Errorf("Execution latency %d ns should be < 100μs", result.LatencyNs)
+		}
 	})
 	
 	// Test 3: Settlement
 	t.Run("Settlement", func(t *testing.T) {
 		// Get the executed trade
 		trades := executionEngine.GetTradesBySymbol(symbol)
-		require.Len(t, trades, 1, "Should have one executed trade")
+		if len(trades) != 1 {
+			t.Errorf("Expected 1 executed trade, got %d", len(trades))
+			return
+		}
 		
 		trade := trades[0]
 		
@@ -136,17 +160,30 @@ func TestTradingPipelineIntegration(t *testing.T) {
 			trade.ID, trade.Symbol, userID1, userID2,
 			trade.Quantity, trade.Price, trade.Fees, trade.Commission,
 		)
-		require.NoError(t, err)
-		assert.NotNil(t, settlement, "Settlement should be created")
-		assert.Equal(t, trade.ID, settlement.TradeID, "Settlement should reference correct trade")
+		if err != nil {
+			t.Errorf("Settlement submission failed: %v", err)
+			return
+		}
+		if settlement == nil {
+			t.Error("Settlement should be created")
+			return
+		}
+		if settlement.TradeID != trade.ID {
+			t.Errorf("Expected settlement trade ID %s, got %s", trade.ID, settlement.TradeID)
+		}
 		
 		// Wait for settlement processing
 		time.Sleep(200 * time.Millisecond)
 		
 		// Check settlement status
 		processedSettlement, exists := settlementProcessor.GetSettlement(settlement.ID)
-		require.True(t, exists, "Settlement should exist")
-		assert.Equal(t, settlement.SettlementStatusSettled, processedSettlement.Status, "Settlement should be completed")
+		if !exists {
+			t.Error("Settlement should exist")
+			return
+		}
+		if processedSettlement.Status != settlement.SettlementStatusSettled {
+			t.Errorf("Expected settlement status %s, got %s", settlement.SettlementStatusSettled, processedSettlement.Status)
+		}
 	})
 	
 	// Test 4: Position updates
@@ -171,42 +208,72 @@ func TestTradingPipelineIntegration(t *testing.T) {
 		}
 		
 		err := positionManager.UpdatePosition(buyerUpdate)
-		require.NoError(t, err)
+		if err != nil {
+			t.Errorf("Buyer position update failed: %v", err)
+			return
+		}
 		
 		err = positionManager.UpdatePosition(sellerUpdate)
-		require.NoError(t, err)
+		if err != nil {
+			t.Errorf("Seller position update failed: %v", err)
+			return
+		}
 		
 		// Check buyer position
 		buyerPosition, exists := positionManager.GetPosition(userID1, symbol)
-		require.True(t, exists, "Buyer position should exist")
-		assert.Equal(t, 1.0, buyerPosition.Quantity, "Buyer should have long position")
-		assert.Equal(t, 50050.0, buyerPosition.AvgPrice, "Buyer average price should be correct")
+		if !exists {
+			t.Error("Buyer position should exist")
+			return
+		}
+		if buyerPosition.Quantity != 1.0 {
+			t.Errorf("Expected buyer quantity 1.0, got %f", buyerPosition.Quantity)
+		}
+		if buyerPosition.AvgPrice != 50050.0 {
+			t.Errorf("Expected buyer avg price 50050.0, got %f", buyerPosition.AvgPrice)
+		}
 		
 		// Check seller position
 		sellerPosition, exists := positionManager.GetPosition(userID2, symbol)
-		require.True(t, exists, "Seller position should exist")
-		assert.Equal(t, -1.0, sellerPosition.Quantity, "Seller should have short position")
-		assert.Equal(t, 50050.0, sellerPosition.AvgPrice, "Seller average price should be correct")
+		if !exists {
+			t.Error("Seller position should exist")
+			return
+		}
+		if sellerPosition.Quantity != -1.0 {
+			t.Errorf("Expected seller quantity -1.0, got %f", sellerPosition.Quantity)
+		}
+		if sellerPosition.AvgPrice != 50050.0 {
+			t.Errorf("Expected seller avg price 50050.0, got %f", sellerPosition.AvgPrice)
+		}
 	})
 	
 	// Test 5: Performance metrics
 	t.Run("PerformanceMetrics", func(t *testing.T) {
 		// Check execution engine metrics
 		execMetrics := executionEngine.GetPerformanceMetrics()
-		assert.Greater(t, execMetrics["total_executions"].(int64), int64(0), "Should have executed trades")
-		assert.Equal(t, 1.0, execMetrics["success_rate"].(float64), "Success rate should be 100%")
+		if execMetrics["total_executions"].(int64) <= 0 {
+			t.Error("Should have executed trades")
+		}
+		if execMetrics["success_rate"].(float64) != 1.0 {
+			t.Errorf("Expected success rate 1.0, got %f", execMetrics["success_rate"].(float64))
+		}
 		
 		// Check settlement processor metrics
 		settlementMetrics := settlementProcessor.GetPerformanceMetrics()
-		assert.Greater(t, settlementMetrics["total_settlements"].(int64), int64(0), "Should have processed settlements")
+		if settlementMetrics["total_settlements"].(int64) <= 0 {
+			t.Error("Should have processed settlements")
+		}
 		
 		// Check position manager metrics
 		positionMetrics := positionManager.GetPerformanceMetrics()
-		assert.Greater(t, positionMetrics["total_positions"].(int64), int64(0), "Should have positions")
+		if positionMetrics["total_positions"].(int64) <= 0 {
+			t.Error("Should have positions")
+		}
 		
 		// Check risk engine metrics
 		riskMetrics := riskEngine.GetPerformanceMetrics()
-		assert.Greater(t, riskMetrics["total_checks"].(int64), int64(0), "Should have performed risk checks")
+		if riskMetrics["total_checks"].(int64) <= 0 {
+			t.Error("Should have performed risk checks")
+		}
 	})
 	
 	// Cleanup
@@ -311,4 +378,3 @@ func BenchmarkTradingPipeline(b *testing.B) {
 		}
 	})
 }
-
