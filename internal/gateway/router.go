@@ -1,6 +1,8 @@
 package gateway
 
 import (
+	"net/http"
+
 	"github.com/abdoElHodaky/tradSys/internal/auth"
 	"github.com/abdoElHodaky/tradSys/internal/config"
 	"github.com/gin-gonic/gin"
@@ -53,8 +55,13 @@ func (r *Router) registerHealthRoutes() {
 func (r *Router) registerAuthRoutes(authMiddleware *auth.Middleware) {
 	auth := r.engine.Group("/auth")
 	{
-		auth.POST("/login", authMiddleware.LoginHandler)
-		auth.POST("/refresh", authMiddleware.RefreshHandler)
+		// TODO: Implement login and refresh handlers
+		auth.POST("/login", func(c *gin.Context) {
+			c.JSON(http.StatusNotImplemented, gin.H{"error": "Login handler not implemented"})
+		})
+		auth.POST("/refresh", func(c *gin.Context) {
+			c.JSON(http.StatusNotImplemented, gin.H{"error": "Refresh handler not implemented"})
+		})
 	}
 }
 
@@ -62,7 +69,7 @@ func (r *Router) registerAuthRoutes(authMiddleware *auth.Middleware) {
 func (r *Router) registerAPIRoutes(authMiddleware *auth.Middleware) {
 	// Create API group with authentication middleware
 	api := r.engine.Group("/api")
-	api.Use(authMiddleware.AuthRequired())
+	api.Use(authMiddleware.JWTAuth())
 	
 	// Market data routes
 	marketData := api.Group("/market-data")
@@ -122,7 +129,7 @@ func (r *Router) registerAPIRoutes(authMiddleware *auth.Middleware) {
 		
 		// Admin-only routes
 		admin := users.Group("/")
-		admin.Use(authMiddleware.AdminRequired())
+		admin.Use(authMiddleware.RoleAuth("admin"))
 		{
 			admin.GET("/", forwardToService("users", "/"))
 			admin.POST("/", forwardToService("users", "/"))
@@ -146,4 +153,3 @@ func forwardToService(serviceName, path string) gin.HandlerFunc {
 		})
 	}
 }
-

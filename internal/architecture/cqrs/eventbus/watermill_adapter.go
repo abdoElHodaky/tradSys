@@ -51,12 +51,12 @@ func DefaultWatermillEventBusConfig() WatermillEventBusConfig {
 // NewWatermillEventBus creates a new WatermillEventBus
 func NewWatermillEventBus(eventStore store.EventStore, logger *zap.Logger, config WatermillEventBusConfig) (*WatermillEventBus, error) {
 	// Create a watermill logger
-	watermillLogger := watermill.NewStdLoggerWithOut(logger.Sugar().Out(), false, false)
+	watermillLogger := watermill.NewStdLogger(false, false)
 	
 	// Create a gochannel publisher/subscriber
 	pubSub := gochannel.NewGoChannel(
 		gochannel.Config{
-			OutputChannelBuffer: config.BufferSize,
+			OutputChannelBuffer: int64(config.BufferSize),
 			Persistent:          config.Persistent,
 		},
 		watermillLogger,
@@ -96,10 +96,17 @@ func (b *WatermillEventBus) Start() error {
 	defer b.mu.RUnlock()
 	
 	// Subscribe to all events
-	_, err := b.subscriber.Subscribe(context.Background(), b.topicPrefix+"*", b.handleMessage)
+	messages, err := b.subscriber.Subscribe(context.Background(), b.topicPrefix+"*")
 	if err != nil {
 		return err
 	}
+	
+	// Handle messages in a goroutine
+	go func() {
+		for msg := range messages {
+			b.handleMessage(msg)
+		}
+	}()
 	
 	return nil
 }
@@ -199,12 +206,13 @@ func (b *WatermillEventBus) SubscribeToAggregate(aggregateType string, handler e
 }
 
 // handleMessage handles a message from the subscriber
-func (b *WatermillEventBus) handleMessage(msg *message.Message) ([]*message.Message, error) {
+func (b *WatermillEventBus) handleMessage(msg *message.Message) {
 	// Convert the message to an event
 	event, err := b.messageToEvent(msg)
 	if err != nil {
 		b.logger.Error("Failed to convert message to event", zap.Error(err))
-		return nil, err
+		msg.Nack()
+		return
 	}
 	
 	// Handle the event
@@ -252,7 +260,7 @@ func (b *WatermillEventBus) handleMessage(msg *message.Message) ([]*message.Mess
 	}
 	
 	// Acknowledge the message
-	return nil, nil
+	msg.Ack()
 }
 
 // eventToMessage converts an event to a message
@@ -286,4 +294,3 @@ func (b *WatermillEventBus) messageToEvent(msg *message.Message) (*eventsourcing
 	
 	return &event, nil
 }
-

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
+	"github.com/abdoElHodaky/tradSys/internal/trading/types"
 )
 
 // OrderPool manages a pool of Order objects to reduce GC pressure
@@ -235,4 +236,45 @@ func GetOrderResponseFromPool() *OrderResponse {
 // PutOrderResponseToPool returns an OrderResponse to the global pool
 func PutOrderResponseToPool(resp *OrderResponse) {
 	globalOrderResponsePool.Put(resp)
+}
+
+// TypesOrderPool provides object pooling for types.Order structs to reduce allocations
+type TypesOrderPool struct {
+	pool sync.Pool
+}
+
+// NewTypesOrderPool creates a new TypesOrderPool
+func NewTypesOrderPool() *TypesOrderPool {
+	return &TypesOrderPool{
+		pool: sync.Pool{
+			New: func() interface{} {
+				return &types.Order{}
+			},
+		},
+	}
+}
+
+// Get retrieves a types.Order from the pool
+func (p *TypesOrderPool) Get() *types.Order {
+	return p.pool.Get().(*types.Order)
+}
+
+// Put returns a types.Order to the pool after resetting it
+func (p *TypesOrderPool) Put(order *types.Order) {
+	// Reset the order to avoid memory leaks
+	order.Reset()
+	p.pool.Put(order)
+}
+
+// Global types order pool instance
+var globalTypesOrderPool = NewTypesOrderPool()
+
+// GetTypesOrderFromPool retrieves a types.Order from the global pool
+func GetTypesOrderFromPool() *types.Order {
+	return globalTypesOrderPool.Get()
+}
+
+// PutTypesOrderToPool returns a types.Order to the global pool
+func PutTypesOrderToPool(order *types.Order) {
+	globalTypesOrderPool.Put(order)
 }

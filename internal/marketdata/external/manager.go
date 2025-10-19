@@ -35,8 +35,20 @@ func (m *Manager) GetMarketData(symbol, interval string) (float64, float64, int6
 	return 100.0, 1000.0, time.Now().Unix() * 1000, nil
 }
 
-// Module provides the external market data module for fx
-var Module = fx.Options(
+// GetDefaultProvider returns the default market data provider
+func (m *Manager) GetDefaultProvider() (Provider, error) {
+	// For now, return a Binance provider as the default
+	// In a real implementation, this could be configurable
+	provider := NewBinanceProvider(
+		"", // API key would be loaded from config
+		"", // API secret would be loaded from config
+		m.logger,
+	)
+	
+	return provider, nil
+}
+
+// ManagerModule provides the external market data manager for fx
+var ManagerModule = fx.Options(
 	fx.Provide(NewManager),
 )
-

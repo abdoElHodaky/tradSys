@@ -9,11 +9,26 @@ import (
 	"go.uber.org/zap"
 )
 
+// Service represents a service in the registry
+type Service struct {
+	Name     string            `json:"name"`
+	Version  string            `json:"version"`
+	Metadata map[string]string `json:"metadata"`
+	Nodes    []*Node           `json:"nodes"`
+}
+
+// Node represents a service node
+type Node struct {
+	Id       string            `json:"id"`
+	Address  string            `json:"address"`
+	Metadata map[string]string `json:"metadata"`
+}
+
 // ServiceDiscovery provides service discovery functionality
 type ServiceDiscovery struct {
 	registry registry.Registry
 	logger   *zap.Logger
-	cache    map[string][]*registry.Service
+	cache    map[string][]*Service
 	cacheTTL time.Duration
 	cacheMu  sync.RWMutex
 }
@@ -23,7 +38,7 @@ func NewServiceDiscovery(registry registry.Registry, logger *zap.Logger) *Servic
 	return &ServiceDiscovery{
 		registry: registry,
 		logger:   logger,
-		cache:    make(map[string][]*registry.Service),
+		cache:    make(map[string][]*Service),
 		cacheTTL: 30 * time.Second,
 	}
 }
@@ -47,7 +62,7 @@ func (d *ServiceDiscovery) DeregisterService(ctx context.Context, service *regis
 }
 
 // GetService gets a service from the registry
-func (d *ServiceDiscovery) GetService(ctx context.Context, name string) ([]*registry.Service, error) {
+func (d *ServiceDiscovery) GetService(ctx context.Context, name string) ([]*Service, error) {
 	// Check the cache
 	d.cacheMu.RLock()
 	services, ok := d.cache[name]
@@ -58,9 +73,28 @@ func (d *ServiceDiscovery) GetService(ctx context.Context, name string) ([]*regi
 	}
 
 	// Get the service from the registry
-	services, err := d.registry.GetService(name)
+	regServices, err := d.registry.GetService(name)
 	if err != nil {
 		return nil, err
+	}
+	
+	// Convert registry services to our Service type
+	services = make([]*Service, len(regServices))
+	for i, regSvc := range regServices {
+		nodes := make([]*Node, len(regSvc.Nodes))
+		for j, regNode := range regSvc.Nodes {
+			nodes[j] = &Node{
+				Id:       regNode.Id,
+				Address:  regNode.Address,
+				Metadata: regNode.Metadata,
+			}
+		}
+		services[i] = &Service{
+			Name:     regSvc.Name,
+			Version:  regSvc.Version,
+			Metadata: regSvc.Metadata,
+			Nodes:    nodes,
+		}
 	}
 
 	// Update the cache
@@ -80,8 +114,32 @@ func (d *ServiceDiscovery) GetService(ctx context.Context, name string) ([]*regi
 }
 
 // ListServices lists all services in the registry
-func (d *ServiceDiscovery) ListServices(ctx context.Context) ([]*registry.Service, error) {
-	return d.registry.ListServices()
+func (d *ServiceDiscovery) ListServices(ctx context.Context) ([]*Service, error) {
+	regServices, err := d.registry.ListServices()
+	if err != nil {
+		return nil, err
+	}
+	
+	// Convert registry services to our Service type
+	services := make([]*Service, len(regServices))
+	for i, regSvc := range regServices {
+		nodes := make([]*Node, len(regSvc.Nodes))
+		for j, regNode := range regSvc.Nodes {
+			nodes[j] = &Node{
+				Id:       regNode.Id,
+				Address:  regNode.Address,
+				Metadata: regNode.Metadata,
+			}
+		}
+		services[i] = &Service{
+			Name:     regSvc.Name,
+			Version:  regSvc.Version,
+			Metadata: regSvc.Metadata,
+			Nodes:    nodes,
+		}
+	}
+	
+	return services, nil
 }
 
 // Watch watches for changes in the registry
@@ -123,8 +181,18 @@ func (s *ServiceSelector) Select(ctx context.Context, name string) (*registry.No
 		return nil, registry.ErrNotFound
 	}
 
+	// Convert nodes back to registry.Node for strategy
+	regNodes := make([]*registry.Node, len(services[0].Nodes))
+	for i, node := range services[0].Nodes {
+		regNodes[i] = &registry.Node{
+			Id:       node.Id,
+			Address:  node.Address,
+			Metadata: node.Metadata,
+		}
+	}
+	
 	// Select a node using the strategy
-	return s.strategy.Select(services[0].Nodes)
+	return s.strategy.Select(regNodes)
 }
 
 // RoundRobinStrategy provides round-robin selection strategy
@@ -175,4 +243,3 @@ func (s *RandomStrategy) Select(nodes []*registry.Node) (*registry.Node, error) 
 	// Get a random node
 	return nodes[time.Now().UnixNano()%int64(len(nodes))], nil
 }
-

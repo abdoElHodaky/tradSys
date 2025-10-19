@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -113,9 +114,9 @@ func (m *SecurityMiddleware) RateLimiter() gin.HandlerFunc {
 		}
 
 		// Set the rate limit headers
-		c.Header("X-RateLimit-Limit", limiterCtx.Limit.String())
-		c.Header("X-RateLimit-Remaining", limiterCtx.Remaining.String())
-		c.Header("X-RateLimit-Reset", limiterCtx.Reset.String())
+		c.Header("X-RateLimit-Limit", strconv.FormatInt(limiterCtx.Limit, 10))
+		c.Header("X-RateLimit-Remaining", strconv.FormatInt(limiterCtx.Remaining, 10))
+		c.Header("X-RateLimit-Reset", strconv.FormatInt(limiterCtx.Reset, 10))
 
 		// Check if the request is over the limit
 		if limiterCtx.Reached {
@@ -159,4 +160,3 @@ func (m *SecurityMiddleware) SecurityHeaders() gin.HandlerFunc {
 		c.Next()
 	}
 }
-

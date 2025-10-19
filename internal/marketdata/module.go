@@ -1,6 +1,8 @@
 package marketdata
 
 import (
+	"context"
+	
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"github.com/abdoElHodaky/tradSys/internal/marketdata/external"
 	"go.uber.org/fx"
@@ -23,11 +25,11 @@ func NewFxService(
 	service := NewService(marketDataRepository, externalManager, logger)
 	
 	lifecycle.Append(fx.Hook{
-		OnStart: func(ctx fx.Context) error {
+		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting market data service")
 			return nil
 		},
-		OnStop: func(ctx fx.Context) error {
+		OnStop: func(ctx context.Context) error {
 			logger.Info("Stopping market data service")
 			service.Stop()
 			return nil
@@ -36,4 +38,3 @@ func NewFxService(
 	
 	return service
 }
-
