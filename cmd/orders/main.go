@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/abdoElHodaky/tradSys/internal/common"
-	"github.com/abdoElHodaky/tradSys/internal/config"
+	"github.com/abdoElHodaky/tradSys/internal/unified-config"
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"github.com/abdoElHodaky/tradSys/internal/micro"
 	"github.com/abdoElHodaky/tradSys/internal/orders"

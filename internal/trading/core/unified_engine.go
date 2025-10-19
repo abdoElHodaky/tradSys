@@ -7,9 +7,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/trading/order_matching"
-	"github.com/abdoElHodaky/tradSys/internal/trading/risk_management"
-	"github.com/abdoElHodaky/tradSys/internal/trading/settlement"
+	"github.com/abdoElHodaky/tradSys/internal/core/matching"
+	"github.com/abdoElHodaky/tradSys/internal/core/risk"
+	"github.com/abdoElHodaky/tradSys/internal/core/settlement"
 	"github.com/abdoElHodaky/tradSys/internal/trading/types"
 	"go.uber.org/zap"
 )

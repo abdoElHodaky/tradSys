@@ -2,7 +2,7 @@ package order_management
 
 import (
 	"context"
-	"github.com/abdoElHodaky/tradSys/internal/trading/order_matching"
+	"github.com/abdoElHodaky/tradSys/internal/core/matching"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )

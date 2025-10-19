@@ -1,7 +1,7 @@
 package micro
 
 import (
-	"github.com/abdoElHodaky/tradSys/internal/config"
+	"github.com/abdoElHodaky/tradSys/internal/unified-config"
 	gomicro "go-micro.dev/v4"
 	"go-micro.dev/v4/client"
 	"go-micro.dev/v4/server"

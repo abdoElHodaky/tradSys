@@ -3,7 +3,7 @@ package micro
 import (
 	"context"
 
-	"github.com/abdoElHodaky/tradSys/internal/config"
+	"github.com/abdoElHodaky/tradSys/internal/unified-config"
 	"go-micro.dev/v4/registry"
 	"go.uber.org/fx"
 	"go.uber.org/zap"

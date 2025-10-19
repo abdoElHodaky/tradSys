@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/config"
+	"github.com/abdoElHodaky/tradSys/internal/unified-config"
 	gomicro "go-micro.dev/v4"
 	"go-micro.dev/v4/registry"
 	"go.uber.org/fx"

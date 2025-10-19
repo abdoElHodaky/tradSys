@@ -3,7 +3,7 @@ package events
 import (
 	"context"
 
-	"github.com/abdoElHodaky/tradSys/internal/config"
+	"github.com/abdoElHodaky/tradSys/internal/unified-config"
 	"go-micro.dev/v4/broker"
 	"go.uber.org/fx"
 	"go.uber.org/zap"

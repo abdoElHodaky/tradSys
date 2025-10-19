@@ -11,7 +11,7 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/trading/execution"
 	"github.com/abdoElHodaky/tradSys/internal/trading/positions"
 	"github.com/abdoElHodaky/tradSys/internal/trading/price_levels"
-	"github.com/abdoElHodaky/tradSys/internal/trading/settlement"
+	"github.com/abdoElHodaky/tradSys/internal/core/settlement"
 	"github.com/abdoElHodaky/tradSys/internal/risk"
 )
 

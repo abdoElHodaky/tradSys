@@ -4,7 +4,7 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/api/handlers"
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"github.com/abdoElHodaky/tradSys/internal/orders"
-	"github.com/abdoElHodaky/tradSys/internal/strategy"
+	"github.com/abdoElHodaky/tradSys/internal/strategies"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )

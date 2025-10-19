@@ -16,7 +16,7 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/hft/config"
 	"github.com/abdoElHodaky/tradSys/internal/hft/memory"
 	"github.com/abdoElHodaky/tradSys/internal/hft/metrics"
-	"github.com/abdoElHodaky/tradSys/internal/hft/monitoring"
+	"github.com/abdoElHodaky/tradSys/internal/monitoring"
 	"github.com/abdoElHodaky/tradSys/internal/api/handlers"
 	"github.com/abdoElHodaky/tradSys/internal/ws/manager"
 )

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/trading/order_matching"
+	"github.com/abdoElHodaky/tradSys/internal/core/matching"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )

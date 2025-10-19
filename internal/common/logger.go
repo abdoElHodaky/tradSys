@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -120,17 +121,17 @@ func formatValue(v interface{}) string {
 	case string:
 		return val
 	case int, int32, int64:
-		return log.Sprint(val)
+		return fmt.Sprint(val)
 	case float32, float64:
-		return log.Sprint(val)
+		return fmt.Sprint(val)
 	case bool:
-		return log.Sprint(val)
+		return fmt.Sprint(val)
 	case time.Time:
 		return val.Format(time.RFC3339)
 	case time.Duration:
 		return val.String()
 	default:
-		return log.Sprint(val)
+		return fmt.Sprint(val)
 	}
 }
 
