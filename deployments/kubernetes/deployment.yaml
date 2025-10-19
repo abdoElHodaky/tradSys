@@ -35,8 +35,8 @@ spec:
         runAsGroup: 1001
         fsGroup: 1001
       containers:
-      - name: hft-server
-        image: hft-trading-system:v2.0.0
+      - name: tradsys
+        image: tradsys:v2.0.0
         imagePullPolicy: IfNotPresent
         ports:
         - name: http

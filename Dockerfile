@@ -21,7 +21,7 @@ RUN CGO_ENABLED=1 GOOS=linux go build \
     -ldflags="-w -s -extldflags '-static'" \
     -a -installsuffix cgo \
     -o tradsys \
-    ./cmd/server
+    ./cmd/tradsys
 
 # Production stage
 FROM alpine:3.18

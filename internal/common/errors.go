@@ -87,3 +87,52 @@ func WrapRepositoryError(repository, operation string, err error) error {
 	}
 	return NewRepositoryError(repository, operation, err)
 }
+
+// TradSysError represents a unified error type for the trading system
+type TradSysError struct {
+	Code    string
+	Message string
+	Cause   error
+	Context map[string]interface{}
+}
+
+func (e *TradSysError) Error() string {
+	if e.Cause != nil {
+		return fmt.Sprintf("[%s] %s: %v", e.Code, e.Message, e.Cause)
+	}
+	return fmt.Sprintf("[%s] %s", e.Code, e.Message)
+}
+
+// WithContext adds context information to the error
+func (e *TradSysError) WithContext(key string, value interface{}) *TradSysError {
+	if e.Context == nil {
+		e.Context = make(map[string]interface{})
+	}
+	e.Context[key] = value
+	return e
+}
+
+// Unified error constructors for trading system
+func NewOrderError(msg string, cause error) *TradSysError {
+	return &TradSysError{Code: "ORDER_ERROR", Message: msg, Cause: cause}
+}
+
+func NewRiskError(msg string, cause error) *TradSysError {
+	return &TradSysError{Code: "RISK_ERROR", Message: msg, Cause: cause}
+}
+
+func NewConnectivityError(msg string, cause error) *TradSysError {
+	return &TradSysError{Code: "CONNECTIVITY_ERROR", Message: msg, Cause: cause}
+}
+
+func NewComplianceError(msg string, cause error) *TradSysError {
+	return &TradSysError{Code: "COMPLIANCE_ERROR", Message: msg, Cause: cause}
+}
+
+func NewSystemError(msg string, cause error) *TradSysError {
+	return &TradSysError{Code: "SYSTEM_ERROR", Message: msg, Cause: cause}
+}
+
+func NewBusinessError(msg string, cause error) *TradSysError {
+	return &TradSysError{Code: "BUSINESS_ERROR", Message: msg, Cause: cause}
+}

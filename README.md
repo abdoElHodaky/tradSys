@@ -284,7 +284,7 @@ go mod download
 go test ./...
 
 # Build the system
-go build -o tradsys ./cmd/server
+go build -o tradsys ./cmd/tradsys
 
 # Run the trading engine
 ./tradsys
