@@ -58,7 +58,7 @@ func (h *Handler) GetMarketData(ctx context.Context, req *marketdata.MarketDataR
 }
 
 // StreamMarketData implements the MarketDataService.StreamMarketData method
-func (h *Handler) StreamMarketData(ctx context.Context, req *marketdata.MarketDataRequest, stream marketdata.MarketDataService_StreamMarketDataStream) error {
+func (h *Handler) StreamMarketData(req *marketdata.MarketDataRequest, stream marketdata.MarketDataService_StreamMarketDataServer) error {
 	h.logger.Info("StreamMarketData called", 
 		zap.String("symbol", req.Symbol),
 		zap.String("interval", req.Interval))
