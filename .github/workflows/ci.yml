@@ -94,7 +94,7 @@ jobs:
       # that are not present in the unified config structure
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: binaries
           path: bin/
