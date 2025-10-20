@@ -95,6 +95,7 @@ func printVersion() {
 func runServer() {
 	log.Printf("Starting %s v%s", AppName, AppVersion)
 
+
 	// Initialize logger
 	logger, err := zap.NewProduction()
 	if err != nil {
@@ -103,7 +104,12 @@ func runServer() {
 	defer logger.Sync()
 
 	// Load configuration
-	cfg, err := config.NewConfig(logger)
+	
+  //cfg, err := config.NewConfig(logger)
+
+	// Load unified configuration
+	cfg, err := unifiedconfig.Load("config/tradsys.yaml")
+
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}

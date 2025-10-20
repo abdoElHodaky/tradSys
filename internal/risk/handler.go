@@ -53,14 +53,17 @@ func (h *Handler) GetAccountRisk(ctx context.Context, req *risk.AccountRiskReque
 		zap.String("account_id", req.AccountId))
 
 	// Implementation would go here
-	// For now, just return placeholder account risk
+	// For now, just return placeholder risk data
 	rsp.AccountId = req.AccountId
 	rsp.TotalValue = 100000.0
 	rsp.AvailableMargin = 50000.0
 	rsp.UsedMargin = 25000.0
 	rsp.MarginLevel = 200.0
+	rsp.MarginCallLevel = 120.0
+	rsp.LiquidationLevel = 100.0
 	rsp.DailyPnl = 1500.0
 	rsp.TotalPnl = 5000.0
+	rsp.RiskLevel = risk.RiskLevel_MEDIUM
 	rsp.Positions = []*risk.Position{
 		{
 			Symbol:        "BTC-USD",
@@ -74,9 +77,9 @@ func (h *Handler) GetAccountRisk(ctx context.Context, req *risk.AccountRiskReque
 			Symbol:        "ETH-USD",
 			Size:          10.0,
 			EntryPrice:    3200.0,
-			CurrentPrice:  3280.0,
-			UnrealizedPnl: 800.0,
-			RealizedPnl:   500.0,
+			CurrentPrice:  3500.0,
+			UnrealizedPnl: 3000.0,
+			RealizedPnl:   2000.0,
 		},
 	}
 
@@ -90,17 +93,18 @@ func (h *Handler) GetPositionRisk(ctx context.Context, req *risk.PositionRiskReq
 		zap.String("account_id", req.AccountId))
 
 	// Implementation would go here
-	// For now, just return placeholder position risk
+	// For now, just return placeholder position risk data
 	rsp.AccountId = req.AccountId
 	rsp.Symbol = req.Symbol
 	rsp.Size = 1.5
 	rsp.EntryPrice = 48000.0
 	rsp.CurrentPrice = 50000.0
-	rsp.LiquidationPrice = 45000.0
+	rsp.LiquidationPrice = 40000.0
 	rsp.UnrealizedPnl = 3000.0
 	rsp.RealizedPnl = 1000.0
 	rsp.InitialMargin = 9600.0
 	rsp.MaintenanceMargin = 4800.0
+	rsp.RiskLevel = risk.RiskLevel_MEDIUM
 
 	return nil
 }
@@ -112,7 +116,7 @@ func (h *Handler) GetOrderRisk(ctx context.Context, req *risk.OrderRiskRequest, 
 		zap.String("account_id", req.AccountId))
 
 	// Implementation would go here
-	// For now, just return placeholder order risk
+	// For now, just return placeholder order risk data
 	rsp.AccountId = req.AccountId
 	rsp.Symbol = req.Symbol
 	rsp.Side = req.Side
@@ -122,7 +126,9 @@ func (h *Handler) GetOrderRisk(ctx context.Context, req *risk.OrderRiskRequest, 
 	rsp.RequiredMargin = req.Quantity * req.Price * 0.2 // 20% margin requirement
 	rsp.AvailableMarginAfter = 50000.0 - rsp.RequiredMargin
 	rsp.MarginLevelAfter = 150.0
+	rsp.RiskLevel = risk.RiskLevel_LOW
 	rsp.IsAllowed = true
+	rsp.RejectionReason = ""
 
 	return nil
 }
@@ -133,9 +139,9 @@ func (h *Handler) UpdateRiskLimits(ctx context.Context, req *risk.UpdateRiskLimi
 		zap.String("account_id", req.AccountId))
 
 	// Implementation would go here
-	// For now, just return the account ID and placeholder risk limits
+	// For now, just return the updated risk limits
 	rsp.AccountId = req.AccountId
-	// rsp.RiskLimits would be set here with the updated limits
+	rsp.RiskLimits = req.RiskLimits
 
 	return nil
 }
