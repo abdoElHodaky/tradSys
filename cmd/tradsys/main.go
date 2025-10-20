@@ -95,7 +95,7 @@ func runServer() {
 	log.Printf("Starting %s v%s", AppName, AppVersion)
 
 	// Load unified configuration
-	cfg, err := unifiedconfig.Load()
+	cfg, err := unifiedconfig.Load("config/tradsys.yaml")
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}

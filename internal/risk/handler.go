@@ -77,15 +77,9 @@ func (h *Handler) GetAccountRisk(ctx context.Context, req *risk.AccountRiskReque
 			Symbol:        "ETH-USD",
 			Size:          10.0,
 			EntryPrice:    3200.0,
-<<<<<<< HEAD
-			CurrentPrice:  3280.0,
-			UnrealizedPnl: 800.0,
-			RealizedPnl:   500.0,
-=======
 			CurrentPrice:  3500.0,
 			UnrealizedPnl: 3000.0,
 			RealizedPnl:   2000.0,
->>>>>>> codegen-bot/fix-build-errors-1760873074
 		},
 	}
 
@@ -99,29 +93,18 @@ func (h *Handler) GetPositionRisk(ctx context.Context, req *risk.PositionRiskReq
 		zap.String("account_id", req.AccountId))
 
 	// Implementation would go here
-<<<<<<< HEAD
-	// For now, just return placeholder position risk
-=======
 	// For now, just return placeholder position risk data
->>>>>>> codegen-bot/fix-build-errors-1760873074
 	rsp.AccountId = req.AccountId
 	rsp.Symbol = req.Symbol
 	rsp.Size = 1.5
 	rsp.EntryPrice = 48000.0
 	rsp.CurrentPrice = 50000.0
-<<<<<<< HEAD
-	rsp.LiquidationPrice = 45000.0
-=======
 	rsp.LiquidationPrice = 40000.0
->>>>>>> codegen-bot/fix-build-errors-1760873074
 	rsp.UnrealizedPnl = 3000.0
 	rsp.RealizedPnl = 1000.0
 	rsp.InitialMargin = 9600.0
 	rsp.MaintenanceMargin = 4800.0
-<<<<<<< HEAD
-=======
 	rsp.RiskLevel = risk.RiskLevel_MEDIUM
->>>>>>> codegen-bot/fix-build-errors-1760873074
 
 	return nil
 }
@@ -133,11 +116,7 @@ func (h *Handler) GetOrderRisk(ctx context.Context, req *risk.OrderRiskRequest, 
 		zap.String("account_id", req.AccountId))
 
 	// Implementation would go here
-<<<<<<< HEAD
-	// For now, just return placeholder order risk
-=======
 	// For now, just return placeholder order risk data
->>>>>>> codegen-bot/fix-build-errors-1760873074
 	rsp.AccountId = req.AccountId
 	rsp.Symbol = req.Symbol
 	rsp.Side = req.Side
@@ -147,13 +126,9 @@ func (h *Handler) GetOrderRisk(ctx context.Context, req *risk.OrderRiskRequest, 
 	rsp.RequiredMargin = req.Quantity * req.Price * 0.2 // 20% margin requirement
 	rsp.AvailableMarginAfter = 50000.0 - rsp.RequiredMargin
 	rsp.MarginLevelAfter = 150.0
-<<<<<<< HEAD
-	rsp.IsAllowed = true
-=======
 	rsp.RiskLevel = risk.RiskLevel_LOW
 	rsp.IsAllowed = true
 	rsp.RejectionReason = ""
->>>>>>> codegen-bot/fix-build-errors-1760873074
 
 	return nil
 }
@@ -164,15 +139,9 @@ func (h *Handler) UpdateRiskLimits(ctx context.Context, req *risk.UpdateRiskLimi
 		zap.String("account_id", req.AccountId))
 
 	// Implementation would go here
-<<<<<<< HEAD
-	// For now, just return the account ID and placeholder risk limits
-	rsp.AccountId = req.AccountId
-	// rsp.RiskLimits would be set here with the updated limits
-=======
 	// For now, just return the updated risk limits
 	rsp.AccountId = req.AccountId
 	rsp.RiskLimits = req.RiskLimits
->>>>>>> codegen-bot/fix-build-errors-1760873074
 
 	return nil
 }

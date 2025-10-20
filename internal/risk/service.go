@@ -66,11 +66,8 @@ func (s *Service) ValidateOrder(ctx context.Context, symbol string, side risk.Or
 	if quantity > maxAllowedQuantity {
 		response.IsValid = false
 		response.RejectionReason = "Order quantity exceeds maximum allowed"
-<<<<<<< HEAD
-=======
 		response.RiskMetrics.IsAllowed = false
 		response.RiskMetrics.RejectionReason = "Order quantity exceeds maximum allowed"
->>>>>>> codegen-bot/fix-build-errors-1760873074
 	}
 
 	// Check if the order exceeds notional value limits
@@ -78,11 +75,8 @@ func (s *Service) ValidateOrder(ctx context.Context, symbol string, side risk.Or
 	if notionalValue > maxAllowedNotional {
 		response.IsValid = false
 		response.RejectionReason = "Order notional value exceeds maximum allowed"
-<<<<<<< HEAD
-=======
 		response.RiskMetrics.IsAllowed = false
 		response.RiskMetrics.RejectionReason = "Order notional value exceeds maximum allowed"
->>>>>>> codegen-bot/fix-build-errors-1760873074
 	}
 
 	return response, nil
@@ -98,14 +92,6 @@ func (s *Service) GetPositions(ctx context.Context, accountID, symbol string) ([
 	// For now, just return placeholder positions
 	positions := []*risk.Position{
 		{
-<<<<<<< HEAD
-			Symbol:        "BTC-USD",
-			Size:          1.5,
-			EntryPrice:    48000.0,
-			CurrentPrice:  50000.0,
-			UnrealizedPnl: 3000.0,
-			RealizedPnl:   1000.0,
-=======
 			Symbol:          "BTC-USD",
 			Size:            1.5,
 			EntryPrice:      48000.0,
@@ -113,7 +99,6 @@ func (s *Service) GetPositions(ctx context.Context, accountID, symbol string) ([
 			LiquidationPrice: 40000.0,
 			UnrealizedPnl:   3000.0,
 			RealizedPnl:     1000.0,
->>>>>>> codegen-bot/fix-build-errors-1760873074
 		},
 	}
 
@@ -144,17 +129,10 @@ func (s *Service) GetRiskLimits(ctx context.Context, symbol, accountID string) (
 		MaxOrderSize:      5.0,
 		MaxLeverage:       5.0,
 		MaxDailyLoss:      1000.0,
-<<<<<<< HEAD
-		MaxTotalLoss:      10000.0,
-		MinMarginLevel:    100.0,
-		MarginCallLevel:   120.0,
-		LiquidationLevel:  110.0,
-=======
 		MaxTotalLoss:      5000.0,
 		MinMarginLevel:    120.0,
 		MarginCallLevel:   120.0,
 		LiquidationLevel:  100.0,
->>>>>>> codegen-bot/fix-build-errors-1760873074
 	}
 
 	return limits, nil
