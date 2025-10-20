@@ -12,9 +12,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 
 	"github.com/abdoElHodaky/tradSys/internal/api/handlers"
-	unifiedconfig "github.com/abdoElHodaky/tradSys/internal/unified-config"
+	"github.com/abdoElHodaky/tradSys/internal/config"
 	// "github.com/abdoElHodaky/tradSys/internal/core/matching"
 	// "github.com/abdoElHodaky/tradSys/internal/core/risk"
 	// "github.com/abdoElHodaky/tradSys/internal/core/settlement"
@@ -94,8 +95,21 @@ func printVersion() {
 func runServer() {
 	log.Printf("Starting %s v%s", AppName, AppVersion)
 
+
+	// Initialize logger
+	logger, err := zap.NewProduction()
+	if err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
+	}
+	defer logger.Sync()
+
+	// Load configuration
+	
+  //cfg, err := config.NewConfig(logger)
+
 	// Load unified configuration
 	cfg, err := unifiedconfig.Load("config/tradsys.yaml")
+
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
@@ -211,7 +225,7 @@ func runWebSocketService() {
 }
 
 // initializeTradingSystem initializes all trading system components
-func initializeTradingSystem(cfg *unifiedconfig.Config) (*TradingSystem, error) {
+func initializeTradingSystem(cfg *config.Config) (*TradingSystem, error) {
 	// Initialize matching engine
 	// matchingEngine := matching.NewEngine(nil)
 
