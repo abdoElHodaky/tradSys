@@ -47,66 +47,95 @@ func (h *Handler) ValidateOrder(ctx context.Context, req *risk.ValidateOrderRequ
 	return nil
 }
 
-// GetPositions implements the RiskService.GetPositions method
-func (h *Handler) GetPositions(ctx context.Context, req *risk.GetPositionsRequest, rsp *risk.GetPositionsResponse) error {
-	h.logger.Info("GetPositions called",
-		zap.String("account_id", req.AccountId),
-		zap.String("symbol", req.Symbol))
+// GetAccountRisk implements the RiskService.GetAccountRisk method
+func (h *Handler) GetAccountRisk(ctx context.Context, req *risk.AccountRiskRequest, rsp *risk.AccountRiskResponse) error {
+	h.logger.Info("GetAccountRisk called",
+		zap.String("account_id", req.AccountId))
 
 	// Implementation would go here
-	// For now, just return placeholder positions
+	// For now, just return placeholder account risk
+	rsp.AccountId = req.AccountId
+	rsp.TotalValue = 100000.0
+	rsp.AvailableMargin = 50000.0
+	rsp.UsedMargin = 25000.0
+	rsp.MarginLevel = 200.0
+	rsp.DailyPnl = 1500.0
+	rsp.TotalPnl = 5000.0
 	rsp.Positions = []*risk.Position{
 		{
 			Symbol:        "BTC-USD",
-			Quantity:      1.5,
-			AveragePrice:  48000.0,
+			Size:          1.5,
+			EntryPrice:    48000.0,
+			CurrentPrice:  50000.0,
 			UnrealizedPnl: 3000.0,
 			RealizedPnl:   1000.0,
-			UpdatedAt:     1625097600000,
 		},
 		{
 			Symbol:        "ETH-USD",
-			Quantity:      10.0,
-			AveragePrice:  3200.0,
+			Size:          10.0,
+			EntryPrice:    3200.0,
+			CurrentPrice:  3280.0,
 			UnrealizedPnl: 800.0,
 			RealizedPnl:   500.0,
-			UpdatedAt:     1625097660000,
 		},
 	}
 
 	return nil
 }
 
-// GetRiskLimits implements the RiskService.GetRiskLimits method
-func (h *Handler) GetRiskLimits(ctx context.Context, req *risk.GetRiskLimitsRequest, rsp *risk.GetRiskLimitsResponse) error {
-	h.logger.Info("GetRiskLimits called",
+// GetPositionRisk implements the RiskService.GetPositionRisk method
+func (h *Handler) GetPositionRisk(ctx context.Context, req *risk.PositionRiskRequest, rsp *risk.PositionRiskResponse) error {
+	h.logger.Info("GetPositionRisk called",
 		zap.String("symbol", req.Symbol),
 		zap.String("account_id", req.AccountId))
 
 	// Implementation would go here
-	// For now, just return placeholder risk limits
-	rsp.Limits = &risk.RiskLimits{
-		Symbol:            req.Symbol,
-		MaxPositionSize:   10.0,
-		MaxNotionalValue:  500000.0,
-		MaxLeverage:       5.0,
-		MaxDailyVolume:    100.0,
-		MaxDailyTrades:    100,
-		MaxDrawdownPercent: 10.0,
-	}
+	// For now, just return placeholder position risk
+	rsp.AccountId = req.AccountId
+	rsp.Symbol = req.Symbol
+	rsp.Size = 1.5
+	rsp.EntryPrice = 48000.0
+	rsp.CurrentPrice = 50000.0
+	rsp.LiquidationPrice = 45000.0
+	rsp.UnrealizedPnl = 3000.0
+	rsp.RealizedPnl = 1000.0
+	rsp.InitialMargin = 9600.0
+	rsp.MaintenanceMargin = 4800.0
+
+	return nil
+}
+
+// GetOrderRisk implements the RiskService.GetOrderRisk method
+func (h *Handler) GetOrderRisk(ctx context.Context, req *risk.OrderRiskRequest, rsp *risk.OrderRiskResponse) error {
+	h.logger.Info("GetOrderRisk called",
+		zap.String("symbol", req.Symbol),
+		zap.String("account_id", req.AccountId))
+
+	// Implementation would go here
+	// For now, just return placeholder order risk
+	rsp.AccountId = req.AccountId
+	rsp.Symbol = req.Symbol
+	rsp.Side = req.Side
+	rsp.Type = req.Type
+	rsp.Quantity = req.Quantity
+	rsp.Price = req.Price
+	rsp.RequiredMargin = req.Quantity * req.Price * 0.2 // 20% margin requirement
+	rsp.AvailableMarginAfter = 50000.0 - rsp.RequiredMargin
+	rsp.MarginLevelAfter = 150.0
+	rsp.IsAllowed = true
 
 	return nil
 }
 
 // UpdateRiskLimits implements the RiskService.UpdateRiskLimits method
-func (h *Handler) UpdateRiskLimits(ctx context.Context, req *risk.UpdateRiskLimitsRequest, rsp *risk.GetRiskLimitsResponse) error {
+func (h *Handler) UpdateRiskLimits(ctx context.Context, req *risk.UpdateRiskLimitsRequest, rsp *risk.UpdateRiskLimitsResponse) error {
 	h.logger.Info("UpdateRiskLimits called",
-		zap.String("symbol", req.Symbol),
 		zap.String("account_id", req.AccountId))
 
 	// Implementation would go here
-	// For now, just return the updated risk limits
-	rsp.Limits = req.Limits
+	// For now, just return the account ID and placeholder risk limits
+	rsp.AccountId = req.AccountId
+	// rsp.RiskLimits would be set here with the updated limits
 
 	return nil
 }
