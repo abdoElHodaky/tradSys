@@ -1,0 +1,220 @@
+# TradSys Unified Configuration
+# High-Frequency Trading System Configuration
+
+# Server Configuration
+server:
+  port: 8080
+  host: "0.0.0.0"
+  read_timeout: 30s
+  write_timeout: 30s
+  idle_timeout: 120s
+  max_connections: 10000
+
+# Database Configuration
+database:
+  type: "sqlite"
+  connection_string: "tradSys.db"
+  max_open_connections: 25
+  max_idle_connections: 5
+  connection_max_lifetime: 1h
+  
+  # SQLite Performance Settings
+  sqlite:
+    journal_mode: "WAL"
+    synchronous: "NORMAL"
+    cache_size: 10000
+    temp_store: "memory"
+    mmap_size: 268435456  # 256MB
+
+# Trading Engine Configuration
+trading:
+  # Order Matching
+  matching:
+    engine_type: "fifo"
+    max_orders_per_symbol: 100000
+    price_precision: 8
+    quantity_precision: 8
+    
+  # Risk Management
+  risk:
+    max_position_size: 10.0
+    max_order_size: 5.0
+    max_leverage: 5.0
+    max_daily_loss: 1000.0
+    max_total_loss: 10000.0
+    min_margin_level: 100.0
+    margin_call_level: 120.0
+    liquidation_level: 110.0
+    
+  # Settlement
+  settlement:
+    batch_size: 1000
+    batch_timeout: 5s
+    retry_attempts: 3
+    retry_delay: 1s
+
+# Market Data Configuration
+market_data:
+  sources:
+    - name: "binance"
+      enabled: true
+      websocket_url: "wss://stream.binance.com:9443/ws"
+      rest_url: "https://api.binance.com"
+    - name: "coinbase"
+      enabled: false
+      websocket_url: "wss://ws-feed.pro.coinbase.com"
+      rest_url: "https://api.pro.coinbase.com"
+      
+  symbols:
+    - "BTCUSD"
+    - "ETHUSD"
+    - "ADAUSD"
+    
+  buffer_size: 10000
+  update_interval: 100ms
+
+# WebSocket Configuration
+websocket:
+  port: 8081
+  path: "/ws"
+  buffer_size: 4096
+  read_buffer_size: 4096
+  write_buffer_size: 4096
+  compression_level: 1
+  binary_protocol: true
+  max_connections: 10000
+  ping_interval: 30s
+  pong_timeout: 10s
+
+# API Configuration
+api:
+  rate_limit:
+    requests_per_second: 1000
+    burst_size: 2000
+  
+  cors:
+    allowed_origins: ["*"]
+    allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allowed_headers: ["*"]
+    
+  auth:
+    jwt_secret: "${JWT_SECRET}"
+    token_expiry: 24h
+
+# Monitoring & Metrics
+monitoring:
+  metrics:
+    enabled: true
+    port: 9090
+    path: "/metrics"
+    
+  health_checks:
+    enabled: true
+    interval: 30s
+    
+  logging:
+    level: "info"
+    format: "json"
+    output: "stdout"
+    
+  tracing:
+    enabled: false
+    jaeger_endpoint: "http://localhost:14268/api/traces"
+
+# Performance Optimization
+performance:
+  # Memory Management
+  gc_percent: 200
+  memory_limit: 2147483648  # 2GB
+  
+  # Object Pooling
+  pools:
+    order_pool_size: 1000
+    message_pool_size: 5000
+    response_pool_size: 2000
+    
+  # Latency Targets (microseconds)
+  targets:
+    order_latency: 100
+    ws_latency: 50
+    db_latency: 1000
+
+# Strategy Configuration
+strategies:
+  enabled: true
+  max_concurrent: 10
+  
+  # Available Strategies
+  available:
+    - name: "market_making"
+      enabled: true
+      config:
+        spread: 0.001
+        max_position: 1.0
+        
+    - name: "mean_reversion"
+      enabled: false
+      config:
+        lookback_period: 20
+        threshold: 2.0
+        
+    - name: "momentum"
+      enabled: false
+      config:
+        momentum_period: 10
+        signal_threshold: 0.02
+
+# Exchange Connectivity
+exchanges:
+  binance:
+    enabled: true
+    api_key: "${BINANCE_API_KEY}"
+    api_secret: "${BINANCE_API_SECRET}"
+    sandbox: true
+    rate_limits:
+      orders_per_second: 10
+      requests_per_minute: 1200
+      
+  coinbase:
+    enabled: false
+    api_key: "${COINBASE_API_KEY}"
+    api_secret: "${COINBASE_API_SECRET}"
+    passphrase: "${COINBASE_PASSPHRASE}"
+    sandbox: true
+
+# Compliance & Reporting
+compliance:
+  enabled: true
+  
+  reporting:
+    trade_reports: true
+    position_reports: true
+    risk_reports: true
+    output_directory: "./reports"
+    
+  limits:
+    max_daily_volume: 1000000.0
+    max_position_concentration: 0.1
+    
+# Environment-specific overrides
+environments:
+  development:
+    server:
+      port: 8080
+    database:
+      connection_string: "tradSys_dev.db"
+    monitoring:
+      logging:
+        level: "debug"
+        
+  production:
+    server:
+      port: 80
+    database:
+      connection_string: "tradSys_prod.db"
+    monitoring:
+      logging:
+        level: "warn"
+    performance:
+      gc_percent: 100
+      memory_limit: 8589934592  # 8GB

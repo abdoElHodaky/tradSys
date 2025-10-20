@@ -1,536 +1,492 @@
 # TradSys - High-Frequency Trading System
 
-## Overview
+[![Go Version](https://img.shields.io/badge/Go-1.21+-blue.svg)](https://golang.org)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](https://github.com/abdoElHodaky/tradSys/actions)
 
-TradSys is a high-performance, low-latency trading system designed for institutional trading with microsecond-level execution capabilities. The system provides comprehensive order matching, risk management, settlement processing, exchange connectivity, compliance reporting, and algorithmic trading strategies.
+A high-performance, low-latency trading system designed for algorithmic and high-frequency trading operations. Built with Go for maximum performance and reliability.
 
-## Architecture Overview
-
-### Unified Trading Engine Architecture (95% Complete)
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                         Unified Trading Engine                                  │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐           │
-│  │ Advanced    │  │ Real-time   │  │ Settlement  │  │ Exchange    │           │
-│  │ Order       │◄►│ Risk        │◄►│ Processor   │◄►│ Connectivity│           │
-│  │ Matching    │  │ Engine      │  │             │  │             │           │
-│  │             │  │             │  │             │  │             │           │
-│  │ ✅ Price    │  │ ✅ Pre-trade│  │ ✅ T+0      │  │ ✅ Multi-   │           │
-│  │    Priority │  │    Checks   │  │    Process  │  │    Exchange │           │
-│  │ ✅ Iceberg  │  │ ✅ Position │  │ ✅ Real-time│  │ ✅ Market   │           │
-│  │    Orders   │  │    Limits   │  │    Confirm  │  │    Data     │           │
-│  │ ✅ Hidden   │  │ ✅ VaR      │  │ ✅ Error    │  │ ✅ Order    │           │
-│  │    Orders   │  │    Calc     │  │    Recovery │  │    Routing  │           │
-│  │ ✅ Market   │  │ ✅ Circuit  │  │ ✅ Batch    │  │ ✅ Auto     │           │
-│  │    Impact   │  │    Breaker  │  │    Process  │  │    Reconnect│           │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘           │
-│         │                │                │                │                   │
-│         └────────────────┼────────────────┼────────────────┘                   │
-│                          │                │                                    │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                            │
-│  │ Compliance  │  │ Strategy    │  │ Event Bus & │                            │
-│  │ & Reporting │  │ Engine      │  │ Metrics     │                            │
-│  │             │  │             │  │             │                            │
-│  │ ✅ Rule     │  │ ✅ Mean     │  │ ✅ Real-time│                            │
-│  │    Engine   │  │    Reversion│  │    Events   │                            │
-│  │ ✅ Audit    │  │ ✅ Momentum │  │ ✅ Latency  │                            │
-│  │    Trail    │  │    Strategy │  │    Tracking │                            │
-│  │ ✅ Reports  │  │ ✅ Signal   │  │ ✅ Error    │                            │
-│  │    Generator│  │    Generator│  │    Handling │                            │
-│  │ ✅ Alerts   │  │ ✅ Risk     │  │ ✅ Metrics  │                            │
-│  │    Manager  │  │    Controls │  │    Collection│                           │
-│  └─────────────┘  └─────────────┘  └─────────────┘                            │
-│                                                                                 │
-└─────────────────────────────────────────────────────────────────────────────────┘
-```
-
-### System Components
-
-#### 1. Advanced Order Matching Engine ✅
-- **Price-Time Priority Matching**: FIFO matching with price priority
-- **Advanced Order Types**: Support for iceberg, hidden, and stop orders
-- **Market Impact Calculation**: Real-time impact assessment using multiple models
-- **Performance Optimization**: Object pooling and lock-free data structures
-- **Latency Target**: <100μs order processing
-
-#### 2. Real-Time Risk Management Engine ✅
-- **Pre-Trade Risk Checks**: Position limits, order size validation, daily loss limits
-- **Post-Trade Monitoring**: Real-time position tracking and P&L calculation
-- **VaR Calculation**: Value at Risk using historical simulation and Monte Carlo
-- **Circuit Breaker**: Automatic trading halt on extreme market conditions
-- **Latency Target**: <10μs risk check processing
-
-#### 3. Settlement Processor ✅
-- **T+0 Settlement**: Real-time trade settlement capabilities
-- **Error Recovery**: Automatic retry logic with exponential backoff
-- **Batch Processing**: Efficient bulk settlement processing
-- **Performance Metrics**: Comprehensive settlement tracking and reporting
-
-#### 4. Exchange Connectivity ✅
-- **Multi-Exchange Support**: Unified interface for multiple exchanges
-- **Market Data Feeds**: Real-time market data aggregation and distribution
-- **Order Routing**: Intelligent order routing based on liquidity and latency
-- **Auto-Reconnection**: Automatic reconnection with exponential backoff
-- **Connection Monitoring**: Real-time connection health monitoring
-
-#### 5. Compliance & Regulatory Reporting ✅
-- **Rule Engine**: Configurable compliance rules with real-time checking
-- **Audit Trail**: Comprehensive audit logging with retention management
-- **Report Generation**: Automated regulatory report generation
-- **Alert Management**: Real-time compliance violation alerts
-- **Multi-Regulation Support**: Support for various regulatory frameworks
-
-#### 6. Algorithmic Trading Strategies ✅
-- **Strategy Framework**: Pluggable strategy architecture
-- **Mean Reversion**: Statistical arbitrage based on price deviations
-- **Momentum Trading**: Trend-following strategies with momentum indicators
-- **Signal Generation**: Real-time signal generation and execution
-- **Risk Controls**: Strategy-level risk limits and monitoring
-
-#### 7. Event-Driven Architecture ✅
-- **Event Bus**: Centralized event handling for inter-component communication
-- **Real-Time Metrics**: Performance monitoring with microsecond precision
-- **Event Types**: Order lifecycle, risk events, settlements, system errors
-
-## Performance Characteristics
-
-### Latency Targets
-- **End-to-End Order Processing**: <100μs (target)
-- **Order Matching**: <50μs
-- **Risk Checks**: <10μs
-- **Settlement Processing**: <1ms
-- **Exchange Connectivity**: <5ms
-- **Compliance Checks**: <1μs
-
-### Throughput Capabilities
-- **Orders per Second**: 100,000+ (sustained)
-- **Trades per Second**: 50,000+ (peak)
-- **Market Data Messages**: 1,000,000+ (peak)
-- **Concurrent Symbols**: 10,000+
-- **Memory Usage**: <4GB (typical)
-
-## Key Features
-
-### Order Management
-- ✅ Market, Limit, Stop, and Stop-Limit orders
-- ✅ Iceberg orders with configurable display quantities
-- ✅ Hidden orders for stealth trading
-- ✅ Time-in-Force options (GTC, IOC, FOK)
-- ✅ Order expiration and automatic cancellation
-- ✅ Price improvement for limit orders
-
-### Risk Management
-- ✅ Real-time position tracking
-- ✅ Pre-trade and post-trade risk checks
-- ✅ Position and order size limits
-- ✅ Daily loss limits and P&L monitoring
-- ✅ VaR calculation with multiple models
-- ✅ Circuit breaker functionality
-- ✅ Stress testing capabilities
-
-### Settlement & Clearing
-- ✅ T+0 real-time settlement
-- ✅ Multi-currency support
-- ✅ Fee and commission calculation
-- ✅ Settlement confirmation and reporting
-- ✅ Error handling and retry mechanisms
-- ✅ Regulatory compliance tracking
-
-### Exchange Connectivity
-- ✅ Multi-exchange connectivity
-- ✅ Real-time market data feeds
-- ✅ Intelligent order routing
-- ✅ Connection health monitoring
-- ✅ Automatic reconnection
-- ✅ Latency optimization
-
-### Compliance & Reporting
-- ✅ Configurable compliance rules
-- ✅ Real-time violation detection
-- ✅ Comprehensive audit trail
-- ✅ Automated report generation
-- ✅ Alert management system
-- ✅ Multi-regulation support
-
-### Algorithmic Trading
-- ✅ Pluggable strategy framework
-- ✅ Mean reversion strategies
-- ✅ Momentum trading strategies
-- ✅ Real-time signal generation
-- ✅ Strategy performance monitoring
-- ✅ Risk controls and limits
-
-### Performance & Monitoring
-- ✅ Real-time performance metrics
-- ✅ Latency histograms and percentiles
-- ✅ Throughput monitoring
-- ✅ Error rate tracking
-- ✅ System health monitoring
-- ✅ Alerting and notifications
-
-## Technical Implementation
-
-### Core Technologies
-- **Language**: Go (Golang) for high performance and concurrency
-- **Concurrency**: Goroutines and channels for parallel processing
-- **Memory Management**: Object pooling for garbage collection optimization
-- **Data Structures**: Lock-free algorithms where possible
-- **Logging**: Structured logging with zap for performance
-- **Metrics**: Prometheus-compatible metrics collection
-
-### Data Flow Architecture
-```
-Market Data → Strategy Engine → Signal Generation → Order Creation
-     ↓              ↓               ↓                    ↓
-Exchange Conn → Risk Check → Order Matching → Trade Execution → Settlement
-     ↓              ↓             ↓              ↓              ↓
-Compliance → Audit Trail → Event Bus → Metrics → Monitoring → Alerts
-```
-
-### Event Processing Pipeline
-```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   Market    │───►│  Strategy   │───►│    Risk     │───►│   Order     │
-│    Data     │    │   Engine    │    │   Check     │    │  Matching   │
-└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
-       │                  │                  │                  │
-       ▼                  ▼                  ▼                  ▼
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│ Compliance  │    │ Settlement  │    │   Event     │    │  Metrics &  │
-│   Engine    │    │ Processor   │    │    Bus      │    │ Monitoring  │
-└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
-```
-
-## Development Status
-
-### Phase 5A: Advanced Order Matching (✅ Complete)
-- ✅ Enhanced order matching engine with HFT optimizations
-- ✅ Price-time priority matching algorithm
-- ✅ Support for iceberg and hidden orders
-- ✅ Market impact calculation and optimization
-- ✅ Performance tracking with <100μs latency target
-
-### Phase 6A: Real-Time Risk Management (✅ Complete)
-- ✅ Real-time risk engine with <10μs latency
-- ✅ Pre-trade and post-trade risk checks
-- ✅ Position tracking and limit management
-- ✅ VaR calculation and circuit breakers
-- ✅ Comprehensive risk event handling
-
-### Phase 7A: Unified Architecture (✅ Complete)
-- ✅ Unified trading engine integrating all components
-- ✅ Event-driven architecture with event bus
-- ✅ Comprehensive metrics and monitoring
-- ✅ End-to-end order processing pipeline
-- ✅ Performance optimization and latency tracking
-
-### Phase 8A: Exchange Connectivity (✅ Complete)
-- ✅ Unified exchange connector with multi-exchange support
-- ✅ Real-time market data aggregation and distribution
-- ✅ Intelligent order routing with latency optimization
-- ✅ Connection health monitoring and auto-reconnection
-- ✅ Exchange adapter interface for easy integration
-
-### Phase 9A: Compliance & Reporting (✅ Complete)
-- ✅ Unified compliance engine with configurable rules
-- ✅ Real-time compliance checking and violation detection
-- ✅ Comprehensive audit trail with retention management
-- ✅ Automated regulatory report generation
-- ✅ Alert management system with multiple handlers
-
-### Phase 10A: Algorithmic Trading Strategies (✅ Complete)
-- ✅ Unified strategy engine with pluggable architecture
-- ✅ Mean reversion and momentum trading strategies
-- ✅ Real-time signal generation and execution
-- ✅ Strategy performance monitoring and metrics
-- ✅ Risk controls and position management
-
-### Phase 11A: Production Deployment (✅ Complete)
-- ✅ Docker containerization with multi-stage builds
-- ✅ Kubernetes deployment manifests and configurations
-- ✅ Production-ready PostgreSQL with optimized settings
-- ✅ Comprehensive monitoring stack (Prometheus + Grafana)
-- ✅ Automated deployment scripts with health checks
-- ✅ Security hardening and RBAC configurations
-- ✅ Infrastructure as Code with Kubernetes manifests
-
-### Next Phase (Future Enhancement)
-- 🔄 **Phase 12A**: Advanced Analytics & Reporting
-- 🔄 **Phase 13A**: Machine Learning Integration
-- ⏳ **Phase 14A**: Multi-Cloud Deployment & Scaling
-- ⏳ **Phase 15A**: Advanced Security & Compliance
-
-## Installation & Setup
+## 🚀 **Quick Start**
 
 ### Prerequisites
 - Go 1.21 or higher
-- Docker & Docker Compose
-- Kubernetes cluster (for production)
-- kubectl CLI tool
+- SQLite3 (for local development)
 - Git
 
-### Development Setup
+### Installation
+
 ```bash
 # Clone the repository
 git clone https://github.com/abdoElHodaky/tradSys.git
 cd tradSys
 
+# Build the system
+go build -o tradsys cmd/tradsys/main.go
+
+# Run the unified trading server
+./tradsys server
+```
+
+### Basic Usage
+
+```bash
+# Start the full trading system
+./tradsys server
+
+# Run specific services
+./tradsys gateway      # API Gateway
+./tradsys orders       # Order Management
+./tradsys risk         # Risk Management
+./tradsys marketdata   # Market Data Service
+./tradsys ws           # WebSocket Service
+
+# Show version
+./tradsys version
+
+# Show help
+./tradsys help
+```
+
+## 📋 **Features**
+
+### Core Trading Engine
+- **Ultra-low latency order matching** (sub-100μs target)
+- **Real-time risk management** with configurable limits
+- **Multi-exchange connectivity** (Binance, Coinbase, etc.)
+- **Advanced order types** (Market, Limit, Stop, IOC, FOK)
+- **Position management** with automatic settlement
+
+### High-Frequency Trading Optimizations
+- **Memory pooling** for zero-allocation operations
+- **Lock-free data structures** for concurrent access
+- **Binary protocol** for WebSocket communications
+- **Batch processing** for database operations
+- **CPU affinity** and NUMA awareness
+
+### Risk Management
+- **Real-time position monitoring**
+- **Configurable risk limits** (position size, leverage, daily loss)
+- **Margin requirements** with automatic liquidation
+- **Compliance reporting** and audit trails
+
+### Market Data
+- **Real-time price feeds** from multiple exchanges
+- **Order book reconstruction** with microsecond precision
+- **Historical data storage** and backtesting support
+- **Custom indicators** and technical analysis
+
+### API & Connectivity
+- **RESTful API** with comprehensive endpoints
+- **WebSocket streaming** for real-time updates
+- **gRPC services** for internal communication
+- **Rate limiting** and authentication
+
+## 🏗️ **Architecture**
+
+### System Overview
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Web Client    │    │   Trading App   │    │  External APIs  │
+└─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
+          │                      │                      │
+          ▼                      ▼                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        API Gateway                              │
+│                     (Rate Limiting, Auth)                      │
+└─────────────────────────┬───────────────────────────────────────┘
+                          │
+          ┌───────────────┼───────────────┐
+          ▼               ▼               ▼
+┌─────────────────┐ ┌─────────────┐ ┌─────────────────┐
+│ Order Management│ │ Market Data │ │ Risk Management │
+│    Service      │ │   Service   │ │    Service      │
+└─────────┬───────┘ └──────┬──────┘ └─────────┬───────┘
+          │                │                  │
+          └────────────────┼──────────────────┘
+                           ▼
+          ┌─────────────────────────────────────┐
+          │         Core Trading Engine         │
+          │    (Matching, Settlement, etc.)     │
+          └─────────────────┬───────────────────┘
+                            │
+          ┌─────────────────┼─────────────────┐
+          ▼                 ▼                 ▼
+┌─────────────────┐ ┌─────────────┐ ┌─────────────────┐
+│    Database     │ │  Exchanges  │ │   Monitoring    │
+│   (SQLite)      │ │ (Binance,   │ │  (Metrics,      │
+│                 │ │  Coinbase)  │ │   Logging)      │
+└─────────────────┘ └─────────────┘ └─────────────────┘
+```
+
+### Directory Structure
+
+```
+tradSys/
+├── cmd/
+│   └── tradsys/           # Main application entry point
+├── internal/
+│   ├── api/               # REST API handlers and routes
+│   ├── trading/           # Core trading engine
+│   │   ├── strategies/    # Trading strategies
+│   │   ├── core/          # Order matching, settlement
+│   │   ├── risk_management/ # Risk controls
+│   │   └── order_management/ # Order lifecycle
+│   ├── connectivity/      # Exchange connectors
+│   ├── compliance/        # Regulatory compliance
+│   ├── monitoring/        # Metrics and health checks
+│   └── config/           # Configuration management
+├── config/
+│   └── tradsys.yaml      # Unified configuration file
+├── docs/                 # Documentation
+├── scripts/              # Build and deployment scripts
+└── tests/                # Test suites
+```
+
+## ⚙️ **Configuration**
+
+The system uses a unified YAML configuration file located at `config/tradsys.yaml`. Key sections include:
+
+### Server Configuration
+```yaml
+server:
+  port: 8080
+  host: "0.0.0.0"
+  read_timeout: 30s
+  write_timeout: 30s
+  max_connections: 10000
+```
+
+### Trading Engine
+```yaml
+trading:
+  matching:
+    engine_type: "fifo"
+    max_orders_per_symbol: 100000
+    price_precision: 8
+  risk:
+    max_position_size: 10.0
+    max_leverage: 5.0
+    max_daily_loss: 1000.0
+```
+
+### Performance Tuning
+```yaml
+performance:
+  gc_percent: 200
+  memory_limit: 2147483648  # 2GB
+  pools:
+    order_pool_size: 1000
+    message_pool_size: 5000
+  targets:
+    order_latency: 100      # microseconds
+    ws_latency: 50          # microseconds
+```
+
+### Environment Variables
+```bash
+# Exchange API Keys
+export BINANCE_API_KEY="your_binance_api_key"
+export BINANCE_API_SECRET="your_binance_secret"
+
+# JWT Authentication
+export JWT_SECRET="your_jwt_secret"
+
+# Database (optional, defaults to SQLite)
+export DATABASE_URL="sqlite://tradSys.db"
+```
+
+## 🔧 **Development**
+
+### Building from Source
+
+```bash
 # Install dependencies
 go mod download
 
 # Run tests
 go test ./...
 
-# Build the system
-go build -o tradsys ./cmd/tradsys
+# Build optimized binary
+go build -ldflags="-s -w" -o tradsys cmd/tradsys/main.go
 
-# Run the trading engine
-./tradsys
+# Build with race detection (development)
+go build -race -o tradsys-debug cmd/tradsys/main.go
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+go test ./...
+
+# Run tests with coverage
+go test -cover ./...
+
+# Run benchmarks
+go test -bench=. ./...
+
+# Run specific test package
+go test ./internal/trading/...
+```
+
+### Development Mode
+
+```bash
+# Run with debug logging
+TRADSYS_ENV=development ./tradsys server
+
+# Run with custom config
+./tradsys server --config config/dev.yaml
+
+# Enable profiling
+./tradsys server --profile --profile-port 6060
+```
+
+## 📊 **Performance**
+
+### Latency Targets
+- **Order Processing**: < 100μs (microseconds)
+- **WebSocket Updates**: < 50μs
+- **Database Operations**: < 1ms
+- **Risk Checks**: < 10μs
+
+### Throughput Capacity
+- **Orders per Second**: 100,000+
+- **Market Data Updates**: 1,000,000+ per second
+- **Concurrent WebSocket Connections**: 10,000+
+- **API Requests**: 10,000 per second
+
+### Memory Usage
+- **Base Memory**: ~50MB
+- **Per Connection**: ~4KB
+- **Order Book**: ~1MB per symbol
+- **Total Recommended**: 2-8GB depending on load
+
+## 🔒 **Security**
+
+### Authentication & Authorization
+- **JWT-based authentication** for API access
+- **API key management** for exchange connectivity
+- **Role-based access control** (RBAC)
+- **Rate limiting** to prevent abuse
+
+### Risk Controls
+- **Position limits** per account and symbol
+- **Maximum leverage** controls
+- **Daily loss limits** with automatic shutdown
+- **Margin requirements** with liquidation
+
+### Compliance
+- **Trade reporting** for regulatory requirements
+- **Audit trails** for all system actions
+- **Data encryption** at rest and in transit
+- **Secure key management**
+
+## 🚀 **Deployment**
+
+### Docker Deployment
+
+```bash
+# Build Docker image
+docker build -t tradsys:latest .
+
+# Run container
+docker run -d \
+  --name tradsys \
+  -p 8080:8080 \
+  -p 8081:8081 \
+  -v $(pwd)/config:/app/config \
+  -v $(pwd)/data:/app/data \
+  tradsys:latest
 ```
 
 ### Production Deployment
 
-#### Kubernetes Deployment Architecture
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                           Kubernetes Cluster                                    │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐             │
-│  │   Load Balancer │    │     Ingress     │    │   TLS Termination│             │
-│  │   (External)    │───►│   Controller    │───►│   & Routing      │             │
-│  └─────────────────┘    └─────────────────┘    └─────────────────┘             │
-│                                   │                                             │
-│  ┌─────────────────────────────────┼─────────────────────────────────┐           │
-│  │                    TradSys Namespace                              │           │
-│  │                                 │                                 │           │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌───────────┐ │           │
-│  │  │  TradSys    │  │  TradSys    │  │  TradSys    │  │ Service   │ │           │
-│  │  │   Core      │  │   Core      │  │   Core      │  │ Discovery │ │           │
-│  │  │  Pod #1     │  │  Pod #2     │  │  Pod #3     │  │           │ │           │
-│  │  │             │  │             │  │             │  │           │ │           │
-│  │  │ ✅ Order   │  │ ✅ Risk     │  │ ✅ Strategy │  │ ✅ Config │ │           │
-│  │  │   Matching  │  │   Engine    │  │   Engine    │  │   Maps    │ │           │
-│  │  │ ✅ Exchange│  │ ✅ Compliance│  │ ✅ Settlement│  │ ✅ Secrets│ │           │
-│  │  │   Connector │  │   Engine    │  │   Processor │  │           │ │           │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘  └───────────┘ │           │
-│  │                                 │                                 │           │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                │           │
-│  │  │ PostgreSQL  │  │    Redis    │  │  Monitoring │                │           │
-│  │  │ StatefulSet │  │   Cluster   │  │    Stack    │                │           │
-│  │  │             │  │             │  │             │                │           │
-│  │  │ ✅ ACID     │  │ ✅ Caching │  │ ✅ Prometheus│                │           │
-│  │  │   Compliance│  │ ✅ Session │  │ ✅ Grafana   │                │           │
-│  │  │ ✅ Backup   │  │   Storage   │  │ ✅ Alerting │                │           │
-│  │  │ ✅ HA Setup │  │ ✅ Pub/Sub  │  │ ✅ Dashboards│               │           │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘                │           │
-│  └─────────────────────────────────────────────────────────────────────┘           │
-│                                                                                 │
-│  ┌─────────────────────────────────────────────────────────────────────────────┐ │
-│  │                        Infrastructure Layer                                 │ │
-│  │                                                                             │ │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │ │
-│  │  │   Storage   │  │  Networking │  │   Security  │  │   Scaling   │       │ │
-│  │  │             │  │             │  │             │  │             │       │ │
-│  │  │ ✅ SSD      │  │ ✅ CNI      │  │ ✅ RBAC     │  │ ✅ HPA      │       │ │
-│  │  │   Storage   │  │   Plugin    │  │ ✅ Network  │  │ ✅ VPA      │       │ │
-│  │  │ ✅ Backup   │  │ ✅ Service  │  │   Policies  │  │ ✅ Cluster  │       │ │
-│  │  │   Policies  │  │   Mesh      │  │ ✅ Pod      │  │   Autoscaler│       │ │
-│  │  │ ✅ Volume   │  │ ✅ Load     │  │   Security  │  │             │       │ │
-│  │  │   Snapshots │  │   Balancing │  │   Context   │  │             │       │ │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘       │ │
-│  └─────────────────────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────────────┘
-```
-
-#### Quick Production Deployment
 ```bash
-# Deploy to Kubernetes cluster
-./scripts/deploy.sh deploy
+# Build optimized binary
+CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o tradsys cmd/tradsys/main.go
 
-# Verify deployment
-./scripts/deploy.sh verify
+# Set production environment
+export TRADSYS_ENV=production
 
-# Access services
-kubectl port-forward -n tradsys svc/tradsys-core 8080:80
-kubectl port-forward -n tradsys svc/grafana 3000:3000
-kubectl port-forward -n tradsys svc/prometheus 9090:9090
+# Run with systemd (recommended)
+sudo systemctl start tradsys
+sudo systemctl enable tradsys
 ```
 
-#### Docker Compose (Development)
+### Kubernetes Deployment
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tradsys
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: tradsys
+  template:
+    metadata:
+      labels:
+        app: tradsys
+    spec:
+      containers:
+      - name: tradsys
+        image: tradsys:latest
+        ports:
+        - containerPort: 8080
+        - containerPort: 8081
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+```
+
+## 📈 **Monitoring**
+
+### Health Checks
+- **Health endpoint**: `GET /health`
+- **Readiness endpoint**: `GET /ready`
+- **Metrics endpoint**: `GET /metrics` (Prometheus format)
+
+### Key Metrics
+- **Order latency** (p50, p95, p99)
+- **Throughput** (orders/sec, messages/sec)
+- **Error rates** by service and endpoint
+- **Memory usage** and garbage collection
+- **Database performance**
+
+### Logging
 ```bash
-# Start all services
-docker-compose up -d
+# View logs in JSON format
+./tradsys server 2>&1 | jq '.'
 
-# View logs
-docker-compose logs -f tradsys
+# Filter by log level
+./tradsys server 2>&1 | jq 'select(.level == "error")'
 
-# Stop services
-docker-compose down
+# Monitor specific component
+./tradsys server 2>&1 | jq 'select(.component == "trading.engine")'
 ```
 
-### Configuration
-The system uses configuration files in JSON format:
+## 🧪 **Testing**
 
-```json
-{
-  "order_matching": {
-    "max_orders_per_symbol": 100000,
-    "latency_target": "100µs",
-    "enable_iceberg_orders": true,
-    "enable_hidden_orders": true,
-    "tick_size": 0.01
-  },
-  "risk_management": {
-    "max_latency": "10µs",
-    "enable_pre_trade_checks": true,
-    "enable_var_calculation": true,
-    "max_position_size": 1000000,
-    "max_daily_loss": 100000
-  },
-  "settlement": {
-    "enable_t0_settlement": true,
-    "settlement_delay": "1ms",
-    "max_settlement_batch_size": 1000
-  },
-  "connectivity": {
-    "enabled_exchanges": ["binance", "coinbase", "kraken"],
-    "market_data_enabled": true,
-    "order_routing_enabled": true,
-    "max_latency": "5ms"
-  },
-  "compliance": {
-    "enabled_regulations": ["MiFID2", "INTERNAL"],
-    "reporting_enabled": true,
-    "audit_trail_enabled": true,
-    "alerting_enabled": true
-  },
-  "strategies": {
-    "enabled_strategies": ["mean_reversion", "momentum"],
-    "max_concurrent_orders": 100,
-    "execution_interval": "100ms"
-  }
-}
+### Unit Tests
+```bash
+# Run unit tests
+go test ./internal/...
+
+# Test specific package
+go test ./internal/trading/core/
 ```
 
-## API Documentation
-
-### Order Submission
-```go
-// Submit a new order
-request := &core.OrderRequest{
-    Order: &types.Order{
-        Symbol:   "AAPL",
-        Side:     types.OrderSideBuy,
-        Type:     types.OrderTypeLimit,
-        Quantity: 100,
-        Price:    150.00,
-    },
-    ClientID: "client123",
-}
-
-response, err := engine.ProcessOrder(ctx, request)
+### Integration Tests
+```bash
+# Run integration tests
+go test -tags=integration ./tests/...
 ```
 
-### Market Data Subscription
-```go
-// Subscribe to market data
-handler := &MyMarketDataHandler{}
-err := connector.SubscribeMarketData([]string{"AAPL", "GOOGL"}, handler)
+### Load Testing
+```bash
+# Install hey (HTTP load testing tool)
+go install github.com/rakyll/hey@latest
+
+# Test API endpoints
+hey -n 10000 -c 100 http://localhost:8080/api/v1/orders
+
+# Test WebSocket connections
+./scripts/ws-load-test.sh
 ```
 
-### Strategy Registration
-```go
-// Register a custom strategy
-strategy := &MyCustomStrategy{}
-strategyEngine.RegisterStrategy(strategy)
+### Benchmarking
+```bash
+# Run benchmarks
+go test -bench=BenchmarkOrderMatching ./internal/trading/core/
+go test -bench=BenchmarkRiskCheck ./internal/trading/risk_management/
 ```
 
-### Compliance Checking
-```go
-// Perform compliance check
-result, err := complianceEngine.CheckCompliance(order, userID)
-if !result.Passed {
-    // Handle compliance violations
-}
-```
+## 🤝 **Contributing**
 
-## Performance Benchmarks
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-### Latency Benchmarks (Microseconds)
-| Operation | P50 | P95 | P99 | P99.9 |
-|-----------|-----|-----|-----|-------|
-| Order Processing | 45μs | 85μs | 120μs | 200μs |
-| Risk Check | 5μs | 8μs | 12μs | 20μs |
-| Order Matching | 25μs | 45μs | 65μs | 100μs |
-| Settlement | 500μs | 800μs | 1.2ms | 2ms |
-| Exchange Connectivity | 2ms | 4ms | 6ms | 10ms |
-| Compliance Check | 0.5μs | 1μs | 2μs | 5μs |
-| Strategy Signal | 10μs | 20μs | 35μs | 50μs |
+### Development Workflow
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Add tests for new functionality
+5. Run the test suite (`go test ./...`)
+6. Commit your changes (`git commit -m 'Add amazing feature'`)
+7. Push to the branch (`git push origin feature/amazing-feature`)
+8. Open a Pull Request
 
-### Throughput Benchmarks
-| Metric | Sustained | Peak |
-|--------|-----------|------|
-| Orders/sec | 100,000 | 150,000 |
-| Trades/sec | 50,000 | 75,000 |
-| Risk Checks/sec | 200,000 | 300,000 |
-| Settlements/sec | 25,000 | 40,000 |
-| Market Data Msgs/sec | 500,000 | 1,000,000 |
-| Strategy Signals/sec | 10,000 | 20,000 |
+### Code Style
+- Follow standard Go conventions
+- Use `gofmt` for formatting
+- Run `golint` and `go vet`
+- Add comments for exported functions
+- Write tests for new features
 
-## System Architecture Highlights
-
-### Unified Design Principles
-- **Single Responsibility**: Each component has a clear, focused purpose
-- **Loose Coupling**: Components interact through well-defined interfaces
-- **High Cohesion**: Related functionality is grouped together
-- **Event-Driven**: Asynchronous communication through event bus
-- **Performance First**: Optimized for low-latency, high-throughput operations
-
-### Scalability Features
-- **Horizontal Scaling**: Components can be distributed across multiple nodes
-- **Load Balancing**: Intelligent load distribution across resources
-- **Resource Pooling**: Efficient resource utilization and management
-- **Caching**: Strategic caching for frequently accessed data
-- **Monitoring**: Comprehensive monitoring and alerting
-
-### Reliability Features
-- **Fault Tolerance**: Graceful handling of component failures
-- **Circuit Breakers**: Automatic protection against cascading failures
-- **Retry Logic**: Intelligent retry mechanisms with exponential backoff
-- **Health Checks**: Continuous health monitoring and reporting
-- **Disaster Recovery**: Backup and recovery procedures
-
-## Contributing
-
-We welcome contributions to TradSys! Please see our [Contributing Guide](CONTRIBUTING.md) for details on:
-- Code style and standards
-- Testing requirements
-- Pull request process
-- Performance benchmarking
-
-## License
+## 📄 **License**
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Support
+## 🆘 **Support**
 
-For support and questions:
-- 📧 Email: support@tradsys.com
-- 💬 Discord: [TradSys Community](https://discord.gg/tradsys)
-- 📖 Documentation: [docs.tradsys.com](https://docs.tradsys.com)
-- 🐛 Issues: [GitHub Issues](https://github.com/abdoElHodaky/tradSys/issues)
+### Documentation
+- **API Documentation**: Available at `/docs` when running the server
+- **Configuration Reference**: See `config/tradsys.yaml` for all options
+- **Architecture Guide**: Detailed system design documentation
 
-## Acknowledgments
+### Getting Help
+- **Issues**: Report bugs and request features on [GitHub Issues](https://github.com/abdoElHodaky/tradSys/issues)
+- **Discussions**: Join the community on [GitHub Discussions](https://github.com/abdoElHodaky/tradSys/discussions)
+- **Email**: Contact the maintainers at [support@tradsys.dev](mailto:support@tradsys.dev)
 
-- Built with Go for maximum performance and reliability
-- Inspired by modern HFT systems and best practices
-- Thanks to the open-source community for excellent libraries and tools
+### FAQ
+
+**Q: What exchanges are supported?**
+A: Currently Binance and Coinbase Pro, with more exchanges planned.
+
+**Q: Can I run this in production?**
+A: Yes, but ensure proper testing and risk management configuration.
+
+**Q: What's the minimum hardware requirement?**
+A: 4GB RAM, 2 CPU cores, SSD storage recommended for production.
+
+**Q: How do I add a new trading strategy?**
+A: Implement the Strategy interface in `internal/trading/strategies/` and register it in the configuration.
+
+**Q: Is there a paper trading mode?**
+A: Yes, set `sandbox: true` in the exchange configuration.
 
 ---
 
-**⚡ TradSys - Where Speed Meets Precision in Trading Technology**
+## 🎯 **Roadmap**
 
-*A complete, production-ready high-frequency trading system with unified architecture, advanced order matching, real-time risk management, comprehensive compliance, and algorithmic trading capabilities.*
+### Version 2.1 (Current)
+- ✅ Unified configuration system
+- ✅ Simplified directory structure
+- ✅ Enhanced documentation
+- ✅ Performance optimizations
+
+### Version 2.2 (Planned)
+- [ ] Additional exchange connectors (Kraken, FTX)
+- [ ] Advanced order types (Iceberg, TWAP)
+- [ ] Machine learning integration
+- [ ] Enhanced backtesting framework
+
+### Version 3.0 (Future)
+- [ ] Distributed architecture
+- [ ] Multi-asset support (Forex, Commodities)
+- [ ] Advanced risk analytics
+- [ ] Web-based management interface
+
+---
+
+**Built with ❤️ by the TradSys Team**
+
+*High-frequency trading made accessible, reliable, and profitable.*
