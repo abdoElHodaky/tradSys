@@ -53,7 +53,7 @@ jobs:
         run: ./scripts/generate_proto.sh
 
       - name: Run tests
-        run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./cmd/tradsys/... ./internal/unified-config/...
+        run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./cmd/tradsys/... ./internal/config/...
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
