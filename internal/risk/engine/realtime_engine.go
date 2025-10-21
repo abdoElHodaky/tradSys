@@ -97,6 +97,8 @@ type VaRCalculator struct {
 	timeHorizon      time.Duration
 	historicalReturns map[string][]float64 // symbol -> returns
 	correlationMatrix map[string]map[string]float64
+	currentVaR       float64
+	lastCalculation  time.Time
 	mu               sync.RWMutex
 }
 
@@ -109,6 +111,7 @@ type CircuitBreaker struct {
 	isTripped         bool
 	tripTime          time.Time
 	cooldownPeriod    time.Duration
+	referencePrice    float64
 	mu                sync.RWMutex
 }
 
@@ -550,7 +553,6 @@ func (e *RealTimeRiskEngine) calculateVaR() {
 	
 	// Historical simulation VaR (simplified)
 	// In production, this would use actual historical price data
-	confidenceLevel := 0.95 // 95% confidence level
 	volatility := 0.02      // 2% daily volatility assumption
 	
 	// Calculate VaR using normal distribution approximation
@@ -602,6 +604,74 @@ func (e *RealTimeRiskEngine) checkCircuitBreakerConditions() {
 	}
 }
 
+// IsTripped returns whether the circuit breaker is currently tripped
+func (cb *CircuitBreaker) IsTripped() bool {
+	cb.mu.RLock()
+	defer cb.mu.RUnlock()
+	return cb.isTripped
+}
+
+// GetReferencePrice returns the reference price
+func (cb *CircuitBreaker) GetReferencePrice() float64 {
+	cb.mu.RLock()
+	defer cb.mu.RUnlock()
+	return cb.referencePrice
+}
+
+// SetReferencePrice sets the reference price
+func (cb *CircuitBreaker) SetReferencePrice(price float64) {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+	cb.referencePrice = price
+}
+
+// Trip triggers the circuit breaker
+func (cb *CircuitBreaker) Trip() {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+	cb.isTripped = true
+	cb.tripTime = time.Now()
+}
+
+// Reset resets the circuit breaker
+func (cb *CircuitBreaker) Reset() {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+	cb.isTripped = false
+}
+
+// GetLastTriggered returns the last time the circuit breaker was triggered
+func (cb *CircuitBreaker) GetLastTriggered() time.Time {
+	cb.mu.RLock()
+	defer cb.mu.RUnlock()
+	return cb.tripTime
+}
+
+// GetCooldownPeriod returns the cooldown period
+func (cb *CircuitBreaker) GetCooldownPeriod() time.Duration {
+	cb.mu.RLock()
+	defer cb.mu.RUnlock()
+	return cb.cooldownPeriod
+}
+
+// GetPriceChangeThreshold returns the price change threshold
+func (cb *CircuitBreaker) GetPriceChangeThreshold() float64 {
+	cb.mu.RLock()
+	defer cb.mu.RUnlock()
+	return cb.priceChangeThreshold
+}
+
+// NewCircuitBreaker creates a new circuit breaker
+func NewCircuitBreaker(priceChangeThreshold float64, cooldownPeriod time.Duration) *CircuitBreaker {
+	return &CircuitBreaker{
+		enabled:              true,
+		priceChangeThreshold: priceChangeThreshold,
+		cooldownPeriod:       cooldownPeriod,
+		isTripped:            false,
+		referencePrice:       0,
+	}
+}
+
 // GetMetrics returns current risk metrics
 func (e *RealTimeRiskEngine) GetMetrics() *RiskMetrics {
 	return e.metrics
@@ -624,20 +694,23 @@ type Trade struct {
 
 // getPortfolioPositions returns all current positions
 func (e *RealTimeRiskEngine) getPortfolioPositions() map[string]*Position {
-	e.positions.mu.RLock()
-	defer e.positions.mu.RUnlock()
+	e.positionManager.mu.RLock()
+	defer e.positionManager.mu.RUnlock()
 	
 	positions := make(map[string]*Position)
-	for symbol, position := range e.positions.positions {
+	e.positionManager.positions.Range(func(key, value interface{}) bool {
+		symbol := key.(string)
+		position := value.(*Position)
 		if position.Quantity != 0 {
 			positions[symbol] = &Position{
-				Symbol:    position.Symbol,
-				Quantity:  position.Quantity,
-				AvgPrice:  position.AvgPrice,
-				Timestamp: position.Timestamp,
+				Symbol:         position.Symbol,
+				Quantity:       position.Quantity,
+				AveragePrice:   position.AveragePrice,
+				LastUpdateTime: position.LastUpdateTime,
 			}
 		}
-	}
+		return true
+	})
 	
 	return positions
 }
@@ -649,13 +722,13 @@ func (e *RealTimeRiskEngine) calculatePortfolioValue(positions map[string]*Posit
 	for symbol, position := range positions {
 		// In production, you would get current market price
 		// For now, use the average price as an approximation
-		positionValue := position.Quantity * position.AvgPrice
+		positionValue := position.Quantity * position.AveragePrice
 		totalValue += positionValue
 		
 		e.logger.Debug("Position value calculated",
 			zap.String("symbol", symbol),
 			zap.Float64("quantity", position.Quantity),
-			zap.Float64("avg_price", position.AvgPrice),
+			zap.Float64("avg_price", position.AveragePrice),
 			zap.Float64("position_value", positionValue))
 	}
 	

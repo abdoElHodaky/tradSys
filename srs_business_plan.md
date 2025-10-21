@@ -3,7 +3,7 @@
 <div align="center">
 
 ![TradSys Logo](https://img.shields.io/badge/TradSys-Trading%20System-blue?style=for-the-badge)
-![Version](https://img.shields.io/badge/Version-2.0-green?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-3.0-green?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge)
 
 **High-Performance Algorithmic Trading Platform**
@@ -103,6 +103,43 @@ This **Software Requirements Specification (SRS)** document provides a comprehen
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+#### 🌐 Multi-Asset Support (v3.0)
+
+**NEW in TradSys v3.0**: Comprehensive multi-asset trading capabilities across all major asset classes:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  Multi-Asset Trading Platform               │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  💰 Cryptocurrencies        📈 Equities                    │
+│     • Bitcoin, Ethereum      • NYSE, NASDAQ stocks         │
+│     • Major altcoins         • ETFs and indices            │
+│     • DeFi tokens            • Options and warrants        │
+│                                                             │
+│  💱 Forex                   🥇 Commodities                 │
+│     • Major currency pairs   • Precious metals             │
+│     • Cross-currency rates   • Energy futures              │
+│     • Exotic pairs           • Agricultural products       │
+│                                                             │
+│  📊 Derivatives             🏦 Fixed Income                │
+│     • Futures contracts      • Government bonds            │
+│     • Options strategies     • Corporate bonds             │
+│     • Swaps and CFDs         • Treasury securities         │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Key Multi-Asset Features:**
+- **Universal Symbol Format**: Standardized asset identification across all classes
+- **Cross-Asset Arbitrage**: Detect opportunities across different asset types
+- **Multi-Currency Settlement**: Handle different base currencies seamlessly
+- **Asset-Specific Risk Models**: Tailored risk management per asset class
+- **Unified Portfolio View**: Single dashboard for all asset positions
+- **Cross-Asset Correlation**: Portfolio-level risk analysis
+- **Multi-Exchange Connectivity**: Connect to 50+ exchanges and data providers
+
 
 #### 🚫 Out of Scope
 

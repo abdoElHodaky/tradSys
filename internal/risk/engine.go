@@ -10,25 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// RiskLevel represents the risk level
-type RiskLevel string
 
-const (
-	RiskLevelLow      RiskLevel = "low"
-	RiskLevelMedium   RiskLevel = "medium"
-	RiskLevelHigh     RiskLevel = "high"
-	RiskLevelCritical RiskLevel = "critical"
-)
-
-// RiskCheckResult represents the result of a risk check
-type RiskCheckResult struct {
-	Passed       bool      `json:"passed"`
-	RiskLevel    RiskLevel `json:"risk_level"`
-	Violations   []string  `json:"violations"`
-	Warnings     []string  `json:"warnings"`
-	CheckedAt    time.Time `json:"checked_at"`
-	ProcessingTime time.Duration `json:"processing_time"`
-}
 
 // OrderRiskCheck represents risk parameters for an order
 type OrderRiskCheck struct {
@@ -130,7 +112,6 @@ func (re *RiskEngine) CheckOrderRisk(ctx context.Context, order *OrderRiskCheck)
 		Violations:     make([]string, 0),
 		Warnings:       make([]string, 0),
 		CheckedAt:      time.Now(),
-		ProcessingTime: 0,
 	}
 
 	// Check if context is cancelled
@@ -211,14 +192,14 @@ func (re *RiskEngine) CheckOrderRisk(ctx context.Context, order *OrderRiskCheck)
 		re.violationCount++
 	}
 
-	result.ProcessingTime = time.Since(start)
+	processingTime := time.Since(start)
 
 	re.logger.Debug("Risk check completed",
 		zap.String("user_id", order.UserID),
 		zap.String("symbol", order.Symbol),
 		zap.Bool("passed", result.Passed),
 		zap.String("risk_level", string(result.RiskLevel)),
-		zap.Duration("processing_time", result.ProcessingTime),
+		zap.Duration("processing_time", processingTime),
 	)
 
 	return result, nil
@@ -471,4 +452,3 @@ func (re *RiskEngine) GetRiskSummary(userID string) map[string]interface{} {
 
 	return summary
 }
-
