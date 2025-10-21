@@ -1,40 +1,36 @@
-package marketdata
+package market_data
 
 import (
 	"context"
-	
-	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
-	"github.com/abdoElHodaky/tradSys/internal/marketdata/external"
+	"github.com/abdoElHodaky/tradSys/internal/core/matching"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
-// Module provides the market data module for the fx application
-var Module = fx.Options(
-	fx.Provide(NewService),
-	fx.Options(external.Module),
+// TradingMarketDataModule provides the trading market data module for the fx application
+var TradingMarketDataModule = fx.Options(
+	fx.Provide(NewHandler),
 )
 
-// NewFxService creates a new market data service for the fx application
-func NewFxService(
+// NewFxHandler creates a new market data handler for the fx application
+func NewFxHandler(
 	lifecycle fx.Lifecycle,
 	logger *zap.Logger,
-	marketDataRepository *repositories.MarketDataRepository,
-	externalManager *external.Manager,
-) *Service {
-	service := NewService(marketDataRepository, externalManager, logger)
+	orderEngine *order_matching.Engine,
+) *Handler {
+	handler := NewHandler(orderEngine, logger)
 	
 	lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			logger.Info("Starting market data service")
+			logger.Info("Starting market data handler")
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			logger.Info("Stopping market data service")
-			service.Stop()
+			logger.Info("Stopping market data handler")
+			handler.Stop()
 			return nil
 		},
 	})
 	
-	return service
+	return handler
 }

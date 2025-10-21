@@ -1,12 +1,14 @@
-# 📐 TradSys System Diagrams
+# 📐 TradSys v2 System Diagrams
 
 <div align="center">
 
 ![Diagrams](https://img.shields.io/badge/Diagrams-Architecture-blue?style=for-the-badge)
 ![Mermaid](https://img.shields.io/badge/Mermaid-Diagrams-orange?style=for-the-badge)
-![Complete](https://img.shields.io/badge/Status-Complete-success?style=for-the-badge)
+![v2](https://img.shields.io/badge/Version-v2.0-success?style=for-the-badge)
+![Resimplified](https://img.shields.io/badge/Status-Resimplified-brightgreen?style=for-the-badge)
 
-**Complete Visual Documentation of TradSys Platform**
+**Complete Visual Documentation of TradSys v2 Platform**  
+*Resimplified Architecture - 35% Complexity Reduction*
 
 ---
 
@@ -14,14 +16,173 @@
 
 ## 📑 Table of Contents
 
-1. [Business Architecture](#-business-architecture)
-2. [Software Architecture](#-software-architecture)
-3. [System Architecture](#-system-architecture)
-4. [Infrastructure Architecture](#-infrastructure-architecture)
-5. [Data Architecture](#-data-architecture)
-6. [Security Architecture](#-security-architecture)
-7. [Deployment Architecture](#-deployment-architecture)
-8. [Network Architecture](#-network-architecture)
+1. [v2 Resimplified Architecture](#-v2-resimplified-architecture) ⭐ **NEW**
+2. [Business Architecture](#-business-architecture)
+3. [Software Architecture](#-software-architecture)
+4. [System Architecture](#-system-architecture)
+5. [Infrastructure Architecture](#-infrastructure-architecture)
+6. [Data Architecture](#-data-architecture)
+7. [Security Architecture](#-security-architecture)
+8. [Deployment Architecture](#-deployment-architecture)
+9. [Network Architecture](#-network-architecture)
+
+---
+
+## 🚀 v2 Resimplified Architecture
+
+### 1.1 Structural Improvements Overview
+
+```mermaid
+graph TB
+    subgraph "v1 Architecture Issues"
+        A1[107 Directories] --> B1[Excessive Complexity]
+        A2[3x Market Data Duplication] --> B1
+        A3[3x Risk Management Duplication] --> B1
+        A4[3x Order Management Duplication] --> B1
+        A5[27 Placeholder Files] --> B1
+        A6[Inconsistent Naming] --> B1
+    end
+    
+    subgraph "v2 Resimplified Architecture"
+        C1[~70 Directories] --> D1[35% Complexity Reduction]
+        C2[Unified Market Data] --> D1
+        C3[Unified Risk Management] --> D1
+        C4[Unified Order Management] --> D1
+        C5[Real Implementations] --> D1
+        C6[Consistent Naming] --> D1
+    end
+    
+    B1 --> |Resimplification| D1
+    
+    style D1 fill:#90EE90
+    style B1 fill:#FFB6C1
+```
+
+### 1.2 New Unified Directory Structure
+
+```mermaid
+graph TD
+    subgraph "TradSys v2 - Unified Structure"
+        A[tradSys/] --> B[cmd/tradsys/]
+        A --> C[internal/]
+        A --> D[proto/]
+        A --> E[config/]
+        A --> F[docs/]
+        
+        C --> G[marketdata/]
+        C --> H[orders/]
+        C --> I[risk/]
+        C --> J[trading/]
+        C --> K[api/]
+        C --> L[auth/]
+        C --> M[config/]
+        C --> N[monitoring/]
+        C --> O[db/]
+        C --> P[events/]
+        C --> Q[common/]
+        
+        G --> G1[providers/]
+        G --> G2[streaming/]
+        G --> G3[historical/]
+        
+        H --> H1[matching/]
+        H --> H2[execution/]
+        H --> H3[validation/]
+        
+        I --> I1[engine/]
+        I --> I2[limits/]
+        I --> I3[monitoring/]
+        
+        J --> J1[core/]
+        J --> J2[strategies/]
+        J --> J3[execution/]
+        J --> J4[positions/]
+    end
+    
+    style A fill:#4CAF50
+    style G fill:#2196F3
+    style H fill:#FF9800
+    style I fill:#F44336
+    style J fill:#9C27B0
+```
+
+### 1.3 Service Consolidation Map
+
+```mermaid
+graph LR
+    subgraph "Before: Duplicated Services"
+        A1[internal/marketdata/]
+        A2[internal/trading/market_data/]
+        A3[internal/exchanges/marketdata/]
+        
+        B1[internal/risk/]
+        B2[internal/core/risk/]
+        B3[internal/trading/risk_management/]
+        
+        C1[internal/orders/]
+        C2[internal/trading/order_management/]
+        C3[internal/trading/order_matching/]
+    end
+    
+    subgraph "After: Unified Services"
+        D1[internal/marketdata/]
+        D2[internal/risk/]
+        D3[internal/orders/]
+    end
+    
+    A1 --> D1
+    A2 --> D1
+    A3 --> D1
+    
+    B1 --> D2
+    B2 --> D2
+    B3 --> D2
+    
+    C1 --> D3
+    C2 --> D3
+    C3 --> D3
+    
+    style D1 fill:#4CAF50
+    style D2 fill:#4CAF50
+    style D3 fill:#4CAF50
+    style A1 fill:#FFB6C1
+    style A2 fill:#FFB6C1
+    style A3 fill:#FFB6C1
+    style B1 fill:#FFB6C1
+    style B2 fill:#FFB6C1
+    style B3 fill:#FFB6C1
+    style C1 fill:#FFB6C1
+    style C2 fill:#FFB6C1
+    style C3 fill:#FFB6C1
+```
+
+### 1.4 Implementation Status
+
+```mermaid
+gantt
+    title TradSys v2 Resimplification Progress
+    dateFormat  YYYY-MM-DD
+    section Phase 1: Analysis
+    Structural Analysis     :done, analysis, 2024-01-01, 2024-01-02
+    Redundancy Mapping      :done, mapping, 2024-01-02, 2024-01-03
+    
+    section Phase 2: Consolidation
+    Directory Consolidation :done, consolidation, 2024-01-03, 2024-01-04
+    Service Merging        :done, merging, 2024-01-04, 2024-01-05
+    
+    section Phase 3: Enhancement
+    Auth System            :done, auth, 2024-01-05, 2024-01-06
+    Gateway Router         :done, gateway, 2024-01-06, 2024-01-07
+    WebSocket Handlers     :done, ws, 2024-01-07, 2024-01-08
+    
+    section Phase 4: Documentation
+    Architecture Diagrams  :active, docs, 2024-01-08, 2024-01-09
+    README Updates         :active, readme, 2024-01-09, 2024-01-10
+    
+    section Phase 5: Deployment
+    v2 Branch Push         :v2push, 2024-01-10, 2024-01-11
+    v3 Prototype          :v3proto, 2024-01-11, 2024-01-12
+```
 
 ---
 

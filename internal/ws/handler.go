@@ -2,6 +2,9 @@ package ws
 
 import (
 	"context"
+	"fmt"
+	"sync"
+	"time"
 
 	"github.com/abdoElHodaky/tradSys/proto/ws"
 	"github.com/google/uuid"
@@ -17,11 +20,20 @@ type HandlerParams struct {
 	Server *Server `optional:"true"`
 }
 
+// Subscription represents a WebSocket subscription
+type Subscription struct {
+	ID       string
+	ClientID string
+	Topic    string
+	Created  time.Time
+}
+
 // Handler implements the WebSocketService handler
 type Handler struct {
 	ws.UnimplementedWebSocketServiceServer
-	logger *zap.Logger
-	server *Server
+	logger        *zap.Logger
+	server        *Server
+	subscriptions sync.Map // map[string]*Subscription
 }
 
 // NewHandler creates a new WebSocket handler with fx dependency injection
@@ -38,10 +50,32 @@ func (h *Handler) Subscribe(ctx context.Context, req *ws.SubscribeRequest, rsp *
 		zap.String("topic", req.Topic),
 		zap.String("client_id", req.ClientId))
 
-	// Implementation would go here
-	// For now, just return a placeholder response
+	// Validate subscription request
+	if req.Topic == "" {
+		return fmt.Errorf("topic is required")
+	}
+	if req.ClientId == "" {
+		return fmt.Errorf("client_id is required")
+	}
+
+	// Generate subscription ID
+	subscriptionID := uuid.New().String()
+	
+	// Store subscription (in production, use Redis or database)
+	h.subscriptions.Store(subscriptionID, &Subscription{
+		ID:       subscriptionID,
+		ClientID: req.ClientId,
+		Topic:    req.Topic,
+		Created:  time.Now(),
+	})
+
 	rsp.Success = true
-	rsp.SubscriptionId = uuid.New().String()
+	rsp.SubscriptionId = subscriptionID
+
+	h.logger.Info("Client subscribed successfully",
+		zap.String("subscription_id", subscriptionID),
+		zap.String("topic", req.Topic),
+		zap.String("client_id", req.ClientId))
 
 	return nil
 }

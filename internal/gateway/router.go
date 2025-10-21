@@ -1,7 +1,9 @@
 package gateway
 
 import (
+	"io"
 	"net/http"
+	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/auth"
 	"github.com/abdoElHodaky/tradSys/internal/config"
@@ -155,13 +157,72 @@ func (r *Router) registerAPIRoutes(authMiddleware *auth.Middleware) {
 // forwardToService creates a handler that forwards requests to the appropriate microservice
 func forwardToService(serviceName, path string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// This is a placeholder for the actual service forwarding logic
-		// In a real implementation, this would use a service discovery mechanism
-		// and forward the request to the appropriate service
-		c.JSON(501, gin.H{
-			"error": "Service forwarding not implemented",
-			"service": serviceName,
-			"path": path,
-		})
+		// Service discovery and forwarding logic
+		serviceURL := getServiceURL(serviceName)
+		if serviceURL == "" {
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"error": "Service unavailable",
+				"service": serviceName,
+				"message": "Service not found in registry",
+			})
+			return
+		}
+
+		// Forward request to service
+		targetURL := serviceURL + path
+		
+		// Create proxy request
+		req, err := http.NewRequest(c.Request.Method, targetURL, c.Request.Body)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to create proxy request",
+				"details": err.Error(),
+			})
+			return
+		}
+
+		// Copy headers
+		for key, values := range c.Request.Header {
+			for _, value := range values {
+				req.Header.Add(key, value)
+			}
+		}
+
+		// Execute request
+		client := &http.Client{Timeout: 30 * time.Second}
+		resp, err := client.Do(req)
+		if err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{
+				"error": "Service request failed",
+				"service": serviceName,
+				"details": err.Error(),
+			})
+			return
+		}
+		defer resp.Body.Close()
+
+		// Copy response
+		for key, values := range resp.Header {
+			for _, value := range values {
+				c.Header(key, value)
+			}
+		}
+		
+		c.Status(resp.StatusCode)
+		io.Copy(c.Writer, resp.Body)
 	}
+}
+
+// getServiceURL returns the URL for a given service name
+func getServiceURL(serviceName string) string {
+	// Service registry mapping
+	services := map[string]string{
+		"orders":     "http://localhost:8081",
+		"risk":       "http://localhost:8082", 
+		"marketdata": "http://localhost:8083",
+		"users":      "http://localhost:8084",
+		"auth":       "http://localhost:8085",
+	}
+	
+	return services[serviceName]
 }
