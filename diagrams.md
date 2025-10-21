@@ -1,14 +1,14 @@
-# 📐 TradSys v2 System Diagrams
+# 📐 TradSys v2.5 System Diagrams
 
 <div align="center">
 
 ![Diagrams](https://img.shields.io/badge/Diagrams-Architecture-blue?style=for-the-badge)
 ![Mermaid](https://img.shields.io/badge/Mermaid-Diagrams-orange?style=for-the-badge)
-![v2](https://img.shields.io/badge/Version-v2.0-success?style=for-the-badge)
+![v2.5](https://img.shields.io/badge/Version-v2.5-success?style=for-the-badge)
 ![Resimplified](https://img.shields.io/badge/Status-Resimplified-brightgreen?style=for-the-badge)
 
-**Complete Visual Documentation of TradSys v2 Platform**  
-*Resimplified Architecture - 35% Complexity Reduction*
+**Complete Visual Documentation of TradSys v2.5 Platform**  
+*Resimplified Architecture - 26% Complexity Reduction Achieved*
 
 ---
 
@@ -16,19 +16,20 @@
 
 ## 📑 Table of Contents
 
-1. [v2 Resimplified Architecture](#-v2-resimplified-architecture) ⭐ **NEW**
-2. [Business Architecture](#-business-architecture)
-3. [Software Architecture](#-software-architecture)
-4. [System Architecture](#-system-architecture)
-5. [Infrastructure Architecture](#-infrastructure-architecture)
-6. [Data Architecture](#-data-architecture)
-7. [Security Architecture](#-security-architecture)
-8. [Deployment Architecture](#-deployment-architecture)
-9. [Network Architecture](#-network-architecture)
+1. [v2.5 Resimplified Architecture](#-v25-resimplified-architecture) ⭐ **UPDATED**
+2. [Consolidated Service Architecture](#-consolidated-service-architecture) ⭐ **NEW**
+3. [Business Architecture](#-business-architecture)
+4. [Software Architecture](#-software-architecture)
+5. [System Architecture](#-system-architecture)
+6. [Infrastructure Architecture](#-infrastructure-architecture)
+7. [Data Architecture](#-data-architecture)
+8. [Security Architecture](#-security-architecture)
+9. [Deployment Architecture](#-deployment-architecture)
+10. [Network Architecture](#-network-architecture)
 
 ---
 
-## 🚀 v2 Resimplified Architecture
+## 🚀 v2.5 Resimplified Architecture
 
 ### 1.1 Structural Improvements Overview
 
@@ -36,18 +37,22 @@
 graph TB
     subgraph "v1 Architecture Issues"
         A1[107 Directories] --> B1[Excessive Complexity]
-        A2[3x Market Data Duplication] --> B1
-        A3[3x Risk Management Duplication] --> B1
-        A4[3x Order Management Duplication] --> B1
-        A5[27 Placeholder Files] --> B1
-        A6[Inconsistent Naming] --> B1
+        A2[3x Compliance Duplication] --> B1
+        A3[3x Pool Management Duplication] --> B1
+        A4[3x WebSocket Duplication] --> B1
+        A5[8x CQRS Over-Engineering] --> B1
+        A6[5x Event Sourcing Fragmentation] --> B1
+        A7[18 Placeholder Files] --> B1
     end
     
-    subgraph "v2 Resimplified Architecture"
-        C1[~70 Directories] --> D1[35% Complexity Reduction]
-        C2[Unified Market Data] --> D1
-        C3[Unified Risk Management] --> D1
-        C4[Unified Order Management] --> D1
+    subgraph "v2.5 Resimplified Architecture"
+        C1[79 Directories] --> D1[26% Complexity Reduction]
+        C2[Unified Compliance] --> D1
+        C3[Unified Pool Management] --> D1
+        C4[Unified WebSocket Services] --> D1
+        C5[Simplified CQRS: 8→2] --> D1
+        C6[Simplified Event Sourcing: 5→2] --> D1
+        C7[Optimized Trading Services] --> D1
         C5[Real Implementations] --> D1
         C6[Consistent Naming] --> D1
     end
@@ -182,6 +187,138 @@ gantt
     section Phase 5: Deployment
     v2 Branch Push         :v2push, 2024-01-10, 2024-01-11
     v3 Prototype          :v3proto, 2024-01-11, 2024-01-12
+```
+
+---
+
+## 🏗️ Consolidated Service Architecture
+
+### 2.1 v2.5 Unified Service Structure
+
+```mermaid
+graph TB
+    subgraph "TradSys v2.5 - Consolidated Architecture (79 directories)"
+        A[tradSys/] --> B[internal/]
+        
+        subgraph "Core Services (Unified)"
+            B --> C1[compliance/]
+            C1 --> C1A[risk/]
+            C1 --> C1B[trading/]
+            C1 --> C1C[core/]
+            
+            B --> C2[common/pool/]
+            C2 --> C2A[generic/]
+            C2 --> C2B[performance/]
+            C2 --> C2C[trading/]
+            
+            B --> C3[ws/]
+            C3 --> C3A[api/]
+            C3 --> C3B[transport/]
+            C3 --> C3C[manager/]
+            C3 --> C3D[protocol/]
+        end
+        
+        subgraph "Architecture (Simplified)"
+            B --> D1[architecture/cqrs/]
+            D1 --> D1A[core/]
+            D1 --> D1B[handlers/]
+            
+            B --> D2[eventsourcing/]
+            D2 --> D2A[core/]
+            D2 --> D2B[handlers/]
+        end
+        
+        subgraph "Trading (Optimized)"
+            B --> E1[trading/]
+            E1 --> E1A[core/]
+            E1 --> E1B[execution/settlement/]
+            E1 --> E1C[positions/price_levels/]
+            E1 --> E1D[strategies/]
+            E1 --> E1E[app/]
+            E1 --> E1F[connectivity/]
+            E1 --> E1G[memory/]
+            E1 --> E1H[metrics/]
+            E1 --> E1I[middleware/]
+            E1 --> E1J[security/]
+            E1 --> E1K[types/]
+            E1 --> E1L[grpc/]
+        end
+        
+        subgraph "Database (Optimized)"
+            B --> F1[db/]
+            F1 --> F1A[migrations/]
+            F1 --> F1B[models/]
+            F1 --> F1C[queries/]
+            F1 --> F1D[repositories/]
+        end
+    end
+    
+    style C1 fill:#4CAF50
+    style C2 fill:#2196F3
+    style C3 fill:#FF9800
+    style D1 fill:#9C27B0
+    style D2 fill:#607D8B
+    style E1 fill:#F44336
+    style F1 fill:#795548
+```
+
+### 2.2 Consolidation Results Summary
+
+```mermaid
+graph LR
+    subgraph "Phase 1: Service Consolidation"
+        A1[3x Compliance] --> B1[1x Unified Compliance]
+        A2[3x Pool Management] --> B2[1x Unified Pool]
+        A3[3x WebSocket] --> B3[1x Unified WebSocket]
+    end
+    
+    subgraph "Phase 2: Architecture Simplification"
+        C1[8x CQRS Dirs] --> D1[2x CQRS Dirs]
+        C2[5x EventSourcing Dirs] --> D2[2x EventSourcing Dirs]
+    end
+    
+    subgraph "Phase 3: Trading Optimization"
+        E1[18x Trading Subdirs] --> F1[12x Trading Subdirs]
+        E2[Execution + Settlement] --> F2[Unified Execution]
+        E3[Positions + Price Levels] --> F3[Unified Positions]
+    end
+    
+    subgraph "Phase 4: Database Optimization"
+        G1[queries/ + query/] --> H1[Unified queries/]
+    end
+    
+    style B1 fill:#4CAF50
+    style B2 fill:#4CAF50
+    style B3 fill:#4CAF50
+    style D1 fill:#4CAF50
+    style D2 fill:#4CAF50
+    style F1 fill:#4CAF50
+    style F2 fill:#4CAF50
+    style F3 fill:#4CAF50
+    style H1 fill:#4CAF50
+```
+
+### 2.3 Directory Reduction Achievement
+
+```mermaid
+graph TD
+    A[Original v1: 107 directories] --> B[v2: 88 directories]
+    B --> C[v2.5: 79 directories]
+    
+    A --> D[Target: 70 directories]
+    C --> E[Achievement: 26% reduction]
+    D --> F[Target: 35% reduction]
+    
+    G[Remaining: 9 directories to target]
+    C --> G
+    
+    style A fill:#FFB6C1
+    style B fill:#FFF3CD
+    style C fill:#D4EDDA
+    style D fill:#CCE5FF
+    style E fill:#4CAF50
+    style F fill:#2196F3
+    style G fill:#FFF3CD
 ```
 
 ---
