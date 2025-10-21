@@ -538,8 +538,35 @@ func (e *RealTimeRiskEngine) calculateVaR() {
 	defer e.varCalculator.mu.Unlock()
 
 	// Calculate portfolio VaR using historical simulation
-	// This is a placeholder implementation
-	e.logger.Info("VaR calculation completed")
+	// Get current positions
+	positions := e.getPortfolioPositions()
+	if len(positions) == 0 {
+		e.logger.Debug("No positions for VaR calculation")
+		return
+	}
+	
+	// Calculate portfolio value
+	portfolioValue := e.calculatePortfolioValue(positions)
+	
+	// Historical simulation VaR (simplified)
+	// In production, this would use actual historical price data
+	confidenceLevel := 0.95 // 95% confidence level
+	volatility := 0.02      // 2% daily volatility assumption
+	
+	// Calculate VaR using normal distribution approximation
+	// VaR = Portfolio Value * Z-score * Volatility
+	zScore := 1.645 // 95% confidence level z-score
+	var95 := portfolioValue * zScore * volatility
+	
+	// Store VaR result
+	e.varCalculator.currentVaR = var95
+	e.varCalculator.lastCalculation = time.Now()
+	
+	e.logger.Info("VaR calculation completed",
+		zap.Float64("portfolio_value", portfolioValue),
+		zap.Float64("var_95", var95),
+		zap.Float64("volatility", volatility),
+		zap.Int("positions_count", len(positions)))
 }
 
 // monitorCircuitBreaker monitors circuit breaker conditions
@@ -593,4 +620,44 @@ type Trade struct {
 	Quantity   float64
 	TakerSide  types.OrderSide
 	Timestamp  time.Time
+}
+
+// getPortfolioPositions returns all current positions
+func (e *RealTimeRiskEngine) getPortfolioPositions() map[string]*Position {
+	e.positions.mu.RLock()
+	defer e.positions.mu.RUnlock()
+	
+	positions := make(map[string]*Position)
+	for symbol, position := range e.positions.positions {
+		if position.Quantity != 0 {
+			positions[symbol] = &Position{
+				Symbol:    position.Symbol,
+				Quantity:  position.Quantity,
+				AvgPrice:  position.AvgPrice,
+				Timestamp: position.Timestamp,
+			}
+		}
+	}
+	
+	return positions
+}
+
+// calculatePortfolioValue calculates the total portfolio value
+func (e *RealTimeRiskEngine) calculatePortfolioValue(positions map[string]*Position) float64 {
+	totalValue := 0.0
+	
+	for symbol, position := range positions {
+		// In production, you would get current market price
+		// For now, use the average price as an approximation
+		positionValue := position.Quantity * position.AvgPrice
+		totalValue += positionValue
+		
+		e.logger.Debug("Position value calculated",
+			zap.String("symbol", symbol),
+			zap.Float64("quantity", position.Quantity),
+			zap.Float64("avg_price", position.AvgPrice),
+			zap.Float64("position_value", positionValue))
+	}
+	
+	return totalValue
 }

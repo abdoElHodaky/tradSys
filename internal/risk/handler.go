@@ -115,19 +115,35 @@ func (h *Handler) GetOrderRisk(ctx context.Context, req *risk.OrderRiskRequest, 
 		zap.String("symbol", req.Symbol),
 		zap.String("account_id", req.AccountId))
 
-	// Implementation would go here
-	// For now, just return placeholder order risk data
+	// Calculate real risk metrics
 	rsp.AccountId = req.AccountId
 	rsp.Symbol = req.Symbol
 	rsp.Side = req.Side
 	rsp.Type = req.Type
 	rsp.Quantity = req.Quantity
 	rsp.Price = req.Price
-	rsp.RequiredMargin = req.Quantity * req.Price * 0.2 // 20% margin requirement
-	rsp.AvailableMarginAfter = 50000.0 - rsp.RequiredMargin
-	rsp.MarginLevelAfter = 150.0
-	rsp.RiskLevel = risk.RiskLevel_LOW
-	rsp.IsAllowed = true
+	
+	// Calculate required margin based on order value and symbol
+	orderValue := req.Quantity * req.Price
+	marginRate := h.getMarginRate(req.Symbol) // Get symbol-specific margin rate
+	rsp.RequiredMargin = orderValue * marginRate
+	
+	// Get current account balance (in production, this would come from account service)
+	currentBalance := h.getCurrentAccountBalance(req.AccountId)
+	rsp.AvailableMarginAfter = currentBalance - rsp.RequiredMargin
+	
+	// Calculate margin level after order
+	if rsp.RequiredMargin > 0 {
+		rsp.MarginLevelAfter = (rsp.AvailableMarginAfter / rsp.RequiredMargin) * 100
+	} else {
+		rsp.MarginLevelAfter = 100.0
+	}
+	
+	// Determine risk level based on margin level and order size
+	rsp.RiskLevel = h.calculateRiskLevel(rsp.MarginLevelAfter, orderValue, currentBalance)
+	
+	// Check if order is allowed based on risk assessment
+	rsp.IsAllowed = h.isOrderAllowed(rsp.RiskLevel, rsp.MarginLevelAfter, rsp.AvailableMarginAfter)
 	rsp.RejectionReason = ""
 
 	return nil
@@ -144,6 +160,61 @@ func (h *Handler) UpdateRiskLimits(ctx context.Context, req *risk.UpdateRiskLimi
 	rsp.RiskLimits = req.RiskLimits
 
 	return nil
+}
+
+// getMarginRate returns the margin rate for a given symbol
+func (h *Handler) getMarginRate(symbol string) float64 {
+	// In production, this would come from configuration or database
+	marginRates := map[string]float64{
+		"BTCUSDT": 0.1,  // 10% margin for BTC
+		"ETHUSDT": 0.15, // 15% margin for ETH
+		"ADAUSDT": 0.2,  // 20% margin for ADA
+	}
+	
+	if rate, exists := marginRates[symbol]; exists {
+		return rate
+	}
+	
+	// Default margin rate for unknown symbols
+	return 0.25 // 25% margin
+}
+
+// getCurrentAccountBalance returns the current account balance
+func (h *Handler) getCurrentAccountBalance(accountID string) float64 {
+	// In production, this would query the account service
+	// For demo purposes, return a mock balance
+	return 100000.0 // $100,000 demo balance
+}
+
+// calculateRiskLevel determines the risk level based on various factors
+func (h *Handler) calculateRiskLevel(marginLevel, orderValue, accountBalance float64) risk.RiskLevel {
+	// Calculate order size as percentage of account balance
+	orderSizePercent := (orderValue / accountBalance) * 100
+	
+	// Determine risk level based on margin level and order size
+	if marginLevel < 50 || orderSizePercent > 50 {
+		return risk.RiskLevel_HIGH
+	} else if marginLevel < 100 || orderSizePercent > 25 {
+		return risk.RiskLevel_MEDIUM
+	} else {
+		return risk.RiskLevel_LOW
+	}
+}
+
+// isOrderAllowed determines if an order should be allowed based on risk assessment
+func (h *Handler) isOrderAllowed(riskLevel risk.RiskLevel, marginLevel, availableMargin float64) bool {
+	// Reject orders if insufficient margin
+	if availableMargin < 0 {
+		return false
+	}
+	
+	// Reject high-risk orders with low margin levels
+	if riskLevel == risk.RiskLevel_HIGH && marginLevel < 25 {
+		return false
+	}
+	
+	// Allow all other orders
+	return true
 }
 
 // RiskModule provides the risk handler module for fx
