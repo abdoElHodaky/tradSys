@@ -43,8 +43,9 @@ type HFTConfigManager struct {
 // Type aliases for imported configs
 type HFTMemoryConfig = memory.HFTMemoryConfig
 
-// Config is an alias for HFTManagerConfig for backward compatibility
-type Config = HFTManagerConfig
+// Config is an alias for UnifiedConfig for backward compatibility
+// This eliminates the redeclaration error
+type Config = UnifiedConfig
 
 // HFTMonitoringConfig contains monitoring configuration
 type HFTMonitoringConfig struct {

@@ -94,8 +94,9 @@ func (c *HFTConfig) Optimize() {
 	c.SocketBufferSize = 131072 // 128KB
 }
 
-// Config represents the main application configuration
-type Config struct {
+// LegacyConfig represents the legacy application configuration
+// Renamed to avoid conflict with UnifiedConfig
+type LegacyConfig struct {
 	// HFT contains high-frequency trading configuration
 	HFT HFTConfig `yaml:"hft"`
 	
