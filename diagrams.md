@@ -1131,6 +1131,7 @@ graph TB
     style ENG2 fill:#FF5722,color:#fff
     style DB_MASTER fill:#2196F3,color:#fff
 ```
+```
 
 ### 3.4 Multi-Region Architecture
 
@@ -1196,4 +1197,8 @@ graph TB
     
     style DNS fill:#4CAF50,color:#fff
     style CDN fill:#FF9800,color:#fff
-    style
+    style US_DB fill:#2196F3,color:#fff
+    style EU_DB fill:#2196F3,color:#fff
+    style AP_DB fill:#9C27B0,color:#fff
+    style SYNC fill:#FF5722,color:#fff
+```
