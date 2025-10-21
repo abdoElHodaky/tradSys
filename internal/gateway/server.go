@@ -54,10 +54,10 @@ func NewServer(p ServerParams) *Server {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// TODO: Add metrics middleware if available
-	// if p.Metrics != nil {
-	//     router.Use(p.Metrics.GinMiddleware())
-	// }
+	// Add metrics middleware if available
+	if p.Metrics != nil {
+		router.Use(p.Metrics.GinMiddleware())
+	}
 
 	// Create server
 	server := &Server{

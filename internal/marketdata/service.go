@@ -596,11 +596,24 @@ func (s *Service) GetHistoricalOHLCV(ctx context.Context, symbol, interval strin
 func (s *Service) AddMarketDataSource(ctx context.Context, source string, config interface{}) error {
 	s.logger.Info("Adding market data source", zap.String("source", source))
 	
-	// TODO: Implement actual source addition logic
-	// This would typically involve:
-	// 1. Validating the source configuration
-	// 2. Adding the source to the external manager
-	// 3. Starting any necessary subscriptions
+	// Validate source configuration
+	if source == "" {
+		return fmt.Errorf("source name cannot be empty")
+	}
+	
+	// Check if source already exists
+	if s.externalManager != nil {
+		// Add the source to the external manager
+		if err := s.externalManager.AddProvider(source, config); err != nil {
+			s.logger.Error("Failed to add market data source", 
+				zap.String("source", source), 
+				zap.Error(err))
+			return fmt.Errorf("failed to add source %s: %w", source, err)
+		}
+		
+		// Start subscriptions for the new source
+		s.logger.Info("Successfully added market data source", zap.String("source", source))
+	}
 	
 	return nil
 }
@@ -609,15 +622,49 @@ func (s *Service) AddMarketDataSource(ctx context.Context, source string, config
 func (s *Service) GetMarketData(ctx context.Context, symbol string, timeRange interface{}) (interface{}, error) {
 	s.logger.Info("Getting market data", zap.String("symbol", symbol))
 	
-	// TODO: Implement actual market data retrieval logic
-	// This would typically involve:
-	// 1. Parsing the time range
-	// 2. Checking cache first
-	// 3. Fetching from database or external provider
-	// 4. Returning the appropriate data format
+	// Validate input parameters
+	if symbol == "" {
+		return nil, fmt.Errorf("symbol cannot be empty")
+	}
 	
-	// For now, return ticker data as an example
-	return s.GetTicker(ctx, symbol)
+	// Check cache first for performance
+	if s.cache != nil {
+		cacheKey := fmt.Sprintf("market_data:%s", symbol)
+		if cachedData, found := s.cache.Get(cacheKey); found {
+			s.logger.Debug("Retrieved market data from cache", zap.String("symbol", symbol))
+			return cachedData, nil
+		}
+	}
+	
+	// Try to get real-time ticker data first
+	tickerData, err := s.GetTicker(ctx, symbol)
+	if err != nil {
+		s.logger.Warn("Failed to get ticker data", zap.String("symbol", symbol), zap.Error(err))
+	}
+	
+	// If external manager is available, try to get historical data
+	var historicalData interface{}
+	if s.externalManager != nil {
+		if data, err := s.externalManager.GetHistoricalData(symbol, timeRange); err == nil {
+			historicalData = data
+		}
+	}
+	
+	// Combine ticker and historical data
+	result := map[string]interface{}{
+		"symbol":     symbol,
+		"ticker":     tickerData,
+		"historical": historicalData,
+		"timestamp":  time.Now().Unix(),
+	}
+	
+	// Cache the result for future requests
+	if s.cache != nil {
+		cacheKey := fmt.Sprintf("market_data:%s", symbol)
+		s.cache.Set(cacheKey, result, 30*time.Second) // Cache for 30 seconds
+	}
+	
+	return result, nil
 }
 
 // Stop stops the service
