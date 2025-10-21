@@ -298,8 +298,48 @@ func runRiskService() {
 
 func runMarketDataService() {
 	log.Printf("Starting TradSys Market Data Service v%s", AppVersion)
-	// TODO: Implement market data service startup
-	log.Println("Market data service functionality will be implemented")
+	
+	// Load configuration
+	cfg, err := config.Load("config/tradsys.yaml")
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+	
+	// Initialize logger
+	logger, err := zap.NewProduction()
+	if err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
+	}
+	defer logger.Sync()
+	
+	// Create market data service
+	mdService := marketdata.NewService(marketdata.ServiceParams{
+		Logger: logger,
+		Config: cfg,
+	})
+	
+	// Start the market data service
+	ctx := context.Background()
+	if err := mdService.Start(ctx); err != nil {
+		log.Fatalf("Failed to start market data service: %v", err)
+	}
+	
+	// Wait for interrupt signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	
+	log.Println("Shutting down market data service...")
+	
+	// Graceful shutdown
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	
+	if err := mdService.Stop(shutdownCtx); err != nil {
+		log.Printf("Error during market data service shutdown: %v", err)
+	}
+	
+	log.Println("Market data service exited")
 }
 
 func runWebSocketService() {

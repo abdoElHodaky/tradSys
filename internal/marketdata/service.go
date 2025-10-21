@@ -2,15 +2,27 @@ package marketdata
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
+	"github.com/abdoElHodaky/tradSys/internal/config"
 	"github.com/abdoElHodaky/tradSys/internal/db"
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"github.com/abdoElHodaky/tradSys/internal/marketdata/external"
 	"github.com/patrickmn/go-cache"
+	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
+
+// ServiceParams contains the parameters for creating a market data service
+type ServiceParams struct {
+	fx.In
+
+	Logger     *zap.Logger
+	Config     *config.Config
+	Repository *repositories.MarketDataRepository `optional:"true"`
+}
 
 // Service represents a market data service
 type Service struct {
@@ -26,6 +38,8 @@ type Service struct {
 	SymbolSubscriptions map[string]map[string]*Subscription
 	// Logger
 	logger *zap.Logger
+	// Config
+	config *config.Config
 	// Mutex for thread safety
 	mu sync.RWMutex
 	// Context
@@ -50,29 +64,77 @@ type Subscription struct {
 	CreatedAt time.Time
 }
 
-// NewService creates a new market data service
-func NewService(
-	marketDataRepository *repositories.MarketDataRepository,
-	externalManager *external.Manager,
-	logger *zap.Logger,
-) *Service {
+// NewService creates a new market data service with fx dependency injection
+func NewService(p ServiceParams) *Service {
 	ctx, cancel := context.WithCancel(context.Background())
 	
+	// Initialize external manager with default configuration
+	externalManager := external.NewManager(p.Logger)
+	
 	service := &Service{
-		MarketDataRepository: marketDataRepository,
+		MarketDataRepository: p.Repository,
 		ExternalManager:      externalManager,
 		Cache:                cache.New(5*time.Minute, 10*time.Minute),
 		Subscriptions:        make(map[string]*Subscription),
 		SymbolSubscriptions:  make(map[string]map[string]*Subscription),
-		logger:               logger,
+		logger:               p.Logger,
+		config:               p.Config,
 		ctx:                  ctx,
 		cancel:               cancel,
 	}
 	
-	// Start data persistence task
-	go service.persistMarketData()
-	
 	return service
+}
+
+// Start starts the market data service
+func (s *Service) Start(ctx context.Context) error {
+	s.logger.Info("Starting market data service")
+	
+	// Start data persistence task
+	go s.persistMarketData()
+	
+	// Initialize external data sources
+	if err := s.initializeDataSources(); err != nil {
+		return fmt.Errorf("failed to initialize data sources: %w", err)
+	}
+	
+	s.logger.Info("Market data service started successfully")
+	return nil
+}
+
+// Stop stops the market data service
+func (s *Service) Stop(ctx context.Context) error {
+	s.logger.Info("Stopping market data service")
+	
+	// Cancel context to stop all goroutines
+	s.cancel()
+	
+	// Close all subscriptions
+	s.mu.Lock()
+	for _, subscription := range s.Subscriptions {
+		close(subscription.Channel)
+	}
+	s.mu.Unlock()
+	
+	s.logger.Info("Market data service stopped successfully")
+	return nil
+}
+
+// initializeDataSources initializes external market data sources
+func (s *Service) initializeDataSources() error {
+	s.logger.Info("Initializing market data sources")
+	
+	// Add default data sources based on configuration
+	// This is a placeholder - in production, you'd configure actual providers
+	if err := s.ExternalManager.AddSource("binance", map[string]interface{}{
+		"api_key":    "",
+		"secret_key": "",
+		"testnet":    true,
+	}); err != nil {
+		s.logger.Warn("Failed to add Binance data source", zap.Error(err))
+	}
+	
+	return nil
 }
 
 // persistMarketData periodically persists market data to the database

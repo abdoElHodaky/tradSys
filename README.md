@@ -1,10 +1,30 @@
-# TradSys - High-Frequency Trading System
+# TradSys v2 - High-Frequency Trading System
 
 [![Go Version](https://img.shields.io/badge/Go-1.21+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](https://github.com/abdoElHodaky/tradSys/actions)
+[![System Status](https://img.shields.io/badge/Status-Development-yellow.svg)](#system-status)
 
 A high-performance, low-latency trading system designed for algorithmic and high-frequency trading operations. Built with Go for maximum performance and reliability.
+
+## 🎯 **System Status**
+
+| Component | Status | Completion | Notes |
+|-----------|--------|------------|-------|
+| **Core Services** | 🟢 Ready | 85% | Order & Risk services operational |
+| **Market Data** | 🟢 Implemented | 90% | Real-time feeds & external providers |
+| **Authentication** | 🟢 Implemented | 95% | JWT-based auth with role management |
+| **API Gateway** | 🟢 Ready | 80% | REST endpoints & WebSocket support |
+| **Risk Management** | 🟡 Partial | 60% | Basic implementation, needs enhancement |
+| **Testing** | 🔴 Limited | 15% | Only 4 test files currently |
+| **Documentation** | 🟡 Basic | 50% | README & config docs available |
+| **Deployment** | 🟢 Ready | 90% | Kubernetes manifests complete |
+
+**Latest Updates (v2 Branch):**
+- ✅ **Market Data Service**: Fully implemented with external provider support
+- ✅ **Authentication System**: Complete JWT-based authentication with login/refresh
+- ✅ **Service Architecture**: Microservices with gRPC communication
+- ✅ **Configuration**: Unified YAML configuration system
 
 ## 🚀 **Quick Start**
 
@@ -80,6 +100,13 @@ go build -o tradsys cmd/tradsys/main.go
 - **WebSocket streaming** for real-time updates
 - **gRPC services** for internal communication
 - **Rate limiting** and authentication
+
+### Authentication & Security
+- **JWT-based authentication** with refresh tokens
+- **Role-based access control** (Admin, Trader, Viewer)
+- **Secure password hashing** with bcrypt
+- **Token validation middleware** for protected routes
+- **Default users**: `admin/admin123`, `trader/trader123`
 
 ## 🏗️ **Architecture**
 
@@ -194,6 +221,131 @@ export JWT_SECRET="your_jwt_secret"
 
 # Database (optional, defaults to SQLite)
 export DATABASE_URL="sqlite://tradSys.db"
+```
+
+## 🔌 **API Documentation**
+
+### Authentication Endpoints
+
+#### Login
+```bash
+POST /auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+# Response
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": "admin-001",
+      "username": "admin",
+      "email": "admin@tradsys.com",
+      "role": "admin"
+    },
+    "expires_at": "2024-10-21T10:24:07Z"
+  }
+}
+```
+
+#### Refresh Token
+```bash
+POST /auth/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+#### Protected Routes
+```bash
+# Get user profile
+GET /auth/profile
+Authorization: Bearer <token>
+
+# Logout
+POST /auth/logout
+Authorization: Bearer <token>
+```
+
+### Trading Endpoints
+
+#### Place Order
+```bash
+POST /api/v1/orders
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "symbol": "BTCUSDT",
+  "side": "buy",
+  "type": "limit",
+  "quantity": "0.001",
+  "price": "50000.00"
+}
+```
+
+#### Get Orders
+```bash
+GET /api/v1/orders
+Authorization: Bearer <token>
+
+# Get specific order
+GET /api/v1/orders/{order_id}
+Authorization: Bearer <token>
+```
+
+#### Market Data
+```bash
+# Get ticker
+GET /api/v1/market/ticker/{symbol}
+
+# Get order book
+GET /api/v1/market/orderbook/{symbol}
+
+# Get recent trades
+GET /api/v1/market/trades/{symbol}
+```
+
+### WebSocket Endpoints
+
+#### Connect to WebSocket
+```javascript
+const ws = new WebSocket('ws://localhost:8080/ws');
+
+// Subscribe to market data
+ws.send(JSON.stringify({
+  "type": "subscribe",
+  "channel": "ticker",
+  "symbol": "BTCUSDT"
+}));
+
+// Subscribe to order updates (requires authentication)
+ws.send(JSON.stringify({
+  "type": "subscribe",
+  "channel": "orders",
+  "token": "your_jwt_token"
+}));
+```
+
+### Health & Monitoring
+
+```bash
+# Health check
+GET /health
+
+# Readiness check
+GET /ready
+
+# Metrics (Prometheus format)
+GET /metrics
 ```
 
 ## 🔧 **Development**

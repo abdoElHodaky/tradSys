@@ -53,15 +53,27 @@ func (r *Router) registerHealthRoutes() {
 
 // registerAuthRoutes registers authentication routes
 func (r *Router) registerAuthRoutes(authMiddleware *auth.Middleware) {
-	auth := r.engine.Group("/auth")
+	// Create auth service and handlers
+	authService := auth.NewService(auth.ServiceParams{
+		Logger: r.logger,
+		Config: r.config,
+	})
+	authHandlers := auth.NewHandlers(authService, r.logger)
+	
+	authGroup := r.engine.Group("/auth")
 	{
-		// TODO: Implement login and refresh handlers
-		auth.POST("/login", func(c *gin.Context) {
-			c.JSON(http.StatusNotImplemented, gin.H{"error": "Login handler not implemented"})
-		})
-		auth.POST("/refresh", func(c *gin.Context) {
-			c.JSON(http.StatusNotImplemented, gin.H{"error": "Refresh handler not implemented"})
-		})
+		// Public routes (no authentication required)
+		authGroup.POST("/login", authHandlers.Login)
+		authGroup.POST("/refresh", authHandlers.RefreshToken)
+		
+		// Protected routes (authentication required)
+		protected := authGroup.Group("/")
+		protected.Use(authHandlers.ValidateToken)
+		{
+			protected.POST("/logout", authHandlers.Logout)
+			protected.GET("/profile", authHandlers.Profile)
+			protected.POST("/change-password", authHandlers.ChangePassword)
+		}
 	}
 }
 
