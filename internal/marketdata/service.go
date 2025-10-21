@@ -11,7 +11,6 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"github.com/abdoElHodaky/tradSys/internal/marketdata/external"
 	"github.com/patrickmn/go-cache"
-	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
@@ -45,6 +44,8 @@ type Service struct {
 type Subscription struct {
 	// ID is the unique identifier for the subscription
 	ID string
+	// UserID is the user ID
+	UserID string
 	// Symbol is the trading symbol
 	Symbol string
 	// Type is the type of market data
@@ -595,9 +596,15 @@ func (s *Service) AddMarketDataSource(ctx context.Context, source string, config
 	}
 	
 	// Check if source already exists
-	if s.externalManager != nil {
+	if s.ExternalManager != nil {
+		// Convert config to the expected type
+		configMap, ok := config.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("config must be a map[string]interface{}")
+		}
+		
 		// Add the source to the external manager
-		if err := s.externalManager.AddProvider(source, config); err != nil {
+		if err := s.ExternalManager.AddSource(source, configMap); err != nil {
 			s.logger.Error("Failed to add market data source", 
 				zap.String("source", source), 
 				zap.Error(err))
@@ -621,9 +628,9 @@ func (s *Service) GetMarketData(ctx context.Context, symbol string, timeRange in
 	}
 	
 	// Check cache first for performance
-	if s.cache != nil {
+	if s.Cache != nil {
 		cacheKey := fmt.Sprintf("market_data:%s", symbol)
-		if cachedData, found := s.cache.Get(cacheKey); found {
+		if cachedData, found := s.Cache.Get(cacheKey); found {
 			s.logger.Debug("Retrieved market data from cache", zap.String("symbol", symbol))
 			return cachedData, nil
 		}
@@ -635,43 +642,36 @@ func (s *Service) GetMarketData(ctx context.Context, symbol string, timeRange in
 		s.logger.Warn("Failed to get ticker data", zap.String("symbol", symbol), zap.Error(err))
 	}
 	
-	// If external manager is available, try to get historical data
-	var historicalData interface{}
-	if s.externalManager != nil {
-		if data, err := s.externalManager.GetHistoricalData(symbol, timeRange); err == nil {
-			historicalData = data
+	// If external manager is available, try to get current market data
+	var marketData interface{}
+	if s.ExternalManager != nil {
+		if price, volume, timestamp, err := s.ExternalManager.GetMarketData(symbol, "1m"); err == nil {
+			marketData = map[string]interface{}{
+				"price":     price,
+				"volume":    volume,
+				"timestamp": timestamp,
+			}
 		}
 	}
 	
-	// Combine ticker and historical data
+	// Combine ticker and market data
 	result := map[string]interface{}{
 		"symbol":     symbol,
 		"ticker":     tickerData,
-		"historical": historicalData,
+		"market":     marketData,
 		"timestamp":  time.Now().Unix(),
 	}
 	
 	// Cache the result for future requests
-	if s.cache != nil {
+	if s.Cache != nil {
 		cacheKey := fmt.Sprintf("market_data:%s", symbol)
-		s.cache.Set(cacheKey, result, 30*time.Second) // Cache for 30 seconds
+		s.Cache.Set(cacheKey, result, 30*time.Second) // Cache for 30 seconds
 	}
 	
 	return result, nil
 }
 
-// Stop stops the service
-func (s *Service) Stop() {
-	s.cancel()
-	
-	// Close all subscription channels
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	
-	for _, subscription := range s.Subscriptions {
-		close(subscription.Channel)
-	}
-}
+
 
 // Helper function to generate a unique ID
 func generateID() string {
