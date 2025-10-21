@@ -43,6 +43,9 @@ type HFTConfigManager struct {
 // Type aliases for imported configs
 type HFTMemoryConfig = memory.HFTMemoryConfig
 
+// Config is an alias for HFTManagerConfig for backward compatibility
+type Config = HFTManagerConfig
+
 // HFTMonitoringConfig contains monitoring configuration
 type HFTMonitoringConfig struct {
 	// Metrics collection
