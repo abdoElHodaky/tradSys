@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/proto/ws"
 	"github.com/google/uuid"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -53,7 +52,7 @@ func NewHandler(p HandlerParams) *Handler {
 }
 
 // Subscribe implements the WebSocketService.Subscribe method
-func (h *Handler) Subscribe(ctx context.Context, req *ws.SubscribeRequest, rsp *ws.SubscribeResponse) error {
+func (h *Handler) Subscribe(ctx context.Context, req *SubscribeRequest, rsp *SubscribeResponse) error {
 	h.logger.Info("Subscribe called",
 		zap.String("topic", req.Topic),
 		zap.String("client_id", req.ClientId))
@@ -89,7 +88,7 @@ func (h *Handler) Subscribe(ctx context.Context, req *ws.SubscribeRequest, rsp *
 }
 
 // Unsubscribe implements the WebSocketService.Unsubscribe method
-func (h *Handler) Unsubscribe(ctx context.Context, req *ws.UnsubscribeRequest, rsp *ws.UnsubscribeResponse) error {
+func (h *Handler) Unsubscribe(ctx context.Context, req *UnsubscribeRequest, rsp *UnsubscribeResponse) error {
 	h.logger.Info("Unsubscribe called",
 		zap.String("subscription_id", req.SubscriptionId),
 		zap.String("client_id", req.ClientId))
@@ -102,7 +101,7 @@ func (h *Handler) Unsubscribe(ctx context.Context, req *ws.UnsubscribeRequest, r
 }
 
 // Publish implements the WebSocketService.Publish method
-func (h *Handler) Publish(ctx context.Context, req *ws.PublishRequest, rsp *ws.PublishResponse) error {
+func (h *Handler) Publish(ctx context.Context, req *PublishRequest, rsp *PublishResponse) error {
 	h.logger.Info("Publish called",
 		zap.String("topic", req.Topic),
 		zap.Int("data_size", len(req.Data)))
@@ -116,13 +115,13 @@ func (h *Handler) Publish(ctx context.Context, req *ws.PublishRequest, rsp *ws.P
 }
 
 // GetConnections implements the WebSocketService.GetConnections method
-func (h *Handler) GetConnections(ctx context.Context, req *ws.GetConnectionsRequest, rsp *ws.GetConnectionsResponse) error {
+func (h *Handler) GetConnections(ctx context.Context, req *GetConnectionsRequest, rsp *GetConnectionsResponse) error {
 	h.logger.Info("GetConnections called",
 		zap.String("topic", req.Topic))
 
 	// Implementation would go here
 	// For now, just return placeholder connections
-	rsp.Connections = []*ws.Connection{
+	rsp.Connections = []*ConnectionInfo{
 		{
 			ClientId:      uuid.New().String(),
 			UserId:        "user1",
