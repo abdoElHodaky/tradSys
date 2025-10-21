@@ -63,4 +63,3 @@ func NewBroker(p BrokerParams) broker.Broker {
 var BrokerModule = fx.Options(
 	fx.Provide(NewBroker),
 )
-

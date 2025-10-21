@@ -1,6 +1,10 @@
 package gateway
 
 import (
+	"io"
+	"net/http"
+	"time"
+
 	"github.com/abdoElHodaky/tradSys/internal/auth"
 	"github.com/abdoElHodaky/tradSys/internal/config"
 	"github.com/gin-gonic/gin"
@@ -51,10 +55,27 @@ func (r *Router) registerHealthRoutes() {
 
 // registerAuthRoutes registers authentication routes
 func (r *Router) registerAuthRoutes(authMiddleware *auth.Middleware) {
-	auth := r.engine.Group("/auth")
+	// Create auth service and handlers
+	authService := auth.NewService(auth.ServiceParams{
+		Logger: r.logger,
+		Config: r.config,
+	})
+	authHandlers := auth.NewHandlers(authService, r.logger)
+	
+	authGroup := r.engine.Group("/auth")
 	{
-		auth.POST("/login", authMiddleware.LoginHandler)
-		auth.POST("/refresh", authMiddleware.RefreshHandler)
+		// Public routes (no authentication required)
+		authGroup.POST("/login", authHandlers.Login)
+		authGroup.POST("/refresh", authHandlers.RefreshToken)
+		
+		// Protected routes (authentication required)
+		protected := authGroup.Group("/")
+		protected.Use(authHandlers.ValidateToken)
+		{
+			protected.POST("/logout", authHandlers.Logout)
+			protected.GET("/profile", authHandlers.Profile)
+			protected.POST("/change-password", authHandlers.ChangePassword)
+		}
 	}
 }
 
@@ -62,7 +83,7 @@ func (r *Router) registerAuthRoutes(authMiddleware *auth.Middleware) {
 func (r *Router) registerAPIRoutes(authMiddleware *auth.Middleware) {
 	// Create API group with authentication middleware
 	api := r.engine.Group("/api")
-	api.Use(authMiddleware.AuthRequired())
+	api.Use(authMiddleware.JWTAuth())
 	
 	// Market data routes
 	marketData := api.Group("/market-data")
@@ -122,7 +143,7 @@ func (r *Router) registerAPIRoutes(authMiddleware *auth.Middleware) {
 		
 		// Admin-only routes
 		admin := users.Group("/")
-		admin.Use(authMiddleware.AdminRequired())
+		admin.Use(authMiddleware.RoleAuth("admin"))
 		{
 			admin.GET("/", forwardToService("users", "/"))
 			admin.POST("/", forwardToService("users", "/"))
@@ -136,14 +157,72 @@ func (r *Router) registerAPIRoutes(authMiddleware *auth.Middleware) {
 // forwardToService creates a handler that forwards requests to the appropriate microservice
 func forwardToService(serviceName, path string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// This is a placeholder for the actual service forwarding logic
-		// In a real implementation, this would use a service discovery mechanism
-		// and forward the request to the appropriate service
-		c.JSON(501, gin.H{
-			"error": "Service forwarding not implemented",
-			"service": serviceName,
-			"path": path,
-		})
+		// Service discovery and forwarding logic
+		serviceURL := getServiceURL(serviceName)
+		if serviceURL == "" {
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"error": "Service unavailable",
+				"service": serviceName,
+				"message": "Service not found in registry",
+			})
+			return
+		}
+
+		// Forward request to service
+		targetURL := serviceURL + path
+		
+		// Create proxy request
+		req, err := http.NewRequest(c.Request.Method, targetURL, c.Request.Body)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to create proxy request",
+				"details": err.Error(),
+			})
+			return
+		}
+
+		// Copy headers
+		for key, values := range c.Request.Header {
+			for _, value := range values {
+				req.Header.Add(key, value)
+			}
+		}
+
+		// Execute request
+		client := &http.Client{Timeout: 30 * time.Second}
+		resp, err := client.Do(req)
+		if err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{
+				"error": "Service request failed",
+				"service": serviceName,
+				"details": err.Error(),
+			})
+			return
+		}
+		defer resp.Body.Close()
+
+		// Copy response
+		for key, values := range resp.Header {
+			for _, value := range values {
+				c.Header(key, value)
+			}
+		}
+		
+		c.Status(resp.StatusCode)
+		io.Copy(c.Writer, resp.Body)
 	}
 }
 
+// getServiceURL returns the URL for a given service name
+func getServiceURL(serviceName string) string {
+	// Service registry mapping
+	services := map[string]string{
+		"orders":     "http://localhost:8081",
+		"risk":       "http://localhost:8082", 
+		"marketdata": "http://localhost:8083",
+		"users":      "http://localhost:8084",
+		"auth":       "http://localhost:8085",
+	}
+	
+	return services[serviceName]
+}

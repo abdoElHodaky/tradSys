@@ -50,8 +50,8 @@ func (m *WebSocketMessage) UnmarshalData(v interface{}) error {
 	return json.Unmarshal(m.Data, v)
 }
 
-// ErrorMessage creates a new error message
-func ErrorMessage(errorMessage string) *WebSocketMessage {
+// NewErrorMessage creates a new error message
+func NewErrorMessage(errorMessage string) *WebSocketMessage {
 	return &WebSocketMessage{
 		Type:      "error",
 		Error:     errorMessage,
@@ -91,8 +91,8 @@ func PongMessage() *WebSocketMessage {
 	}
 }
 
-// AuthMessage creates a new authentication message
-func AuthMessage(token string) *WebSocketMessage {
+// NewAuthMessage creates a new authentication message
+func NewAuthMessage(token string) *WebSocketMessage {
 	data := map[string]string{
 		"token": token,
 	}
@@ -165,4 +165,3 @@ var (
 	ErrInvalidParams      = "invalid parameters"
 	ErrInternalError      = "internal error"
 )
-

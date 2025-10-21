@@ -59,4 +59,3 @@ func NewRegistry(p RegistryParams) registry.Registry {
 var RegistryModule = fx.Options(
 	fx.Provide(NewRegistry),
 )
-

@@ -1,0 +1,267 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hft-trading-system
+  namespace: trading
+  labels:
+    app: hft-trading-system
+    version: v2.0.0
+    component: trading-engine
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: hft-trading-system
+  template:
+    metadata:
+      labels:
+        app: hft-trading-system
+        version: v2.0.0
+        component: trading-engine
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: hft-trading-system
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+      containers:
+      - name: tradsys
+        image: tradsys:v2.0.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        - name: metrics
+          containerPort: 9090
+          protocol: TCP
+        env:
+        - name: HFT_ENVIRONMENT
+          value: "production"
+        - name: HFT_CONFIG_PATH
+          value: "/app/configs/hft-config.yaml"
+        - name: GIN_MODE
+          value: "release"
+        - name: HFT_JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: hft-secrets
+              key: jwt-secret
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/configs
+          readOnly: true
+        - name: data-volume
+          mountPath: /app/data
+        - name: logs-volume
+          mountPath: /app/logs
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: config-volume
+        configMap:
+          name: hft-config
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: hft-data-pvc
+      - name: logs-volume
+        emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - hft-trading-system
+              topologyKey: kubernetes.io/hostname
+      tolerations:
+      - key: "trading-workload"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+      nodeSelector:
+        workload-type: "trading"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hft-trading-system-service
+  namespace: trading
+  labels:
+    app: hft-trading-system
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 8080
+    targetPort: http
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: metrics
+    protocol: TCP
+  selector:
+    app: hft-trading-system
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: hft-trading-system
+  namespace: trading
+  labels:
+    app: hft-trading-system
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hft-config
+  namespace: trading
+  labels:
+    app: hft-trading-system
+data:
+  hft-config.yaml: |
+    environment: production
+    
+    database:
+      driver: sqlite3
+      dsn: "/app/data/trading.db"
+      max_conns: 20
+      enable_wal: true
+    
+    websocket:
+      port: 8080
+      read_buffer_size: 8192
+      write_buffer_size: 8192
+      ping_interval: 30s
+      binary_protocol: true
+    
+    security:
+      token_expiry: 24h
+      enable_tls: false
+    
+    rate_limit:
+      requests_per_second: 5000
+      burst_size: 500
+      window_size: 1s
+    
+    circuit_breaker:
+      max_failures: 10
+      reset_timeout: 60s
+      failure_ratio: 0.3
+    
+    timeouts:
+      http_read: 10s
+      http_write: 15s
+      grpc_request: 10s
+    
+    gc:
+      gc_percent: 300
+      memory_limit: 1610612736  # 1.5GB
+      enable_memory_limit: true
+      enable_gc_monitoring: true
+      gc_stats_interval: 30s
+      enable_ballast_heap: true
+      ballast_size: 536870912  # 512MB
+    
+    memory:
+      enable_object_pools: true
+      enable_buffer_pools: true
+      enable_string_pools: true
+      max_heap_size: 1610612736  # 1.5GB
+      gc_target_percentage: 300
+      enable_memory_monitoring: true
+      monitoring_interval: 10s
+      enable_leak_detection: true
+      leak_detection_threshold: 209715200  # 200MB
+    
+    monitoring:
+      enable_prometheus: true
+      enable_custom_metrics: true
+      metrics_interval: 5s
+      enable_health_checks: true
+      health_check_interval: 15s
+      enable_alerting: true
+      enable_performance_monitoring: true
+      performance_interval: 3s
+      enable_dashboard: true
+      dashboard_port: 9090
+      dashboard_path: "/dashboard"
+      
+      alert_thresholds:
+        max_latency: 50ms
+        max_error_rate: 0.005  # 0.5%
+        max_memory_usage: 1342177280  # 1.25GB
+        max_gc_pause_time: 5ms
+        min_throughput: 5000
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: hft-secrets
+  namespace: trading
+  labels:
+    app: hft-trading-system
+type: Opaque
+data:
+  jwt-secret: <base64-encoded-jwt-secret>
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hft-data-pvc
+  namespace: trading
+  labels:
+    app: hft-trading-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: fast-ssd

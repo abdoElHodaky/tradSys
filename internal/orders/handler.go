@@ -10,6 +10,8 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // HandlerParams contains the parameters for creating an order handler
@@ -66,23 +68,22 @@ func (h *Handler) CreateOrder(ctx context.Context, req *orders.CreateOrderReques
 			return err
 		}
 
-		if !validateRsp.Valid {
+		if !validateRsp.IsValid {
 			h.logger.Warn("Order validation failed",
-				zap.String("reason", validateRsp.Reason),
-				zap.Float64("max_allowed_quantity", validateRsp.MaxAllowedQuantity))
-			return grpc.Errorf(grpc.Code(400), "Order validation failed: %s", validateRsp.Reason)
+				zap.String("reason", validateRsp.RejectionReason))
+			return status.Errorf(codes.InvalidArgument, "Order validation failed: %s", validateRsp.RejectionReason)
 		}
 	}
 
 	// Implementation would go here
 	// For now, just return a placeholder response
-	rsp.OrderId = uuid.New().String()
+	rsp.Id = uuid.New().String()
 	rsp.Symbol = req.Symbol
 	rsp.Type = req.Type
 	rsp.Side = req.Side
 	rsp.Status = orders.OrderStatus_PENDING
 	rsp.Quantity = req.Quantity
-	rsp.FilledQuantity = 0
+	rsp.FilledQty = 0
 	rsp.Price = req.Price
 	rsp.StopPrice = req.StopPrice
 	rsp.CreatedAt = 1625097600000
@@ -95,17 +96,17 @@ func (h *Handler) CreateOrder(ctx context.Context, req *orders.CreateOrderReques
 // GetOrder implements the OrderService.GetOrder method
 func (h *Handler) GetOrder(ctx context.Context, req *orders.GetOrderRequest, rsp *orders.OrderResponse) error {
 	h.logger.Info("GetOrder called",
-		zap.String("order_id", req.OrderId))
+		zap.String("order_id", req.Id))
 
 	// Implementation would go here
 	// For now, just return a placeholder response
-	rsp.OrderId = req.OrderId
+	rsp.Id = req.Id
 	rsp.Symbol = "BTC-USD"
 	rsp.Type = orders.OrderType_LIMIT
 	rsp.Side = orders.OrderSide_BUY
-	rsp.Status = orders.OrderStatus_OPEN
+	rsp.Status = orders.OrderStatus_NEW
 	rsp.Quantity = 1.0
-	rsp.FilledQuantity = 0.5
+	rsp.FilledQty = 0.5
 	rsp.Price = 50000.0
 	rsp.CreatedAt = 1625097600000
 	rsp.UpdatedAt = 1625097660000
@@ -116,17 +117,17 @@ func (h *Handler) GetOrder(ctx context.Context, req *orders.GetOrderRequest, rsp
 // CancelOrder implements the OrderService.CancelOrder method
 func (h *Handler) CancelOrder(ctx context.Context, req *orders.CancelOrderRequest, rsp *orders.OrderResponse) error {
 	h.logger.Info("CancelOrder called",
-		zap.String("order_id", req.OrderId))
+		zap.String("order_id", req.Id))
 
 	// Implementation would go here
 	// For now, just return a placeholder response
-	rsp.OrderId = req.OrderId
+	rsp.Id = req.Id
 	rsp.Symbol = "BTC-USD"
 	rsp.Type = orders.OrderType_LIMIT
 	rsp.Side = orders.OrderSide_BUY
-	rsp.Status = orders.OrderStatus_CANCELED
+	rsp.Status = orders.OrderStatus_CANCELLED
 	rsp.Quantity = 1.0
-	rsp.FilledQuantity = 0.5
+	rsp.FilledQty = 0.5
 	rsp.Price = 50000.0
 	rsp.CreatedAt = 1625097600000
 	rsp.UpdatedAt = 1625097720000
@@ -144,36 +145,35 @@ func (h *Handler) GetOrders(ctx context.Context, req *orders.GetOrdersRequest, r
 	// For now, just return placeholder responses
 	rsp.Orders = []*orders.OrderResponse{
 		{
-			OrderId:        uuid.New().String(),
-			Symbol:         req.Symbol,
-			Type:           orders.OrderType_LIMIT,
-			Side:           orders.OrderSide_BUY,
-			Status:         req.Status,
-			Quantity:       1.0,
-			FilledQuantity: 0.5,
-			Price:          50000.0,
-			CreatedAt:      1625097600000,
-			UpdatedAt:      1625097660000,
+			Id:        uuid.New().String(),
+			Symbol:    req.Symbol,
+			Type:      orders.OrderType_LIMIT,
+			Side:      orders.OrderSide_BUY,
+			Status:    req.Status,
+			Quantity:  1.0,
+			FilledQty: 0.5,
+			Price:     50000.0,
+			CreatedAt: 1625097600000,
+			UpdatedAt: 1625097660000,
 		},
 		{
-			OrderId:        uuid.New().String(),
-			Symbol:         req.Symbol,
-			Type:           orders.OrderType_MARKET,
-			Side:           orders.OrderSide_SELL,
-			Status:         req.Status,
-			Quantity:       0.5,
-			FilledQuantity: 0.5,
-			Price:          51000.0,
-			CreatedAt:      1625097700000,
-			UpdatedAt:      1625097760000,
+			Id:        uuid.New().String(),
+			Symbol:    req.Symbol,
+			Type:      orders.OrderType_MARKET,
+			Side:      orders.OrderSide_SELL,
+			Status:    req.Status,
+			Quantity:  0.5,
+			FilledQty: 0.5,
+			Price:     51000.0,
+			CreatedAt: 1625097700000,
+			UpdatedAt: 1625097760000,
 		},
 	}
 
 	return nil
 }
 
-// Module provides the orders module for fx
-var Module = fx.Options(
+// OrdersModule provides the orders handler module for fx
+var OrdersModule = fx.Options(
 	fx.Provide(NewHandler),
 )
-

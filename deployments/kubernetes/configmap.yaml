@@ -1,0 +1,154 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tradsys-config
+  namespace: tradsys
+  labels:
+    app.kubernetes.io/name: tradsys
+    app.kubernetes.io/component: config
+data:
+  production.json: |
+    {
+      "server": {
+        "host": "0.0.0.0",
+        "port": 8080,
+        "metrics_port": 9090,
+        "read_timeout": "30s",
+        "write_timeout": "30s",
+        "idle_timeout": "120s"
+      },
+      "order_matching": {
+        "max_orders_per_symbol": 100000,
+        "latency_target": "100µs",
+        "enable_iceberg_orders": true,
+        "enable_hidden_orders": true,
+        "tick_size": 0.01,
+        "enable_market_impact": true
+      },
+      "risk_management": {
+        "max_latency": "10µs",
+        "enable_pre_trade_checks": true,
+        "enable_post_trade_checks": true,
+        "enable_var_calculation": true,
+        "max_position_size": 1000000,
+        "max_daily_loss": 100000,
+        "circuit_breaker_enabled": true
+      },
+      "settlement": {
+        "enable_t0_settlement": true,
+        "settlement_delay": "1ms",
+        "max_settlement_batch_size": 1000,
+        "retry_attempts": 3,
+        "retry_delay": "100ms"
+      },
+      "connectivity": {
+        "enabled_exchanges": ["binance", "coinbase", "kraken"],
+        "market_data_enabled": true,
+        "order_routing_enabled": true,
+        "max_latency": "5ms",
+        "reconnect_interval": "5s",
+        "heartbeat_interval": "30s",
+        "buffer_size": 10000
+      },
+      "compliance": {
+        "enabled_regulations": ["MiFID2", "INTERNAL"],
+        "reporting_enabled": true,
+        "audit_trail_enabled": true,
+        "alerting_enabled": true,
+        "reporting_interval": "24h",
+        "retention_period": "2160h",
+        "max_violations_per_day": 100,
+        "auto_reporting_enabled": true
+      },
+      "strategies": {
+        "enabled_strategies": ["mean_reversion", "momentum"],
+        "max_concurrent_orders": 100,
+        "execution_interval": "100ms",
+        "monitoring_enabled": true,
+        "risk_limits": {
+          "max_position_size": 500000,
+          "max_daily_loss": 50000,
+          "max_drawdown": 0.1
+        }
+      },
+      "database": {
+        "host": "tradsys-postgres",
+        "port": 5432,
+        "database": "tradsys",
+        "username": "tradsys",
+        "ssl_mode": "require",
+        "max_connections": 100,
+        "connection_timeout": "30s"
+      },
+      "redis": {
+        "host": "tradsys-redis",
+        "port": 6379,
+        "database": 0,
+        "pool_size": 100,
+        "connection_timeout": "5s"
+      },
+      "logging": {
+        "level": "info",
+        "format": "json",
+        "output": "stdout",
+        "enable_file_logging": true,
+        "log_file": "/app/logs/tradsys.log",
+        "max_size": "100MB",
+        "max_backups": 10,
+        "max_age": 30
+      },
+      "metrics": {
+        "enabled": true,
+        "port": 9090,
+        "path": "/metrics",
+        "enable_runtime_metrics": true,
+        "enable_custom_metrics": true
+      },
+      "tracing": {
+        "enabled": true,
+        "jaeger_endpoint": "http://jaeger-collector:14268/api/traces",
+        "sample_rate": 0.1
+      }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tradsys-scripts
+  namespace: tradsys
+  labels:
+    app.kubernetes.io/name: tradsys
+    app.kubernetes.io/component: scripts
+data:
+  init-db.sh: |
+    #!/bin/bash
+    set -e
+    
+    echo "Initializing TradSys database..."
+    
+    # Wait for PostgreSQL to be ready
+    until pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USER; do
+      echo "Waiting for PostgreSQL..."
+      sleep 2
+    done
+    
+    # Create database if it doesn't exist
+    createdb -h $DB_HOST -p $DB_PORT -U $DB_USER $DB_NAME || true
+    
+    # Run migrations
+    echo "Running database migrations..."
+    /app/tradsys migrate up
+    
+    echo "Database initialization complete."
+  
+  health-check.sh: |
+    #!/bin/bash
+    set -e
+    
+    # Check main API health
+    curl -f http://localhost:8080/health || exit 1
+    
+    # Check metrics endpoint
+    curl -f http://localhost:9090/metrics > /dev/null || exit 1
+    
+    echo "Health check passed"

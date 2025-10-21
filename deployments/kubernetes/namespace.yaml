@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tradsys
+  labels:
+    name: tradsys
+    environment: production
+    app.kubernetes.io/name: tradsys
+    app.kubernetes.io/version: "v2.0"
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: tradsys-quota
+  namespace: tradsys
+spec:
+  hard:
+    requests.cpu: "20"
+    requests.memory: 40Gi
+    limits.cpu: "40"
+    limits.memory: 80Gi
+    persistentvolumeclaims: "10"
+    services: "20"
+    secrets: "10"
+    configmaps: "10"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: tradsys-limits
+  namespace: tradsys
+spec:
+  limits:
+  - default:
+      cpu: "2"
+      memory: "4Gi"
+    defaultRequest:
+      cpu: "500m"
+      memory: "1Gi"
+    type: Container

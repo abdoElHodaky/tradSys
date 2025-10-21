@@ -6,12 +6,25 @@ import (
 	"gorm.io/gorm"
 )
 
-// Module provides the repositories module for the fx application
-var Module = fx.Options(
+// RepositoriesModule provides the repositories module for the fx application
+var RepositoriesModule = fx.Options(
 	fx.Provide(NewOrderRepository),
 	fx.Provide(NewTradeRepository),
 	fx.Provide(NewPositionRepository),
 	fx.Provide(NewRiskRepository),
+	fx.Provide(NewMarketDataRepository),
+)
+
+// Individual repository modules for specific services
+var OrderRepositoryModule = fx.Options(
+	fx.Provide(NewOrderRepository),
+)
+
+var RiskRepositoryModule = fx.Options(
+	fx.Provide(NewRiskRepository),
+)
+
+var MarketDataRepositoryModule = fx.Options(
 	fx.Provide(NewMarketDataRepository),
 )
 
@@ -37,4 +50,3 @@ func NewRepositories(
 		MarketDataRepository: NewMarketDataRepository(db, logger),
 	}
 }
-

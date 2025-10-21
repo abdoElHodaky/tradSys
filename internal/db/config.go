@@ -100,29 +100,7 @@ func (w *zapGormWriter) Printf(format string, args ...interface{}) {
 	w.zapLogger.Debug("gorm", zap.String("msg", msg))
 }
 
-// InitializeDatabase initializes the database with optimizations
-func InitializeDatabase(db *gorm.DB, logger *zap.Logger) error {
-	// Enable connection pooling
-	sqlDB, err := db.DB()
-	if err != nil {
-		return err
-	}
-
-	// Ping the database to verify the connection
-	if err := sqlDB.Ping(); err != nil {
-		return err
-	}
-
-	// Create indexes and optimizations
-	logger.Info("Initializing database with optimizations")
-
-	// Run migrations
-	if err := runMigrations(db, logger); err != nil {
-		return err
-	}
-
-	return nil
-}
+// Removed duplicate InitializeDatabase function - using the comprehensive one in init.go
 
 // runMigrations runs database migrations
 func runMigrations(db *gorm.DB, logger *zap.Logger) error {
@@ -211,4 +189,3 @@ func createIndexes(db *gorm.DB, logger *zap.Logger) error {
 
 	return nil
 }
-
