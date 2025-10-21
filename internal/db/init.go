@@ -9,7 +9,7 @@ import (
 // InitializeDatabase sets up the database with optimizations
 func InitializeDatabase(db *gorm.DB, logger *zap.Logger) error {
 	// Create optimizer
-	optimizer := query.NewOptimizer(db, logger)
+	optimizer := queries.NewOptimizer(db, logger)
 	
 	// Enable SQLite optimizations
 	if err := optimizer.EnableQueryOptimizations(); err != nil {
@@ -45,7 +45,7 @@ func InitializeDatabase(db *gorm.DB, logger *zap.Logger) error {
 }
 
 // createCommonIndexes creates indexes for common query patterns
-func createCommonIndexes(db *gorm.DB, optimizer *query.Optimizer, logger *zap.Logger) {
+func createCommonIndexes(db *gorm.DB, optimizer *queries.Optimizer, logger *zap.Logger) {
 	// Order indexes
 	orderIndexes := []struct {
 		name    string
@@ -96,4 +96,3 @@ func createCommonIndexes(db *gorm.DB, optimizer *query.Optimizer, logger *zap.Lo
 	
 	// Other indexes for remaining tables would be added here
 }
-

@@ -12,6 +12,8 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
+	
+	"github.com/abdoElHodaky/tradSys/internal/trading/memory"
 )
 
 // HFTConfigManager manages configuration for HFT components
@@ -22,14 +24,14 @@ type HFTConfigManager struct {
 	env        string
 	
 	// Current configuration
-	config     atomic.Value // *HFTConfig
+	config     atomic.Value // *HFTManagerConfig
 	
 	// Hot reload
 	watcher    *fsnotify.Watcher
 	reloadChan chan struct{}
 	
 	// Callbacks
-	callbacks  []func(*HFTConfig)
+	callbacks  []func(*HFTManagerConfig)
 	cbLock     sync.RWMutex
 	
 	// Control
@@ -38,8 +40,45 @@ type HFTConfigManager struct {
 	wg         sync.WaitGroup
 }
 
-// HFTConfig contains all HFT configuration
-type HFTConfig struct {
+// Type aliases for imported configs
+type HFTMemoryConfig = memory.HFTMemoryConfig
+
+// HFTMonitoringConfig contains monitoring configuration
+type HFTMonitoringConfig struct {
+	// Metrics collection
+	EnablePrometheus    bool          `yaml:"enable_prometheus" default:"true"`
+	EnableCustomMetrics bool          `yaml:"enable_custom_metrics" default:"true"`
+	MetricsInterval     time.Duration `yaml:"metrics_interval" default:"10s"`
+	
+	// Health checks
+	EnableHealthChecks  bool          `yaml:"enable_health_checks" default:"true"`
+	HealthCheckInterval time.Duration `yaml:"health_check_interval" default:"30s"`
+	
+	// Alerting
+	EnableAlerting      bool          `yaml:"enable_alerting" default:"true"`
+	AlertThresholds     AlertThresholds `yaml:"alert_thresholds"`
+	
+	// Performance monitoring
+	EnablePerformanceMonitoring bool          `yaml:"enable_performance_monitoring" default:"true"`
+	PerformanceInterval         time.Duration `yaml:"performance_interval" default:"5s"`
+	
+	// Dashboard
+	EnableDashboard bool   `yaml:"enable_dashboard" default:"true"`
+	DashboardPort   int    `yaml:"dashboard_port" default:"9090"`
+	DashboardPath   string `yaml:"dashboard_path" default:"/dashboard"`
+}
+
+// AlertThresholds contains alerting thresholds
+type AlertThresholds struct {
+	MaxLatency        time.Duration `yaml:"max_latency" default:"100ms"`
+	MaxErrorRate      float64       `yaml:"max_error_rate" default:"0.01"`      // 1%
+	MaxMemoryUsage    int64         `yaml:"max_memory_usage" default:"1073741824"` // 1GB
+	MaxGCPauseTime    time.Duration `yaml:"max_gc_pause_time" default:"10ms"`
+	MinThroughput     int64         `yaml:"min_throughput" default:"1000"`     // requests/sec
+}
+
+// HFTManagerConfig contains all HFT configuration for the manager
+type HFTManagerConfig struct {
 	// Environment
 	Environment string `yaml:"environment" default:"development"`
 	
@@ -228,7 +267,7 @@ func (m *HFTConfigManager) loadConfig() error {
 	}
 	
 	// Create new config
-	config := &HFTConfig{}
+	config := &HFTManagerConfig{}
 	
 	// Unmarshal config
 	if err := m.viper.Unmarshal(config); err != nil {
@@ -303,7 +342,7 @@ func (m *HFTConfigManager) watchLoop() {
 }
 
 // notifyCallbacks notifies all registered callbacks
-func (m *HFTConfigManager) notifyCallbacks(config *HFTConfig) {
+func (m *HFTConfigManager) notifyCallbacks(config *HFTManagerConfig) {
 	m.cbLock.RLock()
 	defer m.cbLock.RUnlock()
 	
@@ -313,12 +352,12 @@ func (m *HFTConfigManager) notifyCallbacks(config *HFTConfig) {
 }
 
 // GetConfig returns the current configuration
-func (m *HFTConfigManager) GetConfig() *HFTConfig {
-	return m.config.Load().(*HFTConfig)
+func (m *HFTConfigManager) GetConfig() *HFTManagerConfig {
+	return m.config.Load().(*HFTManagerConfig)
 }
 
 // RegisterCallback registers a callback for configuration changes
-func (m *HFTConfigManager) RegisterCallback(callback func(*HFTConfig)) {
+func (m *HFTConfigManager) RegisterCallback(callback func(*HFTManagerConfig)) {
 	m.cbLock.Lock()
 	defer m.cbLock.Unlock()
 	
@@ -333,7 +372,7 @@ func (m *HFTConfigManager) Close() error {
 }
 
 // ValidateHFTConfig validates the HFT configuration
-func ValidateHFTConfig(config *HFTConfig) error {
+func ValidateHFTConfig(config *HFTManagerConfig) error {
 	if config == nil {
 		return fmt.Errorf("config cannot be nil")
 	}
@@ -386,13 +425,13 @@ func ValidateHFTConfig(config *HFTConfig) error {
 }
 
 // LoadConfigFromFile loads configuration from a YAML file
-func LoadConfigFromFile(path string) (*HFTConfig, error) {
+func LoadConfigFromFile(path string) (*HFTManagerConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 	
-	var config HFTConfig
+	var config HFTManagerConfig
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
@@ -401,7 +440,7 @@ func LoadConfigFromFile(path string) (*HFTConfig, error) {
 }
 
 // SaveConfigToFile saves configuration to a YAML file
-func SaveConfigToFile(config *HFTConfig, path string) error {
+func SaveConfigToFile(config *HFTManagerConfig, path string) error {
 	data, err := yaml.Marshal(config)
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)

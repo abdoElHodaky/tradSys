@@ -140,7 +140,7 @@ func (m *Manager) GetMarketData(symbol, interval string) (float64, float64, int6
 		return 50000.0, 1000.0, time.Now().Unix() * 1000, nil
 	}
 	
-	return ticker.Price, ticker.Volume, ticker.Timestamp, nil
+	return ticker.Price, ticker.Volume, ticker.Timestamp.Unix() * 1000, nil
 }
 
 // ManagerModule provides the external market data manager for fx

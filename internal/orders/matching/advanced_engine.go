@@ -227,7 +227,7 @@ func (e *AdvancedOrderMatchingEngine) AddOrder(order *types.Order) ([]*Trade, er
 		e.updateMetrics(latency)
 	}()
 
-	if !atomic.LoadInt32(&e.isRunning) == 1 {
+	if atomic.LoadInt32(&e.isRunning) != 1 {
 		return nil, fmt.Errorf("engine is not running")
 	}
 

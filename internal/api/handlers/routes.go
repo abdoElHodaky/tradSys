@@ -6,13 +6,13 @@ import (
 	"time"
 	
 	"github.com/gin-gonic/gin"
-	"github.com/abdoElHodaky/tradSys/internal/core/matching"
+	order_matching "github.com/abdoElHodaky/tradSys/internal/core/matching"
 	"github.com/abdoElHodaky/tradSys/internal/trading/types"
 )
 
 // TradingSystemInterface defines the interface for the trading system
 type TradingSystemInterface interface {
-	GetMatchingEngine() *matching.Engine
+	GetMatchingEngine() *order_matching.Engine
 	GetPerformanceMetrics() map[string]interface{}
 }
 
@@ -124,7 +124,7 @@ func createOrderHandler(ts TradingSystemInterface) gin.HandlerFunc {
 		
 		// Process order through matching engine
 		engine := ts.GetMatchingEngine()
-		trades, err := engine.ProcessOrder(order)
+		trades, err := engine.PlaceOrder(order)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
