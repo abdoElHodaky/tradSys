@@ -3,7 +3,7 @@ package micro
 import (
 	"context"
 
-	unifiedconfig "github.com/abdoElHodaky/tradSys/internal/unified-config"
+	"github.com/abdoElHodaky/tradSys/internal/config"
 	"go-micro.dev/v4/registry"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -14,7 +14,7 @@ type RegistryParams struct {
 	fx.In
 
 	Logger    *zap.Logger
-	Config    *unifiedconfig.Config
+	Config    *config.Config
 	Lifecycle fx.Lifecycle
 }
 

@@ -10,8 +10,8 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
-	"github.com/abdoElHodaky/tradSys/internal/hft/metrics"
-	"github.com/abdoElHodaky/tradSys/internal/hft/pools"
+	"github.com/abdoElHodaky/tradSys/internal/trading/metrics"
+	"github.com/abdoElHodaky/tradSys/internal/trading/pools"
 )
 
 // FastOrderHandler provides high-performance order handling with minimal allocations

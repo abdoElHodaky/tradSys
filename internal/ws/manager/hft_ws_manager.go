@@ -12,8 +12,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
-	"github.com/abdoElHodaky/tradSys/internal/hft/metrics"
-	"github.com/abdoElHodaky/tradSys/internal/hft/pools"
+	"github.com/abdoElHodaky/tradSys/internal/trading/metrics"
+	"github.com/abdoElHodaky/tradSys/internal/trading/pools"
 )
 
 // HFTWebSocketManager manages WebSocket connections with HFT optimizations

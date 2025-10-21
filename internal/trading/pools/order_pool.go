@@ -53,24 +53,7 @@ func PutOrderToPool(order *models.Order) {
 	globalOrderPool.Put(order)
 }
 
-// Reset method for Order struct - extends the existing model
-func (o *models.Order) Reset() {
-	o.ID = ""
-	o.UserID = ""
-	o.Symbol = ""
-	o.Side = ""
-	o.Type = ""
-	o.Quantity = 0
-	o.Price = 0
-	o.StopPrice = 0
-	o.Status = ""
-	o.FilledQuantity = 0
-	o.AveragePrice = 0
-	o.Commission = 0
-	o.CreatedAt = time.Time{}
-	o.UpdatedAt = time.Time{}
-	o.ExecutedAt = nil
-}
+// Reset method is now defined in the models package
 
 // OrderRequest represents a pooled order request
 type OrderRequest struct {
@@ -180,18 +163,18 @@ func (r *OrderResponse) Reset() {
 func (r *OrderResponse) FromOrder(order *models.Order) {
 	r.ID = order.ID
 	r.Symbol = order.Symbol
-	r.Side = order.Side
-	r.Type = order.Type
+	r.Side = string(order.Side)
+	r.Type = string(order.Type)
 	r.Quantity = order.Quantity
 	r.Price = order.Price
 	r.StopPrice = order.StopPrice
-	r.Status = order.Status
-	r.FilledQuantity = order.FilledQuantity
-	r.AveragePrice = order.AveragePrice
-	r.Commission = order.Commission
+	r.Status = string(order.Status)
+	r.FilledQuantity = order.FilledQty
+	r.AveragePrice = order.AvgPrice
+	r.Commission = 0 // Not available in models.Order, set to 0
 	r.CreatedAt = order.CreatedAt
 	r.UpdatedAt = order.UpdatedAt
-	r.ExecutedAt = order.ExecutedAt
+	r.ExecutedAt = nil // Not available in models.Order, set to nil
 }
 
 // OrderResponsePool manages a pool of OrderResponse objects

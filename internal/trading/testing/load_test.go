@@ -8,8 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/hft/metrics"
-	"github.com/abdoElHodaky/tradSys/internal/hft/pools"
+	"github.com/abdoElHodaky/tradSys/internal/trading/metrics"
+	"github.com/abdoElHodaky/tradSys/internal/trading/pools"
 )
 
 // LoadTestConfig contains load testing configuration

@@ -77,6 +77,30 @@ type OrderWithTriggers struct {
 	TakeProfit *float64 `gorm:"-" json:"take_profit"`
 }
 
+// Reset resets the order to its zero state for pool reuse
+func (o *Order) Reset() {
+	o.ID = ""
+	o.UserID = ""
+	o.AccountID = ""
+	o.Symbol = ""
+	o.Side = ""
+	o.Type = ""
+	o.Quantity = 0
+	o.Price = 0
+	o.StopPrice = 0
+	o.TrailingOffset = 0
+	o.TimeInForce = ""
+	o.Status = ""
+	o.FilledQty = 0
+	o.AvgPrice = 0
+	o.ClientOrderID = ""
+	o.ExchangeOrderID = ""
+	o.Notes = ""
+	o.CreatedAt = time.Time{}
+	o.UpdatedAt = time.Time{}
+	o.ExpiresAt = nil
+}
+
 // BeforeCreate is a GORM hook that runs before creating a new order
 func (o *Order) BeforeCreate(tx *gorm.DB) error {
 	if o.ID == "" {
@@ -104,4 +128,3 @@ func (oh *OrderHistory) BeforeCreate(tx *gorm.DB) error {
 	}
 	return nil
 }
-

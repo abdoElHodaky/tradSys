@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/abdoElHodaky/tradSys/internal/hft/metrics"
+	"github.com/abdoElHodaky/tradSys/internal/trading/metrics"
 )
 
 // LatencyMiddleware measures and records request latency

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/abdoElHodaky/tradSys/internal/unified-config"
+	"github.com/abdoElHodaky/tradSys/internal/config"
 	"github.com/gorilla/websocket"
 	"go.uber.org/fx"
 	"go.uber.org/zap"

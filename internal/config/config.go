@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
+	"gopkg.in/yaml.v3"
 )
 
 // Config contains application configuration
@@ -20,6 +21,10 @@ type Config struct {
 	JWT         JWTConfig
 	Services    ServicesConfig
 	Logging     LoggingConfig
+	
+	// Trading-specific configuration (merged from unified-config)
+	Trading    TradingConfig
+	Risk       RiskConfig
 	
 	// Additional fields for microservices architecture
 	Service    ServiceConfig
@@ -129,6 +134,23 @@ type AuthConfig struct {
 	RefreshExpiry int    `json:"refreshExpiry"`
 }
 
+// TradingConfig contains trading-related configuration (merged from unified-config)
+type TradingConfig struct {
+	MaxOrderSize     float64 `json:"max_order_size" yaml:"max_order_size"`
+	MaxPositionSize  float64 `json:"max_position_size" yaml:"max_position_size"`
+	DefaultLeverage  float64 `json:"default_leverage" yaml:"default_leverage"`
+	CommissionRate   float64 `json:"commission_rate" yaml:"commission_rate"`
+}
+
+// RiskConfig contains risk management configuration (merged from unified-config)
+type RiskConfig struct {
+	MaxDailyLoss     float64 `json:"max_daily_loss" yaml:"max_daily_loss"`
+	MaxTotalLoss     float64 `json:"max_total_loss" yaml:"max_total_loss"`
+	MinMarginLevel   float64 `json:"min_margin_level" yaml:"min_margin_level"`
+	MarginCallLevel  float64 `json:"margin_call_level" yaml:"margin_call_level"`
+	LiquidationLevel float64 `json:"liquidation_level" yaml:"liquidation_level"`
+}
+
 // LoadConfig loads the application configuration
 func LoadConfig(configPath string, logger *zap.Logger) (*Config, error) {
 	// Set default configuration values
@@ -204,6 +226,19 @@ func LoadConfig(configPath string, logger *zap.Logger) (*Config, error) {
 			JWTSecret:     "default-jwt-secret-change-in-production",
 			TokenExpiry:   3600,
 			RefreshExpiry: 86400,
+		},
+		Trading: TradingConfig{
+			MaxOrderSize:    1000000.0,
+			MaxPositionSize: 5000000.0,
+			DefaultLeverage: 1.0,
+			CommissionRate:  0.001,
+		},
+		Risk: RiskConfig{
+			MaxDailyLoss:     10000.0,
+			MaxTotalLoss:     50000.0,
+			MinMarginLevel:   120.0,
+			MarginCallLevel:  120.0,
+			LiquidationLevel: 100.0,
 		},
 	}
 
@@ -332,3 +367,73 @@ func NewConfig(logger *zap.Logger) (*Config, error) {
 var Module = fx.Options(
 	fx.Provide(NewConfig),
 )
+
+// Load loads configuration from the specified YAML file (merged from unified-config)
+func Load(configPath string) (*Config, error) {
+	if configPath == "" {
+		configPath = "config/tradsys.yaml"
+	}
+
+	// Check if file exists
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("config file not found: %s", configPath)
+	}
+
+	// Read the file
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	// Parse YAML
+	var config Config
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	}
+
+	return &config, nil
+}
+
+// LoadFromDir loads configuration from a directory (merged from unified-config)
+func LoadFromDir(dir string) (*Config, error) {
+	configPath := filepath.Join(dir, "tradsys.yaml")
+	return Load(configPath)
+}
+
+// Default returns a default configuration (merged from unified-config)
+func Default() *Config {
+	return &Config{
+		Server: ServerConfig{
+			Port:         8080,
+			ReadTimeout:  5 * time.Second,
+			WriteTimeout: 10 * time.Second,
+			IdleTimeout:  120 * time.Second,
+		},
+		Database: DatabaseConfig{
+			Driver:   "postgres",
+			Host:     "localhost",
+			Port:     5432,
+			Database: "tradsys",
+			Username: "tradsys",
+			Password: "password",
+			SSLMode:  "disable",
+		},
+		Trading: TradingConfig{
+			MaxOrderSize:    1000000.0,
+			MaxPositionSize: 5000000.0,
+			DefaultLeverage: 1.0,
+			CommissionRate:  0.001,
+		},
+		Risk: RiskConfig{
+			MaxDailyLoss:     10000.0,
+			MaxTotalLoss:     50000.0,
+			MinMarginLevel:   120.0,
+			MarginCallLevel:  120.0,
+			LiquidationLevel: 100.0,
+		},
+		Logging: LoggingConfig{
+			Level:      "info",
+			OutputPath: "stdout",
+		},
+	}
+}

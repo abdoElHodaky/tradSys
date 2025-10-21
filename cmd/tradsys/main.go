@@ -103,12 +103,8 @@ func runServer() {
 	}
 	defer logger.Sync()
 
-	// Load configuration
-	
-  //cfg, err := config.NewConfig(logger)
-
-	// Load unified configuration
-	cfg, err := unifiedconfig.Load("config/tradsys.yaml")
+	// Load configuration (unified config merged into main config)
+	cfg, err := config.Load("config/tradsys.yaml")
 
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)

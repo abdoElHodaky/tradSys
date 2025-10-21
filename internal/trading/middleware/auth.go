@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	
-	"github.com/abdoElHodaky/tradSys/internal/hft/metrics"
+	"github.com/abdoElHodaky/tradSys/internal/trading/metrics"
 )
 
 // Claims represents JWT claims for HFT authentication

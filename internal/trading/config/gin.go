@@ -9,7 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	
 	"github.com/abdoElHodaky/tradSys/internal/api/handlers"
-	"github.com/abdoElHodaky/tradSys/internal/hft/middleware"
+	"github.com/abdoElHodaky/tradSys/internal/trading/middleware"
 )
 
 // HFTGinConfig contains HFT-specific Gin configuration

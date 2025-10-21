@@ -11,7 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	
-	"github.com/abdoElHodaky/tradSys/internal/hft/metrics"
+	"github.com/abdoElHodaky/tradSys/internal/trading/metrics"
 )
 
 // HFTCircuitBreakerConfig contains circuit breaker configuration

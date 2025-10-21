@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
-	"github.com/abdoElHodaky/tradSys/internal/hft/metrics"
+	"github.com/abdoElHodaky/tradSys/internal/trading/metrics"
 )
 
 // HFTQueries contains all prepared statements for high-frequency operations
@@ -172,7 +172,7 @@ func (hq *HFTQueries) GetOrderByID(orderID string) (*models.Order, error) {
 	err := hq.getOrderByIDStmt.QueryRow(orderID).Scan(
 		&order.ID, &order.UserID, &order.Symbol, &order.Side, &order.Type,
 		&order.Quantity, &order.Price, &order.StopPrice, &order.Status,
-		&order.FilledQuantity, &order.AveragePrice, &order.Commission,
+		&order.FilledQty, &order.AvgPrice, &order.Notes,
 		&order.CreatedAt, &order.UpdatedAt, &executedAt,
 	)
 	
@@ -184,7 +184,7 @@ func (hq *HFTQueries) GetOrderByID(orderID string) (*models.Order, error) {
 	}
 	
 	if executedAt.Valid {
-		order.ExecutedAt = &executedAt.Time
+		order.ExpiresAt = &executedAt.Time
 	}
 	
 	return order, nil
@@ -220,8 +220,8 @@ func (hq *HFTQueries) UpdateOrder(order *models.Order) error {
 	defer hq.mu.RUnlock()
 	
 	_, err := hq.updateOrderStmt.Exec(
-		order.FilledQuantity, order.AveragePrice, order.Commission,
-		order.Status, order.UpdatedAt, order.ExecutedAt, order.ID,
+		order.FilledQty, order.AvgPrice, order.Notes,
+		order.Status, order.UpdatedAt, order.ExpiresAt, order.ID,
 	)
 	
 	if err != nil {
@@ -269,7 +269,7 @@ func (hq *HFTQueries) GetOrdersByUser(userID string, limit int) ([]*models.Order
 		err := rows.Scan(
 			&order.ID, &order.UserID, &order.Symbol, &order.Side, &order.Type,
 			&order.Quantity, &order.Price, &order.StopPrice, &order.Status,
-			&order.FilledQuantity, &order.AveragePrice, &order.Commission,
+			&order.FilledQty, &order.AvgPrice, &order.Notes,
 			&order.CreatedAt, &order.UpdatedAt, &executedAt,
 		)
 		if err != nil {
@@ -277,7 +277,7 @@ func (hq *HFTQueries) GetOrdersByUser(userID string, limit int) ([]*models.Order
 		}
 		
 		if executedAt.Valid {
-			order.ExecutedAt = &executedAt.Time
+			order.ExpiresAt = &executedAt.Time
 		}
 		
 		orders = append(orders, order)
@@ -308,7 +308,7 @@ func (hq *HFTQueries) GetActiveOrders() ([]*models.Order, error) {
 		err := rows.Scan(
 			&order.ID, &order.UserID, &order.Symbol, &order.Side, &order.Type,
 			&order.Quantity, &order.Price, &order.StopPrice, &order.Status,
-			&order.FilledQuantity, &order.AveragePrice, &order.Commission,
+			&order.FilledQty, &order.AvgPrice, &order.Notes,
 			&order.CreatedAt, &order.UpdatedAt, &executedAt,
 		)
 		if err != nil {
@@ -316,7 +316,7 @@ func (hq *HFTQueries) GetActiveOrders() ([]*models.Order, error) {
 		}
 		
 		if executedAt.Valid {
-			order.ExecutedAt = &executedAt.Time
+			order.ExpiresAt = &executedAt.Time
 		}
 		
 		orders = append(orders, order)

@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	
-	"github.com/abdoElHodaky/tradSys/internal/hft/metrics"
+	"github.com/abdoElHodaky/tradSys/internal/trading/metrics"
 )
 
 // HFTRecoveryConfig contains recovery middleware configuration

@@ -8,7 +8,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/abdoElHodaky/tradSys/internal/hft/pools"
+	"github.com/abdoElHodaky/tradSys/internal/trading/pools"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )

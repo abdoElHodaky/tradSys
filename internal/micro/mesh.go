@@ -1,7 +1,7 @@
 package micro
 
 import (
-	unifiedconfig "github.com/abdoElHodaky/tradSys/internal/unified-config"
+	"github.com/abdoElHodaky/tradSys/internal/config"
 	gomicro "go-micro.dev/v4"
 	"go-micro.dev/v4/client"
 	"go-micro.dev/v4/server"
@@ -78,11 +78,11 @@ func ConfigureMesh(service gomicro.Service, opts MeshOptions, logger *zap.Logger
 }
 
 // NewMeshOptions creates mesh options from configuration
-func NewMeshOptions(config *unifiedconfig.Config) MeshOptions {
+func NewMeshOptions(cfg *config.Config) MeshOptions {
 	return MeshOptions{
-		EnableTracing:       config.Tracing.Enabled,
-		EnableMetrics:       config.Metrics.Enabled,
-		EnableCircuitBreaker: config.Resilience.CircuitBreakerEnabled,
-		EnableRateLimiting:  config.Resilience.RateLimitingEnabled,
+		EnableTracing:       cfg.Tracing.Enabled,
+		EnableMetrics:       cfg.Metrics.Enabled,
+		EnableCircuitBreaker: cfg.Resilience.CircuitBreakerEnabled,
+		EnableRateLimiting:  cfg.Resilience.RateLimitingEnabled,
 	}
 }
