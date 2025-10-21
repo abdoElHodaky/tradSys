@@ -15,14 +15,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// ServiceParams contains the parameters for creating a market data service
-type ServiceParams struct {
-	fx.In
 
-	Logger     *zap.Logger
-	Config     *config.Config
-	Repository *repositories.MarketDataRepository `optional:"true"`
-}
 
 // Service represents a market data service
 type Service struct {

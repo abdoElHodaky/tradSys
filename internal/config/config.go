@@ -94,6 +94,30 @@ func (c *HFTConfig) Optimize() {
 	c.SocketBufferSize = 131072 // 128KB
 }
 
+// Config represents the main application configuration
+type Config struct {
+	// HFT contains high-frequency trading configuration
+	HFT HFTConfig `yaml:"hft"`
+	
+	// Server configuration
+	Server struct {
+		Host string `yaml:"host"`
+		Port int    `yaml:"port"`
+	} `yaml:"server"`
+	
+	// Database configuration
+	Database struct {
+		Driver string `yaml:"driver"`
+		DSN    string `yaml:"dsn"`
+	} `yaml:"database"`
+	
+	// JWT configuration
+	JWT struct {
+		Secret     string        `yaml:"secret"`
+		Expiration time.Duration `yaml:"expiration"`
+	} `yaml:"jwt"`
+}
+
 // Errors
 var (
 	ErrInvalidMaxOrdersPerSecond = fmt.Errorf("invalid max orders per second")
