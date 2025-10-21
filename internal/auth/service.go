@@ -2,7 +2,7 @@ package auth
 
 import (
 	"context"
-	"crypto/bcrypt"
+	"golang.org/x/crypto/bcrypt"
 	"errors"
 	"fmt"
 	"time"
@@ -276,4 +276,3 @@ func (s *Service) GetUser(username string) (*User, error) {
 		UpdatedAt: user.UpdatedAt,
 	}, nil
 }
-

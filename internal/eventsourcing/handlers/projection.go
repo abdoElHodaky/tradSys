@@ -1,4 +1,4 @@
-package projection
+package handlers
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/store"
+	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
 	"go.uber.org/zap"
 )
 

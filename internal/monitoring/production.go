@@ -13,7 +13,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	
-	"github.com/abdoElHodaky/tradSys/internal/trading/config"
+	"github.com/abdoElHodaky/tradSys/internal/config"
 	"github.com/abdoElHodaky/tradSys/internal/trading/memory"
 	"github.com/abdoElHodaky/tradSys/internal/trading/metrics"
 )

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/performance/latency"
-	"github.com/abdoElHodaky/tradSys/internal/performance/pools"
+	"github.com/abdoElHodaky/tradSys/internal/common/pool/performance"
 	"github.com/abdoElHodaky/tradSys/proto/marketdata"
 	"github.com/abdoElHodaky/tradSys/proto/orders"
 	"go.uber.org/zap"

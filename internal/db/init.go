@@ -1,7 +1,7 @@
 package db
 
 import (
-	"github.com/abdoElHodaky/tradSys/internal/db/query"
+	"github.com/abdoElHodaky/tradSys/internal/db/queries"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
-	"github.com/abdoElHodaky/tradSys/internal/db/query"
+	"github.com/abdoElHodaky/tradSys/internal/db/queries"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )

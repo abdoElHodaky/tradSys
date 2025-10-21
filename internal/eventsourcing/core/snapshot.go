@@ -1,4 +1,4 @@
-package snapshot
+package core
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/store"
 	"go.uber.org/zap"
 )
 
@@ -228,4 +227,3 @@ func (s *SnapshotScheduler) createSnapshots() {
 var (
 	ErrDeleteSnapshotsNotSupported = errors.New("delete snapshots not supported")
 )
-

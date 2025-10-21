@@ -1,4 +1,4 @@
-package command
+package core
 
 import (
 	"context"
@@ -106,4 +106,3 @@ var (
 	ErrCommandNotFound = errors.New("command not found")
 	ErrHandlerNotFound = errors.New("handler not found")
 )
-

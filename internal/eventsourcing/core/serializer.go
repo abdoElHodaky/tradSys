@@ -1,4 +1,4 @@
-package serialization
+package core
 
 import (
 	"encoding/json"

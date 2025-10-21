@@ -1,4 +1,4 @@
-package market_data
+package marketdata
 
 import (
 	"context"

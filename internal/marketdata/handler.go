@@ -1,4 +1,4 @@
-package market_data
+package marketdata
 
 import (
 	"context"
@@ -482,4 +482,3 @@ func (h *Handler) Stop() {
 		close(subscription.Channel)
 	}
 }
-

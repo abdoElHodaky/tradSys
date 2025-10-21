@@ -1,15 +1,15 @@
-package integration
+package handlers
 
 import (
 	"context"
 	"fmt"
 	"sync"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/command"
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/eventbus"
+	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
+	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/aggregate"
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/store"
+	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
+	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
 	"go.uber.org/zap"
 )
 

@@ -19,7 +19,7 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/api/handlers"
 	"github.com/abdoElHodaky/tradSys/internal/config"
 	"github.com/abdoElHodaky/tradSys/internal/core/matching"
-	"github.com/abdoElHodaky/tradSys/internal/core/risk"
+	"github.com/abdoElHodaky/tradSys/internal/risk"
 	"github.com/abdoElHodaky/tradSys/internal/core/settlement"
 	"github.com/abdoElHodaky/tradSys/internal/connectivity"
 	"github.com/abdoElHodaky/tradSys/internal/compliance"

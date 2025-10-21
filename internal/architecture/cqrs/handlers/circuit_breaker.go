@@ -1,4 +1,4 @@
-package integration
+package handlers
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/eventbus"
+	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
 	"go.uber.org/zap"
 )
@@ -309,4 +309,3 @@ func (d *CircuitBreakerEventBusDecorator) SubscribeToType(eventType string, hand
 func (d *CircuitBreakerEventBusDecorator) SubscribeToAggregate(aggregateType string, handler eventsourcing.EventHandler) error {
 	return d.eventBus.SubscribeToAggregate(aggregateType, handler)
 }
-

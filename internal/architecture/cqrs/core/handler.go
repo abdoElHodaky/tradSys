@@ -1,4 +1,4 @@
-package command
+package core
 
 import (
 	"context"
@@ -6,9 +6,8 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/eventbus"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/aggregate"
+	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
 	"go.uber.org/zap"
 )
 
@@ -187,4 +186,3 @@ func (h *AggregateCommandHandler) createEmptyAggregate(aggregateID string) (aggr
 	
 	return nil, fmt.Errorf("aggregate repository does not support creating aggregates")
 }
-

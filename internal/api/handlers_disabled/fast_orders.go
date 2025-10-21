@@ -11,7 +11,7 @@ import (
 
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
 	"github.com/abdoElHodaky/tradSys/internal/trading/metrics"
-	"github.com/abdoElHodaky/tradSys/internal/trading/pools"
+	"github.com/abdoElHodaky/tradSys/internal/common/pool"
 )
 
 // FastOrderHandler provides high-performance order handling with minimal allocations

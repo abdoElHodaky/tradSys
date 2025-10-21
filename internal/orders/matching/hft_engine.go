@@ -8,7 +8,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/abdoElHodaky/tradSys/internal/trading/pools"
+	"github.com/abdoElHodaky/tradSys/internal/common/pool"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -22,8 +22,8 @@ type HFTEngine struct {
 	TradeChannel chan *Trade
 	
 	// Order pools for zero-allocation order processing
-	fastOrderPool *pools.FastOrderPool
-	tradePool     *pools.TradePool
+	fastOrderPool *pool.FastOrderPool
+	tradePool     *pool.TradePool
 	
 	// Performance metrics
 	ordersProcessed uint64
@@ -115,7 +115,7 @@ type PriceLevelNode struct {
 }
 
 // Use FastOrder from pools package
-type FastOrder = pools.FastOrder
+type FastOrder = pool.FastOrder
 
 // NewHFTEngine creates a new HFT-optimized order matching engine
 func NewHFTEngine(logger *zap.Logger) *HFTEngine {
@@ -126,8 +126,8 @@ func NewHFTEngine(logger *zap.Logger) *HFTEngine {
 	
 	engine := &HFTEngine{
 		TradeChannel:  make(chan *Trade, 10000), // Large buffer for high throughput
-		fastOrderPool: pools.NewFastOrderPool(), // Fast order pool for zero-allocation processing
-		tradePool:     pools.NewTradePool(1000), // Pre-allocate 1000 trades
+		fastOrderPool: pool.NewFastOrderPool(), // Fast order pool for zero-allocation processing
+		tradePool:     pool.NewTradePool(1000), // Pre-allocate 1000 trades
 		logger:       logger,
 		ctx:          ctx,
 		cancel:       cancel,

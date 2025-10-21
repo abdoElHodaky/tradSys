@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/core/matching"
-	"github.com/abdoElHodaky/tradSys/internal/trading/order_management"
+	"github.com/abdoElHodaky/tradSys/internal/orders"
 	"github.com/google/uuid"
 	"github.com/patrickmn/go-cache"
 	"go.uber.org/zap"
