@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,16 +14,21 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 
 	"github.com/abdoElHodaky/tradSys/internal/api/handlers"
 	"github.com/abdoElHodaky/tradSys/internal/config"
-	// "github.com/abdoElHodaky/tradSys/internal/core/matching"
-	// "github.com/abdoElHodaky/tradSys/internal/core/risk"
-	// "github.com/abdoElHodaky/tradSys/internal/core/settlement"
-	// "github.com/abdoElHodaky/tradSys/internal/connectivity"
-	// "github.com/abdoElHodaky/tradSys/internal/compliance"
-	// "github.com/abdoElHodaky/tradSys/internal/strategies"
-	// "github.com/abdoElHodaky/tradSys/internal/common"
+	"github.com/abdoElHodaky/tradSys/internal/core/matching"
+	"github.com/abdoElHodaky/tradSys/internal/core/risk"
+	"github.com/abdoElHodaky/tradSys/internal/core/settlement"
+	"github.com/abdoElHodaky/tradSys/internal/connectivity"
+	"github.com/abdoElHodaky/tradSys/internal/compliance"
+	"github.com/abdoElHodaky/tradSys/internal/strategies"
+	"github.com/abdoElHodaky/tradSys/internal/gateway"
+	"github.com/abdoElHodaky/tradSys/internal/orders"
+	"github.com/abdoElHodaky/tradSys/internal/marketdata"
+	"github.com/abdoElHodaky/tradSys/internal/ws"
+	"github.com/abdoElHodaky/tradSys/internal/risk"
 )
 
 const (
@@ -192,20 +198,102 @@ func runServer() {
 // Individual service runners
 func runGateway() {
 	log.Printf("Starting TradSys Gateway Service v%s", AppVersion)
-	// TODO: Implement gateway service startup
-	log.Println("Gateway service functionality will be implemented")
+	
+	// Load configuration
+	cfg, err := config.Load("config/tradsys.yaml")
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+	
+	// Initialize logger
+	logger, err := zap.NewProduction()
+	if err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
+	}
+	defer logger.Sync()
+	
+	// Create and start gateway server
+	gatewayServer := gateway.NewServer(gateway.ServerParams{
+		Logger: logger,
+		Config: cfg,
+	})
+	
+	// Start the gateway server
+	if err := gatewayServer.Start(); err != nil {
+		log.Fatalf("Failed to start gateway server: %v", err)
+	}
 }
 
 func runOrderService() {
 	log.Printf("Starting TradSys Order Service v%s", AppVersion)
-	// TODO: Implement order service startup
-	log.Println("Order service functionality will be implemented")
+	
+	// Load configuration
+	cfg, err := config.Load("config/tradsys.yaml")
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+	
+	// Initialize logger
+	logger, err := zap.NewProduction()
+	if err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
+	}
+	defer logger.Sync()
+	
+	// Create order service
+	orderService := orders.NewService(orders.ServiceParams{
+		Logger: logger,
+	})
+	
+	// Start gRPC server for order service
+	grpcServer := grpc.NewServer()
+	orders.RegisterOrderServiceServer(grpcServer, orderService)
+	
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Service.GRPCPort))
+	if err != nil {
+		log.Fatalf("Failed to listen: %v", err)
+	}
+	
+	log.Printf("Order service listening on port %d", cfg.Service.GRPCPort)
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Fatalf("Failed to serve: %v", err)
+	}
 }
 
 func runRiskService() {
 	log.Printf("Starting TradSys Risk Service v%s", AppVersion)
-	// TODO: Implement risk service startup
-	log.Println("Risk service functionality will be implemented")
+	
+	// Load configuration
+	cfg, err := config.Load("config/tradsys.yaml")
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+	
+	// Initialize logger
+	logger, err := zap.NewProduction()
+	if err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
+	}
+	defer logger.Sync()
+	
+	// Create risk service
+	riskService := risk.NewService(risk.ServiceParams{
+		Logger: logger,
+	})
+	
+	// Start gRPC server for risk service
+	grpcServer := grpc.NewServer()
+	risk.RegisterRiskServiceServer(grpcServer, riskService)
+	
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Service.GRPCPort+1))
+	if err != nil {
+		log.Fatalf("Failed to listen: %v", err)
+	}
+	
+	log.Printf("Risk service listening on port %d", cfg.Service.GRPCPort+1)
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Fatalf("Failed to serve: %v", err)
+	}
 }
 
 func runMarketDataService() {
@@ -216,58 +304,88 @@ func runMarketDataService() {
 
 func runWebSocketService() {
 	log.Printf("Starting TradSys WebSocket Service v%s", AppVersion)
-	// TODO: Implement WebSocket service startup
-	log.Println("WebSocket service functionality will be implemented")
+	
+	// Load configuration
+	cfg, err := config.Load("config/tradsys.yaml")
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+	
+	// Initialize logger
+	logger, err := zap.NewProduction()
+	if err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
+	}
+	defer logger.Sync()
+	
+	// Create WebSocket server
+	wsServer := ws.NewServer(ws.ServerParams{
+		Logger: logger,
+		Config: cfg,
+	})
+	
+	// Start the WebSocket server
+	if err := wsServer.Start(); err != nil {
+		log.Fatalf("Failed to start WebSocket server: %v", err)
+	}
 }
 
 // initializeTradingSystem initializes all trading system components
 func initializeTradingSystem(cfg *config.Config) (*TradingSystem, error) {
-	// Initialize matching engine
-	// matchingEngine := matching.NewEngine(nil)
+	// Initialize logger
+	logger, err := zap.NewProduction()
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize logger: %w", err)
+	}
 
-	// Initialize risk engine (placeholder - using interface{} for now)
-	// var riskEngine interface{} = "risk-engine-placeholder"
+	// Initialize matching engine
+	matchingEngine := matching.NewEngine(logger)
+
+	// Initialize risk engine
+	riskEngine := risk.NewEngine(logger)
 
 	// Initialize settlement processor
-	// settlementProcessor, err := settlement.NewProcessor()
-	// if err != nil {
-	//	return nil, fmt.Errorf("failed to initialize settlement processor: %w", err)
-	// }
+	settlementProcessor, err := settlement.NewProcessor(logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize settlement processor: %w", err)
+	}
 
-	// Initialize connectivity (placeholder)
-	// connManager, err := connectivity.NewManager(cfg.Connectivity)
-	// if err != nil {
-	//     return nil, fmt.Errorf("failed to initialize connectivity: %w", err)
-	// }
+	// Initialize connectivity manager
+	connManager, err := connectivity.NewManager(cfg.Connectivity, logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize connectivity: %w", err)
+	}
 
-	// Initialize compliance (placeholder)
-	// complianceEngine, err := compliance.NewEngine(cfg.Compliance)
-	// if err != nil {
-	//     return nil, fmt.Errorf("failed to initialize compliance: %w", err)
-	// }
+	// Initialize compliance engine
+	complianceEngine, err := compliance.NewEngine(cfg.Compliance, logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize compliance: %w", err)
+	}
 
-	// Initialize strategies (placeholder)
-	// strategyEngine, err := strategies.NewEngine(cfg.Strategies)
-	// if err != nil {
-	//     return nil, fmt.Errorf("failed to initialize strategies: %w", err)
-	// }
+	// Initialize strategies engine
+	strategyEngine, err := strategies.NewEngine(cfg.Strategies, logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize strategies: %w", err)
+	}
 
 	return &TradingSystem{
-		// MatchingEngine:      matchingEngine,
-		// RiskEngine:         riskEngine,
-		// SettlementProcessor: settlementProcessor,
-		// Connectivity: connManager,
-		// Compliance:  complianceEngine,
-		// Strategies:  strategyEngine,
+		MatchingEngine:      matchingEngine,
+		RiskEngine:         riskEngine,
+		SettlementProcessor: settlementProcessor,
+		Connectivity:       connManager,
+		Compliance:         complianceEngine,
+		Strategies:         strategyEngine,
+		Logger:             logger,
 	}, nil
 }
 
 // TradingSystem represents the unified trading system
 type TradingSystem struct {
-	// MatchingEngine      interface{}
-	// RiskEngine         interface{}
-	// SettlementProcessor interface{}
-	// Connectivity *connectivity.Manager
-	// Compliance  *compliance.Engine
-	// Strategies  *strategies.Engine
+	MatchingEngine      *matching.Engine
+	RiskEngine         *risk.Engine
+	SettlementProcessor *settlement.Processor
+	Connectivity       *connectivity.Manager
+	Compliance         *compliance.Engine
+	Strategies         *strategies.Engine
+	Logger             *zap.Logger
 }
