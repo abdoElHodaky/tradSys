@@ -1131,7 +1131,6 @@ graph TB
     style ENG2 fill:#FF5722,color:#fff
     style DB_MASTER fill:#2196F3,color:#fff
 ```
-```
 
 ### 3.4 Multi-Region Architecture
 
