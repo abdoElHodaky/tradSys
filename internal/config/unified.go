@@ -197,9 +197,11 @@ type WebSocketConfig struct {
 
 // JWTConfig contains JWT authentication settings
 type JWTConfig struct {
-	Secret     string        `yaml:"secret"`
-	Expiration time.Duration `yaml:"expiration" default:"24h"`
-	Issuer     string        `yaml:"issuer" default:"tradsys"`
+	Secret        string        `yaml:"secret"`
+	SecretKey     string        `yaml:"secret_key"`     // Alias for Secret for backward compatibility
+	Expiration    time.Duration `yaml:"expiration" default:"24h"`
+	TokenDuration time.Duration `yaml:"token_duration" default:"24h"` // Alias for Expiration
+	Issuer        string        `yaml:"issuer" default:"tradsys"`
 }
 
 // UnifiedHFTConfig contains high-frequency trading settings (for backward compatibility)
