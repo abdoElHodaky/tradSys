@@ -44,6 +44,9 @@ type UnifiedConfig struct {
 	
 	// HFT configuration (for backward compatibility)
 	HFT UnifiedHFTConfig `yaml:"hft"`
+	
+	// Gateway configuration
+	Gateway GatewayConfig `yaml:"gateway"`
 }
 
 // SystemConfig contains core system settings
@@ -202,6 +205,17 @@ type JWTConfig struct {
 	Expiration    time.Duration `yaml:"expiration" default:"24h"`
 	TokenDuration time.Duration `yaml:"token_duration" default:"24h"` // Alias for Expiration
 	Issuer        string        `yaml:"issuer" default:"tradsys"`
+}
+
+// GatewayConfig contains API gateway settings
+type GatewayConfig struct {
+	Address         string        `yaml:"address" default:":8080"`
+	ReadTimeout     time.Duration `yaml:"read_timeout" default:"30s"`
+	WriteTimeout    time.Duration `yaml:"write_timeout" default:"30s"`
+	IdleTimeout     time.Duration `yaml:"idle_timeout" default:"120s"`
+	EnableMetrics   bool          `yaml:"enable_metrics" default:"true"`
+	EnableCORS      bool          `yaml:"enable_cors" default:"true"`
+	EnableRateLimit bool          `yaml:"enable_rate_limit" default:"true"`
 }
 
 // UnifiedHFTConfig contains high-frequency trading settings (for backward compatibility)

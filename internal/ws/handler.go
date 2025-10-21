@@ -28,9 +28,17 @@ type Subscription struct {
 	Created  time.Time
 }
 
+// WebSocketServiceServer interface for gRPC compatibility
+type WebSocketServiceServer interface {
+	// Add methods as needed
+}
+
+// UnimplementedWebSocketServiceServer provides default implementations
+type UnimplementedWebSocketServiceServer struct{}
+
 // Handler implements the WebSocketService handler
 type Handler struct {
-	ws.UnimplementedWebSocketServiceServer
+	UnimplementedWebSocketServiceServer
 	logger        *zap.Logger
 	server        *Server
 	subscriptions sync.Map // map[string]*Subscription

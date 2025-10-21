@@ -3,7 +3,12 @@ package ws
 import (
 	"encoding/json"
 	"time"
+	"github.com/gorilla/websocket"
 )
+
+// Type aliases for backward compatibility
+type Message = WebSocketMessage
+type Connection = websocket.Conn
 
 // WebSocketMessage represents a message sent over WebSocket
 type WebSocketMessage struct {

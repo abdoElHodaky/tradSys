@@ -34,7 +34,7 @@ type Server struct {
 // NewServer creates a new API Gateway server with fx dependency injection
 func NewServer(p ServerParams) *Server {
 	// Set Gin mode based on configuration
-	if p.Config.Service.Environment == "production" {
+	if p.Config.System.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 

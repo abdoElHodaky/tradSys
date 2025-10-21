@@ -79,7 +79,7 @@ func NewProcessor(logger *zap.Logger) *Processor {
 }
 
 // Start starts the settlement processor
-func (sp *SettlementProcessor) Start() {
+func (sp *Processor) Start() {
 	sp.mutex.Lock()
 	if sp.running {
 		sp.mutex.Unlock()
@@ -96,7 +96,7 @@ func (sp *SettlementProcessor) Start() {
 }
 
 // Stop stops the settlement processor
-func (sp *SettlementProcessor) Stop() {
+func (sp *Processor) Stop() {
 	sp.mutex.Lock()
 	if !sp.running {
 		sp.mutex.Unlock()
@@ -111,7 +111,7 @@ func (sp *SettlementProcessor) Stop() {
 }
 
 // Shutdown gracefully shuts down the processor with timeout
-func (sp *SettlementProcessor) Shutdown(timeout time.Duration) error {
+func (sp *Processor) Shutdown(timeout time.Duration) error {
 	done := make(chan struct{})
 	go func() {
 		sp.Stop()
@@ -127,7 +127,7 @@ func (sp *SettlementProcessor) Shutdown(timeout time.Duration) error {
 }
 
 // worker processes settlement requests
-func (sp *SettlementProcessor) worker() {
+func (sp *Processor) worker() {
 	defer sp.wg.Done()
 	
 	for {
@@ -166,7 +166,7 @@ func (sp *SettlementProcessor) worker() {
 }
 
 // ProcessSettlement processes a settlement request
-func (sp *SettlementProcessor) ProcessSettlement(ctx context.Context, request *SettlementRequest) (*SettlementResult, error) {
+func (sp *Processor) ProcessSettlement(ctx context.Context, request *SettlementRequest) (*SettlementResult, error) {
 	if !sp.running {
 		return nil, fmt.Errorf("settlement processor is not running")
 	}
@@ -207,7 +207,7 @@ func (sp *SettlementProcessor) ProcessSettlement(ctx context.Context, request *S
 }
 
 // processSettlement performs the actual settlement processing
-func (sp *SettlementProcessor) processSettlement(request *SettlementRequest) *SettlementResult {
+func (sp *Processor) processSettlement(request *SettlementRequest) *SettlementResult {
 	start := time.Now()
 	
 	// Update status to processing
@@ -243,7 +243,7 @@ func (sp *SettlementProcessor) processSettlement(request *SettlementRequest) *Se
 }
 
 // GetSettlementRequest retrieves a settlement request by ID
-func (sp *SettlementProcessor) GetSettlementRequest(requestID string) (*SettlementRequest, bool) {
+func (sp *Processor) GetSettlementRequest(requestID string) (*SettlementRequest, bool) {
 	sp.mutex.RLock()
 	defer sp.mutex.RUnlock()
 	
@@ -252,7 +252,7 @@ func (sp *SettlementProcessor) GetSettlementRequest(requestID string) (*Settleme
 }
 
 // GetSettlementsByTrade returns all settlements for a trade
-func (sp *SettlementProcessor) GetSettlementsByTrade(tradeID string) []*SettlementRequest {
+func (sp *Processor) GetSettlementsByTrade(tradeID string) []*SettlementRequest {
 	sp.mutex.RLock()
 	defer sp.mutex.RUnlock()
 	
@@ -267,7 +267,7 @@ func (sp *SettlementProcessor) GetSettlementsByTrade(tradeID string) []*Settleme
 }
 
 // GetSettlementsByUser returns all settlements for a user
-func (sp *SettlementProcessor) GetSettlementsByUser(userID string) []*SettlementRequest {
+func (sp *Processor) GetSettlementsByUser(userID string) []*SettlementRequest {
 	sp.mutex.RLock()
 	defer sp.mutex.RUnlock()
 	
@@ -282,7 +282,7 @@ func (sp *SettlementProcessor) GetSettlementsByUser(userID string) []*Settlement
 }
 
 // RetrySettlement retries a failed settlement
-func (sp *SettlementProcessor) RetrySettlement(requestID string) error {
+func (sp *Processor) RetrySettlement(requestID string) error {
 	sp.mutex.Lock()
 	defer sp.mutex.Unlock()
 	
@@ -312,7 +312,7 @@ func (sp *SettlementProcessor) RetrySettlement(requestID string) error {
 }
 
 // updateMetrics updates internal performance metrics
-func (sp *SettlementProcessor) updateMetrics() {
+func (sp *Processor) updateMetrics() {
 	totalSettlements := atomic.LoadInt64(&sp.totalSettlements)
 	successfulSettlements := atomic.LoadInt64(&sp.successfulSettlements)
 	failedSettlements := atomic.LoadInt64(&sp.failedSettlements)
@@ -332,7 +332,7 @@ func (sp *SettlementProcessor) updateMetrics() {
 }
 
 // GetPerformanceMetrics returns settlement processor performance metrics
-func (sp *SettlementProcessor) GetPerformanceMetrics() map[string]interface{} {
+func (sp *Processor) GetPerformanceMetrics() map[string]interface{} {
 	sp.mutex.RLock()
 	defer sp.mutex.RUnlock()
 	
@@ -348,7 +348,7 @@ func (sp *SettlementProcessor) GetPerformanceMetrics() map[string]interface{} {
 }
 
 // GetSettlementStats returns settlement statistics
-func (sp *SettlementProcessor) GetSettlementStats() map[string]interface{} {
+func (sp *Processor) GetSettlementStats() map[string]interface{} {
 	sp.mutex.RLock()
 	defer sp.mutex.RUnlock()
 	
@@ -370,7 +370,7 @@ func (sp *SettlementProcessor) GetSettlementStats() map[string]interface{} {
 }
 
 // GetPendingSettlements returns all pending settlements
-func (sp *SettlementProcessor) GetPendingSettlements() []*SettlementRequest {
+func (sp *Processor) GetPendingSettlements() []*SettlementRequest {
 	sp.mutex.RLock()
 	defer sp.mutex.RUnlock()
 	

@@ -16,13 +16,15 @@ import (
 type Service struct {
 	logger     *zap.Logger
 	repository *repositories.UserRepository
+	jwtService *auth.JWTService
 }
 
 // NewService creates a new user service
-func NewService(logger *zap.Logger, repository *repositories.UserRepository) *Service {
+func NewService(logger *zap.Logger, repository *repositories.UserRepository, jwtService *auth.JWTService) *Service {
 	return &Service{
 		logger:     logger,
 		repository: repository,
+		jwtService: jwtService,
 	}
 }
 
@@ -105,7 +107,7 @@ func (s *Service) LoginUser(ctx context.Context, usernameOrEmail, password strin
 	}
 
 	// Generate JWT token
-	token, err := auth.GenerateToken(user.ID, user.Username, user.Role)
+	token, err := s.jwtService.GenerateToken(user.ID, user.Username, user.Role)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate token: %w", err)
 	}
