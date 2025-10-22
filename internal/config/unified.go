@@ -47,6 +47,9 @@ type UnifiedConfig struct {
 	
 	// Gateway configuration
 	Gateway GatewayConfig `yaml:"gateway"`
+	
+	// Broker configuration
+	Broker BrokerConfig `yaml:"broker"`
 }
 
 // SystemConfig contains core system settings
@@ -242,6 +245,15 @@ type UnifiedHFTPerformanceConfig struct {
 	EnableOptimizations bool `yaml:"enable_optimizations" default:"true"`
 	MemoryPoolSize      int  `yaml:"memory_pool_size" default:"1000"`
 	BatchSize           int  `yaml:"batch_size" default:"100"`
+}
+
+// BrokerConfig contains message broker settings
+type BrokerConfig struct {
+	Type      string   `yaml:"type" default:"nats"`
+	Addresses []string `yaml:"addresses"`
+	Username  string   `yaml:"username"`
+	Password  string   `yaml:"password"`
+	TLS       bool     `yaml:"tls" default:"false"`
 }
 
 // Global configuration instance

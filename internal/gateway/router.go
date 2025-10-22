@@ -26,6 +26,7 @@ type RouterParams struct {
 // Router represents the API Gateway router
 type Router struct {
 	logger *zap.Logger
+	config *config.Config
 	engine *gin.Engine
 }
 
@@ -33,6 +34,7 @@ type Router struct {
 func NewRouter(p RouterParams) *Router {
 	router := &Router{
 		logger: p.Logger,
+		config: p.Config,
 		engine: p.Server.Router(),
 	}
 

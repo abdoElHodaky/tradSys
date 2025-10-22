@@ -34,6 +34,18 @@ type CacheMetrics struct {
 	mutex            sync.RWMutex
 }
 
+// CacheMetricsSnapshot represents a snapshot of cache metrics without mutex
+type CacheMetricsSnapshot struct {
+	Hits             int64
+	Misses           int64
+	Errors           int64
+	Evictions        int64
+	Size             int64
+	TotalItems       int64
+	TotalOperations  int64
+	AverageAccessTime time.Duration
+}
+
 // QueryCacheOptions contains options for the query cache
 type QueryCacheOptions struct {
 	DefaultTTL  time.Duration
@@ -226,11 +238,20 @@ func (qc *QueryCache) Flush() {
 }
 
 // GetMetrics returns the current cache metrics
-func (qc *QueryCache) GetMetrics() CacheMetrics {
+func (qc *QueryCache) GetMetrics() CacheMetricsSnapshot {
 	qc.metrics.mutex.RLock()
 	defer qc.metrics.mutex.RUnlock()
 
-	return *qc.metrics
+	return CacheMetricsSnapshot{
+		Hits:             qc.metrics.Hits,
+		Misses:           qc.metrics.Misses,
+		Errors:           qc.metrics.Errors,
+		Evictions:        qc.metrics.Evictions,
+		Size:             qc.metrics.Size,
+		TotalItems:       qc.metrics.TotalItems,
+		TotalOperations:  qc.metrics.TotalOperations,
+		AverageAccessTime: qc.metrics.AverageAccessTime,
+	}
 }
 
 // ResetMetrics resets the cache metrics

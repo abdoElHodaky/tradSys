@@ -30,6 +30,15 @@ type BatchMetrics struct {
 	mutex              sync.RWMutex
 }
 
+// BatchMetricsSnapshot represents a snapshot of batch metrics without mutex
+type BatchMetricsSnapshot struct {
+	BatchesProcessed   int64
+	ItemsProcessed     int64
+	OperationErrors    int64
+	AverageBatchTime   time.Duration
+	TotalOperationTime time.Duration
+}
+
 // BatchOperationsOptions contains options for batch operations
 type BatchOperationsOptions struct {
 	BatchSize   int
@@ -465,11 +474,17 @@ func (b *BatchOperations) BatchSelect(ctx context.Context, dest interface{}, que
 }
 
 // GetMetrics returns the current batch metrics
-func (b *BatchOperations) GetMetrics() BatchMetrics {
+func (b *BatchOperations) GetMetrics() BatchMetricsSnapshot {
 	b.metrics.mutex.RLock()
 	defer b.metrics.mutex.RUnlock()
 
-	return *b.metrics
+	return BatchMetricsSnapshot{
+		BatchesProcessed:   b.metrics.BatchesProcessed,
+		ItemsProcessed:     b.metrics.ItemsProcessed,
+		OperationErrors:    b.metrics.OperationErrors,
+		AverageBatchTime:   b.metrics.AverageBatchTime,
+		TotalOperationTime: b.metrics.TotalOperationTime,
+	}
 }
 
 // ResetMetrics resets the batch metrics
@@ -485,4 +500,3 @@ func (b *BatchOperations) ResetMetrics() {
 
 	b.logger.Info("Batch metrics reset")
 }
-

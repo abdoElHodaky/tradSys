@@ -39,6 +39,22 @@ type ConnectionMetrics struct {
 	mutex              sync.RWMutex
 }
 
+// ConnectionMetricsSnapshot represents a snapshot of connection metrics without mutex
+type ConnectionMetricsSnapshot struct {
+	OpenConnections    int64
+	InUseConnections   int64
+	IdleConnections    int64
+	WaitCount          int64
+	WaitDuration       time.Duration
+	MaxIdleTimeClosed  int64
+	MaxLifetimeClosed  int64
+	QueryCount         int64
+	QueryErrors        int64
+	QueryDuration      time.Duration
+	SlowQueryThreshold time.Duration
+	SlowQueries        int64
+}
+
 // ConnectionPoolOptions contains options for the connection pool
 type ConnectionPoolOptions struct {
 	MaxOpenConns      int
@@ -255,11 +271,24 @@ func (p *ConnectionPool) trackQuery(query string, duration time.Duration, err er
 }
 
 // GetMetrics returns the current connection metrics
-func (p *ConnectionPool) GetMetrics() ConnectionMetrics {
+func (p *ConnectionPool) GetMetrics() ConnectionMetricsSnapshot {
 	p.metrics.mutex.RLock()
 	defer p.metrics.mutex.RUnlock()
 
-	return *p.metrics
+	return ConnectionMetricsSnapshot{
+		OpenConnections:    p.metrics.OpenConnections,
+		InUseConnections:   p.metrics.InUseConnections,
+		IdleConnections:    p.metrics.IdleConnections,
+		WaitCount:          p.metrics.WaitCount,
+		WaitDuration:       p.metrics.WaitDuration,
+		MaxIdleTimeClosed:  p.metrics.MaxIdleTimeClosed,
+		MaxLifetimeClosed:  p.metrics.MaxLifetimeClosed,
+		QueryCount:         p.metrics.QueryCount,
+		QueryErrors:        p.metrics.QueryErrors,
+		QueryDuration:      p.metrics.QueryDuration,
+		SlowQueryThreshold: p.metrics.SlowQueryThreshold,
+		SlowQueries:        p.metrics.SlowQueries,
+	}
 }
 
 // ResetMetrics resets the query metrics
