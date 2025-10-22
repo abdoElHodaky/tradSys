@@ -20,12 +20,13 @@ type AuthenticatedConnection struct {
 
 // AuthenticatedUpgrader upgrades HTTP connections to WebSocket connections with authentication
 type AuthenticatedUpgrader struct {
-	upgrader websocket.Upgrader
-	logger   *zap.Logger
+	upgrader   websocket.Upgrader
+	logger     *zap.Logger
+	jwtService *auth.JWTService
 }
 
 // NewAuthenticatedUpgrader creates a new authenticated upgrader
-func NewAuthenticatedUpgrader(logger *zap.Logger) *AuthenticatedUpgrader {
+func NewAuthenticatedUpgrader(logger *zap.Logger, jwtService *auth.JWTService) *AuthenticatedUpgrader {
 	return &AuthenticatedUpgrader{
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
@@ -34,7 +35,8 @@ func NewAuthenticatedUpgrader(logger *zap.Logger) *AuthenticatedUpgrader {
 				return true // In production, implement proper origin checks
 			},
 		},
-		logger: logger,
+		logger:     logger,
+		jwtService: jwtService,
 	}
 }
 
@@ -61,7 +63,7 @@ func (au *AuthenticatedUpgrader) Upgrade(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Validate token
-	claims, err := auth.ValidateToken(token)
+	claims, err := au.jwtService.ValidateToken(token)
 	if err != nil {
 		au.logger.Error("Invalid authentication token", zap.Error(err))
 		return nil, errors.New("invalid authentication token")

@@ -2,6 +2,7 @@ package ws
 
 import (
 	"encoding/json"
+	"errors"
 	"time"
 	"github.com/gorilla/websocket"
 )
@@ -14,6 +15,12 @@ type Connection = websocket.Conn
 type WebSocketMessage struct {
 	// Type is the message type
 	Type string `json:"type"`
+
+	// Channel is the channel the message belongs to
+	Channel string `json:"channel,omitempty"`
+
+	// Symbol is the symbol the message is related to
+	Symbol string `json:"symbol,omitempty"`
 
 	// Data is the message data
 	Data json.RawMessage `json:"data"`
@@ -162,11 +169,11 @@ func UnsubscribeMessage(channel string) (*WebSocketMessage, error) {
 
 // Common error messages
 var (
-	ErrConnectionNotFound = "connection not found"
-	ErrInvalidMessage     = "invalid message"
-	ErrUnauthorized       = "unauthorized"
-	ErrInvalidToken       = "invalid token"
-	ErrInvalidChannel     = "invalid channel"
-	ErrInvalidParams      = "invalid parameters"
-	ErrInternalError      = "internal error"
+	ErrConnectionNotFound = errors.New("connection not found")
+	ErrInvalidMessage     = errors.New("invalid message")
+	ErrUnauthorized       = errors.New("unauthorized")
+	ErrInvalidToken       = errors.New("invalid token")
+	ErrInvalidChannel     = errors.New("invalid channel")
+	ErrInvalidParams      = errors.New("invalid parameters")
+	ErrInternalError      = errors.New("internal error")
 )

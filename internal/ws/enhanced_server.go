@@ -242,7 +242,7 @@ func (s *EnhancedServer) handleTextMessage(c *Connection, message []byte) {
 }
 
 // BroadcastBinary broadcasts a binary message to all subscribed clients
-func (s *EnhancedServer) BroadcastBinary(message *ws.WebSocketMessage) error {
+func (s *EnhancedServer) BroadcastBinary(message *WebSocketMessage) error {
 	return s.binaryHandler.BroadcastBinaryMessage(message)
 }
 
