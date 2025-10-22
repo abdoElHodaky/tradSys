@@ -129,7 +129,7 @@ func (m *DefaultSnapshotManager) DeleteSnapshots(ctx context.Context, aggregateT
 // SnapshotScheduler schedules snapshot creation
 type SnapshotScheduler struct {
 	manager      SnapshotManager
-	eventStore   store.EventStore
+	eventStore   EventStore
 	logger       *zap.Logger
 	interval     time.Duration
 	stopCh       chan struct{}
@@ -137,7 +137,7 @@ type SnapshotScheduler struct {
 }
 
 // NewSnapshotScheduler creates a new snapshot scheduler
-func NewSnapshotScheduler(manager SnapshotManager, eventStore store.EventStore, logger *zap.Logger, interval time.Duration) *SnapshotScheduler {
+func NewSnapshotScheduler(manager SnapshotManager, eventStore EventStore, logger *zap.Logger, interval time.Duration) *SnapshotScheduler {
 	return &SnapshotScheduler{
 		manager:      manager,
 		eventStore:   eventStore,

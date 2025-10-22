@@ -50,6 +50,30 @@ type UnifiedConfig struct {
 	
 	// Broker configuration
 	Broker BrokerConfig `yaml:"broker"`
+	
+	// Service configuration
+	Service ServiceConfig `yaml:"service"`
+	
+	// Connectivity configuration
+	Connectivity ConnectivityConfig `yaml:"connectivity"`
+	
+	// Compliance configuration
+	Compliance ComplianceConfig `yaml:"compliance"`
+	
+	// Strategies configuration
+	Strategies StrategiesConfig `yaml:"strategies"`
+	
+	// Tracing configuration
+	Tracing TracingConfig `yaml:"tracing"`
+	
+	// Metrics configuration
+	Metrics MetricsConfig `yaml:"metrics"`
+	
+	// Resilience configuration
+	Resilience ResilienceConfig `yaml:"resilience"`
+	
+	// Registry configuration
+	Registry RegistryConfig `yaml:"registry"`
 }
 
 // SystemConfig contains core system settings
@@ -256,6 +280,50 @@ type BrokerConfig struct {
 	TLS       bool     `yaml:"tls" default:"false"`
 }
 
+// ServiceConfig contains service-specific settings
+type ServiceConfig struct {
+	Name     string `yaml:"name" default:"tradsys"`
+	Version  string `yaml:"version" default:"1.0.0"`
+	GRPCPort int    `yaml:"grpc_port" default:"9090"`
+}
+
+// ConnectivityConfig contains connectivity settings
+type ConnectivityConfig struct {
+	Enabled bool `yaml:"enabled" default:"true"`
+}
+
+// ComplianceConfig contains compliance settings
+type ComplianceConfig struct {
+	Enabled bool `yaml:"enabled" default:"true"`
+}
+
+// StrategiesConfig contains strategies settings
+type StrategiesConfig struct {
+	Enabled bool `yaml:"enabled" default:"true"`
+}
+
+// TracingConfig contains tracing settings
+type TracingConfig struct {
+	Enabled bool `yaml:"enabled" default:"false"`
+}
+
+// MetricsConfig contains metrics settings
+type MetricsConfig struct {
+	Enabled bool `yaml:"enabled" default:"true"`
+}
+
+// ResilienceConfig contains resilience settings
+type ResilienceConfig struct {
+	CircuitBreakerEnabled bool `yaml:"circuit_breaker_enabled" default:"true"`
+	RateLimitingEnabled   bool `yaml:"rate_limiting_enabled" default:"true"`
+}
+
+// RegistryConfig contains service registry settings
+type RegistryConfig struct {
+	Enabled bool   `yaml:"enabled" default:"false"`
+	Type    string `yaml:"type" default:"consul"`
+}
+
 // Global configuration instance
 var GlobalConfig *UnifiedConfig
 
@@ -271,6 +339,19 @@ func LoadConfig(configPath string) (*UnifiedConfig, error) {
 	config.Server.Port = 8080
 	config.Database.Driver = "sqlite"
 	config.Database.Database = "tradsys.db"
+	config.Service.Name = "tradsys"
+	config.Service.Version = "1.0.0"
+	config.Service.GRPCPort = 9090
+	config.Gateway.Address = ":8080"
+	config.Connectivity.Enabled = true
+	config.Compliance.Enabled = true
+	config.Strategies.Enabled = true
+	config.Tracing.Enabled = false
+	config.Metrics.Enabled = true
+	config.Resilience.CircuitBreakerEnabled = true
+	config.Resilience.RateLimitingEnabled = true
+	config.Registry.Enabled = false
+	config.Registry.Type = "consul"
 	
 	GlobalConfig = config
 	return config, nil

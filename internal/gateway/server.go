@@ -123,4 +123,16 @@ func (s *Server) Router() *gin.Engine {
 	return s.router
 }
 
+// Start starts the gateway server
+func (s *Server) Start() error {
+	s.logger.Info("Starting API Gateway server", zap.String("address", s.config.Gateway.Address))
+	return s.server.ListenAndServe()
+}
+
+// Stop stops the gateway server
+func (s *Server) Stop(ctx context.Context) error {
+	s.logger.Info("Stopping API Gateway server")
+	return s.server.Shutdown(ctx)
+}
+
 // Removed duplicate Module declaration - using the one in module.go

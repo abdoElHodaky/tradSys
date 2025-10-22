@@ -28,6 +28,7 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/orders"
 	"github.com/abdoElHodaky/tradSys/internal/marketdata"
 	"github.com/abdoElHodaky/tradSys/internal/ws"
+	orders_proto "github.com/abdoElHodaky/tradSys/proto/orders"
 )
 
 const (
@@ -239,14 +240,14 @@ func runOrderService() {
 	}
 	defer logger.Sync()
 	
-	// Create order service
-	orderService := orders.NewService(orders.ServiceParams{
+	// Create order handler for gRPC
+	orderHandler := orders.NewHandler(orders.HandlerParams{
 		Logger: logger,
 	})
 	
 	// Start gRPC server for order service
 	grpcServer := grpc.NewServer()
-	orders.RegisterOrderServiceServer(grpcServer, orderService)
+	orders_proto.RegisterOrderServiceServer(grpcServer, orderHandler)
 	
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Service.GRPCPort))
 	if err != nil {
@@ -420,11 +421,27 @@ func initializeTradingSystem(cfg *config.Config) (*TradingSystem, error) {
 
 // TradingSystem represents the unified trading system
 type TradingSystem struct {
-	MatchingEngine      *matching.Engine
-	RiskEngine         *risk.Engine
+	MatchingEngine      *order_matching.Engine
+	RiskEngine         *risk.Service
 	SettlementProcessor *settlement.Processor
-	Connectivity       *connectivity.Manager
-	Compliance         *compliance.Engine
-	Strategies         *strategies.Engine
+	ConnectivityManager *connectivity.Manager
+	ComplianceEngine   *compliance.Engine
+	StrategiesEngine   *strategies.Engine
 	Logger             *zap.Logger
+}
+
+// GetMatchingEngine returns the matching engine (implements TradingSystemInterface)
+func (ts *TradingSystem) GetMatchingEngine() *order_matching.Engine {
+	return ts.MatchingEngine
+}
+
+// GetPerformanceMetrics returns performance metrics (implements TradingSystemInterface)
+func (ts *TradingSystem) GetPerformanceMetrics() map[string]interface{} {
+	return map[string]interface{}{
+		"uptime":           time.Since(time.Now()).String(),
+		"orders_processed": 0, // TODO: implement actual metrics
+		"trades_executed":  0,
+		"risk_checks":      0,
+		"latency_avg":      "0ms",
+	}
 }
