@@ -1,10 +1,13 @@
 package ws
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
 
+	"github.com/abdoElHodaky/tradSys/proto/ws"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
@@ -216,10 +219,10 @@ func (s *EnhancedServer) writePump(c *Connection) {
 				}
 			} else {
 				// Send JSON heartbeat
-				heartbeat := Message{
+				heartbeat := WebSocketMessage{
 					Type:    "heartbeat",
 					Channel: "heartbeat",
-					Data:    time.Now().Unix(),
+					Data:    json.RawMessage(`{"timestamp":` + fmt.Sprintf("%d", time.Now().Unix()) + `}`),
 				}
 				
 				if err := c.conn.WriteJSON(heartbeat); err != nil {
@@ -242,7 +245,7 @@ func (s *EnhancedServer) handleTextMessage(c *Connection, message []byte) {
 }
 
 // BroadcastBinary broadcasts a binary message to all subscribed clients
-func (s *EnhancedServer) BroadcastBinary(message *WebSocketMessage) error {
+func (s *EnhancedServer) BroadcastBinary(message *ws.WebSocketMessage) error {
 	return s.binaryHandler.BroadcastBinaryMessage(message)
 }
 

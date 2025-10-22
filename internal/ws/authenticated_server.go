@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/auth"
-	"github.com/abdoElHodaky/tradSys/internal/db/models"
 	pbws "github.com/abdoElHodaky/tradSys/proto/ws"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"

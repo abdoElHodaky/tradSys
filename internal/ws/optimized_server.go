@@ -29,6 +29,9 @@ const (
 	defaultWorkerCount = 0 // Will use NumCPU() if 0
 )
 
+// OptimizedMessageHandler defines the signature for optimized message handlers
+type OptimizedMessageHandler func(ctx context.Context, data []byte) ([]byte, error)
+
 // OptimizedWebSocketServer is an enhanced WebSocket server optimized for HFT
 type OptimizedWebSocketServer struct {
 	upgrader       websocket.Upgrader
@@ -37,7 +40,7 @@ type OptimizedWebSocketServer struct {
 	logger         *zap.Logger
 	
 	// Message handling
-	handlers       map[string]MessageHandler
+	handlers       map[string]OptimizedMessageHandler
 	handlersMu     sync.RWMutex
 	
 	// Performance optimizations
@@ -104,7 +107,7 @@ func NewOptimizedWebSocketServer(config OptimizedWebSocketServerConfig) *Optimiz
 			},
 		},
 		connections:    make(map[*websocket.Conn]bool),
-		handlers:       make(map[string]MessageHandler),
+		handlers:       make(map[string]OptimizedMessageHandler),
 		bufferPool:     pools.NewBufferPool(config.MaxMessageSize),
 		workerPool:     make(chan struct{}, config.WorkerCount),
 		latencyTracker: latency.NewLatencyTracker(config.Logger),
@@ -116,7 +119,7 @@ func NewOptimizedWebSocketServer(config OptimizedWebSocketServerConfig) *Optimiz
 }
 
 // HandleFunc registers a message handler for a specific message type
-func (s *OptimizedWebSocketServer) HandleFunc(messageType string, handler MessageHandler) {
+func (s *OptimizedWebSocketServer) HandleFunc(messageType string, handler OptimizedMessageHandler) {
 	s.handlersMu.Lock()
 	defer s.handlersMu.Unlock()
 	
@@ -402,4 +405,3 @@ func parseMessageType(message []byte) (string, error) {
 	// Placeholder implementation
 	return "default", nil
 }
-
