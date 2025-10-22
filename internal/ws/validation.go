@@ -1,15 +1,14 @@
 package ws
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/abdoElHodaky/tradSys/internal/validation"
 	"go.uber.org/zap"
-	"google.golang.org/protobuf/proto"
 )
 
 // MessageValidator validates WebSocket messages
@@ -48,31 +47,8 @@ func (v *MessageValidator) ValidateMessage(message Message) error {
 	}
 	instance := reflect.New(schemaType).Interface()
 
-	// Convert message data to JSON
-	var jsonData []byte
-	var err error
-	switch data := message.Data.(type) {
-	case string:
-		jsonData = []byte(data)
-	case []byte:
-		jsonData = data
-	case map[string]interface{}:
-		jsonData, err = json.Marshal(data)
-		if err != nil {
-			return fmt.Errorf("failed to marshal message data: %w", err)
-		}
-	case proto.Message:
-		// For Protocol Buffers messages, we need to convert to JSON
-		jsonData, err = json.Marshal(data)
-		if err != nil {
-			return fmt.Errorf("failed to marshal protobuf message: %w", err)
-		}
-	default:
-		jsonData, err = json.Marshal(data)
-		if err != nil {
-			return fmt.Errorf("failed to marshal message data: %w", err)
-		}
-	}
+	// message.Data is already json.RawMessage ([]byte)
+	jsonData := []byte(message.Data)
 
 	// Unmarshal JSON data into schema instance
 	if err := json.Unmarshal(jsonData, instance); err != nil {
@@ -90,7 +66,7 @@ func (v *MessageValidator) ValidateMessage(message Message) error {
 // ValidateBinaryMessage validates a binary message against its schema
 func (v *MessageValidator) ValidateBinaryMessage(message *WebSocketMessage) error {
 	// Check if schema exists for message type
-	schema, ok := v.schemas[message.Type]
+	_, ok := v.schemas[message.Type]
 	if !ok {
 		return fmt.Errorf("no schema registered for message type: %s", message.Type)
 	}
@@ -185,7 +161,7 @@ func (v *MessageValidator) RegisterDefaultSchemas() {
 // ValidateMessageMiddleware returns a middleware function for validating messages
 func (v *MessageValidator) ValidateMessageMiddleware() MessageHandlerMiddleware {
 	return func(next MessageHandler) MessageHandler {
-		return func(ctx Context, conn *AuthenticatedConnection, msg Message) error {
+		return func(ctx context.Context, conn *AuthenticatedConnection, msg Message) error {
 			// Validate message
 			if err := v.ValidateMessage(msg); err != nil {
 				v.logger.Error("Message validation failed",
@@ -195,12 +171,13 @@ func (v *MessageValidator) ValidateMessageMiddleware() MessageHandlerMiddleware 
 				)
 
 				// Send error message to client
+				errorData, _ := json.Marshal(ErrorMessage{
+					Code:    400,
+					Message: fmt.Sprintf("Validation error: %s", err.Error()),
+				})
 				errorMsg := Message{
 					Type: "error",
-					Data: ErrorMessage{
-						Code:    400,
-						Message: fmt.Sprintf("Validation error: %s", err.Error()),
-					},
+					Data: json.RawMessage(errorData),
 				}
 				if err := conn.SendJSON(errorMsg); err != nil {
 					v.logger.Error("Failed to send error message", zap.Error(err))
@@ -217,11 +194,6 @@ func (v *MessageValidator) ValidateMessageMiddleware() MessageHandlerMiddleware 
 
 // MessageHandlerMiddleware is a middleware function for message handlers
 type MessageHandlerMiddleware func(MessageHandler) MessageHandler
-
-// Context represents a context for message handling
-type Context interface {
-	// Add context methods as needed
-}
 
 // SendJSON sends a JSON message to the connection
 func (c *AuthenticatedConnection) SendJSON(msg interface{}) error {

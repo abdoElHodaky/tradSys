@@ -7,7 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/db/models"
+	"github.com/abdoElHodaky/tradSys/internal/auth"
+	pbws "github.com/abdoElHodaky/tradSys/proto/ws"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
@@ -25,10 +26,10 @@ type AuthenticatedServer struct {
 }
 
 // NewAuthenticatedServer creates a new authenticated WebSocket server
-func NewAuthenticatedServer(logger *zap.Logger) *AuthenticatedServer {
+func NewAuthenticatedServer(logger *zap.Logger, jwtService *auth.JWTService) *AuthenticatedServer {
 	return &AuthenticatedServer{
 		logger:      logger,
-		upgrader:    NewAuthenticatedUpgrader(logger),
+		upgrader:    NewAuthenticatedUpgrader(logger, jwtService),
 		connections: make(map[string]*AuthenticatedConnection),
 		handlers:    make(map[string]MessageHandler),
 		closeCh:     make(chan struct{}),
@@ -109,14 +110,22 @@ func (s *AuthenticatedServer) handleMessages(conn *AuthenticatedConnection) {
 
 		case websocket.BinaryMessage:
 			// Parse Protocol Buffers message
-			var wsMessage WebSocketMessage
-			if err := proto.Unmarshal(data, &wsMessage); err != nil {
+			var pbMessage pbws.WebSocketMessage
+			if err := proto.Unmarshal(data, &pbMessage); err != nil {
 				s.logger.Error("Failed to parse binary message", zap.Error(err))
 				continue
 			}
 
+			// Convert to internal message format
+			wsMessage := &WebSocketMessage{
+				Type:    pbMessage.Type,
+				Channel: pbMessage.Channel,
+				Symbol:  pbMessage.Symbol,
+				Data:    json.RawMessage("{}"), // Convert payload to JSON if needed
+			}
+
 			// Handle binary message
-			s.handleBinaryMessage(conn, &wsMessage)
+			s.handleBinaryMessage(conn, wsMessage)
 
 		default:
 			s.logger.Warn("Unsupported message type", zap.Int("type", messageType))
@@ -159,7 +168,7 @@ func (s *AuthenticatedServer) handleBinaryMessage(conn *AuthenticatedConnection,
 		Type:    message.Type,
 		Channel: message.Channel,
 		Symbol:  message.Symbol,
-		Data:    message,
+		Data:    message.Data,
 	}
 
 	// Handle message
@@ -219,8 +228,15 @@ func (s *AuthenticatedServer) BroadcastMessage(message Message, roles ...string)
 
 // BroadcastBinaryMessage broadcasts a binary message to all connections with the specified roles
 func (s *AuthenticatedServer) BroadcastBinaryMessage(message *WebSocketMessage, roles ...string) {
+	// Convert to proto message
+	pbMessage := &pbws.WebSocketMessage{
+		Type:    message.Type,
+		Channel: message.Channel,
+		Symbol:  message.Symbol,
+	}
+	
 	// Marshal message
-	data, err := proto.Marshal(message)
+	data, err := proto.Marshal(pbMessage)
 	if err != nil {
 		s.logger.Error("Failed to marshal binary message", zap.Error(err))
 		return
@@ -263,8 +279,15 @@ func (s *AuthenticatedServer) SendMessage(userID string, message Message) error 
 
 // SendBinaryMessage sends a binary message to a specific user
 func (s *AuthenticatedServer) SendBinaryMessage(userID string, message *WebSocketMessage) error {
+	// Convert to proto message
+	pbMessage := &pbws.WebSocketMessage{
+		Type:    message.Type,
+		Channel: message.Channel,
+		Symbol:  message.Symbol,
+	}
+	
 	// Marshal message
-	data, err := proto.Marshal(message)
+	data, err := proto.Marshal(pbMessage)
 	if err != nil {
 		return err
 	}

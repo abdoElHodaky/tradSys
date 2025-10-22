@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradSys Diagram Image Generator</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        .control-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #495057;
+        }
+        
+        select, textarea, button {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        textarea {
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            min-height: 200px;
+        }
+        
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button.secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        button.success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .diagram-container {
+            padding: 40px;
+            text-align: center;
+            background: white;
+        }
+        
+        .mermaid {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            display: inline-block;
+            max-width: 100%;
+            overflow: auto;
+        }
+        
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .info-box h3 {
+            color: #1976D2;
+            margin-bottom: 10px;
+        }
+        
+        .info-box ul {
+            margin-left: 20px;
+        }
+        
+        .info-box li {
+            margin: 5px 0;
+        }
+        
+        .status {
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .diagram-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            padding: 20px;
+        }
+        
+        .diagram-card {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .diagram-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .diagram-card h4 {
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .diagram-card p {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 TradSys Diagram Generator</h1>
+            <p>Convert Mermaid diagrams to images instantly</p>
+        </div>
+        
+        <div class="controls">
+            <div class="info-box">
+                <h3>📋 Instructions</h3>
+                <ul>
+                    <li><strong>Method 1:</strong> Select a predefined diagram from the dropdown</li>
+                    <li><strong>Method 2:</strong> Paste your Mermaid code in the text area</li>
+                    <li><strong>Export:</strong> Right-click the diagram and save as image, or use browser screenshot tools</li>
+                    <li><strong>Tip:</strong> Use browser extensions like "GoFullPage" for high-quality screenshots</li>
+                </ul>
+            </div>
+            
+            <div class="control-group">
+                <label for="diagramSelect">Select Predefined Diagram:</label>
+                <select id="diagramSelect">
+                    <option value="">-- Choose a diagram --</option>
+                    <option value="business-model">Business Model Canvas</option>
+                    <option value="system-architecture">High-Level System Architecture</option>
+                    <option value="microservices">Microservices Architecture</option>
+                    <option value="order-flow">Order Processing Sequence</option>
+                    <option value="risk-flow">Risk Management Flow</option>
+                    <option value="deployment">Deployment Architecture</option>
+                    <option value="kubernetes">Kubernetes Architecture</option>
+                    <option value="security-layers">Security Layers</option>
+                    <option value="data-schema">Database Schema</option>
+                    <option value="cicd">CI/CD Pipeline</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="mermaidCode">Or Enter Custom Mermaid Code:</label>
+                <textarea id="mermaidCode" placeholder="graph TB&#10;    A[Start] --> B[End]"></textarea>
+            </div>
+            
+            <div class="button-group">
+                <button onclick="renderDiagram()">🎨 Render Diagram</button>
+                <button class="secondary" onclick="clearDiagram()">🗑️ Clear</button>
+                <button class="success" onclick="downloadSVG()">💾 Download SVG</button>
+            </div>
+            
+            <div id="status"></div>
+        </div>
+        
+        <div class="diagram-container">
+            <div id="diagram" class="mermaid"></div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: false,
+            theme: 'default',
+            themeVariables: {
+                primaryColor: '#667eea',
+                primaryTextColor: '#fff',
+                primaryBorderColor: '#764ba2',
+                lineColor: '#667eea',
+                secondaryColor: '#f093fb',
+                tertiaryColor: '#4facfe'
+            }
+        });
+
+        const diagrams = {
+            'business-model': `graph TB
+    subgraph KeyPartners["🤝 Key Partners"]
+        A1["Exchanges<br/>Binance, Coinbase"]
+        A2["Cloud Providers<br/>AWS, GCP, Azure"]
+        A3["Technology Partners<br/>TradingView"]
+    end
+    
+    subgraph ValuePropositions["💎 Value Propositions"]
+        C1["Ultra-Low Latency<br/>< 100μs"]
+        C2["Cost Effective<br/>Open Source Core"]
+        C3["Multi-Exchange<br/>Support"]
+    end
+    
+    subgraph CustomerSegments["👥 Customer Segments"]
+        E1["Retail Traders"]
+        E2["Trading Firms"]
+        E3["Market Makers"]
+    end
+    
+    A1 --> C1
+    C1 --> E1
+    C1 --> E2
+    C2 --> E1
+    C3 --> E2
+    
+    style C1 fill:#4CAF50,color:#fff
+    style E1 fill:#2196F3,color:#fff`,
+
+            'system-architecture': `graph TB
+    subgraph ClientLayer["📱 Client Layer"]
+        WEB["Web Browser"]
+        APP["Trading Apps"]
+    end
+    
+    subgraph GatewayLayer["🚪 API Gateway"]
+        GATEWAY["API Gateway<br/>Rate Limiting<br/>Authentication"]
+    end
+    
+    subgraph ServiceLayer["⚙️ Services"]
+        ORDER["Order Management"]
+        MARKET["Market Data"]
+        RISK["Risk Management"]
+    end
+    
+    subgraph CoreLayer["🔥 Core"]
+        ENGINE["Trading Engine<br/>Order Matching"]
+    end
+    
+    subgraph DataLayer["💾 Data"]
+        DB[("PostgreSQL")]
+        CACHE[("Redis")]
+    end
+    
+    WEB --> GATEWAY
+    APP --> GATEWAY
+    GATEWAY --> ORDER
+    GATEWAY --> MARKET
+    GATEWAY --> RISK
+    ORDER --> ENGINE
+    MARKET --> ENGINE
+    RISK --> ENGINE
+    ORDER --> DB
+    ORDER --> CACHE
+    
+    style GATEWAY fill:#4CAF50,color:#fff
+    style ENGINE fill:#FF5722,color:#fff
+    style DB fill:#2196F3,color:#fff`,
+
+            'microservices': `graph TB
+    subgraph External["🌐 External"]
+        USERS["Users/Clients"]
+    end
+    
+    subgraph Edge["🛡️ Edge"]
+        LB["Load Balancer"]
+        CDN["CDN"]
+    end
+    
+    subgraph Gateway["🚪 Gateway"]
+        APIGW["API Gateway"]
+        AUTH["Auth Service"]
+    end
+    
+    subgraph Services["⚙️ Services"]
+        MS1["Order Service"]
+        MS2["Market Data"]
+        MS3["Risk Service"]
+    end
+    
+    subgraph Core["🔥 Core"]
+        CORE1["Trading Engine"]
+    end
+    
+    subgraph Data["💾 Data"]
+        DS1[("Order DB")]
+        DS2[("Market DB")]
+        DS3[("Cache")]
+    end
+    
+    USERS --> CDN
+    CDN --> LB
+    LB --> APIGW
+    APIGW --> AUTH
+    AUTH --> MS1
+    AUTH --> MS2
+    AUTH --> MS3
+    MS1 --> CORE1
+    MS1 --> DS1
+    MS2 --> DS2
+    MS1 --> DS3
+    
+    style APIGW fill:#4CAF50,color:#fff
+    style CORE1 fill:#FF5722,color:#fff`,
+
+            'order-flow': `sequenceDiagram
+    participant Client
+    participant Gateway
+    participant OrderSvc
+    participant RiskSvc
+    participant Engine
+    participant Exchange
+    
+    Client->>Gateway: Submit Order
+    Gateway->>Gateway: Authenticate
+    Gateway->>OrderSvc: Forward Order
+    OrderSvc->>OrderSvc: Validate
+    OrderSvc->>RiskSvc: Risk Check
+    RiskSvc-->>OrderSvc: Approved
+    OrderSvc->>Engine: Submit
+    Engine->>Exchange: Route
+    Exchange-->>Engine: Confirm
+    Engine-->>OrderSvc: Complete
+    OrderSvc-->>Gateway: Response
+    Gateway-->>Client: Success`,
+
+            'risk-flow': `flowchart TD
+    START(["Order Received"]) --> VALIDATE{"Valid?"}
+    VALIDATE -->|No| REJECT1["❌ Reject: Invalid"]
+    VALIDATE -->|Yes| BALANCE{"Balance?"}
+    BALANCE -->|No| REJECT2["❌ Insufficient Funds"]
+    BALANCE -->|Yes| POSITION{"Position<br/>Limits?"}
+    POSITION -->|No| REJECT3["❌ Position Limit"]
+    POSITION -->|Yes| APPROVED["✅ Approved"]
+    APPROVED --> SUBMIT["Submit to Engine"]
+    REJECT1 --> END(["End"])
+    REJECT2 --> END
+    REJECT3 --> END
+    
+    style APPROVED fill:#4CAF50,color:#fff
+    style REJECT1 fill:#F44336,color:#fff
+    style REJECT2 fill:#F44336,color:#fff
+    style REJECT3 fill:#F44336,color:#fff`,
+
+            'deployment': `graph TB
+    subgraph Cloud["☁️ AWS Cloud"]
+        subgraph Public["Public Subnet"]
+            ALB["Load Balancer"]
+        end
+        subgraph Private["Private Subnet"]
+            APP1["App Server 1"]
+            APP2["App Server 2"]
+        end
+        subgraph Data["Data Subnet"]
+            DB[("Database")]
+            CACHE[("Redis")]
+        end
+    end
+    
+    USERS["Users"] --> ALB
+    ALB --> APP1
+    ALB --> APP2
+    APP1 --> DB
+    APP2 --> DB
+    APP1 --> CACHE
+    
+    style ALB fill:#4CAF50,color:#fff
+    style DB fill:#2196F3,color:#fff`,
+
+            'kubernetes': `graph TB
+    subgraph K8s["☸️ Kubernetes"]
+        NGINX["NGINX Ingress"]
+        subgraph Pods["Application Pods"]
+            POD1["gateway-1"]
+            POD2["service-1"]
+            POD3["engine-1"]
+        end
+        subgraph Data["Data"]
+            PG["PostgreSQL"]
+            RD["Redis"]
+        end
+    end
+    
+    NGINX --> POD1
+    POD1 --> POD2
+    POD2 --> POD3
+    POD2 --> PG
+    POD2 --> RD
+    
+    style NGINX fill:#4CAF50,color:#fff
+    style POD3 fill:#FF5722,color:#fff`,
+
+            'security-layers': `graph TB
+    THREAT["Threats"] --> WAF["WAF<br/>CloudFlare"]
+    WAF --> LB["Load Balancer<br/>SSL"]
+    LB --> AUTH["Authentication<br/>JWT"]
+    AUTH --> RBAC["Authorization<br/>RBAC"]
+    RBAC --> ENC["Encryption<br/>TLS 1.3"]
+    
+    style WAF fill:#4CAF50,color:#fff
+    style AUTH fill:#FF9800,color:#fff
+    style ENC fill:#2196F3,color:#fff`,
+
+            'data-schema': `erDiagram
+    USERS ||--o{ ORDERS : places
+    USERS ||--o{ POSITIONS : holds
+    ORDERS ||--o{ TRADES : generates
+    
+    USERS {
+        uuid id PK
+        string email UK
+        string password_hash
+        timestamp created_at
+    }
+    
+    ORDERS {
+        uuid id PK
+        uuid user_id FK
+        string symbol
+        decimal price
+        decimal quantity
+        string status
+    }
+    
+    TRADES {
+        uuid id PK
+        uuid order_id FK
+        decimal price
+        decimal quantity
+        timestamp executed_at
+    }`,
+
+            'cicd': `graph LR
+    CODE["Code<br/>Commit"] --> BUILD["Build"]
+    BUILD --> TEST["Test"]
+    TEST --> SCAN["Security<br/>Scan"]
+    SCAN --> IMAGE["Docker<br/>Image"]
+    IMAGE --> STAGING["Deploy<br/>Staging"]
+    STAGING --> PROD["Deploy<br/>Production"]
+    
+    style BUILD fill:#4CAF50,color:#fff
+    style PROD fill:#FF5722,color:#fff`
+        };
+
+        document.getElementById('diagramSelect').addEventListener('change', function() {
+            const selected = this.value;
+            if (selected && diagrams[selected]) {
+                document.getElementById('mermaidCode').value = diagrams[selected];
+            }
+        });
+
+        async function renderDiagram() {
+            const code = document.getElementById('mermaidCode').value.trim();
+            const diagramDiv = document.getElementById('diagram');
+            const statusDiv = document.getElementById('status');
+            
+            if (!code) {
+                statusDiv.innerHTML = '<div class="status error">Please enter Mermaid code or select a diagram</div>';
+                return;
+            }
+            
+            try {
+                diagramDiv.innerHTML = code;
+                diagramDiv.removeAttribute('data-processed');
+                await mermaid.run({
+                    nodes: [diagramDiv]
+                });
+                statusDiv.innerHTML = '<div class="status success">✅ Diagram rendered successfully!</div>';
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+                console.error(error);
+            }
+        }
+
+        function clearDiagram() {
+            document.getElementById('diagram').innerHTML = '';
+            document.getElementById('mermaidCode').value = '';
+            document.getElementById('status').innerHTML = '';
+            document.getElementById('diagramSelect').value = '';
+        }
+
+        function downloadSVG() {
+            const svg = document.querySelector('#diagram svg');
+            if (!svg) {
+                alert('Please render a diagram first');
+                return;
+            }
+            
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const blob = new Blob([svgData], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'tradsys-diagram.svg';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

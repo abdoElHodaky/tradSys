@@ -1,4 +1,4 @@
-package integration
+package handlers
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/eventbus"
+	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
 	"github.com/google/uuid"
 	"go.uber.org/zap"

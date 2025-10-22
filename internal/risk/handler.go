@@ -33,7 +33,7 @@ func NewHandler(p HandlerParams) *Handler {
 }
 
 // ValidateOrder implements the RiskService.ValidateOrder method
-func (h *Handler) ValidateOrder(ctx context.Context, req *risk.ValidateOrderRequest, rsp *risk.ValidateOrderResponse) error {
+func (h *Handler) ValidateOrder(ctx context.Context, req *risk.ValidateOrderRequest) (*risk.ValidateOrderResponse, error) {
 	h.logger.Info("ValidateOrder called",
 		zap.String("symbol", req.Symbol),
 		zap.String("side", req.Side.String()),
@@ -42,124 +42,139 @@ func (h *Handler) ValidateOrder(ctx context.Context, req *risk.ValidateOrderRequ
 
 	// Implementation would go here
 	// For now, just return a placeholder response
-	rsp.IsValid = true
+	rsp := &risk.ValidateOrderResponse{
+		IsValid: true,
+	}
 
-	return nil
+	return rsp, nil
 }
 
 // GetAccountRisk implements the RiskService.GetAccountRisk method
-func (h *Handler) GetAccountRisk(ctx context.Context, req *risk.AccountRiskRequest, rsp *risk.AccountRiskResponse) error {
+func (h *Handler) GetAccountRisk(ctx context.Context, req *risk.AccountRiskRequest) (*risk.AccountRiskResponse, error) {
 	h.logger.Info("GetAccountRisk called",
 		zap.String("account_id", req.AccountId))
 
 	// Implementation would go here
 	// For now, just return placeholder risk data
-	rsp.AccountId = req.AccountId
-	rsp.TotalValue = 100000.0
-	rsp.AvailableMargin = 50000.0
-	rsp.UsedMargin = 25000.0
-	rsp.MarginLevel = 200.0
-	rsp.MarginCallLevel = 120.0
-	rsp.LiquidationLevel = 100.0
-	rsp.DailyPnl = 1500.0
-	rsp.TotalPnl = 5000.0
-	rsp.RiskLevel = risk.RiskLevel_MEDIUM
-	rsp.Positions = []*risk.Position{
-		{
-			Symbol:        "BTC-USD",
-			Size:          1.5,
-			EntryPrice:    48000.0,
-			CurrentPrice:  50000.0,
-			UnrealizedPnl: 3000.0,
-			RealizedPnl:   1000.0,
-		},
-		{
-			Symbol:        "ETH-USD",
-			Size:          10.0,
-			EntryPrice:    3200.0,
-			CurrentPrice:  3500.0,
-			UnrealizedPnl: 3000.0,
-			RealizedPnl:   2000.0,
+	rsp := &risk.AccountRiskResponse{
+		AccountId:       req.AccountId,
+		TotalValue:      100000.0,
+		AvailableMargin: 50000.0,
+		UsedMargin:      25000.0,
+		MarginLevel:     200.0,
+		MarginCallLevel: 120.0,
+		LiquidationLevel: 100.0,
+		DailyPnl:        1500.0,
+		TotalPnl:        5000.0,
+		RiskLevel:       risk.RiskLevel_MEDIUM,
+		Positions: []*risk.Position{
+			{
+				Symbol:        "BTC-USD",
+				Size:          1.5,
+				EntryPrice:    48000.0,
+				CurrentPrice:  50000.0,
+				UnrealizedPnl: 3000.0,
+				RealizedPnl:   1000.0,
+			},
+			{
+				Symbol:        "ETH-USD",
+				Size:          10.0,
+				EntryPrice:    3200.0,
+				CurrentPrice:  3500.0,
+				UnrealizedPnl: 3000.0,
+				RealizedPnl:   2000.0,
+			},
 		},
 	}
 
-	return nil
+	return rsp, nil
 }
 
 // GetPositionRisk implements the RiskService.GetPositionRisk method
-func (h *Handler) GetPositionRisk(ctx context.Context, req *risk.PositionRiskRequest, rsp *risk.PositionRiskResponse) error {
+func (h *Handler) GetPositionRisk(ctx context.Context, req *risk.PositionRiskRequest) (*risk.PositionRiskResponse, error) {
 	h.logger.Info("GetPositionRisk called",
 		zap.String("symbol", req.Symbol),
 		zap.String("account_id", req.AccountId))
 
 	// Implementation would go here
 	// For now, just return placeholder position risk data
-	rsp.AccountId = req.AccountId
-	rsp.Symbol = req.Symbol
-	rsp.Size = 1.5
-	rsp.EntryPrice = 48000.0
-	rsp.CurrentPrice = 50000.0
-	rsp.LiquidationPrice = 40000.0
-	rsp.UnrealizedPnl = 3000.0
-	rsp.RealizedPnl = 1000.0
-	rsp.InitialMargin = 9600.0
-	rsp.MaintenanceMargin = 4800.0
-	rsp.RiskLevel = risk.RiskLevel_MEDIUM
+	rsp := &risk.PositionRiskResponse{
+		AccountId:         req.AccountId,
+		Symbol:           req.Symbol,
+		Size:             1.5,
+		EntryPrice:       48000.0,
+		CurrentPrice:     50000.0,
+		LiquidationPrice: 40000.0,
+		UnrealizedPnl:    3000.0,
+		RealizedPnl:      1000.0,
+		InitialMargin:    9600.0,
+		MaintenanceMargin: 4800.0,
+		RiskLevel:        risk.RiskLevel_MEDIUM,
+	}
 
-	return nil
+	return rsp, nil
 }
 
 // GetOrderRisk implements the RiskService.GetOrderRisk method
-func (h *Handler) GetOrderRisk(ctx context.Context, req *risk.OrderRiskRequest, rsp *risk.OrderRiskResponse) error {
+func (h *Handler) GetOrderRisk(ctx context.Context, req *risk.OrderRiskRequest) (*risk.OrderRiskResponse, error) {
 	h.logger.Info("GetOrderRisk called",
 		zap.String("symbol", req.Symbol),
 		zap.String("account_id", req.AccountId))
 
 	// Calculate real risk metrics
-	rsp.AccountId = req.AccountId
-	rsp.Symbol = req.Symbol
-	rsp.Side = req.Side
-	rsp.Type = req.Type
-	rsp.Quantity = req.Quantity
-	rsp.Price = req.Price
-	
-	// Calculate required margin based on order value and symbol
 	orderValue := req.Quantity * req.Price
 	marginRate := h.getMarginRate(req.Symbol) // Get symbol-specific margin rate
-	rsp.RequiredMargin = orderValue * marginRate
+	requiredMargin := orderValue * marginRate
 	
 	// Get current account balance (in production, this would come from account service)
 	currentBalance := h.getCurrentAccountBalance(req.AccountId)
-	rsp.AvailableMarginAfter = currentBalance - rsp.RequiredMargin
+	availableMarginAfter := currentBalance - requiredMargin
 	
 	// Calculate margin level after order
-	if rsp.RequiredMargin > 0 {
-		rsp.MarginLevelAfter = (rsp.AvailableMarginAfter / rsp.RequiredMargin) * 100
+	var marginLevelAfter float64
+	if requiredMargin > 0 {
+		marginLevelAfter = (availableMarginAfter / requiredMargin) * 100
 	} else {
-		rsp.MarginLevelAfter = 100.0
+		marginLevelAfter = 100.0
 	}
 	
 	// Determine risk level based on margin level and order size
-	rsp.RiskLevel = h.calculateRiskLevel(rsp.MarginLevelAfter, orderValue, currentBalance)
+	riskLevel := h.calculateRiskLevel(marginLevelAfter, orderValue, currentBalance)
 	
 	// Check if order is allowed based on risk assessment
-	rsp.IsAllowed = h.isOrderAllowed(rsp.RiskLevel, rsp.MarginLevelAfter, rsp.AvailableMarginAfter)
-	rsp.RejectionReason = ""
+	isAllowed := h.isOrderAllowed(riskLevel, marginLevelAfter, availableMarginAfter)
 
-	return nil
+	rsp := &risk.OrderRiskResponse{
+		AccountId:             req.AccountId,
+		Symbol:               req.Symbol,
+		Side:                 req.Side,
+		Type:                 req.Type,
+		Quantity:             req.Quantity,
+		Price:                req.Price,
+		RequiredMargin:       requiredMargin,
+		AvailableMarginAfter: availableMarginAfter,
+		MarginLevelAfter:     marginLevelAfter,
+		RiskLevel:            riskLevel,
+		IsAllowed:            isAllowed,
+		RejectionReason:      "",
+	}
+
+	return rsp, nil
 }
 
 // UpdateRiskLimits implements the RiskService.UpdateRiskLimits method
-func (h *Handler) UpdateRiskLimits(ctx context.Context, req *risk.UpdateRiskLimitsRequest, rsp *risk.UpdateRiskLimitsResponse) error {
+func (h *Handler) UpdateRiskLimits(ctx context.Context, req *risk.UpdateRiskLimitsRequest) (*risk.UpdateRiskLimitsResponse, error) {
 	h.logger.Info("UpdateRiskLimits called",
 		zap.String("account_id", req.AccountId))
 
 	// Implementation would go here
 	// For now, just return the updated risk limits
-	rsp.AccountId = req.AccountId
-	rsp.RiskLimits = req.RiskLimits
+	rsp := &risk.UpdateRiskLimitsResponse{
+		AccountId:  req.AccountId,
+		RiskLimits: req.RiskLimits,
+	}
 
-	return nil
+	return rsp, nil
 }
 
 // getMarginRate returns the margin rate for a given symbol

@@ -2,13 +2,104 @@ package ws
 
 import (
 	"encoding/json"
+	"errors"
+	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
+
+// Type aliases for backward compatibility
+type Message = WebSocketMessage
+
+// Connection represents a WebSocket connection with additional metadata
+type Connection struct {
+	conn      *websocket.Conn
+	mu        sync.RWMutex
+	channels  map[string]bool
+	userID    string
+	clientID  string
+	symbol    string
+	send      chan []byte
+	server    interface{} // Can be *Server or *EnhancedServer
+	closeOnce sync.Once
+}
+
+// NewConnection creates a new Connection
+func NewConnection(conn *websocket.Conn, userID, clientID string) *Connection {
+	return &Connection{
+		conn:     conn,
+		channels: make(map[string]bool),
+		userID:   userID,
+		clientID: clientID,
+		send:     make(chan []byte, 256),
+	}
+}
+
+// GetConn returns the underlying websocket connection
+func (c *Connection) GetConn() *websocket.Conn {
+	return c.conn
+}
+
+// GetUserID returns the user ID
+func (c *Connection) GetUserID() string {
+	return c.userID
+}
+
+// GetClientID returns the client ID
+func (c *Connection) GetClientID() string {
+	return c.clientID
+}
+
+// AddChannel adds a channel subscription
+func (c *Connection) AddChannel(channel string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.channels[channel] = true
+}
+
+// RemoveChannel removes a channel subscription
+func (c *Connection) RemoveChannel(channel string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.channels, channel)
+}
+
+// GetChannels returns a copy of subscribed channels
+func (c *Connection) GetChannels() map[string]bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	channels := make(map[string]bool)
+	for k, v := range c.channels {
+		channels[k] = v
+	}
+	return channels
+}
+
+// GetSymbol returns the symbol
+func (c *Connection) GetSymbol() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.symbol
+}
+
+// SetSymbol sets the symbol
+func (c *Connection) SetSymbol(symbol string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.symbol = symbol
+}
 
 // WebSocketMessage represents a message sent over WebSocket
 type WebSocketMessage struct {
 	// Type is the message type
 	Type string `json:"type"`
+
+	// Channel is the channel the message belongs to
+	Channel string `json:"channel,omitempty"`
+
+	// Symbol is the symbol the message is related to
+	Symbol string `json:"symbol,omitempty"`
 
 	// Data is the message data
 	Data json.RawMessage `json:"data"`
@@ -157,11 +248,11 @@ func UnsubscribeMessage(channel string) (*WebSocketMessage, error) {
 
 // Common error messages
 var (
-	ErrConnectionNotFound = "connection not found"
-	ErrInvalidMessage     = "invalid message"
-	ErrUnauthorized       = "unauthorized"
-	ErrInvalidToken       = "invalid token"
-	ErrInvalidChannel     = "invalid channel"
-	ErrInvalidParams      = "invalid parameters"
-	ErrInternalError      = "internal error"
+	ErrConnectionNotFound = errors.New("connection not found")
+	ErrInvalidMessage     = errors.New("invalid message")
+	ErrUnauthorized       = errors.New("unauthorized")
+	ErrInvalidToken       = errors.New("invalid token")
+	ErrInvalidChannel     = errors.New("invalid channel")
+	ErrInvalidParams      = errors.New("invalid parameters")
+	ErrInternalError      = errors.New("internal error")
 )

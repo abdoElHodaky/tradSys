@@ -1,4 +1,4 @@
-package risk_management
+package risk
 
 import (
 	"context"
@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/core/matching"
-	"github.com/abdoElHodaky/tradSys/internal/trading/order_management"
+	"github.com/abdoElHodaky/tradSys/internal/orders"
+	riskengine "github.com/abdoElHodaky/tradSys/internal/risk/engine"
 	"github.com/google/uuid"
 	"github.com/patrickmn/go-cache"
 	"go.uber.org/zap"
@@ -29,19 +30,7 @@ const (
 	RiskLimitTypeTradeFrequency RiskLimitType = "trade_frequency"
 )
 
-// RiskCheckResult represents the result of a risk check
-type RiskCheckResult struct {
-	// Passed indicates whether the risk check passed
-	Passed bool
-	// Message is the message for the risk check
-	Message string
-	// LimitType is the type of risk limit
-	LimitType RiskLimitType
-	// CurrentValue is the current value
-	CurrentValue float64
-	// LimitValue is the limit value
-	LimitValue float64
-}
+
 
 // RiskLimit represents a risk limit
 type RiskLimit struct {
@@ -63,41 +52,9 @@ type RiskLimit struct {
 	Enabled bool
 }
 
-// Position represents a trading position
-type Position struct {
-	// UserID is the user ID
-	UserID string
-	// Symbol is the trading symbol
-	Symbol string
-	// Quantity is the position quantity (positive for long, negative for short)
-	Quantity float64
-	// AverageEntryPrice is the average entry price
-	AverageEntryPrice float64
-	// UnrealizedPnL is the unrealized profit and loss
-	UnrealizedPnL float64
-	// RealizedPnL is the realized profit and loss
-	RealizedPnL float64
-	// LastUpdated is the time the position was last updated
-	LastUpdated time.Time
-}
 
-// CircuitBreaker represents a circuit breaker
-type CircuitBreaker struct {
-	// Symbol is the trading symbol
-	Symbol string
-	// PercentageThreshold is the percentage threshold for triggering the circuit breaker
-	PercentageThreshold float64
-	// TimeWindow is the time window for the circuit breaker
-	TimeWindow time.Duration
-	// CooldownPeriod is the cooldown period after triggering
-	CooldownPeriod time.Duration
-	// LastTriggered is the time the circuit breaker was last triggered
-	LastTriggered time.Time
-	// Triggered indicates whether the circuit breaker is currently triggered
-	Triggered bool
-	// ReferencePrice is the reference price for calculating the percentage change
-	ReferencePrice float64
-}
+
+
 
 // RiskOperation represents a batch operation on risk data
 type RiskOperation struct {
@@ -128,13 +85,13 @@ type Service struct {
 	// OrderEngine is the order matching engine
 	OrderEngine *order_matching.Engine
 	// OrderService is the order management service
-	OrderService *order_management.Service
+	OrderService *orders.Service
 	// Positions is a map of user ID and symbol to position
-	Positions map[string]map[string]*Position
+	Positions map[string]map[string]*riskengine.Position
 	// RiskLimits is a map of user ID to risk limits
 	RiskLimits map[string][]*RiskLimit
 	// CircuitBreakers is a map of symbol to circuit breaker
-	CircuitBreakers map[string]*CircuitBreaker
+	CircuitBreakers map[string]*riskengine.CircuitBreaker
 	// PositionCache is a cache for frequently accessed positions
 	PositionCache *cache.Cache
 	// RiskLimitCache is a cache for frequently accessed risk limits
@@ -164,15 +121,15 @@ type MarketDataUpdate struct {
 }
 
 // NewService creates a new risk management service
-func NewService(orderEngine *order_matching.Engine, orderService *order_management.Service, logger *zap.Logger) *Service {
+func NewService(orderEngine *order_matching.Engine, orderService *orders.Service, logger *zap.Logger) *Service {
 	ctx, cancel := context.WithCancel(context.Background())
 	
 	service := &Service{
 		OrderEngine:     orderEngine,
 		OrderService:    orderService,
-		Positions:       make(map[string]map[string]*Position),
+		Positions:       make(map[string]map[string]*riskengine.Position),
 		RiskLimits:      make(map[string][]*RiskLimit),
-		CircuitBreakers: make(map[string]*CircuitBreaker),
+		CircuitBreakers: make(map[string]*riskengine.CircuitBreaker),
 		PositionCache:   cache.New(5*time.Minute, 10*time.Minute),
 		RiskLimitCache:  cache.New(5*time.Minute, 10*time.Minute),
 		logger:          logger,
@@ -271,23 +228,22 @@ func (s *Service) processUpdatePositionBatch(ops []RiskOperation) {
 		data := op.Data.(map[string]interface{})
 		
 		// Get position
-		var position *Position
+		var position *riskengine.Position
 		userPositions, exists := s.Positions[userID]
 		if !exists {
-			userPositions = make(map[string]*Position)
+			userPositions = make(map[string]*riskengine.Position)
 			s.Positions[userID] = userPositions
 		}
 		
 		position, exists = userPositions[symbol]
 		if !exists {
-			position = &Position{
-				UserID:            userID,
+			position = &riskengine.Position{
 				Symbol:            symbol,
 				Quantity:          0,
-				AverageEntryPrice: 0,
+				AveragePrice:      0,
 				UnrealizedPnL:     0,
 				RealizedPnL:       0,
-				LastUpdated:       time.Now(),
+				LastUpdateTime:    time.Now(),
 			}
 			userPositions[symbol] = position
 		}
@@ -305,16 +261,16 @@ func (s *Service) processUpdatePositionBatch(ops []RiskOperation) {
 					if position.Quantity > 0 {
 						reduceQuantity = -reduceQuantity
 					}
-					realizedPnL = reduceQuantity * (price - position.AverageEntryPrice)
+					realizedPnL = reduceQuantity * (price - position.AveragePrice)
 					position.RealizedPnL += realizedPnL
 				}
 				
 				// Update average entry price for increasing positions
 				if (position.Quantity >= 0 && quantityDelta > 0) || (position.Quantity <= 0 && quantityDelta < 0) {
 					// Increasing position
-					oldValue := position.Quantity * position.AverageEntryPrice
+					oldValue := position.Quantity * position.AveragePrice
 					newValue := quantityDelta * price
-					position.AverageEntryPrice = (oldValue + newValue) / (position.Quantity + quantityDelta)
+					position.AveragePrice = (oldValue + newValue) / (position.Quantity + quantityDelta)
 				}
 				
 				// Update quantity
@@ -322,11 +278,11 @@ func (s *Service) processUpdatePositionBatch(ops []RiskOperation) {
 				
 				// If position is flat (zero), reset average entry price
 				if position.Quantity == 0 {
-					position.AverageEntryPrice = 0
+					position.AveragePrice = 0
 				}
 				
 				// Update last updated time
-				position.LastUpdated = time.Now()
+				position.LastUpdateTime = time.Now()
 				
 				// Update position in cache
 				s.PositionCache.Set(userID+":"+symbol, position, cache.DefaultExpiration)
@@ -357,8 +313,10 @@ func (s *Service) processCheckLimitBatch(ops []RiskOperation) {
 			op.ResultCh <- RiskOperationResult{
 				Success: true,
 				Data: &RiskCheckResult{
-					Passed:  true,
-					Message: "No risk limits defined",
+					Passed:    true,
+					RiskLevel: RiskLevelLow,
+					Warnings:  []string{"No risk limits defined"},
+					CheckedAt: time.Now(),
 				},
 			}
 			continue
@@ -379,8 +337,10 @@ func (s *Service) processCheckLimitBatch(ops []RiskOperation) {
 			
 			result := &RiskCheckResult{
 				Passed:     true,
-				LimitType:  limit.Type,
-				LimitValue: limit.Value,
+				RiskLevel:  RiskLevelLow,
+				Violations: make([]string, 0),
+				Warnings:   make([]string, 0),
+				CheckedAt:  time.Now(),
 			}
 			
 			switch limit.Type {
@@ -390,10 +350,11 @@ func (s *Service) processCheckLimitBatch(ops []RiskOperation) {
 				if exists {
 					position, exists := userPositions[symbol]
 					if exists {
-						result.CurrentValue = abs(position.Quantity)
-						if result.CurrentValue > limit.Value {
+						currentValue := abs(position.Quantity)
+						if currentValue > limit.Value {
 							result.Passed = false
-							result.Message = "Position limit exceeded"
+							result.RiskLevel = RiskLevelHigh
+							result.Violations = append(result.Violations, "Position limit exceeded")
 						}
 					}
 				}
@@ -401,10 +362,10 @@ func (s *Service) processCheckLimitBatch(ops []RiskOperation) {
 				// Check order size limit
 				orderSize, ok := data["order_size"].(float64)
 				if ok {
-					result.CurrentValue = orderSize
-					if result.CurrentValue > limit.Value {
+					if orderSize > limit.Value {
 						result.Passed = false
-						result.Message = "Order size limit exceeded"
+						result.RiskLevel = RiskLevelHigh
+						result.Violations = append(result.Violations, "Order size limit exceeded")
 					}
 				}
 			case RiskLimitTypeExposure:
@@ -419,20 +380,20 @@ func (s *Service) processCheckLimitBatch(ops []RiskOperation) {
 							totalExposure += abs(pos.Quantity) * price
 						}
 					}
-					result.CurrentValue = totalExposure
-					if result.CurrentValue > limit.Value {
+					if totalExposure > limit.Value {
 						result.Passed = false
-						result.Message = "Exposure limit exceeded"
+						result.RiskLevel = RiskLevelHigh
+						result.Violations = append(result.Violations, "Exposure limit exceeded")
 					}
 				}
 			case RiskLimitTypeDrawdown:
 				// Check drawdown limit
 				drawdown, ok := data["drawdown"].(float64)
 				if ok {
-					result.CurrentValue = drawdown
-					if result.CurrentValue > limit.Value {
+					if drawdown > limit.Value {
 						result.Passed = false
-						result.Message = "Drawdown limit exceeded"
+						result.RiskLevel = RiskLevelHigh
+						result.Violations = append(result.Violations, "Drawdown limit exceeded")
 					}
 				}
 			case RiskLimitTypeTradeFrequency:
@@ -442,10 +403,10 @@ func (s *Service) processCheckLimitBatch(ops []RiskOperation) {
 					timeWindow, ok := data["time_window"].(time.Duration)
 					if ok {
 						tradesPerSecond := float64(tradeCount) / timeWindow.Seconds()
-						result.CurrentValue = tradesPerSecond
-						if result.CurrentValue > limit.Value {
+						if tradesPerSecond > limit.Value {
 							result.Passed = false
-							result.Message = "Trade frequency limit exceeded"
+							result.RiskLevel = RiskLevelHigh
+							result.Violations = append(result.Violations, "Trade frequency limit exceeded")
 						}
 					}
 				}
@@ -471,8 +432,10 @@ func (s *Service) processCheckLimitBatch(ops []RiskOperation) {
 			op.ResultCh <- RiskOperationResult{
 				Success: true,
 				Data: &RiskCheckResult{
-					Passed:  true,
-					Message: "All risk checks passed",
+					Passed:    true,
+					RiskLevel: RiskLevelLow,
+					Warnings:  []string{"All risk checks passed"},
+					CheckedAt: time.Now(),
 				},
 			}
 		} else {
@@ -547,8 +510,8 @@ func (s *Service) updateUnrealizedPnL(symbol string, price float64) {
 		position, exists := userPositions[symbol]
 		if exists && position.Quantity != 0 {
 			// Calculate unrealized PnL
-			position.UnrealizedPnL = position.Quantity * (price - position.AverageEntryPrice)
-			position.LastUpdated = time.Now()
+			position.UnrealizedPnL = position.Quantity * (price - position.AveragePrice)
+			position.LastUpdateTime = time.Now()
 			
 			// Update position in cache
 			s.PositionCache.Set(userID+":"+symbol, position, cache.DefaultExpiration)
@@ -571,11 +534,11 @@ func (s *Service) checkCircuitBreakers() {
 			
 			// Check if any triggered circuit breakers should be reset
 			for symbol, cb := range s.CircuitBreakers {
-				if cb.Triggered && now.Sub(cb.LastTriggered) > cb.CooldownPeriod {
-					cb.Triggered = false
+				if cb.IsTripped() && now.Sub(cb.GetLastTriggered()) > cb.GetCooldownPeriod() {
+					cb.Reset()
 					s.logger.Info("Circuit breaker reset",
 						zap.String("symbol", symbol),
-						zap.Float64("reference_price", cb.ReferencePrice))
+						zap.Float64("reference_price", cb.GetReferencePrice()))
 				}
 			}
 			
@@ -595,29 +558,28 @@ func (s *Service) checkCircuitBreaker(symbol string, price float64, timestamp ti
 	}
 	
 	// Skip if already triggered
-	if cb.Triggered {
+	if cb.IsTripped() {
 		return
 	}
 	
 	// Calculate percentage change
-	if cb.ReferencePrice == 0 {
-		cb.ReferencePrice = price
+	if cb.GetReferencePrice() == 0 {
+		cb.SetReferencePrice(price)
 		return
 	}
 	
-	percentageChange := abs((price - cb.ReferencePrice) / cb.ReferencePrice * 100)
+	percentageChange := abs((price - cb.GetReferencePrice()) / cb.GetReferencePrice() * 100)
 	
 	// Check if circuit breaker should be triggered
-	if percentageChange >= cb.PercentageThreshold {
-		cb.Triggered = true
-		cb.LastTriggered = timestamp
+	if percentageChange >= cb.GetPriceChangeThreshold() {
+		cb.Trip()
 		
 		s.logger.Warn("Circuit breaker triggered",
 			zap.String("symbol", symbol),
-			zap.Float64("reference_price", cb.ReferencePrice),
+			zap.Float64("reference_price", cb.GetReferencePrice()),
 			zap.Float64("current_price", price),
 			zap.Float64("percentage_change", percentageChange),
-			zap.Float64("threshold", cb.PercentageThreshold))
+			zap.Float64("threshold", cb.GetPriceChangeThreshold()))
 	}
 }
 
@@ -692,11 +654,13 @@ func (s *Service) CheckRiskLimits(ctx context.Context, userID, symbol string, or
 	// Check cache for circuit breaker
 	s.mu.RLock()
 	cb, exists := s.CircuitBreakers[symbol]
-	if exists && cb.Triggered {
+	if exists && cb.IsTripped() {
 		s.mu.RUnlock()
 		return &RiskCheckResult{
-			Passed:  false,
-			Message: "Circuit breaker triggered",
+			Passed:     false,
+			RiskLevel:  RiskLevelHigh,
+			Violations: []string{"Circuit breaker triggered"},
+			CheckedAt:  time.Now(),
 		}, nil
 	}
 	s.mu.RUnlock()
@@ -748,10 +712,10 @@ func (s *Service) AddRiskLimit(ctx context.Context, limit *RiskLimit) (*RiskLimi
 }
 
 // GetPosition gets a position
-func (s *Service) GetPosition(ctx context.Context, userID, symbol string) (*Position, error) {
+func (s *Service) GetPosition(ctx context.Context, userID, symbol string) (*riskengine.Position, error) {
 	// Check cache first
 	if cachedPosition, found := s.PositionCache.Get(userID + ":" + symbol); found {
-		return cachedPosition.(*Position), nil
+		return cachedPosition.(*riskengine.Position), nil
 	}
 	
 	// If not in cache, check the map
@@ -776,16 +740,16 @@ func (s *Service) GetPosition(ctx context.Context, userID, symbol string) (*Posi
 }
 
 // GetPositions gets all positions for a user
-func (s *Service) GetPositions(ctx context.Context, userID string) ([]*Position, error) {
+func (s *Service) GetPositions(ctx context.Context, userID string) ([]*riskengine.Position, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	
 	userPositions, exists := s.Positions[userID]
 	if !exists {
-		return []*Position{}, nil
+		return []*riskengine.Position{}, nil
 	}
 	
-	positions := make([]*Position, 0, len(userPositions))
+	positions := make([]*riskengine.Position, 0, len(userPositions))
 	for _, position := range userPositions {
 		positions = append(positions, position)
 	}
@@ -798,15 +762,7 @@ func (s *Service) AddCircuitBreaker(ctx context.Context, symbol string, percenta
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	
-	s.CircuitBreakers[symbol] = &CircuitBreaker{
-		Symbol:              symbol,
-		PercentageThreshold: percentageThreshold,
-		TimeWindow:          timeWindow,
-		CooldownPeriod:      cooldownPeriod,
-		LastTriggered:       time.Time{},
-		Triggered:           false,
-		ReferencePrice:      0,
-	}
+	s.CircuitBreakers[symbol] = riskengine.NewCircuitBreaker(percentageThreshold, cooldownPeriod)
 	
 	return nil
 }
@@ -830,4 +786,3 @@ func min(a, b float64) float64 {
 	}
 	return b
 }
-

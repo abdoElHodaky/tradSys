@@ -2,7 +2,6 @@ package monitoring
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
@@ -12,8 +11,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"go.uber.org/zap"
 	
-	"github.com/abdoElHodaky/tradSys/internal/trading/config"
+	"github.com/abdoElHodaky/tradSys/internal/config"
 	"github.com/abdoElHodaky/tradSys/internal/trading/memory"
 	"github.com/abdoElHodaky/tradSys/internal/trading/metrics"
 )
@@ -145,7 +145,7 @@ func NewHFTProductionMonitor(config *HFTMonitoringConfig) *HFTProductionMonitor 
 		config:         config,
 		healthChecks:   make(map[string]HealthCheck),
 		performanceMetrics: &PerformanceMetrics{},
-		alertManager:   NewAlertManager(&config.AlertThresholds),
+		alertManager:   NewAlertManager(zap.NewNop()),
 		ctx:           ctx,
 		cancel:        cancel,
 	}
@@ -272,7 +272,7 @@ func (m *HFTProductionMonitor) collectMetrics() {
 		if m.memoryUsage != nil {
 			m.memoryUsage.Set(float64(memStats.HeapAlloc))
 		}
-		if m.gcPauseTime != nil && len(memStats.PauseTotal) > 0 {
+		if m.gcPauseTime != nil {
 			m.gcPauseTime.Set(memStats.PauseTotal.Seconds())
 		}
 	}
@@ -387,38 +387,38 @@ func (m *HFTProductionMonitor) checkAlertThresholds() {
 	
 	// Check latency
 	if m.performanceMetrics.P99Latency > thresholds.MaxLatency {
-		m.alertManager.TriggerAlert("high_latency", fmt.Sprintf(
+		m.alertManager.Trigger(context.Background(), AlertLevelCritical, "monitoring", fmt.Sprintf(
 			"P99 latency %v exceeds threshold %v",
 			m.performanceMetrics.P99Latency,
 			thresholds.MaxLatency,
-		))
+		), nil)
 	}
 	
 	// Check error rate
 	if m.performanceMetrics.ErrorRate > thresholds.MaxErrorRate {
-		m.alertManager.TriggerAlert("high_error_rate", fmt.Sprintf(
+		m.alertManager.Trigger(context.Background(), AlertLevelCritical, "monitoring", fmt.Sprintf(
 			"Error rate %.4f exceeds threshold %.4f",
 			m.performanceMetrics.ErrorRate,
 			thresholds.MaxErrorRate,
-		))
+		), nil)
 	}
 	
 	// Check memory usage
 	if int64(m.performanceMetrics.MemoryUsage) > thresholds.MaxMemoryUsage {
-		m.alertManager.TriggerAlert("high_memory_usage", fmt.Sprintf(
+		m.alertManager.Trigger(context.Background(), AlertLevelCritical, "monitoring", fmt.Sprintf(
 			"Memory usage %d bytes exceeds threshold %d bytes",
 			m.performanceMetrics.MemoryUsage,
 			thresholds.MaxMemoryUsage,
-		))
+		), nil)
 	}
 	
 	// Check GC pause time
 	if m.performanceMetrics.GCPauseTime > thresholds.MaxGCPauseTime {
-		m.alertManager.TriggerAlert("high_gc_pause", fmt.Sprintf(
+		m.alertManager.Trigger(context.Background(), AlertLevelCritical, "monitoring", fmt.Sprintf(
 			"GC pause time %v exceeds threshold %v",
 			m.performanceMetrics.GCPauseTime,
 			thresholds.MaxGCPauseTime,
-		))
+		), nil)
 	}
 }
 
@@ -532,38 +532,7 @@ func (m *HFTProductionMonitor) Close() {
 	m.wg.Wait()
 }
 
-// AlertManager manages alerts
-type AlertManager struct {
-	thresholds *AlertThresholds
-	alerts     map[string]time.Time
-	mu         sync.RWMutex
-}
 
-// NewAlertManager creates a new alert manager
-func NewAlertManager(thresholds *AlertThresholds) *AlertManager {
-	return &AlertManager{
-		thresholds: thresholds,
-		alerts:     make(map[string]time.Time),
-	}
-}
-
-// TriggerAlert triggers an alert
-func (am *AlertManager) TriggerAlert(alertType, message string) {
-	am.mu.Lock()
-	defer am.mu.Unlock()
-	
-	// Check if we've already alerted for this recently (rate limiting)
-	if lastAlert, exists := am.alerts[alertType]; exists {
-		if time.Since(lastAlert) < 5*time.Minute {
-			return // Don't spam alerts
-		}
-	}
-	
-	am.alerts[alertType] = time.Now()
-	
-	// Log the alert (in production, this would send to alerting system)
-	fmt.Printf("[ALERT] %s: %s\n", alertType, message)
-}
 
 // Global production monitor instance
 var GlobalProductionMonitor *HFTProductionMonitor

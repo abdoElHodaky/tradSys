@@ -1,4 +1,4 @@
-package event
+package core
 
 import (
 	"context"
@@ -171,4 +171,3 @@ func (s *PostgresEventStore) GetEventsByType(ctx context.Context, eventType stri
 	
 	return events, nil
 }
-

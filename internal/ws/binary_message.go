@@ -12,11 +12,11 @@ import (
 // BinaryMessageHandler handles binary WebSocket messages using Protocol Buffers
 type BinaryMessageHandler struct {
 	logger *zap.Logger
-	server *Server
+	server *EnhancedServer
 }
 
 // NewBinaryMessageHandler creates a new binary message handler
-func NewBinaryMessageHandler(logger *zap.Logger, server *Server) *BinaryMessageHandler {
+func NewBinaryMessageHandler(logger *zap.Logger, server *EnhancedServer) *BinaryMessageHandler {
 	return &BinaryMessageHandler{
 		logger: logger,
 		server: server,

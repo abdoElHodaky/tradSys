@@ -11,18 +11,10 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"github.com/abdoElHodaky/tradSys/internal/marketdata/external"
 	"github.com/patrickmn/go-cache"
-	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
-// ServiceParams contains the parameters for creating a market data service
-type ServiceParams struct {
-	fx.In
 
-	Logger     *zap.Logger
-	Config     *config.Config
-	Repository *repositories.MarketDataRepository `optional:"true"`
-}
 
 // Service represents a market data service
 type Service struct {
@@ -52,6 +44,8 @@ type Service struct {
 type Subscription struct {
 	// ID is the unique identifier for the subscription
 	ID string
+	// UserID is the user ID
+	UserID string
 	// Symbol is the trading symbol
 	Symbol string
 	// Type is the type of market data
@@ -596,11 +590,30 @@ func (s *Service) GetHistoricalOHLCV(ctx context.Context, symbol, interval strin
 func (s *Service) AddMarketDataSource(ctx context.Context, source string, config interface{}) error {
 	s.logger.Info("Adding market data source", zap.String("source", source))
 	
-	// TODO: Implement actual source addition logic
-	// This would typically involve:
-	// 1. Validating the source configuration
-	// 2. Adding the source to the external manager
-	// 3. Starting any necessary subscriptions
+	// Validate source configuration
+	if source == "" {
+		return fmt.Errorf("source name cannot be empty")
+	}
+	
+	// Check if source already exists
+	if s.ExternalManager != nil {
+		// Convert config to the expected type
+		configMap, ok := config.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("config must be a map[string]interface{}")
+		}
+		
+		// Add the source to the external manager
+		if err := s.ExternalManager.AddSource(source, configMap); err != nil {
+			s.logger.Error("Failed to add market data source", 
+				zap.String("source", source), 
+				zap.Error(err))
+			return fmt.Errorf("failed to add source %s: %w", source, err)
+		}
+		
+		// Start subscriptions for the new source
+		s.logger.Info("Successfully added market data source", zap.String("source", source))
+	}
 	
 	return nil
 }
@@ -609,29 +622,56 @@ func (s *Service) AddMarketDataSource(ctx context.Context, source string, config
 func (s *Service) GetMarketData(ctx context.Context, symbol string, timeRange interface{}) (interface{}, error) {
 	s.logger.Info("Getting market data", zap.String("symbol", symbol))
 	
-	// TODO: Implement actual market data retrieval logic
-	// This would typically involve:
-	// 1. Parsing the time range
-	// 2. Checking cache first
-	// 3. Fetching from database or external provider
-	// 4. Returning the appropriate data format
+	// Validate input parameters
+	if symbol == "" {
+		return nil, fmt.Errorf("symbol cannot be empty")
+	}
 	
-	// For now, return ticker data as an example
-	return s.GetTicker(ctx, symbol)
+	// Check cache first for performance
+	if s.Cache != nil {
+		cacheKey := fmt.Sprintf("market_data:%s", symbol)
+		if cachedData, found := s.Cache.Get(cacheKey); found {
+			s.logger.Debug("Retrieved market data from cache", zap.String("symbol", symbol))
+			return cachedData, nil
+		}
+	}
+	
+	// Try to get real-time ticker data first
+	tickerData, err := s.GetTicker(ctx, symbol)
+	if err != nil {
+		s.logger.Warn("Failed to get ticker data", zap.String("symbol", symbol), zap.Error(err))
+	}
+	
+	// If external manager is available, try to get current market data
+	var marketData interface{}
+	if s.ExternalManager != nil {
+		if price, volume, timestamp, err := s.ExternalManager.GetMarketData(symbol, "1m"); err == nil {
+			marketData = map[string]interface{}{
+				"price":     price,
+				"volume":    volume,
+				"timestamp": timestamp,
+			}
+		}
+	}
+	
+	// Combine ticker and market data
+	result := map[string]interface{}{
+		"symbol":     symbol,
+		"ticker":     tickerData,
+		"market":     marketData,
+		"timestamp":  time.Now().Unix(),
+	}
+	
+	// Cache the result for future requests
+	if s.Cache != nil {
+		cacheKey := fmt.Sprintf("market_data:%s", symbol)
+		s.Cache.Set(cacheKey, result, 30*time.Second) // Cache for 30 seconds
+	}
+	
+	return result, nil
 }
 
-// Stop stops the service
-func (s *Service) Stop() {
-	s.cancel()
-	
-	// Close all subscription channels
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	
-	for _, subscription := range s.Subscriptions {
-		close(subscription.Channel)
-	}
-}
+
 
 // Helper function to generate a unique ID
 func generateID() string {

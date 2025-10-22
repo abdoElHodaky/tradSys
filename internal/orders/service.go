@@ -1,4 +1,4 @@
-package order_management
+package orders
 
 import (
 	"context"

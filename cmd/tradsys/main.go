@@ -17,18 +17,19 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/abdoElHodaky/tradSys/internal/api/handlers"
-	"github.com/abdoElHodaky/tradSys/internal/config"
-	"github.com/abdoElHodaky/tradSys/internal/core/matching"
-	"github.com/abdoElHodaky/tradSys/internal/core/risk"
-	"github.com/abdoElHodaky/tradSys/internal/core/settlement"
-	"github.com/abdoElHodaky/tradSys/internal/connectivity"
 	"github.com/abdoElHodaky/tradSys/internal/compliance"
-	"github.com/abdoElHodaky/tradSys/internal/strategies"
+	"github.com/abdoElHodaky/tradSys/internal/config"
+	"github.com/abdoElHodaky/tradSys/internal/connectivity"
+	order_matching "github.com/abdoElHodaky/tradSys/internal/core/matching"
+	"github.com/abdoElHodaky/tradSys/internal/core/settlement"
 	"github.com/abdoElHodaky/tradSys/internal/gateway"
-	"github.com/abdoElHodaky/tradSys/internal/orders"
 	"github.com/abdoElHodaky/tradSys/internal/marketdata"
-	"github.com/abdoElHodaky/tradSys/internal/ws"
+	"github.com/abdoElHodaky/tradSys/internal/orders"
 	"github.com/abdoElHodaky/tradSys/internal/risk"
+	"github.com/abdoElHodaky/tradSys/internal/strategies"
+	"github.com/abdoElHodaky/tradSys/internal/ws"
+	orders_proto "github.com/abdoElHodaky/tradSys/proto/orders"
+	riskpb "github.com/abdoElHodaky/tradSys/proto/risk"
 )
 
 const (
@@ -101,7 +102,6 @@ func printVersion() {
 func runServer() {
 	log.Printf("Starting %s v%s", AppName, AppVersion)
 
-
 	// Initialize logger
 	logger, err := zap.NewProduction()
 	if err != nil {
@@ -110,7 +110,7 @@ func runServer() {
 	defer logger.Sync()
 
 	// Load configuration (unified config merged into main config)
-	cfg, err := config.Load("config/tradsys.yaml")
+	cfg, err := config.LoadConfig("config/tradsys.yaml")
 
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
@@ -198,26 +198,26 @@ func runServer() {
 // Individual service runners
 func runGateway() {
 	log.Printf("Starting TradSys Gateway Service v%s", AppVersion)
-	
+
 	// Load configuration
-	cfg, err := config.Load("config/tradsys.yaml")
+	cfg, err := config.LoadConfig("config/tradsys.yaml")
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
-	
+
 	// Initialize logger
 	logger, err := zap.NewProduction()
 	if err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
 	defer logger.Sync()
-	
+
 	// Create and start gateway server
 	gatewayServer := gateway.NewServer(gateway.ServerParams{
 		Logger: logger,
 		Config: cfg,
 	})
-	
+
 	// Start the gateway server
 	if err := gatewayServer.Start(); err != nil {
 		log.Fatalf("Failed to start gateway server: %v", err)
@@ -226,34 +226,34 @@ func runGateway() {
 
 func runOrderService() {
 	log.Printf("Starting TradSys Order Service v%s", AppVersion)
-	
+
 	// Load configuration
-	cfg, err := config.Load("config/tradsys.yaml")
+	cfg, err := config.LoadConfig("config/tradsys.yaml")
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
-	
+
 	// Initialize logger
 	logger, err := zap.NewProduction()
 	if err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
 	defer logger.Sync()
-	
-	// Create order service
-	orderService := orders.NewService(orders.ServiceParams{
+
+	// Create order handler for gRPC
+	orderHandler := orders.NewHandler(orders.HandlerParams{
 		Logger: logger,
 	})
-	
+
 	// Start gRPC server for order service
 	grpcServer := grpc.NewServer()
-	orders.RegisterOrderServiceServer(grpcServer, orderService)
-	
+	orders_proto.RegisterOrderServiceServer(grpcServer, orderHandler)
+
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Service.GRPCPort))
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
-	
+
 	log.Printf("Order service listening on port %d", cfg.Service.GRPCPort)
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
@@ -262,34 +262,38 @@ func runOrderService() {
 
 func runRiskService() {
 	log.Printf("Starting TradSys Risk Service v%s", AppVersion)
-	
+
 	// Load configuration
-	cfg, err := config.Load("config/tradsys.yaml")
+	cfg, err := config.LoadConfig("config/tradsys.yaml")
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
-	
+
 	// Initialize logger
 	logger, err := zap.NewProduction()
 	if err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
 	defer logger.Sync()
-	
-	// Create risk service
-	riskService := risk.NewService(risk.ServiceParams{
+
+	// All services will be created in initializeTradingSystem
+
+	// Risk service will be created in initializeTradingSystem
+
+	// Create risk handler for gRPC
+	riskHandler := risk.NewHandler(risk.HandlerParams{
 		Logger: logger,
 	})
-	
+
 	// Start gRPC server for risk service
 	grpcServer := grpc.NewServer()
-	risk.RegisterRiskServiceServer(grpcServer, riskService)
-	
+	riskpb.RegisterRiskServiceServer(grpcServer, riskHandler)
+
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Service.GRPCPort+1))
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
-	
+
 	log.Printf("Risk service listening on port %d", cfg.Service.GRPCPort+1)
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
@@ -298,74 +302,74 @@ func runRiskService() {
 
 func runMarketDataService() {
 	log.Printf("Starting TradSys Market Data Service v%s", AppVersion)
-	
+
 	// Load configuration
-	cfg, err := config.Load("config/tradsys.yaml")
+	cfg, err := config.LoadConfig("config/tradsys.yaml")
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
-	
+
 	// Initialize logger
 	logger, err := zap.NewProduction()
 	if err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
 	defer logger.Sync()
-	
+
 	// Create market data service
 	mdService := marketdata.NewService(marketdata.ServiceParams{
 		Logger: logger,
 		Config: cfg,
 	})
-	
+
 	// Start the market data service
 	ctx := context.Background()
 	if err := mdService.Start(ctx); err != nil {
 		log.Fatalf("Failed to start market data service: %v", err)
 	}
-	
+
 	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	
+
 	log.Println("Shutting down market data service...")
-	
+
 	// Graceful shutdown
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	
+
 	if err := mdService.Stop(shutdownCtx); err != nil {
 		log.Printf("Error during market data service shutdown: %v", err)
 	}
-	
+
 	log.Println("Market data service exited")
 }
 
 func runWebSocketService() {
 	log.Printf("Starting TradSys WebSocket Service v%s", AppVersion)
-	
+
 	// Load configuration
-	cfg, err := config.Load("config/tradsys.yaml")
+	cfg, err := config.LoadConfig("config/tradsys.yaml")
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
-	
+
 	// Initialize logger
 	logger, err := zap.NewProduction()
 	if err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
 	defer logger.Sync()
-	
+
 	// Create WebSocket server
 	wsServer := ws.NewServer(ws.ServerParams{
 		Logger: logger,
 		Config: cfg,
 	})
-	
+
 	// Start the WebSocket server
-	if err := wsServer.Start(); err != nil {
+	if err := wsServer.Start(context.Background()); err != nil {
 		log.Fatalf("Failed to start WebSocket server: %v", err)
 	}
 }
@@ -379,53 +383,57 @@ func initializeTradingSystem(cfg *config.Config) (*TradingSystem, error) {
 	}
 
 	// Initialize matching engine
-	matchingEngine := matching.NewEngine(logger)
+	matchingEngine := order_matching.NewEngine(logger)
 
 	// Initialize risk engine
-	riskEngine := risk.NewEngine(logger)
+	riskEngine := risk.NewRiskEngine(logger)
 
 	// Initialize settlement processor
-	settlementProcessor, err := settlement.NewProcessor(logger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize settlement processor: %w", err)
-	}
+	settlementProcessor := settlement.NewProcessor(logger)
 
 	// Initialize connectivity manager
-	connManager, err := connectivity.NewManager(cfg.Connectivity, logger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize connectivity: %w", err)
-	}
+	connManager := connectivity.NewManager(logger)
 
 	// Initialize compliance engine
-	complianceEngine, err := compliance.NewEngine(cfg.Compliance, logger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize compliance: %w", err)
-	}
+	complianceEngine := compliance.NewEngine(logger)
 
 	// Initialize strategies engine
-	strategyEngine, err := strategies.NewEngine(cfg.Strategies, logger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize strategies: %w", err)
-	}
+	strategyEngine := strategies.NewEngine(logger)
 
 	return &TradingSystem{
 		MatchingEngine:      matchingEngine,
-		RiskEngine:         riskEngine,
+		RiskEngine:          riskEngine,
 		SettlementProcessor: settlementProcessor,
-		Connectivity:       connManager,
-		Compliance:         complianceEngine,
-		Strategies:         strategyEngine,
-		Logger:             logger,
+		ConnectivityManager: connManager,
+		ComplianceEngine:    complianceEngine,
+		StrategiesEngine:    strategyEngine,
+		Logger:              logger,
 	}, nil
 }
 
 // TradingSystem represents the unified trading system
 type TradingSystem struct {
-	MatchingEngine      *matching.Engine
-	RiskEngine         *risk.Engine
+	MatchingEngine      *order_matching.Engine
+	RiskEngine          *risk.RiskEngine
 	SettlementProcessor *settlement.Processor
-	Connectivity       *connectivity.Manager
-	Compliance         *compliance.Engine
-	Strategies         *strategies.Engine
-	Logger             *zap.Logger
+	ConnectivityManager *connectivity.Manager
+	ComplianceEngine    *compliance.Engine
+	StrategiesEngine    *strategies.Engine
+	Logger              *zap.Logger
+}
+
+// GetMatchingEngine returns the matching engine (implements TradingSystemInterface)
+func (ts *TradingSystem) GetMatchingEngine() *order_matching.Engine {
+	return ts.MatchingEngine
+}
+
+// GetPerformanceMetrics returns performance metrics (implements TradingSystemInterface)
+func (ts *TradingSystem) GetPerformanceMetrics() map[string]interface{} {
+	return map[string]interface{}{
+		"uptime":           time.Since(time.Now()).String(),
+		"orders_processed": 0, // TODO: implement actual metrics
+		"trades_executed":  0,
+		"risk_checks":      0,
+		"latency_avg":      "0ms",
+	}
 }

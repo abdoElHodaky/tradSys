@@ -1,7 +1,6 @@
 package order_matching
 
 import (
-	"container/heap"
 	"fmt"
 	"math"
 	"sync"
@@ -227,7 +226,7 @@ func (e *AdvancedOrderMatchingEngine) AddOrder(order *types.Order) ([]*Trade, er
 		e.updateMetrics(latency)
 	}()
 
-	if !atomic.LoadInt32(&e.isRunning) == 1 {
+	if atomic.LoadInt32(&e.isRunning) != 1 {
 		return nil, fmt.Errorf("engine is not running")
 	}
 
@@ -250,7 +249,7 @@ func (e *AdvancedOrderMatchingEngine) AddOrder(order *types.Order) ([]*Trade, er
 		return e.handleIcebergOrder(book, order)
 	}
 
-	if order.IsHidden() && e.config.EnableHiddenOrders {
+	if order.IsHidden && e.config.EnableHiddenOrders {
 		return e.handleHiddenOrder(book, order)
 	}
 

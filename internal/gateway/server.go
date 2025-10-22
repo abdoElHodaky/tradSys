@@ -34,7 +34,7 @@ type Server struct {
 // NewServer creates a new API Gateway server with fx dependency injection
 func NewServer(p ServerParams) *Server {
 	// Set Gin mode based on configuration
-	if p.Config.Service.Environment == "production" {
+	if p.Config.System.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
@@ -54,10 +54,10 @@ func NewServer(p ServerParams) *Server {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// TODO: Add metrics middleware if available
-	// if p.Metrics != nil {
-	//     router.Use(p.Metrics.GinMiddleware())
-	// }
+	// Add metrics middleware if available
+	if p.Metrics != nil {
+		router.Use(p.Metrics.GinMiddleware())
+	}
 
 	// Create server
 	server := &Server{
@@ -121,6 +121,18 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 // Router returns the Gin router
 func (s *Server) Router() *gin.Engine {
 	return s.router
+}
+
+// Start starts the gateway server
+func (s *Server) Start() error {
+	s.logger.Info("Starting API Gateway server", zap.String("address", s.config.Gateway.Address))
+	return s.server.ListenAndServe()
+}
+
+// Stop stops the gateway server
+func (s *Server) Stop(ctx context.Context) error {
+	s.logger.Info("Stopping API Gateway server")
+	return s.server.Shutdown(ctx)
 }
 
 // Removed duplicate Module declaration - using the one in module.go

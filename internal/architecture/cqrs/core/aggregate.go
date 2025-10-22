@@ -1,9 +1,8 @@
-package aggregate
+package core
 
 import (
 	"errors"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/event"
 	"github.com/segmentio/ksuid"
 )
 
@@ -19,10 +18,10 @@ type Aggregate interface {
 	Version() int
 	
 	// ApplyEvent applies an event to the aggregate
-	ApplyEvent(event event.Event) error
+	ApplyEvent(event Event) error
 	
 	// GetUncommittedEvents returns the uncommitted events of the aggregate
-	GetUncommittedEvents() []event.Event
+	GetUncommittedEvents() []Event
 	
 	// ClearUncommittedEvents clears the uncommitted events of the aggregate
 	ClearUncommittedEvents()
@@ -33,7 +32,7 @@ type BaseAggregate struct {
 	id               string
 	aggregateType    string
 	version          int
-	uncommittedEvents []event.Event
+	uncommittedEvents []Event
 }
 
 // NewBaseAggregate creates a new base aggregate
@@ -42,7 +41,7 @@ func NewBaseAggregate(aggregateType string) *BaseAggregate {
 		id:               ksuid.New().String(),
 		aggregateType:    aggregateType,
 		version:          0,
-		uncommittedEvents: []event.Event{},
+		uncommittedEvents: []Event{},
 	}
 }
 
@@ -52,7 +51,7 @@ func NewBaseAggregateWithID(id string, aggregateType string) *BaseAggregate {
 		id:               id,
 		aggregateType:    aggregateType,
 		version:          0,
-		uncommittedEvents: []event.Event{},
+		uncommittedEvents: []Event{},
 	}
 }
 
@@ -72,7 +71,7 @@ func (a *BaseAggregate) Version() int {
 }
 
 // ApplyEvent applies an event to the aggregate
-func (a *BaseAggregate) ApplyEvent(event event.Event) error {
+func (a *BaseAggregate) ApplyEvent(event Event) error {
 	// Check if the event is for this aggregate
 	if event.AggregateID() != a.id {
 		return errors.New("event aggregate ID does not match aggregate ID")
@@ -93,9 +92,9 @@ func (a *BaseAggregate) ApplyEvent(event event.Event) error {
 }
 
 // ApplyNewEvent creates and applies a new event to the aggregate
-func (a *BaseAggregate) ApplyNewEvent(eventName string, data interface{}, applyFunc func(event event.Event) error) error {
+func (a *BaseAggregate) ApplyNewEvent(eventName string, data interface{}, applyFunc func(event Event) error) error {
 	// Create a new event
-	newEvent := event.NewEvent(eventName, a.id, data, a.version+1)
+	newEvent := NewEvent(eventName, a.id, data, a.version+1)
 	
 	// Apply the event to the aggregate
 	if applyFunc != nil {
@@ -115,17 +114,17 @@ func (a *BaseAggregate) ApplyNewEvent(eventName string, data interface{}, applyF
 }
 
 // GetUncommittedEvents returns the uncommitted events of the aggregate
-func (a *BaseAggregate) GetUncommittedEvents() []event.Event {
+func (a *BaseAggregate) GetUncommittedEvents() []Event {
 	return a.uncommittedEvents
 }
 
 // ClearUncommittedEvents clears the uncommitted events of the aggregate
 func (a *BaseAggregate) ClearUncommittedEvents() {
-	a.uncommittedEvents = []event.Event{}
+	a.uncommittedEvents = []Event{}
 }
 
 // LoadFromEvents loads the aggregate state from a series of events
-func (a *BaseAggregate) LoadFromEvents(events []event.Event) error {
+func (a *BaseAggregate) LoadFromEvents(events []Event) error {
 	for _, event := range events {
 		if err := a.ApplyEvent(event); err != nil {
 			return err
@@ -137,4 +136,3 @@ func (a *BaseAggregate) LoadFromEvents(events []event.Event) error {
 	
 	return nil
 }
-

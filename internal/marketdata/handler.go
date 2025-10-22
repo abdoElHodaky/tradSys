@@ -1,4 +1,4 @@
-package market_data
+package marketdata
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/core/matching"
+	"github.com/abdoElHodaky/tradSys/internal/marketdata/external"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -24,21 +25,7 @@ const (
 	MarketDataTypeOHLCV MarketDataType = "ohlcv"
 )
 
-// Subscription represents a market data subscription
-type Subscription struct {
-	// ID is the unique identifier for the subscription
-	ID string
-	// UserID is the user ID
-	UserID string
-	// Symbol is the trading symbol
-	Symbol string
-	// Type is the type of market data
-	Type MarketDataType
-	// Channel is the channel for sending market data
-	Channel chan interface{}
-	// CreatedAt is the time the subscription was created
-	CreatedAt time.Time
-}
+
 
 // OrderBookUpdate represents an order book update
 type OrderBookUpdate struct {
@@ -177,7 +164,7 @@ func (h *Handler) Subscribe(userID, symbol string, dataType MarketDataType) (*Su
 		ID:        uuid.New().String(),
 		UserID:    userID,
 		Symbol:    symbol,
-		Type:      dataType,
+		Type:      external.MarketDataType(dataType),
 		Channel:   make(chan interface{}, 100),
 		CreatedAt: time.Now(),
 	}
@@ -216,7 +203,7 @@ func (h *Handler) Unsubscribe(subscriptionID string) error {
 	}
 	
 	// Remove from type subscriptions
-	delete(h.TypeSubscriptions[subscription.Type], subscriptionID)
+	delete(h.TypeSubscriptions[MarketDataType(subscription.Type)], subscriptionID)
 	
 	// Close channel
 	close(subscription.Channel)
@@ -252,7 +239,7 @@ func (h *Handler) processTrades() {
 			// Send to symbol subscribers
 			if symbolSubs, exists := h.SymbolSubscriptions[trade.Symbol]; exists {
 				for _, sub := range symbolSubs {
-					if sub.Type == MarketDataTypeTrade {
+					if sub.Type == external.MarketDataType(MarketDataTypeTrade) {
 						select {
 						case sub.Channel <- update:
 						default:
@@ -300,7 +287,7 @@ func (h *Handler) processOrderBooks() {
 				// Send to subscribers
 				if symbolSubs, exists := h.SymbolSubscriptions[symbol]; exists {
 					for _, sub := range symbolSubs {
-						if sub.Type == MarketDataTypeOrderBook {
+						if sub.Type == external.MarketDataType(MarketDataTypeOrderBook) {
 							select {
 							case sub.Channel <- update:
 							default:
@@ -335,7 +322,7 @@ func (h *Handler) processTickers() {
 				// Send to subscribers
 				if symbolSubs, exists := h.SymbolSubscriptions[symbol]; exists {
 					for _, sub := range symbolSubs {
-						if sub.Type == MarketDataTypeTicker {
+						if sub.Type == external.MarketDataType(MarketDataTypeTicker) {
 							select {
 							case sub.Channel <- tickerData:
 							default:
@@ -372,7 +359,7 @@ func (h *Handler) processOHLCV() {
 					// Send to subscribers
 					if symbolSubs, exists := h.SymbolSubscriptions[symbol]; exists {
 						for _, sub := range symbolSubs {
-							if sub.Type == MarketDataTypeOHLCV {
+							if sub.Type == external.MarketDataType(MarketDataTypeOHLCV) {
 								select {
 								case sub.Channel <- ohlcvData:
 								default:
@@ -482,4 +469,3 @@ func (h *Handler) Stop() {
 		close(subscription.Channel)
 	}
 }
-

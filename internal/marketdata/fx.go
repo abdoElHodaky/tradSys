@@ -6,6 +6,8 @@ import (
 	"reflect"
 
 	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs"
+	"github.com/abdoElHodaky/tradSys/internal/config"
+	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -30,6 +32,8 @@ type ServiceParams struct {
 	fx.In
 	
 	Logger     *zap.Logger
+	Repository *repositories.MarketDataRepository
+	Config     *config.Config
 	CommandBus *cqrs.CommandBus
 	QueryBus   *cqrs.QueryBus
 }

@@ -10,8 +10,9 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-// Config represents the database configuration
-type Config struct {
+// DBConfig represents the database configuration
+// Renamed to avoid conflict with UnifiedConfig
+type DBConfig struct {
 	// Host is the database host
 	Host string
 	// Port is the database port
@@ -33,8 +34,8 @@ type Config struct {
 }
 
 // DefaultConfig returns the default database configuration
-func DefaultConfig() *Config {
-	return &Config{
+func DefaultConfig() *DBConfig {
+	return &DBConfig{
 		Host:           "localhost",
 		Port:           5432,
 		Username:       "postgres",
@@ -48,7 +49,7 @@ func DefaultConfig() *Config {
 }
 
 // DSN returns the database connection string
-func (c *Config) DSN() string {
+func (c *DBConfig) DSN() string {
 	return fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		c.Host, c.Port, c.Username, c.Password, c.Database, c.SSLMode,
@@ -56,7 +57,7 @@ func (c *Config) DSN() string {
 }
 
 // Connect connects to the database
-func Connect(config *Config, zapLogger *zap.Logger) (*gorm.DB, error) {
+func Connect(config *DBConfig, zapLogger *zap.Logger) (*gorm.DB, error) {
 	// Create a GORM logger that uses zap
 	gormLogger := logger.New(
 		&zapGormWriter{zapLogger: zapLogger},

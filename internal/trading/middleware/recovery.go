@@ -114,10 +114,7 @@ func HFTRequestIDMiddleware() gin.HandlerFunc {
 	}
 }
 
-// generateRequestID generates a simple request ID
-func generateRequestID() string {
-	return fmt.Sprintf("%d", time.Now().UnixNano())
-}
+
 
 // HFTResponseTimeMiddleware adds response time header
 func HFTResponseTimeMiddleware() gin.HandlerFunc {

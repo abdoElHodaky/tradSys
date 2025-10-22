@@ -1,4 +1,4 @@
-package query
+package handlers
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/projection"
+	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
 	"go.uber.org/zap"
 )
 
@@ -176,4 +176,3 @@ func (h *ProjectionEventHandler) HandleEvent(event *eventsourcing.Event) error {
 var (
 	ErrProjectionNotFound = projection.ErrProjectionNotFound
 )
-

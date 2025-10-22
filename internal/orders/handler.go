@@ -46,7 +46,7 @@ func NewHandler(p HandlerParams) *Handler {
 }
 
 // CreateOrder implements the OrderService.CreateOrder method
-func (h *Handler) CreateOrder(ctx context.Context, req *orders.CreateOrderRequest, rsp *orders.OrderResponse) error {
+func (h *Handler) CreateOrder(ctx context.Context, req *orders.CreateOrderRequest) (*orders.OrderResponse, error) {
 	h.logger.Info("CreateOrder called",
 		zap.String("symbol", req.Symbol),
 		zap.String("side", req.Side.String()),
@@ -65,112 +65,120 @@ func (h *Handler) CreateOrder(ctx context.Context, req *orders.CreateOrderReques
 		validateRsp, err := h.riskClient.ValidateOrder(ctx, validateReq)
 		if err != nil {
 			h.logger.Error("Failed to validate order with risk service", zap.Error(err))
-			return err
+			return nil, err
 		}
 
 		if !validateRsp.IsValid {
 			h.logger.Warn("Order validation failed",
 				zap.String("reason", validateRsp.RejectionReason))
-			return status.Errorf(codes.InvalidArgument, "Order validation failed: %s", validateRsp.RejectionReason)
+			return nil, status.Errorf(codes.InvalidArgument, "Order validation failed: %s", validateRsp.RejectionReason)
 		}
 	}
 
 	// Implementation would go here
 	// For now, just return a placeholder response
-	rsp.Id = uuid.New().String()
-	rsp.Symbol = req.Symbol
-	rsp.Type = req.Type
-	rsp.Side = req.Side
-	rsp.Status = orders.OrderStatus_PENDING
-	rsp.Quantity = req.Quantity
-	rsp.FilledQty = 0
-	rsp.Price = req.Price
-	rsp.StopPrice = req.StopPrice
-	rsp.CreatedAt = 1625097600000
-	rsp.UpdatedAt = 1625097600000
-	rsp.ClientOrderId = req.ClientOrderId
+	rsp := &orders.OrderResponse{
+		Id:            uuid.New().String(),
+		Symbol:        req.Symbol,
+		Type:          req.Type,
+		Side:          req.Side,
+		Status:        orders.OrderStatus_PENDING,
+		Quantity:      req.Quantity,
+		FilledQty:     0,
+		Price:         req.Price,
+		StopPrice:     req.StopPrice,
+		CreatedAt:     1625097600000,
+		UpdatedAt:     1625097600000,
+		ClientOrderId: req.ClientOrderId,
+	}
 
-	return nil
+	return rsp, nil
 }
 
 // GetOrder implements the OrderService.GetOrder method
-func (h *Handler) GetOrder(ctx context.Context, req *orders.GetOrderRequest, rsp *orders.OrderResponse) error {
+func (h *Handler) GetOrder(ctx context.Context, req *orders.GetOrderRequest) (*orders.OrderResponse, error) {
 	h.logger.Info("GetOrder called",
 		zap.String("order_id", req.Id))
 
 	// Implementation would go here
 	// For now, just return a placeholder response
-	rsp.Id = req.Id
-	rsp.Symbol = "BTC-USD"
-	rsp.Type = orders.OrderType_LIMIT
-	rsp.Side = orders.OrderSide_BUY
-	rsp.Status = orders.OrderStatus_NEW
-	rsp.Quantity = 1.0
-	rsp.FilledQty = 0.5
-	rsp.Price = 50000.0
-	rsp.CreatedAt = 1625097600000
-	rsp.UpdatedAt = 1625097660000
+	rsp := &orders.OrderResponse{
+		Id:        req.Id,
+		Symbol:    "BTC-USD",
+		Type:      orders.OrderType_LIMIT,
+		Side:      orders.OrderSide_BUY,
+		Status:    orders.OrderStatus_NEW,
+		Quantity:  1.0,
+		FilledQty: 0.5,
+		Price:     50000.0,
+		CreatedAt: 1625097600000,
+		UpdatedAt: 1625097660000,
+	}
 
-	return nil
+	return rsp, nil
 }
 
 // CancelOrder implements the OrderService.CancelOrder method
-func (h *Handler) CancelOrder(ctx context.Context, req *orders.CancelOrderRequest, rsp *orders.OrderResponse) error {
+func (h *Handler) CancelOrder(ctx context.Context, req *orders.CancelOrderRequest) (*orders.OrderResponse, error) {
 	h.logger.Info("CancelOrder called",
 		zap.String("order_id", req.Id))
 
 	// Implementation would go here
 	// For now, just return a placeholder response
-	rsp.Id = req.Id
-	rsp.Symbol = "BTC-USD"
-	rsp.Type = orders.OrderType_LIMIT
-	rsp.Side = orders.OrderSide_BUY
-	rsp.Status = orders.OrderStatus_CANCELLED
-	rsp.Quantity = 1.0
-	rsp.FilledQty = 0.5
-	rsp.Price = 50000.0
-	rsp.CreatedAt = 1625097600000
-	rsp.UpdatedAt = 1625097720000
+	rsp := &orders.OrderResponse{
+		Id:        req.Id,
+		Symbol:    "BTC-USD",
+		Type:      orders.OrderType_LIMIT,
+		Side:      orders.OrderSide_BUY,
+		Status:    orders.OrderStatus_CANCELLED,
+		Quantity:  1.0,
+		FilledQty: 0.5,
+		Price:     50000.0,
+		CreatedAt: 1625097600000,
+		UpdatedAt: 1625097720000,
+	}
 
-	return nil
+	return rsp, nil
 }
 
 // GetOrders implements the OrderService.GetOrders method
-func (h *Handler) GetOrders(ctx context.Context, req *orders.GetOrdersRequest, rsp *orders.GetOrdersResponse) error {
+func (h *Handler) GetOrders(ctx context.Context, req *orders.GetOrdersRequest) (*orders.GetOrdersResponse, error) {
 	h.logger.Info("GetOrders called",
 		zap.String("symbol", req.Symbol),
 		zap.String("status", req.Status.String()))
 
 	// Implementation would go here
 	// For now, just return placeholder responses
-	rsp.Orders = []*orders.OrderResponse{
-		{
-			Id:        uuid.New().String(),
-			Symbol:    req.Symbol,
-			Type:      orders.OrderType_LIMIT,
-			Side:      orders.OrderSide_BUY,
-			Status:    req.Status,
-			Quantity:  1.0,
-			FilledQty: 0.5,
-			Price:     50000.0,
-			CreatedAt: 1625097600000,
-			UpdatedAt: 1625097660000,
-		},
-		{
-			Id:        uuid.New().String(),
-			Symbol:    req.Symbol,
-			Type:      orders.OrderType_MARKET,
-			Side:      orders.OrderSide_SELL,
-			Status:    req.Status,
-			Quantity:  0.5,
-			FilledQty: 0.5,
-			Price:     51000.0,
-			CreatedAt: 1625097700000,
-			UpdatedAt: 1625097760000,
+	rsp := &orders.GetOrdersResponse{
+		Orders: []*orders.OrderResponse{
+			{
+				Id:        uuid.New().String(),
+				Symbol:    req.Symbol,
+				Type:      orders.OrderType_LIMIT,
+				Side:      orders.OrderSide_BUY,
+				Status:    req.Status,
+				Quantity:  1.0,
+				FilledQty: 0.5,
+				Price:     50000.0,
+				CreatedAt: 1625097600000,
+				UpdatedAt: 1625097660000,
+			},
+			{
+				Id:        uuid.New().String(),
+				Symbol:    req.Symbol,
+				Type:      orders.OrderType_MARKET,
+				Side:      orders.OrderSide_SELL,
+				Status:    req.Status,
+				Quantity:  0.5,
+				FilledQty: 0.5,
+				Price:     51000.0,
+				CreatedAt: 1625097700000,
+				UpdatedAt: 1625097760000,
+			},
 		},
 	}
 
-	return nil
+	return rsp, nil
 }
 
 // OrdersModule provides the orders handler module for fx

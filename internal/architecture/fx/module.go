@@ -5,9 +5,9 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"github.com/abdoElHodaky/tradSys/internal/marketdata"
 	"github.com/abdoElHodaky/tradSys/internal/core/matching"
-	"github.com/abdoElHodaky/tradSys/internal/trading/order_management"
-	"github.com/abdoElHodaky/tradSys/internal/core/risk"
-	"github.com/abdoElHodaky/tradSys/internal/trading/market_data"
+	"github.com/abdoElHodaky/tradSys/internal/orders"
+	"github.com/abdoElHodaky/tradSys/internal/risk"
+	"github.com/abdoElHodaky/tradSys/internal/marketdata"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -45,7 +45,7 @@ func NewOrdersModule() fx.Option {
 func NewRiskModule() fx.Option {
 	return fx.Options(
 		// Provide risk management service
-		fx.Provide(risk_management.NewFxService),
+		fx.Provide(risk.NewFxService),
 	)
 }
 
@@ -61,4 +61,3 @@ func NewMarketDataModule() fx.Option {
 		fx.Options(marketdata.Module),
 	)
 }
-

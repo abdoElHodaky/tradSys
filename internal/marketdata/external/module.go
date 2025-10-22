@@ -18,7 +18,7 @@ func NewFxManager(
 	logger *zap.Logger,
 	binanceProvider *BinanceProvider,
 ) *Manager {
-	manager := NewManager(ManagerParams{Logger: logger})
+	manager := NewManager(logger)
 	
 	// Register lifecycle hooks
 	lifecycle.Append(fx.Hook{

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
-	"github.com/abdoElHodaky/tradSys/internal/db/query"
+	"github.com/abdoElHodaky/tradSys/internal/db/queries"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -15,7 +15,7 @@ import (
 type StrategyRepository struct {
 	db        *gorm.DB
 	logger    *zap.Logger
-	optimizer *query.Optimizer
+	optimizer *queries.Optimizer
 }
 
 // NewStrategyRepository creates a new strategy repository
@@ -23,7 +23,7 @@ func NewStrategyRepository(db *gorm.DB, logger *zap.Logger) *StrategyRepository 
 	repo := &StrategyRepository{
 		db:        db,
 		logger:    logger,
-		optimizer: query.NewOptimizer(db, logger),
+		optimizer: queries.NewOptimizer(db, logger),
 	}
 	
 	return repo
@@ -33,7 +33,7 @@ func NewStrategyRepository(db *gorm.DB, logger *zap.Logger) *StrategyRepository 
 func (r *StrategyRepository) GetStrategy(ctx context.Context, name string) (*models.Strategy, error) {
 	var strategy models.Strategy
 	
-	builder := query.NewBuilder(r.db, r.logger).
+	builder := queries.NewBuilder(r.db, r.logger).
 		Table("strategies").
 		Where("name = ?", name)
 	
@@ -56,7 +56,7 @@ func (r *StrategyRepository) GetStrategy(ctx context.Context, name string) (*mod
 func (r *StrategyRepository) GetAllStrategies(ctx context.Context) ([]*models.Strategy, error) {
 	var strategies []*models.Strategy
 	
-	builder := query.NewBuilder(r.db, r.logger).
+	builder := queries.NewBuilder(r.db, r.logger).
 		Table("strategies").
 		OrderBy("name ASC")
 	
@@ -133,7 +133,7 @@ func (r *StrategyRepository) UpdateStrategyExecution(ctx context.Context, execut
 func (r *StrategyRepository) GetStrategyExecutions(ctx context.Context, strategyID uint) ([]*models.StrategyExecution, error) {
 	var executions []*models.StrategyExecution
 	
-	builder := query.NewBuilder(r.db, r.logger).
+	builder := queries.NewBuilder(r.db, r.logger).
 		Table("strategy_executions").
 		Where("strategy_id = ?", strategyID).
 		OrderBy("start_time DESC")
@@ -166,7 +166,7 @@ func (r *StrategyRepository) CreateSignal(ctx context.Context, signal *models.Si
 func (r *StrategyRepository) GetActiveSignals(ctx context.Context, symbol string) ([]*models.Signal, error) {
 	var signals []*models.Signal
 	
-	builder := query.NewBuilder(r.db, r.logger).
+	builder := queries.NewBuilder(r.db, r.logger).
 		Table("signals").
 		Where("symbol = ?", symbol).
 		Where("executed = ?", false).
@@ -195,4 +195,3 @@ func (r *StrategyRepository) UpdateSignal(ctx context.Context, signal *models.Si
 	}
 	return nil
 }
-

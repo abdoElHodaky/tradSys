@@ -3,8 +3,8 @@ package fx
 import (
 	"context"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/eventbus"
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/store"
+	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
+	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
 	"github.com/nats-io/nats.go"
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"

@@ -1,4 +1,4 @@
-package risk_management
+package risk
 
 import (
 	"context"

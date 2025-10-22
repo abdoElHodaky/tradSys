@@ -68,6 +68,13 @@ func NewServer(p ServerParams) *Server {
 	return server
 }
 
+// Start starts the WebSocket server
+func (s *Server) Start(ctx context.Context) error {
+	s.logger.Info("Starting WebSocket server")
+	// WebSocket server is started via HTTP handlers, so this is just a placeholder
+	return nil
+}
+
 // closeAllConnections closes all WebSocket connections
 func (s *Server) closeAllConnections() {
 	s.clientsMux.Lock()
@@ -186,4 +193,3 @@ func (s *Server) Broadcast(topic string, message []byte) int {
 var ServerModule = fx.Options(
 	fx.Provide(NewServer),
 )
-

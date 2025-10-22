@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"go.uber.org/zap"
@@ -257,4 +258,28 @@ func (c *MetricsCollector) GetMetrics() map[string]interface{} {
 	// This is just a placeholder for direct metrics access
 	
 	return metrics
+}
+
+// GinMiddleware returns a Gin middleware for metrics collection
+func (c *MetricsCollector) GinMiddleware() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		start := time.Now()
+		
+		// Process request
+		ctx.Next()
+		
+		// Record metrics
+		duration := time.Since(start)
+		status := ctx.Writer.Status()
+		method := ctx.Request.Method
+		path := ctx.FullPath()
+		
+		// Record HTTP request metrics (you can add prometheus metrics here)
+		c.logger.Debug("HTTP request processed",
+			zap.String("method", method),
+			zap.String("path", path),
+			zap.Int("status", status),
+			zap.Duration("duration", duration),
+		)
+	}
 }

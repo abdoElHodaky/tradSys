@@ -12,8 +12,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
+	"github.com/abdoElHodaky/tradSys/internal/common/pool"
 	"github.com/abdoElHodaky/tradSys/internal/trading/metrics"
-	"github.com/abdoElHodaky/tradSys/internal/trading/pools"
 )
 
 // HFTWebSocketManager manages WebSocket connections with HFT optimizations
@@ -23,9 +23,9 @@ type HFTWebSocketManager struct {
 	connCount   int64
 	
 	// Message handling
-	messagePool    *pools.WebSocketMessagePool
-	pricePool      *pools.PriceMessagePool
-	orderUpdatePool *pools.OrderUpdateMessagePool
+	messagePool    *pool.WebSocketMessagePool
+	pricePool      *pool.PriceMessagePool
+	orderUpdatePool *pool.OrderUpdateMessagePool
 	
 	// Broadcasting
 	broadcastChan chan *BroadcastMessage
@@ -109,9 +109,9 @@ func NewHFTWebSocketManager(config *HFTWebSocketConfig) *HFTWebSocketManager {
 	ctx, cancel := context.WithCancel(context.Background())
 	
 	manager := &HFTWebSocketManager{
-		messagePool:     pools.NewWebSocketMessagePool(),
-		pricePool:       pools.NewPriceMessagePool(),
-		orderUpdatePool: pools.NewOrderUpdateMessagePool(),
+		messagePool:     pool.NewWebSocketMessagePool(),
+		pricePool:       pool.NewPriceMessagePool(),
+		orderUpdatePool: pool.NewOrderUpdateMessagePool(),
 		broadcastChan:   make(chan *BroadcastMessage, config.BroadcastBuffer),
 		config:          config,
 		ctx:             ctx,
@@ -291,7 +291,7 @@ func (c *HFTConnection) handleMessage(message []byte) {
 }
 
 // handleSubscribe handles subscription requests
-func (c *HFTConnection) handleSubscribe(msg *pools.WebSocketMessage) {
+func (c *HFTConnection) handleSubscribe(msg *pool.WebSocketMessage) {
 	if msg.Channel == "" {
 		return
 	}
@@ -311,7 +311,7 @@ func (c *HFTConnection) handleSubscribe(msg *pools.WebSocketMessage) {
 }
 
 // handleUnsubscribe handles unsubscription requests
-func (c *HFTConnection) handleUnsubscribe(msg *pools.WebSocketMessage) {
+func (c *HFTConnection) handleUnsubscribe(msg *pool.WebSocketMessage) {
 	if msg.Channel == "" {
 		return
 	}
@@ -331,7 +331,7 @@ func (c *HFTConnection) handleUnsubscribe(msg *pools.WebSocketMessage) {
 }
 
 // handlePing handles ping messages
-func (c *HFTConnection) handlePing(msg *pools.WebSocketMessage) {
+func (c *HFTConnection) handlePing(msg *pool.WebSocketMessage) {
 	response := c.Manager.messagePool.Get()
 	defer c.Manager.messagePool.Put(response)
 	
@@ -343,7 +343,7 @@ func (c *HFTConnection) handlePing(msg *pools.WebSocketMessage) {
 }
 
 // sendMessage sends a message to the connection
-func (c *HFTConnection) sendMessage(msg *pools.WebSocketMessage) {
+func (c *HFTConnection) sendMessage(msg *pool.WebSocketMessage) {
 	data, err := json.Marshal(msg)
 	if err != nil {
 		c.Manager.metrics.RecordError()

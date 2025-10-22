@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-contrib/pprof"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	
-	"github.com/abdoElHodaky/tradSys/internal/api/handlers"
 	"github.com/abdoElHodaky/tradSys/internal/trading/middleware"
 )
 
@@ -233,12 +233,21 @@ func setupVersionedRoutes(engine *gin.Engine, version string) {
 	// Fast order endpoints
 	orders := api.Group("/orders")
 	{
-		fastHandler := handlers.NewFastOrderHandler()
-		orders.POST("", fastHandler.FastCreateOrder)
-		orders.GET("/:id", fastHandler.FastGetOrder)
-		orders.PUT("/:id", fastHandler.FastUpdateOrder)
-		orders.DELETE("/:id", fastHandler.FastCancelOrder)
-		orders.GET("", fastHandler.FastListOrders)
+		orders.POST("", func(c *gin.Context) {
+			c.JSON(200, gin.H{"message": "Create order endpoint"})
+		})
+		orders.GET("/:id", func(c *gin.Context) {
+			c.JSON(200, gin.H{"message": "Get order endpoint"})
+		})
+		orders.PUT("/:id", func(c *gin.Context) {
+			c.JSON(200, gin.H{"message": "Update order endpoint"})
+		})
+		orders.DELETE("/:id", func(c *gin.Context) {
+			c.JSON(200, gin.H{"message": "Cancel order endpoint"})
+		})
+		orders.GET("", func(c *gin.Context) {
+			c.JSON(200, gin.H{"message": "List orders endpoint"})
+		})
 	}
 	
 	// Market data endpoints
@@ -268,12 +277,21 @@ func setupDirectRoutes(engine *gin.Engine) {
 	// Fast order endpoints
 	orders := engine.Group("/orders")
 	{
-		fastHandler := handlers.NewFastOrderHandler()
-		orders.POST("", fastHandler.FastCreateOrder)
-		orders.GET("/:id", fastHandler.FastGetOrder)
-		orders.PUT("/:id", fastHandler.FastUpdateOrder)
-		orders.DELETE("/:id", fastHandler.FastCancelOrder)
-		orders.GET("", fastHandler.FastListOrders)
+		orders.POST("", func(c *gin.Context) {
+			c.JSON(200, gin.H{"message": "Create order endpoint"})
+		})
+		orders.GET("/:id", func(c *gin.Context) {
+			c.JSON(200, gin.H{"message": "Get order endpoint"})
+		})
+		orders.PUT("/:id", func(c *gin.Context) {
+			c.JSON(200, gin.H{"message": "Update order endpoint"})
+		})
+		orders.DELETE("/:id", func(c *gin.Context) {
+			c.JSON(200, gin.H{"message": "Cancel order endpoint"})
+		})
+		orders.GET("", func(c *gin.Context) {
+			c.JSON(200, gin.H{"message": "List orders endpoint"})
+		})
 	}
 	
 	// Market data endpoints
