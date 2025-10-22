@@ -45,7 +45,7 @@ func NewOrdersModule() fx.Option {
 func NewRiskModule() fx.Option {
 	return fx.Options(
 		// Provide risk management service
-		fx.Provide(risk_management.NewFxService),
+		fx.Provide(risk.NewFxService),
 	)
 }
 
@@ -61,4 +61,3 @@ func NewMarketDataModule() fx.Option {
 		fx.Options(marketdata.Module),
 	)
 }
-

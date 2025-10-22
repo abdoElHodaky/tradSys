@@ -9,7 +9,6 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/core/matching"
 	"github.com/abdoElHodaky/tradSys/internal/orders"
 	riskengine "github.com/abdoElHodaky/tradSys/internal/risk/engine"
-	risk_management "github.com/abdoElHodaky/tradSys/internal/risk/engine"
 	"github.com/google/uuid"
 	"github.com/patrickmn/go-cache"
 	"go.uber.org/zap"
@@ -763,7 +762,7 @@ func (s *Service) AddCircuitBreaker(ctx context.Context, symbol string, percenta
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	
-	s.CircuitBreakers[symbol] = risk_management.NewCircuitBreaker(percentageThreshold, cooldownPeriod)
+	s.CircuitBreakers[symbol] = riskengine.NewCircuitBreaker(percentageThreshold, cooldownPeriod)
 	
 	return nil
 }

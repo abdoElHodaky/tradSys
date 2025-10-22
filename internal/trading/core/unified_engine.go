@@ -19,7 +19,7 @@ type UnifiedTradingEngine struct {
 	config              *UnifiedEngineConfig
 	logger              *zap.Logger
 	orderMatchingEngine *order_matching.AdvancedOrderMatchingEngine
-	riskEngine          *risk_management.RealTimeRiskEngine
+	riskEngine          *risk.RealTimeRiskEngine
 	settlementProcessor *settlement.Processor
 	eventBus            *EventBus
 	metrics             *UnifiedMetrics
@@ -34,7 +34,7 @@ type UnifiedEngineConfig struct {
 	OrderMatching *order_matching.EngineConfig `json:"order_matching"`
 	
 	// Risk Management Configuration
-	RiskManagement *risk_management.RiskEngineConfig `json:"risk_management"`
+	RiskManagement *risk.RiskEngineConfig `json:"risk_management"`
 	
 	// Settlement Configuration
 	Settlement *SettlementConfig `json:"settlement"`
@@ -163,7 +163,7 @@ type OrderRequest struct {
 type OrderResponse struct {
 	Order           *types.Order  `json:"order"`
 	Trades          []*Trade      `json:"trades"`
-	RiskCheck       *risk_management.RiskCheck `json:"risk_check,omitempty"`
+	RiskCheck       *risk.RiskCheck `json:"risk_check,omitempty"`
 	Success         bool          `json:"success"`
 	Error           error         `json:"error,omitempty"`
 	ProcessingTime  time.Duration `json:"processing_time"`
@@ -177,7 +177,7 @@ func NewUnifiedTradingEngine(config *UnifiedEngineConfig, logger *zap.Logger) (*
 		config.OrderMatching, logger.Named("matching"))
 	
 	// Create risk engine
-	riskEngine := risk_management.NewRealTimeRiskEngine(
+	riskEngine := risk.NewRealTimeRiskEngine(
 		config.RiskManagement, logger.Named("risk"))
 	
 	// Create settlement processor
@@ -371,9 +371,9 @@ func (e *UnifiedTradingEngine) ProcessOrder(ctx context.Context, request *OrderR
 	
 	// Step 3: Post-Trade Risk Checks
 	if e.config.EnableRiskIntegration && len(trades) > 0 {
-		riskTrades := make([]*risk_management.Trade, len(trades))
+		riskTrades := make([]*risk.Trade, len(trades))
 		for i, trade := range trades {
-			riskTrades[i] = &risk_management.Trade{
+			riskTrades[i] = &risk.Trade{
 				ID:        trade.ID,
 				Symbol:    trade.Symbol,
 				Price:     trade.Price,
@@ -553,7 +553,7 @@ func (e *UnifiedTradingEngine) GetOrderBook(symbol string) *order_matching.Advan
 }
 
 // GetPosition returns the current position for a symbol
-func (e *UnifiedTradingEngine) GetPosition(symbol string) *risk_management.Position {
+func (e *UnifiedTradingEngine) GetPosition(symbol string) *risk.Position {
 	return e.riskEngine.GetPosition(symbol)
 }
 

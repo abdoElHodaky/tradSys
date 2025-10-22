@@ -28,7 +28,6 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/orders"
 	"github.com/abdoElHodaky/tradSys/internal/marketdata"
 	"github.com/abdoElHodaky/tradSys/internal/ws"
-	"github.com/abdoElHodaky/tradSys/internal/risk"
 )
 
 const (
@@ -110,7 +109,7 @@ func runServer() {
 	defer logger.Sync()
 
 	// Load configuration (unified config merged into main config)
-	cfg, err := config.Load("config/tradsys.yaml")
+	cfg, err := config.LoadConfig("config/tradsys.yaml")
 
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
@@ -200,7 +199,7 @@ func runGateway() {
 	log.Printf("Starting TradSys Gateway Service v%s", AppVersion)
 	
 	// Load configuration
-	cfg, err := config.Load("config/tradsys.yaml")
+	cfg, err := config.LoadConfig("config/tradsys.yaml")
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
@@ -228,7 +227,7 @@ func runOrderService() {
 	log.Printf("Starting TradSys Order Service v%s", AppVersion)
 	
 	// Load configuration
-	cfg, err := config.Load("config/tradsys.yaml")
+	cfg, err := config.LoadConfig("config/tradsys.yaml")
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
@@ -264,7 +263,7 @@ func runRiskService() {
 	log.Printf("Starting TradSys Risk Service v%s", AppVersion)
 	
 	// Load configuration
-	cfg, err := config.Load("config/tradsys.yaml")
+	cfg, err := config.LoadConfig("config/tradsys.yaml")
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
@@ -300,7 +299,7 @@ func runMarketDataService() {
 	log.Printf("Starting TradSys Market Data Service v%s", AppVersion)
 	
 	// Load configuration
-	cfg, err := config.Load("config/tradsys.yaml")
+	cfg, err := config.LoadConfig("config/tradsys.yaml")
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
@@ -346,7 +345,7 @@ func runWebSocketService() {
 	log.Printf("Starting TradSys WebSocket Service v%s", AppVersion)
 	
 	// Load configuration
-	cfg, err := config.Load("config/tradsys.yaml")
+	cfg, err := config.LoadConfig("config/tradsys.yaml")
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
