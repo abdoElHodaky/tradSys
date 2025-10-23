@@ -15,7 +15,7 @@ import (
 type Repository interface {
 	// Load loads an aggregate from the event store
 	Load(ctx context.Context, aggregateID string, aggregate Aggregate) error
-	
+
 	// Save saves an aggregate to the event store
 	Save(ctx context.Context, aggregate Aggregate) error
 }
@@ -23,14 +23,14 @@ type Repository interface {
 // RepositoryWithSnapshots provides a repository for aggregates with snapshot support
 type RepositoryWithSnapshots interface {
 	Repository
-	
+
 	// LoadWithSnapshot loads an aggregate from the event store using a snapshot
 	LoadWithSnapshot(ctx context.Context, aggregateID string, aggregate Aggregate) error
 }
 
 // EventSourcedRepository provides an event-sourced repository for aggregates
 type EventSourcedRepository struct {
-	store             store.EventStore
+	store             core.EventStore
 	logger            *zap.Logger
 	snapshotFrequency int
 	aggregateTypes    map[string]reflect.Type
@@ -66,7 +66,7 @@ func WithEventHandler(aggregateType string, eventType string, handler func(aggre
 }
 
 // NewEventSourcedRepository creates a new event-sourced repository
-func NewEventSourcedRepository(eventStore store.EventStore, logger *zap.Logger, options ...EventSourcedRepositoryOption) *EventSourcedRepository {
+func NewEventSourcedRepository(eventStore core.EventStore, logger *zap.Logger, options ...EventSourcedRepositoryOption) *EventSourcedRepository {
 	repo := &EventSourcedRepository{
 		store:             eventStore,
 		logger:            logger,
@@ -74,12 +74,12 @@ func NewEventSourcedRepository(eventStore store.EventStore, logger *zap.Logger, 
 		aggregateTypes:    make(map[string]reflect.Type),
 		eventHandlers:     make(map[string]map[string]func(aggregate Aggregate, event *eventsourcing.Event) error),
 	}
-	
+
 	// Apply options
 	for _, option := range options {
 		option(repo)
 	}
-	
+
 	return repo
 }
 
@@ -90,7 +90,7 @@ func (r *EventSourcedRepository) Load(ctx context.Context, aggregateID string, a
 	if err != nil {
 		return err
 	}
-	
+
 	// Check if the aggregate exists
 	if len(events) == 0 {
 		return ErrAggregateNotFound
@@ -113,12 +113,12 @@ func (r *EventSourcedRepository) Load(ctx context.Context, aggregateID string, a
 // LoadWithSnapshot loads an aggregate from the event store using a snapshot
 func (r *EventSourcedRepository) LoadWithSnapshot(ctx context.Context, aggregateID string, aggregate Aggregate) error {
 	// Check if the store supports snapshots
-	snapshotStore, ok := r.store.(store.SnapshotStore)
+	snapshotStore, ok := r.store.(core.SnapshotStore)
 	if !ok {
 		// Fall back to regular loading
 		return r.Load(ctx, aggregateID, aggregate)
 	}
-	
+
 	// Check if the aggregate supports snapshots
 	snapshottable, ok := aggregate.(Snapshottable)
 	if !ok {
@@ -128,7 +128,7 @@ func (r *EventSourcedRepository) LoadWithSnapshot(ctx context.Context, aggregate
 
 	// Try to get a snapshot
 	snapshot, version, err := snapshotStore.GetLatestSnapshot(ctx, aggregateID, aggregate.GetType())
-	if err != nil && !errors.Is(err, store.ErrSnapshotNotFound) {
+	if err != nil && !errors.Is(err, core.ErrSnapshotNotFound) {
 		return err
 	}
 
@@ -149,7 +149,7 @@ func (r *EventSourcedRepository) LoadWithSnapshot(ctx context.Context, aggregate
 	if err != nil {
 		return err
 	}
-	
+
 	// Check if the aggregate exists
 	if len(events) == 0 && version == 0 {
 		return ErrAggregateNotFound
@@ -187,19 +187,19 @@ func (r *EventSourcedRepository) Save(ctx context.Context, aggregate Aggregate) 
 	aggregate.ClearUncommittedEvents()
 
 	// Check if a snapshot should be created
-	if r.snapshotFrequency > 0 && aggregate.GetVersion() % r.snapshotFrequency == 0 {
+	if r.snapshotFrequency > 0 && aggregate.GetVersion()%r.snapshotFrequency == 0 {
 		// Check if the store supports snapshots
-		snapshotStore, ok := r.store.(store.SnapshotStore)
+		snapshotStore, ok := r.store.(core.SnapshotStore)
 		if !ok {
 			return nil
 		}
-		
+
 		// Check if the aggregate supports snapshots
 		snapshottable, ok := aggregate.(Snapshottable)
 		if !ok {
 			return nil
 		}
-		
+
 		// Create a snapshot
 		snapshot, err := snapshottable.CreateSnapshot()
 		if err != nil {
@@ -210,7 +210,7 @@ func (r *EventSourcedRepository) Save(ctx context.Context, aggregate Aggregate) 
 				zap.Error(err))
 			return nil
 		}
-		
+
 		// Save the snapshot
 		err = snapshotStore.SaveSnapshot(ctx, aggregate.GetID(), aggregate.GetType(), aggregate.GetVersion(), snapshot)
 		if err != nil {
@@ -233,7 +233,7 @@ func (r *EventSourcedRepository) applyEventToAggregate(aggregate Aggregate, even
 			return handler(aggregate, event)
 		}
 	}
-	
+
 	// Fall back to the aggregate's ApplyEvent method
 	return aggregate.ApplyEvent(event)
 }
@@ -245,19 +245,18 @@ func (r *EventSourcedRepository) CreateAggregate(aggregateType string, aggregate
 	if !ok {
 		return nil, fmt.Errorf("aggregate type %s is not registered", aggregateType)
 	}
-	
+
 	// Create a new aggregate
 	aggregateValue := reflect.New(aggregateReflectType)
 	aggregate, ok := aggregateValue.Interface().(Aggregate)
 	if !ok {
 		return nil, fmt.Errorf("failed to create aggregate of type %s", aggregateType)
 	}
-	
+
 	// Initialize the aggregate
 	if initializer, ok := aggregate.(interface{ Initialize(string) }); ok {
 		initializer.Initialize(aggregateID)
 	}
-	
+
 	return aggregate, nil
 }
-
