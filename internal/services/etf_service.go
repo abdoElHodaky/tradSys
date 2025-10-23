@@ -237,20 +237,8 @@ func (s *ETFService) UpdateETFMetrics(symbol string, nav, trackingError, aum, di
 		attributes["premium"] = premium
 	}
 
-	// Marshal updated attributes
-	attributesJSON, err := json.Marshal(attributes)
-	if err != nil {
-		return fmt.Errorf("failed to marshal updated ETF attributes: %w", err)
-	}
-
-	// Convert JSON bytes to AssetAttributes
-	var updatedAttributes models.AssetAttributes
-	if err := json.Unmarshal(attributesJSON, &updatedAttributes); err != nil {
-		return fmt.Errorf("failed to unmarshal updated ETF attributes: %w", err)
-	}
-
 	// Update asset
-	asset.Attributes = updatedAttributes
+	asset.Attributes = attributes
 	asset.UpdatedAt = time.Now()
 
 	if err := s.db.Save(asset).Error; err != nil {
