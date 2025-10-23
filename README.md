@@ -39,6 +39,55 @@
 - **Risk analytics** and VaR calculations
 - **Performance monitoring** dashboards
 
+### 🏢 **Multi-Asset Trading Support** 🆕
+- **8 Asset Classes**: STOCK, REIT, MUTUAL_FUND, ETF, BOND, CRYPTO, FOREX, COMMODITY
+- **Asset-Specific Logic**: Tailored trading rules and validation for each asset type
+- **REIT Features**: FFO/AFFO tracking, property sector analysis, dividend scheduling
+- **Mutual Fund Features**: NAV-based pricing, expense ratio analysis, fund comparison
+- **Flexible Metadata**: JSON-based asset attributes for extensibility
+- **Type-Safe Operations**: Robust asset type validation and conversion
+
+---
+
+## 🏗️ **Multi-Asset Architecture**
+
+TradSys v3 now supports comprehensive multi-asset trading with specialized features for different asset classes:
+
+### **Supported Asset Types**
+
+| Asset Type | Features | Trading Hours | Settlement |
+|------------|----------|---------------|------------|
+| **STOCK** | Standard equity trading | 09:30-16:00 EST | T+2 |
+| **REIT** | FFO/AFFO metrics, dividend tracking | 09:30-16:00 EST | T+2 |
+| **MUTUAL_FUND** | NAV-based pricing, expense analysis | 16:00 EST | T+1 |
+| **ETF** | Creation/redemption, tracking error | 09:30-16:00 EST | T+2 |
+| **BOND** | Yield calculation, maturity tracking | 08:00-17:00 EST | T+3 |
+| **CRYPTO** | 24/7 trading, high volatility | 24/7 | T+0 |
+| **FOREX** | Currency pairs, leverage | 24/5 | T+2 |
+| **COMMODITY** | Physical/futures, storage | Market dependent | T+2 |
+
+### **REIT-Specific Features**
+
+- **Property Sectors**: Residential, Commercial, Industrial, Healthcare, Data Centers, etc.
+- **REIT Types**: Equity REITs, Mortgage REITs, Hybrid REITs
+- **Key Metrics**: 
+  - FFO (Funds From Operations) and AFFO (Adjusted FFO)
+  - NAV per share and Price-to-NAV ratios
+  - Occupancy rates and debt-to-equity ratios
+  - Dividend yield calculations and payment schedules
+- **Performance Analysis**: Automated performance and risk ratings
+- **Portfolio Composition**: Geographic and property type diversification tracking
+
+### **Mutual Fund Features**
+
+- **NAV Operations**: End-of-day pricing and execution
+- **Performance Metrics**: Multi-period returns (YTD, 1Y, 3Y, 5Y, 10Y)
+- **Risk Analytics**: Alpha, Beta, Sharpe ratio, standard deviation
+- **Expense Analysis**: Fee impact calculations over time
+- **Fund Comparison**: Side-by-side analysis across multiple metrics
+- **Category Management**: Fund family and investment style organization
+- **Rating System**: Performance-based fund ratings (Excellent to Poor)
+
 ---
 
 ## 🏛️ **System Architecture**
@@ -167,6 +216,223 @@ kubectl get pods -n tradsys
 
 # Access the dashboard
 kubectl port-forward svc/tradsys-gateway 8080:8080
+```
+
+---
+
+## 🔌 **API Documentation**
+
+### **Core Asset Management APIs**
+
+#### **Asset Metadata Operations**
+```http
+# List all assets (paginated)
+GET /api/v1/assets?page=1&limit=50&asset_type=REIT
+
+# Create asset metadata
+POST /api/v1/assets
+{
+  "symbol": "VNQ",
+  "asset_type": "REIT",
+  "sector": "residential",
+  "attributes": {
+    "reit_type": "equity",
+    "property_sector": "residential"
+  }
+}
+
+# Get asset metadata
+GET /api/v1/assets/VNQ
+
+# Update asset metadata
+PUT /api/v1/assets/VNQ
+{
+  "sector": "commercial",
+  "attributes": {
+    "occupancy_rate": 95.2
+  }
+}
+```
+
+#### **Asset Pricing & Market Data**
+```http
+# Get current pricing
+GET /api/v1/assets/VNQ/pricing
+
+# Update asset pricing
+POST /api/v1/assets/pricing
+{
+  "symbol": "VNQ",
+  "asset_type": "REIT",
+  "price": 85.42,
+  "volume": 1250000
+}
+
+# Get dividend history
+GET /api/v1/assets/VNQ/dividends?limit=10
+```
+
+### **REIT-Specific APIs**
+
+#### **REIT Operations**
+```http
+# Create REIT
+POST /api/v1/reits
+{
+  "symbol": "PLD",
+  "reit_type": "equity",
+  "property_sector": "industrial",
+  "attributes": {
+    "geographic_focus": "global"
+  }
+}
+
+# Get REIT metrics
+GET /api/v1/reits/PLD/metrics
+
+# Update REIT metrics
+POST /api/v1/reits/PLD/metrics
+{
+  "ffo": 4.25,
+  "affo": 4.10,
+  "nav_per_share": 95.50,
+  "occupancy_rate": 97.8,
+  "debt_to_equity": 0.45
+}
+
+# Get REITs by property sector
+GET /api/v1/reits/sectors/industrial
+
+# Calculate dividend yield
+GET /api/v1/reits/PLD/dividend-yield
+
+# Get dividend schedule
+GET /api/v1/reits/PLD/dividends/schedule
+
+# Comprehensive REIT analysis
+GET /api/v1/reits/PLD/analysis
+
+# Validate REIT order
+GET /api/v1/reits/validate-order?symbol=PLD&quantity=100&price=85.50
+```
+
+#### **REIT Reference Data**
+```http
+# Get property sectors
+GET /api/v1/reits/property-sectors
+
+# Get REIT types
+GET /api/v1/reits/types
+```
+
+### **Mutual Fund APIs**
+
+#### **Fund Operations**
+```http
+# Create mutual fund
+POST /api/v1/mutual-funds
+{
+  "symbol": "VTSAX",
+  "fund_family": "Vanguard",
+  "category": "equity",
+  "investment_style": "blend",
+  "attributes": {
+    "min_investment": 3000
+  }
+}
+
+# Get fund metrics
+GET /api/v1/mutual-funds/VTSAX/metrics
+
+# Update fund metrics
+POST /api/v1/mutual-funds/VTSAX/metrics
+{
+  "nav": 112.45,
+  "expense_ratio": 0.04,
+  "one_year_return": 12.5,
+  "three_year_return": 8.7,
+  "five_year_return": 10.2
+}
+
+# Compare multiple funds
+POST /api/v1/mutual-funds/compare
+{
+  "symbols": ["VTSAX", "FXAIX", "SWTSX"]
+}
+
+# Calculate expense impact
+GET /api/v1/mutual-funds/VTSAX/expense-impact?amount=10000&years=10
+
+# Get funds by family
+GET /api/v1/mutual-funds/family/Vanguard
+
+# Get funds by category
+GET /api/v1/mutual-funds/category/equity
+```
+
+### **Asset Configuration APIs**
+
+```http
+# Get asset configuration by type
+GET /api/v1/asset-config/REIT
+
+# Get supported asset types
+GET /api/v1/asset-types
+
+# Get assets by type
+GET /api/v1/assets/types/MUTUAL_FUND
+```
+
+### **Trading APIs with Multi-Asset Support**
+
+```http
+# Place order with asset type
+POST /api/v1/orders
+{
+  "symbol": "VNQ",
+  "asset_type": "REIT",
+  "side": "buy",
+  "type": "limit",
+  "quantity": 100,
+  "price": 85.50
+}
+
+# Get orders by asset type
+GET /api/v1/orders?asset_type=REIT&status=open
+
+# Validate order for specific asset type
+POST /api/v1/orders/validate
+{
+  "symbol": "VTSAX",
+  "asset_type": "MUTUAL_FUND",
+  "quantity": 50,
+  "price": 112.45
+}
+```
+
+### **WebSocket Streams**
+
+```javascript
+// Subscribe to asset-specific updates
+ws.send(JSON.stringify({
+  "action": "subscribe",
+  "channels": [
+    "asset_pricing:REIT:*",
+    "reit_metrics:PLD",
+    "mutual_fund_nav:VTSAX"
+  ]
+}));
+
+// Real-time REIT metrics updates
+{
+  "channel": "reit_metrics:PLD",
+  "data": {
+    "symbol": "PLD",
+    "ffo": 4.28,
+    "occupancy_rate": 98.1,
+    "timestamp": "2024-01-15T10:30:00Z"
+  }
+}
 ```
 
 ---
@@ -301,6 +567,53 @@ trading:
   max_daily_loss: 100000
   risk_check_enabled: true
   circuit_breaker_enabled: true
+  
+  # Multi-Asset Configuration
+  assets:
+    multi_asset_enabled: true
+    
+    stock:
+      enabled: true
+      min_order_size: 1.0
+      max_order_size: 1000000.0
+      trading_hours: "09:30-16:00 EST"
+      settlement_days: 2
+      risk_multiplier: 1.0
+      
+    reit:
+      enabled: true
+      min_order_size: 1.0
+      max_order_size: 1000000.0
+      trading_hours: "09:30-16:00 EST"
+      settlement_days: 2
+      risk_multiplier: 1.2
+      dividend_tracking: true
+      
+    mutual_fund:
+      enabled: true
+      min_order_size: 1.0
+      max_order_size: 1000000.0
+      trading_hours: "16:00 EST"
+      settlement_days: 1
+      risk_multiplier: 1.1
+      nav_based_pricing: true
+      
+    etf:
+      enabled: true
+      min_order_size: 1.0
+      max_order_size: 1000000.0
+      trading_hours: "09:30-16:00 EST"
+      settlement_days: 2
+      risk_multiplier: 1.0
+      
+    bond:
+      enabled: true
+      min_order_size: 100.0
+      max_order_size: 10000000.0
+      trading_hours: "08:00-17:00 EST"
+      settlement_days: 3
+      risk_multiplier: 0.8
+      requires_approval: true
 
 market_data:
   providers:
@@ -408,6 +721,217 @@ go test -bench=. -benchmem ./...
 - **Position limits** enforcement
 - **Circuit breaker** mechanisms
 - **Audit trail** logging
+
+---
+
+## 💡 **Usage Examples**
+
+### **REIT Trading Workflow**
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+    
+    "github.com/abdoElHodaky/tradSys/internal/services"
+    "github.com/abdoElHodaky/tradSys/internal/trading/types"
+)
+
+func main() {
+    // Initialize services
+    assetService := services.NewAssetService(db, logger)
+    reitService := services.NewREITService(db, assetService, logger)
+    
+    ctx := context.Background()
+    
+    // 1. Create REIT metadata
+    err := reitService.CreateREITMetadata(ctx, "PLD", 
+        services.REITTypeEquity, 
+        services.PropertySectorIndustrial,
+        map[string]interface{}{
+            "geographic_focus": "global",
+            "min_investment": 1000.0,
+        })
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    // 2. Update REIT metrics
+    metrics := &services.REITMetrics{
+        Symbol:        "PLD",
+        FFO:           4.25,
+        AFFO:          4.10,
+        NAVPerShare:   95.50,
+        OccupancyRate: 97.8,
+        DebtToEquity:  0.45,
+    }
+    
+    err = reitService.UpdateREITMetrics(ctx, metrics)
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    // 3. Validate REIT order
+    err = reitService.ValidateREITOrder(ctx, "PLD", 100, 85.50)
+    if err != nil {
+        fmt.Printf("Order validation failed: %v\n", err)
+        return
+    }
+    
+    // 4. Analyze REIT performance
+    analysis, err := reitService.AnalyzeREITPerformance(ctx, "PLD")
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    fmt.Printf("REIT Analysis: %+v\n", analysis)
+}
+```
+
+### **Mutual Fund Comparison**
+
+```go
+func compareMutualFunds() {
+    fundService := services.NewMutualFundService(db, assetService, logger)
+    ctx := context.Background()
+    
+    // Compare multiple funds
+    symbols := []string{"VTSAX", "FXAIX", "SWTSX"}
+    comparison, err := fundService.CompareMutualFunds(ctx, symbols)
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    // Print comparison results
+    fmt.Printf("Fund Comparison Results:\n")
+    for symbol, metrics := range comparison["funds"].(map[string]*services.MutualFundMetrics) {
+        fmt.Printf("%s: Expense Ratio: %.2f%%, 5Y Return: %.2f%%\n", 
+            symbol, metrics.ExpenseRatio, metrics.FiveYearReturn)
+    }
+    
+    // Calculate expense impact
+    impact, err := fundService.CalculateExpenseImpact(ctx, "VTSAX", 10000, 10)
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    fmt.Printf("10-year expense impact: $%.2f\n", impact["total_fee_impact"])
+}
+```
+
+### **Multi-Asset Order Placement**
+
+```javascript
+// JavaScript client example
+class TradSysClient {
+    constructor(apiUrl, apiKey) {
+        this.apiUrl = apiUrl;
+        this.apiKey = apiKey;
+    }
+    
+    async placeREITOrder(symbol, quantity, price) {
+        const order = {
+            symbol: symbol,
+            asset_type: "REIT",
+            side: "buy",
+            type: "limit",
+            quantity: quantity,
+            price: price
+        };
+        
+        const response = await fetch(`${this.apiUrl}/api/v1/orders`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.apiKey}`
+            },
+            body: JSON.stringify(order)
+        });
+        
+        return response.json();
+    }
+    
+    async getMutualFundMetrics(symbol) {
+        const response = await fetch(
+            `${this.apiUrl}/api/v1/mutual-funds/${symbol}/metrics`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${this.apiKey}`
+                }
+            }
+        );
+        
+        return response.json();
+    }
+    
+    async subscribeToREITUpdates(symbols) {
+        const ws = new WebSocket(`${this.wsUrl}/ws`);
+        
+        ws.onopen = () => {
+            ws.send(JSON.stringify({
+                action: 'subscribe',
+                channels: symbols.map(s => `reit_metrics:${s}`)
+            }));
+        };
+        
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            console.log('REIT Update:', data);
+        };
+    }
+}
+
+// Usage
+const client = new TradSysClient('https://api.tradsys.com', 'your-api-key');
+
+// Place REIT order
+client.placeREITOrder('PLD', 100, 85.50)
+    .then(result => console.log('Order placed:', result));
+
+// Get mutual fund metrics
+client.getMutualFundMetrics('VTSAX')
+    .then(metrics => console.log('Fund metrics:', metrics));
+
+// Subscribe to real-time updates
+client.subscribeToREITUpdates(['PLD', 'VNQ', 'O']);
+```
+
+### **Asset Configuration Management**
+
+```bash
+#!/bin/bash
+# Script to configure multi-asset trading
+
+# Enable REIT trading with custom settings
+curl -X PUT "https://api.tradsys.com/api/v1/asset-config/REIT" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "trading_enabled": true,
+    "min_order_size": 1.0,
+    "max_order_size": 1000000.0,
+    "risk_multiplier": 1.2,
+    "dividend_tracking": true
+  }'
+
+# Configure mutual fund settings
+curl -X PUT "https://api.tradsys.com/api/v1/asset-config/MUTUAL_FUND" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "trading_enabled": true,
+    "nav_based_pricing": true,
+    "settlement_days": 1,
+    "risk_multiplier": 1.1
+  }'
+
+# Get all supported asset types
+curl -X GET "https://api.tradsys.com/api/v1/asset-types" \
+  -H "Authorization: Bearer $API_KEY"
+```
 
 ---
 
@@ -674,4 +1198,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **🚀 TradSys v3 - Building the Future of High-Performance Trading** 
 
 *Made with ❤️ by the TradSys Team*
-
