@@ -117,13 +117,13 @@ type SubscriptionMessage struct {
 
 // OrderMessage represents an order message
 type OrderMessage struct {
-	Symbol    string  `json:"symbol" validate:"required,symbol"`
-	Side      string  `json:"side" validate:"required,oneof=buy sell"`
-	OrderType string  `json:"order_type" validate:"required,oneof=market limit stop stop_limit"`
-	Quantity  float64 `json:"quantity" validate:"required,amount"`
-	Price     float64 `json:"price" validate:"omitempty,price"`
-	StopPrice float64 `json:"stop_price" validate:"omitempty,price"`
-	TimeInForce string `json:"time_in_force" validate:"required,oneof=GTC IOC FOK DAY"`
+	Symbol      string  `json:"symbol" validate:"required,symbol"`
+	Side        string  `json:"side" validate:"required,oneof=buy sell"`
+	OrderType   string  `json:"order_type" validate:"required,oneof=market limit stop stop_limit"`
+	Quantity    float64 `json:"quantity" validate:"required,amount"`
+	Price       float64 `json:"price" validate:"omitempty,price"`
+	StopPrice   float64 `json:"stop_price" validate:"omitempty,price"`
+	TimeInForce string  `json:"time_in_force" validate:"required,oneof=GTC IOC FOK DAY"`
 }
 
 // CancelOrderMessage represents a cancel order message

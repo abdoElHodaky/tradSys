@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
 	"go.uber.org/zap"
 )
 
@@ -13,7 +14,7 @@ import (
 type SnapshotStrategy interface {
 	// ShouldCreateSnapshot determines if a snapshot should be created
 	ShouldCreateSnapshot(aggregateType string, aggregateID string, version int) bool
-	
+
 	// GetSnapshotFrequency returns the snapshot frequency for an aggregate type
 	GetSnapshotFrequency(aggregateType string) int
 }
@@ -35,7 +36,7 @@ func NewDefaultSnapshotStrategy() *DefaultSnapshotStrategy {
 func (s *DefaultSnapshotStrategy) SetSnapshotFrequency(aggregateType string, frequency int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	s.frequencies[aggregateType] = frequency
 }
 
@@ -43,30 +44,30 @@ func (s *DefaultSnapshotStrategy) SetSnapshotFrequency(aggregateType string, fre
 func (s *DefaultSnapshotStrategy) ShouldCreateSnapshot(aggregateType string, aggregateID string, version int) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	// Get the frequency for the aggregate type
 	frequency, ok := s.frequencies[aggregateType]
 	if !ok {
 		// Default to no snapshots
 		return false
 	}
-	
+
 	// Check if a snapshot should be created
-	return frequency > 0 && version % frequency == 0
+	return frequency > 0 && version%frequency == 0
 }
 
 // GetSnapshotFrequency returns the snapshot frequency for an aggregate type
 func (s *DefaultSnapshotStrategy) GetSnapshotFrequency(aggregateType string) int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	// Get the frequency for the aggregate type
 	frequency, ok := s.frequencies[aggregateType]
 	if !ok {
 		// Default to no snapshots
 		return 0
 	}
-	
+
 	return frequency
 }
 
@@ -74,23 +75,23 @@ func (s *DefaultSnapshotStrategy) GetSnapshotFrequency(aggregateType string) int
 type SnapshotManager interface {
 	// CreateSnapshot creates a snapshot
 	CreateSnapshot(ctx context.Context, aggregateType string, aggregateID string, version int, snapshot interface{}) error
-	
+
 	// GetLatestSnapshot gets the latest snapshot for an aggregate
 	GetLatestSnapshot(ctx context.Context, aggregateType string, aggregateID string) (interface{}, int, error)
-	
+
 	// DeleteSnapshots deletes snapshots for an aggregate
 	DeleteSnapshots(ctx context.Context, aggregateType string, aggregateID string) error
 }
 
 // DefaultSnapshotManager provides a default implementation of the SnapshotManager interface
 type DefaultSnapshotManager struct {
-	store    store.SnapshotStore
+	store    SnapshotStore
 	strategy SnapshotStrategy
 	logger   *zap.Logger
 }
 
 // NewDefaultSnapshotManager creates a new default snapshot manager
-func NewDefaultSnapshotManager(store store.SnapshotStore, strategy SnapshotStrategy, logger *zap.Logger) *DefaultSnapshotManager {
+func NewDefaultSnapshotManager(store SnapshotStore, strategy SnapshotStrategy, logger *zap.Logger) *DefaultSnapshotManager {
 	return &DefaultSnapshotManager{
 		store:    store,
 		strategy: strategy,
@@ -104,7 +105,7 @@ func (m *DefaultSnapshotManager) CreateSnapshot(ctx context.Context, aggregateTy
 	if !m.strategy.ShouldCreateSnapshot(aggregateType, aggregateID, version) {
 		return nil
 	}
-	
+
 	// Create the snapshot
 	return m.store.SaveSnapshot(ctx, aggregateID, aggregateType, version, snapshot)
 }
@@ -122,28 +123,28 @@ func (m *DefaultSnapshotManager) DeleteSnapshots(ctx context.Context, aggregateT
 	}); ok {
 		return deleter.DeleteSnapshots(ctx, aggregateID, aggregateType)
 	}
-	
+
 	return ErrDeleteSnapshotsNotSupported
 }
 
 // SnapshotScheduler schedules snapshot creation
 type SnapshotScheduler struct {
-	manager      SnapshotManager
-	eventStore   EventStore
-	logger       *zap.Logger
-	interval     time.Duration
-	stopCh       chan struct{}
+	manager        SnapshotManager
+	eventStore     EventStore
+	logger         *zap.Logger
+	interval       time.Duration
+	stopCh         chan struct{}
 	aggregateTypes []string
 }
 
 // NewSnapshotScheduler creates a new snapshot scheduler
 func NewSnapshotScheduler(manager SnapshotManager, eventStore EventStore, logger *zap.Logger, interval time.Duration) *SnapshotScheduler {
 	return &SnapshotScheduler{
-		manager:      manager,
-		eventStore:   eventStore,
-		logger:       logger,
-		interval:     interval,
-		stopCh:       make(chan struct{}),
+		manager:        manager,
+		eventStore:     eventStore,
+		logger:         logger,
+		interval:       interval,
+		stopCh:         make(chan struct{}),
 		aggregateTypes: make([]string, 0),
 	}
 }
@@ -167,7 +168,7 @@ func (s *SnapshotScheduler) Stop() {
 func (s *SnapshotScheduler) run() {
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -184,7 +185,7 @@ func (s *SnapshotScheduler) createSnapshots() {
 	// Create a context
 	ctx, cancel := context.WithTimeout(context.Background(), s.interval/2)
 	defer cancel()
-	
+
 	// Create snapshots for each aggregate type
 	for _, aggregateType := range s.aggregateTypes {
 		// Get all events for the aggregate type
@@ -195,13 +196,13 @@ func (s *SnapshotScheduler) createSnapshots() {
 				zap.Error(err))
 			continue
 		}
-		
+
 		// Group events by aggregate ID
 		eventsByAggregateID := make(map[string][]*eventsourcing.Event)
 		for _, event := range events {
 			eventsByAggregateID[event.AggregateID] = append(eventsByAggregateID[event.AggregateID], event)
 		}
-		
+
 		// Create snapshots for each aggregate
 		for aggregateID, aggregateEvents := range eventsByAggregateID {
 			// Get the latest version
@@ -211,7 +212,7 @@ func (s *SnapshotScheduler) createSnapshots() {
 					latestVersion = event.Version
 				}
 			}
-			
+
 			// Create a snapshot
 			// Note: In a real implementation, we would need to load the aggregate and create a snapshot from it
 			// For now, we just log that we would create a snapshot

@@ -20,10 +20,10 @@ type ManagerParams struct {
 
 // Manager handles external market data sources
 type Manager struct {
-	logger    *zap.Logger
-	cache     *cache.Cache
-	providers map[string]Provider
-	mu        sync.RWMutex
+	logger          *zap.Logger
+	cache           *cache.Cache
+	providers       map[string]Provider
+	mu              sync.RWMutex
 	defaultProvider string
 }
 
@@ -40,12 +40,12 @@ func NewManager(logger *zap.Logger) *Manager {
 func (m *Manager) AddSource(name string, config map[string]interface{}) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	m.logger.Info("Adding market data source", zap.String("name", name))
-	
+
 	var provider Provider
 	var err error
-	
+
 	switch name {
 	case "binance":
 		apiKey, _ := config["api_key"].(string)
@@ -54,15 +54,15 @@ func (m *Manager) AddSource(name string, config map[string]interface{}) error {
 	default:
 		return fmt.Errorf("unsupported provider: %s", name)
 	}
-	
+
 	m.providers[name] = provider
-	
+
 	// Set as default if it's the first provider
 	if m.defaultProvider == "" {
 		m.defaultProvider = name
 		m.logger.Info("Set default provider", zap.String("provider", name))
 	}
-	
+
 	return err
 }
 
@@ -70,12 +70,12 @@ func (m *Manager) AddSource(name string, config map[string]interface{}) error {
 func (m *Manager) GetProvider(name string) (Provider, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	provider, exists := m.providers[name]
 	if !exists {
 		return nil, fmt.Errorf("provider %s not found", name)
 	}
-	
+
 	return provider, nil
 }
 
@@ -83,16 +83,16 @@ func (m *Manager) GetProvider(name string) (Provider, error) {
 func (m *Manager) GetDefaultProvider() (Provider, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	if m.defaultProvider == "" {
 		return nil, errors.New("no default provider configured")
 	}
-	
+
 	provider, exists := m.providers[m.defaultProvider]
 	if !exists {
 		return nil, fmt.Errorf("default provider %s not found", m.defaultProvider)
 	}
-	
+
 	return provider, nil
 }
 
@@ -100,11 +100,11 @@ func (m *Manager) GetDefaultProvider() (Provider, error) {
 func (m *Manager) SetDefaultProvider(name string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	if _, exists := m.providers[name]; !exists {
 		return fmt.Errorf("provider %s not found", name)
 	}
-	
+
 	m.defaultProvider = name
 	m.logger.Info("Changed default provider", zap.String("provider", name))
 	return nil
@@ -114,12 +114,12 @@ func (m *Manager) SetDefaultProvider(name string) error {
 func (m *Manager) ListProviders() []string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	providers := make([]string, 0, len(m.providers))
 	for name := range m.providers {
 		providers = append(providers, name)
 	}
-	
+
 	return providers
 }
 
@@ -131,7 +131,7 @@ func (m *Manager) GetMarketData(symbol, interval string) (float64, float64, int6
 		m.logger.Warn("No provider available, returning mock data", zap.Error(err))
 		return 50000.0, 1000.0, time.Now().Unix() * 1000, nil
 	}
-	
+
 	// Get ticker data from provider
 	ticker, err := provider.GetTicker(nil, symbol)
 	if err != nil {
@@ -139,7 +139,7 @@ func (m *Manager) GetMarketData(symbol, interval string) (float64, float64, int6
 		// Return mock data on error
 		return 50000.0, 1000.0, time.Now().Unix() * 1000, nil
 	}
-	
+
 	return ticker.Price, ticker.Volume, ticker.Timestamp.Unix() * 1000, nil
 }
 

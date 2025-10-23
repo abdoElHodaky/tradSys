@@ -3,10 +3,10 @@ package repositories
 import (
 	"context"
 	"time"
-	
+
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
-	"gorm.io/gorm"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // PairRepository handles database operations for trading pairs
@@ -127,7 +127,7 @@ func (r *PairStatisticsRepository) GetLatestStatistics(ctx context.Context, pair
 		Where("pair_id = ?", pairID).
 		Order("timestamp DESC").
 		First(&stats)
-	
+
 	if result.Error != nil {
 		r.logger.Error("Failed to get latest pair statistics",
 			zap.Error(result.Error),
@@ -144,7 +144,7 @@ func (r *PairStatisticsRepository) GetStatisticsHistory(ctx context.Context, pai
 		Where("pair_id = ? AND timestamp BETWEEN ? AND ?", pairID, startTime, endTime).
 		Order("timestamp ASC").
 		Find(&stats)
-	
+
 	if result.Error != nil {
 		r.logger.Error("Failed to get pair statistics history",
 			zap.Error(result.Error),
@@ -199,7 +199,7 @@ func (r *PairPositionRepository) GetOpenPositions(ctx context.Context, pairID st
 	result := r.db.WithContext(ctx).
 		Where("pair_id = ? AND status = ?", pairID, "open").
 		Find(&positions)
-	
+
 	if result.Error != nil {
 		r.logger.Error("Failed to get open pair positions",
 			zap.Error(result.Error),
@@ -215,7 +215,7 @@ func (r *PairPositionRepository) GetAllOpenPositions(ctx context.Context) ([]*mo
 	result := r.db.WithContext(ctx).
 		Where("status = ?", "open").
 		Find(&positions)
-	
+
 	if result.Error != nil {
 		r.logger.Error("Failed to get all open pair positions", zap.Error(result.Error))
 		return nil, result.Error
@@ -230,7 +230,7 @@ func (r *PairPositionRepository) GetPositionHistory(ctx context.Context, pairID 
 		Where("pair_id = ?", pairID).
 		Order("entry_timestamp DESC").
 		Find(&positions)
-	
+
 	if result.Error != nil {
 		r.logger.Error("Failed to get pair position history",
 			zap.Error(result.Error),

@@ -18,20 +18,20 @@ type Order = types.Order
 
 // Constants from types package
 const (
-	OrderTypeLimit      = types.OrderTypeLimit
-	OrderTypeMarket     = types.OrderTypeMarket
-	OrderTypeStop       = types.OrderTypeStop
-	OrderTypeStopLimit  = types.OrderTypeStopLimit
-	OrderTypeStopMarket = types.OrderTypeStopMarket
-	OrderSideBuy        = types.OrderSideBuy
-	OrderSideSell       = types.OrderSideSell
-	OrderStatusNew      = types.OrderStatusNew
+	OrderTypeLimit             = types.OrderTypeLimit
+	OrderTypeMarket            = types.OrderTypeMarket
+	OrderTypeStop              = types.OrderTypeStop
+	OrderTypeStopLimit         = types.OrderTypeStopLimit
+	OrderTypeStopMarket        = types.OrderTypeStopMarket
+	OrderSideBuy               = types.OrderSideBuy
+	OrderSideSell              = types.OrderSideSell
+	OrderStatusNew             = types.OrderStatusNew
 	OrderStatusPartiallyFilled = types.OrderStatusPartiallyFilled
-	OrderStatusFilled   = types.OrderStatusFilled
-	OrderStatusCanceled = types.OrderStatusCanceled
-	OrderStatusCancelled = types.OrderStatusCancelled
-	OrderStatusRejected = types.OrderStatusRejected
-	OrderStatusExpired  = types.OrderStatusExpired
+	OrderStatusFilled          = types.OrderStatusFilled
+	OrderStatusCanceled        = types.OrderStatusCanceled
+	OrderStatusCancelled       = types.OrderStatusCancelled
+	OrderStatusRejected        = types.OrderStatusRejected
+	OrderStatusExpired         = types.OrderStatusExpired
 )
 
 // Trade represents a trade
@@ -131,7 +131,7 @@ func (h *OrderHeap) Pop() interface{} {
 	old := h.Orders
 	n := len(old)
 	order := old[n-1]
-	old[n-1] = nil  // avoid memory leak
+	old[n-1] = nil   // avoid memory leak
 	order.Index = -1 // for safety
 	h.Orders = old[0 : n-1]
 	return order
@@ -386,17 +386,17 @@ func (ob *OrderBook) matchOrders(taker *Order, maker *Order) *Trade {
 
 	// Create trade
 	trade := &Trade{
-		ID:         uuid.New().String(),
-		Symbol:     ob.Symbol,
-		Price:      tradePrice,
-		Quantity:   tradeQuantity,
-		BuyOrderID: "",
+		ID:          uuid.New().String(),
+		Symbol:      ob.Symbol,
+		Price:       tradePrice,
+		Quantity:    tradeQuantity,
+		BuyOrderID:  "",
 		SellOrderID: "",
-		Timestamp:  now,
-		TakerSide:  taker.Side,
-		MakerSide:  maker.Side,
-		TakerFee:   0, // Fees would be calculated based on fee schedule
-		MakerFee:   0, // Fees would be calculated based on fee schedule
+		Timestamp:   now,
+		TakerSide:   taker.Side,
+		MakerSide:   maker.Side,
+		TakerFee:    0, // Fees would be calculated based on fee schedule
+		MakerFee:    0, // Fees would be calculated based on fee schedule
 	}
 
 	// Set buy and sell order IDs
@@ -724,9 +724,9 @@ func (e *Engine) GetMarketData(symbol string, depth int) ([][]float64, [][]float
 
 // Errors
 var (
-	ErrOrderNotFound     = NewError("order not found")
+	ErrOrderNotFound      = NewError("order not found")
 	ErrInvalidOrderStatus = NewError("invalid order status")
-	ErrSymbolNotFound    = NewError("symbol not found")
+	ErrSymbolNotFound     = NewError("symbol not found")
 )
 
 // Error represents an error

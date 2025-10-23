@@ -57,9 +57,9 @@ type ConnectionMetricsSnapshot struct {
 
 // ConnectionPoolOptions contains options for the connection pool
 type ConnectionPoolOptions struct {
-	MaxOpenConns      int
-	MaxIdleConns      int
-	ConnLifetime      time.Duration
+	MaxOpenConns       int
+	MaxIdleConns       int
+	ConnLifetime       time.Duration
 	SlowQueryThreshold time.Duration
 }
 

@@ -12,7 +12,7 @@ import (
 var TracingModule = fx.Options(
 	// Provide the distributed tracer
 	fx.Provide(NewDistributedTracer),
-	
+
 	// Register lifecycle hooks
 	fx.Invoke(registerTracingHooks),
 )
@@ -21,13 +21,13 @@ var TracingModule = fx.Options(
 type TracingConfig struct {
 	// Enabled determines if tracing is enabled
 	Enabled bool
-	
+
 	// SamplingRate is the rate at which traces are sampled (1 in N)
 	SamplingRate int
-	
+
 	// ExportEndpoint is the endpoint to export traces to
 	ExportEndpoint string
-	
+
 	// ServiceName is the name of the service
 	ServiceName string
 }
@@ -46,7 +46,7 @@ func DefaultTracingConfig() TracingConfig {
 func NewDistributedTracer(logger *zap.Logger) *integration.DistributedTracer {
 	// Create the tracing configuration
 	config := integration.DefaultTracingConfig()
-	
+
 	// Create the distributed tracer
 	return integration.NewDistributedTracer(logger, config)
 }
@@ -68,4 +68,3 @@ func registerTracingHooks(
 		},
 	})
 }
-

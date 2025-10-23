@@ -32,10 +32,10 @@ func (f HandlerFunc) Handle(ctx context.Context, command Command) error {
 type Bus interface {
 	// Register registers a handler for a command
 	Register(commandType reflect.Type, handler Handler) error
-	
+
 	// RegisterFunc registers a handler function for a command
 	RegisterFunc(commandType reflect.Type, handler func(ctx context.Context, command Command) error) error
-	
+
 	// Dispatch dispatches a command to its handler
 	Dispatch(ctx context.Context, command Command) error
 }
@@ -57,24 +57,24 @@ func NewDefaultBus() *DefaultBus {
 func (b *DefaultBus) Register(commandType reflect.Type, handler Handler) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	
+
 	// Create a zero value of the command type
 	command, ok := reflect.New(commandType).Elem().Interface().(Command)
 	if !ok {
 		return fmt.Errorf("command type %s does not implement Command interface", commandType.Name())
 	}
-	
+
 	// Get the command name
 	commandName := command.CommandName()
-	
+
 	// Check if a handler is already registered for the command
 	if _, exists := b.handlers[commandName]; exists {
 		return fmt.Errorf("handler already registered for command %s", commandName)
 	}
-	
+
 	// Register the handler
 	b.handlers[commandName] = handler
-	
+
 	return nil
 }
 
@@ -87,16 +87,16 @@ func (b *DefaultBus) RegisterFunc(commandType reflect.Type, handler func(ctx con
 func (b *DefaultBus) Dispatch(ctx context.Context, command Command) error {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	
+
 	// Get the command name
 	commandName := command.CommandName()
-	
+
 	// Get the handler for the command
 	handler, exists := b.handlers[commandName]
 	if !exists {
 		return fmt.Errorf("no handler registered for command %s", commandName)
 	}
-	
+
 	// Handle the command
 	return handler.Handle(ctx, command)
 }

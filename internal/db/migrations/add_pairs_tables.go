@@ -3,7 +3,7 @@ package migrations
 import (
 	"context"
 	"fmt"
-	
+
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
@@ -11,7 +11,7 @@ import (
 // AddPairsTables adds tables for pairs trading
 func AddPairsTables(ctx context.Context, db *sqlx.DB, logger *zap.Logger) error {
 	logger.Info("Running migration: AddPairsTables")
-	
+
 	// Create pairs table
 	_, err := db.ExecContext(ctx, `
 		CREATE TABLE IF NOT EXISTS pairs (
@@ -40,7 +40,7 @@ func AddPairsTables(ctx context.Context, db *sqlx.DB, logger *zap.Logger) error 
 	if err != nil {
 		return fmt.Errorf("failed to create pairs table: %w", err)
 	}
-	
+
 	// Create pair_statistics table
 	_, err = db.ExecContext(ctx, `
 		CREATE TABLE IF NOT EXISTS pair_statistics (
@@ -63,7 +63,7 @@ func AddPairsTables(ctx context.Context, db *sqlx.DB, logger *zap.Logger) error 
 	if err != nil {
 		return fmt.Errorf("failed to create pair_statistics table: %w", err)
 	}
-	
+
 	// Create pair_positions table
 	_, err = db.ExecContext(ctx, `
 		CREATE TABLE IF NOT EXISTS pair_positions (
@@ -95,7 +95,7 @@ func AddPairsTables(ctx context.Context, db *sqlx.DB, logger *zap.Logger) error 
 	if err != nil {
 		return fmt.Errorf("failed to create pair_positions table: %w", err)
 	}
-	
+
 	logger.Info("Migration AddPairsTables completed successfully")
 	return nil
 }

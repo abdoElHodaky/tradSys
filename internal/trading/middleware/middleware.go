@@ -4,17 +4,17 @@ import (
 	"context"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/abdoElHodaky/tradSys/internal/trading/metrics"
+	"github.com/gin-gonic/gin"
 )
 
 // LatencyMiddleware measures and records request latency
 func LatencyMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-		
+
 		c.Next()
-		
+
 		latency := time.Since(start)
 		metrics.RecordLatency(latency)
 	}
@@ -24,10 +24,10 @@ func LatencyMiddleware() gin.HandlerFunc {
 func ThroughputMiddleware() gin.HandlerFunc {
 	var requestCount int64
 	var lastReset time.Time = time.Now()
-	
+
 	return func(c *gin.Context) {
 		requestCount++
-		
+
 		// Calculate RPS every second
 		now := time.Now()
 		if now.Sub(lastReset) >= time.Second {
@@ -36,7 +36,7 @@ func ThroughputMiddleware() gin.HandlerFunc {
 			requestCount = 0
 			lastReset = now
 		}
-		
+
 		c.Next()
 	}
 }
@@ -45,7 +45,7 @@ func ThroughputMiddleware() gin.HandlerFunc {
 func ErrorTrackingMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
-		
+
 		// Check if there was an error
 		if len(c.Errors) > 0 || c.Writer.Status() >= 400 {
 			metrics.RecordError()
@@ -60,7 +60,7 @@ func TimeoutMiddleware(timeout time.Duration) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), timeout)
 		defer cancel()
-		
+
 		c.Request = c.Request.WithContext(ctx)
 		c.Next()
 	}
@@ -98,24 +98,24 @@ func SecurityMiddleware() gin.HandlerFunc {
 func RateLimitMiddleware(requestsPerSecond int) gin.HandlerFunc {
 	var lastRequest time.Time
 	var requestCount int
-	
+
 	return func(c *gin.Context) {
 		now := time.Now()
-		
+
 		// Reset counter every second
 		if now.Sub(lastRequest) >= time.Second {
 			requestCount = 0
 			lastRequest = now
 		}
-		
+
 		requestCount++
-		
+
 		if requestCount > requestsPerSecond {
 			c.JSON(429, gin.H{"error": "Rate limit exceeded"})
 			c.Abort()
 			return
 		}
-		
+
 		c.Next()
 	}
 }
@@ -141,12 +141,12 @@ func CORSMiddleware() gin.HandlerFunc {
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		
+
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
 			return
 		}
-		
+
 		c.Next()
 	}
 }

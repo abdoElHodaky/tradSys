@@ -9,76 +9,76 @@ import (
 
 // MarketDataPoint represents a single market data point
 type MarketDataPoint struct {
-	Symbol      string    `json:"symbol"`
-	Exchange    string    `json:"exchange"`
-	BidPrice    float64   `json:"bid_price"`
-	AskPrice    float64   `json:"ask_price"`
-	BidSize     float64   `json:"bid_size"`
-	AskSize     float64   `json:"ask_size"`
-	LastPrice   float64   `json:"last_price"`
-	Volume      float64   `json:"volume"`
-	Timestamp   time.Time `json:"timestamp"`
-	Confidence  float64   `json:"confidence"` // 0.0 to 1.0
-	Latency     time.Duration `json:"latency"`
+	Symbol     string        `json:"symbol"`
+	Exchange   string        `json:"exchange"`
+	BidPrice   float64       `json:"bid_price"`
+	AskPrice   float64       `json:"ask_price"`
+	BidSize    float64       `json:"bid_size"`
+	AskSize    float64       `json:"ask_size"`
+	LastPrice  float64       `json:"last_price"`
+	Volume     float64       `json:"volume"`
+	Timestamp  time.Time     `json:"timestamp"`
+	Confidence float64       `json:"confidence"` // 0.0 to 1.0
+	Latency    time.Duration `json:"latency"`
 }
 
 // AggregatedMarketData represents aggregated market data from multiple sources
 type AggregatedMarketData struct {
-	Symbol           string                 `json:"symbol"`
-	BestBid          float64               `json:"best_bid"`
-	BestAsk          float64               `json:"best_ask"`
-	BestBidExchange  string                `json:"best_bid_exchange"`
-	BestAskExchange  string                `json:"best_ask_exchange"`
-	WeightedBid      float64               `json:"weighted_bid"`
-	WeightedAsk      float64               `json:"weighted_ask"`
-	Spread           float64               `json:"spread"`
-	TotalBidSize     float64               `json:"total_bid_size"`
-	TotalAskSize     float64               `json:"total_ask_size"`
-	LastPrice        float64               `json:"last_price"`
-	Volume           float64               `json:"volume"`
-	SourceCount      int                   `json:"source_count"`
-	Confidence       float64               `json:"confidence"`
-	Timestamp        time.Time             `json:"timestamp"`
-	Sources          []*MarketDataPoint    `json:"sources"`
+	Symbol          string             `json:"symbol"`
+	BestBid         float64            `json:"best_bid"`
+	BestAsk         float64            `json:"best_ask"`
+	BestBidExchange string             `json:"best_bid_exchange"`
+	BestAskExchange string             `json:"best_ask_exchange"`
+	WeightedBid     float64            `json:"weighted_bid"`
+	WeightedAsk     float64            `json:"weighted_ask"`
+	Spread          float64            `json:"spread"`
+	TotalBidSize    float64            `json:"total_bid_size"`
+	TotalAskSize    float64            `json:"total_ask_size"`
+	LastPrice       float64            `json:"last_price"`
+	Volume          float64            `json:"volume"`
+	SourceCount     int                `json:"source_count"`
+	Confidence      float64            `json:"confidence"`
+	Timestamp       time.Time          `json:"timestamp"`
+	Sources         []*MarketDataPoint `json:"sources"`
 }
 
 // DataSource represents a market data source
 type DataSource struct {
-	Name       string    `json:"name"`
-	Priority   int       `json:"priority"`   // Higher is better
-	Weight     float64   `json:"weight"`     // 0.0 to 1.0
+	Name       string        `json:"name"`
+	Priority   int           `json:"priority"` // Higher is better
+	Weight     float64       `json:"weight"`   // 0.0 to 1.0
 	Latency    time.Duration `json:"latency"`
-	LastUpdate time.Time `json:"last_update"`
-	IsActive   bool      `json:"is_active"`
+	LastUpdate time.Time     `json:"last_update"`
+	IsActive   bool          `json:"is_active"`
 }
 
 // MarketDataAggregator aggregates market data from multiple exchanges
 type MarketDataAggregator struct {
-	sources         map[string]*DataSource
-	marketData      map[string]map[string]*MarketDataPoint // symbol -> exchange -> data
-	aggregatedData  map[string]*AggregatedMarketData       // symbol -> aggregated data
-	subscribers     map[string][]chan *AggregatedMarketData // symbol -> subscribers
-	mutex           sync.RWMutex
-	ctx             context.Context
-	cancel          context.CancelFunc
-	updateInterval  time.Duration
-	staleThreshold  time.Duration
-	running         bool
+	sources        map[string]*DataSource
+	marketData     map[string]map[string]*MarketDataPoint  // symbol -> exchange -> data
+	aggregatedData map[string]*AggregatedMarketData        // symbol -> aggregated data
+	subscribers    map[string][]chan *AggregatedMarketData // symbol -> subscribers
+	mutex          sync.RWMutex
+	ctx            context.Context
+	cancel         context.CancelFunc
+	updateInterval time.Duration
+	staleThreshold time.Duration
+	running        bool
 }
 
 // NewMarketDataAggregator creates a new market data aggregator
 func NewMarketDataAggregator(updateInterval time.Duration) *MarketDataAggregator {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	return &MarketDataAggregator{
-		sources:         make(map[string]*DataSource),
-		marketData:      make(map[string]map[string]*MarketDataPoint),
-		aggregatedData:  make(map[string]*AggregatedMarketData),
-		subscribers:     make(map[string][]chan *AggregatedMarketData),
-		ctx:             ctx,
-		cancel:          cancel,
-		updateInterval:  updateInterval,
-		staleThreshold:  5 * time.Second,
+		sources:        make(map[string]*DataSource),
+		marketData:     make(map[string]map[string]*MarketDataPoint),
+		aggregatedData: make(map[string]*AggregatedMarketData),
+		subscribers:    make(map[string][]chan *AggregatedMarketData),
+		ctx:            ctx,
+		cancel:         cancel,
+		updateInterval: updateInterval,
+		staleThreshold: 5 * time.Second,
 	}
 }
 
@@ -86,7 +86,7 @@ func NewMarketDataAggregator(updateInterval time.Duration) *MarketDataAggregator
 func (mda *MarketDataAggregator) AddDataSource(name string, priority int, weight float64) {
 	mda.mutex.Lock()
 	defer mda.mutex.Unlock()
-	
+
 	mda.sources[name] = &DataSource{
 		Name:       name,
 		Priority:   priority,
@@ -100,9 +100,9 @@ func (mda *MarketDataAggregator) AddDataSource(name string, priority int, weight
 func (mda *MarketDataAggregator) RemoveDataSource(name string) {
 	mda.mutex.Lock()
 	defer mda.mutex.Unlock()
-	
+
 	delete(mda.sources, name)
-	
+
 	// Remove data from this source
 	for symbol := range mda.marketData {
 		delete(mda.marketData[symbol], name)
@@ -113,21 +113,21 @@ func (mda *MarketDataAggregator) RemoveDataSource(name string) {
 func (mda *MarketDataAggregator) UpdateMarketData(data *MarketDataPoint) {
 	mda.mutex.Lock()
 	defer mda.mutex.Unlock()
-	
+
 	// Initialize symbol map if needed
 	if mda.marketData[data.Symbol] == nil {
 		mda.marketData[data.Symbol] = make(map[string]*MarketDataPoint)
 	}
-	
+
 	// Store the data point
 	mda.marketData[data.Symbol][data.Exchange] = data
-	
+
 	// Update source last update time
 	if source, exists := mda.sources[data.Exchange]; exists {
 		source.LastUpdate = time.Now()
 		source.Latency = data.Latency
 	}
-	
+
 	// Trigger aggregation for this symbol
 	go mda.aggregateSymbol(data.Symbol)
 }
@@ -136,16 +136,16 @@ func (mda *MarketDataAggregator) UpdateMarketData(data *MarketDataPoint) {
 func (mda *MarketDataAggregator) aggregateSymbol(symbol string) {
 	mda.mutex.Lock()
 	defer mda.mutex.Unlock()
-	
+
 	symbolData, exists := mda.marketData[symbol]
 	if !exists || len(symbolData) == 0 {
 		return
 	}
-	
+
 	// Filter out stale data
 	now := time.Now()
 	var validData []*MarketDataPoint
-	
+
 	for exchange, data := range symbolData {
 		if now.Sub(data.Timestamp) <= mda.staleThreshold {
 			// Check if source is active
@@ -154,15 +154,15 @@ func (mda *MarketDataAggregator) aggregateSymbol(symbol string) {
 			}
 		}
 	}
-	
+
 	if len(validData) == 0 {
 		return
 	}
-	
+
 	// Aggregate the data
 	aggregated := mda.performAggregation(symbol, validData)
 	mda.aggregatedData[symbol] = aggregated
-	
+
 	// Notify subscribers
 	if subscribers, exists := mda.subscribers[symbol]; exists {
 		for _, subscriber := range subscribers {
@@ -180,59 +180,59 @@ func (mda *MarketDataAggregator) performAggregation(symbol string, data []*Marke
 	if len(data) == 0 {
 		return nil
 	}
-	
+
 	aggregated := &AggregatedMarketData{
 		Symbol:      symbol,
 		Sources:     data,
 		SourceCount: len(data),
 		Timestamp:   time.Now(),
 	}
-	
+
 	// Find best bid and ask
 	var bestBid, bestAsk float64 = 0, math.MaxFloat64
 	var bestBidExchange, bestAskExchange string
-	
+
 	// Calculate weighted prices and totals
 	var weightedBidSum, weightedAskSum, totalBidWeight, totalAskWeight float64
 	var totalBidSize, totalAskSize, totalVolume float64
 	var confidenceSum float64
-	
+
 	for _, point := range data {
 		// Update best bid
 		if point.BidPrice > bestBid {
 			bestBid = point.BidPrice
 			bestBidExchange = point.Exchange
 		}
-		
+
 		// Update best ask
 		if point.AskPrice < bestAsk && point.AskPrice > 0 {
 			bestAsk = point.AskPrice
 			bestAskExchange = point.Exchange
 		}
-		
+
 		// Get source weight
 		weight := 1.0
 		if source, exists := mda.sources[point.Exchange]; exists {
 			weight = source.Weight
 		}
-		
+
 		// Calculate weighted prices
 		if point.BidPrice > 0 {
 			weightedBidSum += point.BidPrice * weight
 			totalBidWeight += weight
 		}
-		
+
 		if point.AskPrice > 0 {
 			weightedAskSum += point.AskPrice * weight
 			totalAskWeight += weight
 		}
-		
+
 		// Accumulate sizes and volume
 		totalBidSize += point.BidSize
 		totalAskSize += point.AskSize
 		totalVolume += point.Volume
 		confidenceSum += point.Confidence
-		
+
 		// Update last price (use highest priority source)
 		if source, exists := mda.sources[point.Exchange]; exists {
 			if aggregated.LastPrice == 0 || source.Priority > mda.getSourcePriority(aggregated.LastPrice, data) {
@@ -240,37 +240,37 @@ func (mda *MarketDataAggregator) performAggregation(symbol string, data []*Marke
 			}
 		}
 	}
-	
+
 	// Calculate weighted averages
 	if totalBidWeight > 0 {
 		aggregated.WeightedBid = weightedBidSum / totalBidWeight
 	}
-	
+
 	if totalAskWeight > 0 {
 		aggregated.WeightedAsk = weightedAskSum / totalAskWeight
 	}
-	
+
 	// Set best prices
 	aggregated.BestBid = bestBid
 	aggregated.BestAsk = bestAsk
 	aggregated.BestBidExchange = bestBidExchange
 	aggregated.BestAskExchange = bestAskExchange
-	
+
 	// Calculate spread
 	if bestBid > 0 && bestAsk < math.MaxFloat64 {
 		aggregated.Spread = bestAsk - bestBid
 	}
-	
+
 	// Set totals
 	aggregated.TotalBidSize = totalBidSize
 	aggregated.TotalAskSize = totalAskSize
 	aggregated.Volume = totalVolume
-	
+
 	// Calculate overall confidence
 	if len(data) > 0 {
 		aggregated.Confidence = confidenceSum / float64(len(data))
 	}
-	
+
 	return aggregated
 }
 
@@ -290,14 +290,14 @@ func (mda *MarketDataAggregator) getSourcePriority(price float64, data []*Market
 func (mda *MarketDataAggregator) GetAggregatedData(symbol string) (*AggregatedMarketData, bool) {
 	mda.mutex.RLock()
 	defer mda.mutex.RUnlock()
-	
+
 	data, exists := mda.aggregatedData[symbol]
 	if exists {
 		// Return a copy to avoid race conditions
 		dataCopy := *data
 		return &dataCopy, true
 	}
-	
+
 	return nil, false
 }
 
@@ -305,10 +305,10 @@ func (mda *MarketDataAggregator) GetAggregatedData(symbol string) (*AggregatedMa
 func (mda *MarketDataAggregator) Subscribe(symbol string) <-chan *AggregatedMarketData {
 	mda.mutex.Lock()
 	defer mda.mutex.Unlock()
-	
+
 	subscriber := make(chan *AggregatedMarketData, 100)
 	mda.subscribers[symbol] = append(mda.subscribers[symbol], subscriber)
-	
+
 	return subscriber
 }
 
@@ -316,7 +316,7 @@ func (mda *MarketDataAggregator) Subscribe(symbol string) <-chan *AggregatedMark
 func (mda *MarketDataAggregator) Unsubscribe(symbol string, subscriber <-chan *AggregatedMarketData) {
 	mda.mutex.Lock()
 	defer mda.mutex.Unlock()
-	
+
 	if subscribers, exists := mda.subscribers[symbol]; exists {
 		for i, sub := range subscribers {
 			if sub == subscriber {
@@ -338,7 +338,7 @@ func (mda *MarketDataAggregator) Start() {
 	}
 	mda.running = true
 	mda.mutex.Unlock()
-	
+
 	// Start periodic aggregation
 	go mda.periodicAggregation()
 }
@@ -352,9 +352,9 @@ func (mda *MarketDataAggregator) Stop() {
 	}
 	mda.running = false
 	mda.mutex.Unlock()
-	
+
 	mda.cancel()
-	
+
 	// Close all subscriber channels
 	mda.mutex.Lock()
 	for symbol, subscribers := range mda.subscribers {
@@ -370,7 +370,7 @@ func (mda *MarketDataAggregator) Stop() {
 func (mda *MarketDataAggregator) periodicAggregation() {
 	ticker := time.NewTicker(mda.updateInterval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-mda.ctx.Done():
@@ -389,7 +389,7 @@ func (mda *MarketDataAggregator) aggregateAllSymbols() {
 		symbols = append(symbols, symbol)
 	}
 	mda.mutex.RUnlock()
-	
+
 	for _, symbol := range symbols {
 		mda.aggregateSymbol(symbol)
 	}
@@ -399,13 +399,13 @@ func (mda *MarketDataAggregator) aggregateAllSymbols() {
 func (mda *MarketDataAggregator) GetDataSources() map[string]*DataSource {
 	mda.mutex.RLock()
 	defer mda.mutex.RUnlock()
-	
+
 	sources := make(map[string]*DataSource)
 	for name, source := range mda.sources {
 		sourceCopy := *source
 		sources[name] = &sourceCopy
 	}
-	
+
 	return sources
 }
 
@@ -413,7 +413,7 @@ func (mda *MarketDataAggregator) GetDataSources() map[string]*DataSource {
 func (mda *MarketDataAggregator) SetSourceActive(name string, active bool) {
 	mda.mutex.Lock()
 	defer mda.mutex.Unlock()
-	
+
 	if source, exists := mda.sources[name]; exists {
 		source.IsActive = active
 	}
@@ -423,7 +423,7 @@ func (mda *MarketDataAggregator) SetSourceActive(name string, active bool) {
 func (mda *MarketDataAggregator) GetStats() map[string]interface{} {
 	mda.mutex.RLock()
 	defer mda.mutex.RUnlock()
-	
+
 	stats := make(map[string]interface{})
 	stats["total_sources"] = len(mda.sources)
 	stats["tracked_symbols"] = len(mda.marketData)
@@ -432,7 +432,7 @@ func (mda *MarketDataAggregator) GetStats() map[string]interface{} {
 	stats["running"] = mda.running
 	stats["update_interval"] = mda.updateInterval
 	stats["stale_threshold"] = mda.staleThreshold
-	
+
 	// Source statistics
 	activeSources := 0
 	for _, source := range mda.sources {
@@ -441,7 +441,7 @@ func (mda *MarketDataAggregator) GetStats() map[string]interface{} {
 		}
 	}
 	stats["active_sources"] = activeSources
-	
+
 	return stats
 }
 

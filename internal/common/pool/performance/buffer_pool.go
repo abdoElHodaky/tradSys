@@ -46,4 +46,3 @@ func (p *BufferPool) Put(buf []byte) {
 	}
 	p.pool.Put(buf)
 }
-

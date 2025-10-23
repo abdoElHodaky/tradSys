@@ -67,7 +67,7 @@ func (h *Handler) Subscribe(ctx context.Context, req *SubscribeRequest, rsp *Sub
 
 	// Generate subscription ID
 	subscriptionID := uuid.New().String()
-	
+
 	// Store subscription (in production, use Redis or database)
 	h.subscriptions.Store(subscriptionID, &Subscription{
 		ID:       subscriptionID,

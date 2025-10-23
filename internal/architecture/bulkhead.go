@@ -35,7 +35,7 @@ func NewBulkhead(options BulkheadOptions) *Bulkhead {
 	if options.MaxWaitingQueue <= 0 {
 		options.MaxWaitingQueue = 100
 	}
-	
+
 	return &Bulkhead{
 		name:            options.Name,
 		maxConcurrency:  options.MaxConcurrency,
@@ -51,10 +51,10 @@ func (b *Bulkhead) Execute(ctx context.Context, fn func() error) error {
 	if atomic.LoadInt64(&b.waitingCalls) >= b.maxWaitingQueue {
 		return errors.New("bulkhead waiting queue is full")
 	}
-	
+
 	// Increment waiting calls counter
 	atomic.AddInt64(&b.waitingCalls, 1)
-	
+
 	// Add to waiting queue
 	select {
 	case b.waitingQueue <- struct{}{}:
@@ -64,13 +64,13 @@ func (b *Bulkhead) Execute(ctx context.Context, fn func() error) error {
 		atomic.AddInt64(&b.waitingCalls, -1)
 		return errors.New("bulkhead waiting queue is full")
 	}
-	
+
 	// Decrement waiting calls counter when we leave the waiting queue
 	defer func() {
 		<-b.waitingQueue
 		atomic.AddInt64(&b.waitingCalls, -1)
 	}()
-	
+
 	// Try to acquire a semaphore
 	select {
 	case b.semaphore <- struct{}{}:
@@ -78,16 +78,16 @@ func (b *Bulkhead) Execute(ctx context.Context, fn func() error) error {
 	case <-ctx.Done():
 		return errors.New("context cancelled while waiting for bulkhead")
 	}
-	
+
 	// Increment active calls counter
 	atomic.AddInt64(&b.activeCalls, 1)
-	
+
 	// Release semaphore when done
 	defer func() {
 		<-b.semaphore
 		atomic.AddInt64(&b.activeCalls, -1)
 	}()
-	
+
 	// Execute the function
 	return fn()
 }
@@ -111,4 +111,3 @@ func (b *Bulkhead) MaxConcurrency() int64 {
 func (b *Bulkhead) MaxWaitingQueue() int64 {
 	return b.maxWaitingQueue
 }
-

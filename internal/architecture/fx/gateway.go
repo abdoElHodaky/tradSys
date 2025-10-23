@@ -15,7 +15,7 @@ import (
 var GatewayModule = fx.Options(
 	// Provide the API gateway
 	fx.Provide(NewAPIGateway),
-	
+
 	// Register lifecycle hooks
 	fx.Invoke(registerGatewayHooks),
 )
@@ -34,29 +34,29 @@ func registerGatewayHooks(
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting API gateway")
-			
+
 			// Add middleware
 			apiGateway.Use(gin.Logger())
 			apiGateway.Use(gin.Recovery())
-			
+
 			// Add correlation middleware for request tracing
 			correlationMiddleware := common.NewCorrelationMiddleware(logger)
 			apiGateway.Use(correlationMiddleware.Handler())
-			
+
 			// Add health check routes
 			healthHandler := common.NewHealthHandler("api-gateway", "1.0.0", logger)
 			healthHandler.RegisterRoutes(apiGateway.GetRouter())
-			
+
 			// Add routes
 			addGatewayRoutes(apiGateway)
-			
+
 			// Start the API gateway in a goroutine
 			go func() {
 				if err := apiGateway.Run(":8080"); err != nil {
 					logger.Error("Failed to start API gateway", zap.Error(err))
 				}
 			}()
-			
+
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
@@ -76,7 +76,7 @@ func addGatewayRoutes(apiGateway *gateway.APIGateway) {
 		ServicePath: "/market-data/:symbol",
 		Middlewares: []gin.HandlerFunc{},
 	})
-	
+
 	// Add routes for the orders service
 	apiGateway.AddRoute(gateway.Route{
 		Method:      "POST",
@@ -85,7 +85,7 @@ func addGatewayRoutes(apiGateway *gateway.APIGateway) {
 		ServicePath: "/orders",
 		Middlewares: []gin.HandlerFunc{},
 	})
-	
+
 	apiGateway.AddRoute(gateway.Route{
 		Method:      "GET",
 		Path:        "/api/v1/orders/:id",
@@ -93,7 +93,7 @@ func addGatewayRoutes(apiGateway *gateway.APIGateway) {
 		ServicePath: "/orders/:id",
 		Middlewares: []gin.HandlerFunc{},
 	})
-	
+
 	// Add routes for the risk service
 	apiGateway.AddRoute(gateway.Route{
 		Method:      "GET",

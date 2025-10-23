@@ -23,26 +23,26 @@ type QueryCache struct {
 
 // CacheMetrics tracks cache metrics
 type CacheMetrics struct {
-	Hits             int64
-	Misses           int64
-	Errors           int64
-	Evictions        int64
-	Size             int64
-	TotalItems       int64
-	TotalOperations  int64
+	Hits              int64
+	Misses            int64
+	Errors            int64
+	Evictions         int64
+	Size              int64
+	TotalItems        int64
+	TotalOperations   int64
 	AverageAccessTime time.Duration
-	mutex            sync.RWMutex
+	mutex             sync.RWMutex
 }
 
 // CacheMetricsSnapshot represents a snapshot of cache metrics without mutex
 type CacheMetricsSnapshot struct {
-	Hits             int64
-	Misses           int64
-	Errors           int64
-	Evictions        int64
-	Size             int64
-	TotalItems       int64
-	TotalOperations  int64
+	Hits              int64
+	Misses            int64
+	Errors            int64
+	Evictions         int64
+	Size              int64
+	TotalItems        int64
+	TotalOperations   int64
 	AverageAccessTime time.Duration
 }
 
@@ -101,7 +101,7 @@ func (qc *QueryCache) collectMetrics() {
 
 	for range ticker.C {
 		items := qc.cache.Items()
-		
+
 		qc.metrics.mutex.Lock()
 		qc.metrics.TotalItems = int64(len(items))
 		qc.metrics.Size = 0
@@ -127,7 +127,7 @@ func (qc *QueryCache) collectMetrics() {
 // Get retrieves an item from the cache
 func (qc *QueryCache) Get(ctx context.Context, key string, dest interface{}) bool {
 	startTime := time.Now()
-	
+
 	// Check if context is canceled
 	if ctx.Err() != nil {
 		return false
@@ -135,7 +135,7 @@ func (qc *QueryCache) Get(ctx context.Context, key string, dest interface{}) boo
 
 	// Get item from cache
 	item, found := qc.cache.Get(key)
-	
+
 	// Track metrics
 	qc.metrics.mutex.Lock()
 	qc.metrics.TotalOperations++
@@ -243,13 +243,13 @@ func (qc *QueryCache) GetMetrics() CacheMetricsSnapshot {
 	defer qc.metrics.mutex.RUnlock()
 
 	return CacheMetricsSnapshot{
-		Hits:             qc.metrics.Hits,
-		Misses:           qc.metrics.Misses,
-		Errors:           qc.metrics.Errors,
-		Evictions:        qc.metrics.Evictions,
-		Size:             qc.metrics.Size,
-		TotalItems:       qc.metrics.TotalItems,
-		TotalOperations:  qc.metrics.TotalOperations,
+		Hits:              qc.metrics.Hits,
+		Misses:            qc.metrics.Misses,
+		Errors:            qc.metrics.Errors,
+		Evictions:         qc.metrics.Evictions,
+		Size:              qc.metrics.Size,
+		TotalItems:        qc.metrics.TotalItems,
+		TotalOperations:   qc.metrics.TotalOperations,
 		AverageAccessTime: qc.metrics.AverageAccessTime,
 	}
 }

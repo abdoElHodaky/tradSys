@@ -14,17 +14,17 @@ import (
 
 // UserHandler handles user-related API endpoints
 type UserHandler struct {
-	logger     *zap.Logger
-	service    *user.Service
-	validator  *validator.Validate
+	logger    *zap.Logger
+	service   *user.Service
+	validator *validator.Validate
 }
 
 // NewUserHandler creates a new user handler
 func NewUserHandler(logger *zap.Logger, service *user.Service) *UserHandler {
 	return &UserHandler{
-		logger:     logger,
-		service:    service,
-		validator:  validator.New(),
+		logger:    logger,
+		service:   service,
+		validator: validator.New(),
 	}
 }
 

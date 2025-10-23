@@ -41,8 +41,8 @@ func (s *RiskServiceImpl) CheckRisk(ctx context.Context, order *Order) (*RiskChe
 	orderValue := order.Quantity * order.Price
 	if orderValue > limits.MaxPositionSize {
 		result.Approved = false
-		result.Reasons = append(result.Reasons, 
-			fmt.Sprintf("Order value %.2f exceeds maximum position size %.2f", 
+		result.Reasons = append(result.Reasons,
+			fmt.Sprintf("Order value %.2f exceeds maximum position size %.2f",
 				orderValue, limits.MaxPositionSize))
 	}
 
@@ -138,7 +138,7 @@ func (s *RiskServiceImpl) MonitorRisk(ctx context.Context) error {
 	// - Check for limit breaches
 	// - Send alerts
 	// - Trigger automatic risk controls
-	
+
 	// For now, this is a placeholder
 	return nil
 }

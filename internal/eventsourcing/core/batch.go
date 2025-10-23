@@ -45,15 +45,15 @@ func NewBatchEventStore(store EventStore, logger *zap.Logger, options ...StoreOp
 		logger:        logger,
 		stopCh:        make(chan struct{}),
 	}
-	
+
 	// Apply options
 	for _, option := range options {
 		option(batchStore)
 	}
-	
+
 	// Start the flush timer
 	batchStore.flushTimer = time.AfterFunc(batchStore.flushInterval, batchStore.onFlushTimer)
-	
+
 	return batchStore
 }
 
@@ -78,7 +78,7 @@ func (s *BatchEventStore) onFlushTimer() {
 		s.logger.Error("Failed to flush batched events",
 			zap.Error(err))
 	}
-	
+
 	// Reset the timer
 	select {
 	case <-s.stopCh:
@@ -119,27 +119,27 @@ func (s *BatchEventStore) SaveEvents(ctx context.Context, events []*eventsourcin
 	if len(events) == 0 {
 		return nil
 	}
-	
+
 	// If the number of events is greater than the batch size, save them directly
 	if len(events) >= s.batchSize {
 		return s.store.SaveEvents(ctx, events)
 	}
-	
+
 	// Otherwise, add them to the batch
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	// Group events by aggregate
 	eventsByAggregate := make(map[string][]*eventsourcing.Event)
 	for _, event := range events {
 		key := event.AggregateType + ":" + event.AggregateID
 		eventsByAggregate[key] = append(eventsByAggregate[key], event)
 	}
-	
+
 	// Add events to the batch
 	for key, aggregateEvents := range eventsByAggregate {
 		s.batchEvents[key] = append(s.batchEvents[key], aggregateEvents...)
-		
+
 		// Check if the batch is full
 		if len(s.batchEvents[key]) >= s.batchSize {
 			// Save the batch
@@ -147,12 +147,12 @@ func (s *BatchEventStore) SaveEvents(ctx context.Context, events []*eventsourcin
 			if err != nil {
 				return err
 			}
-			
+
 			// Clear the batch
 			s.batchEvents[key] = nil
 		}
 	}
-	
+
 	return nil
 }
 
@@ -220,7 +220,7 @@ func (s *BatchEventStore) GetAllEvents(ctx context.Context, fromTimestamp time.T
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Get events from the store
 	return s.store.GetAllEvents(ctx, fromTimestamp, limit)
 }
@@ -230,8 +230,7 @@ func (s *BatchEventStore) Close() error {
 	// Stop the flush timer
 	close(s.stopCh)
 	s.flushTimer.Stop()
-	
+
 	// Flush any pending events
 	return s.Flush(context.Background())
 }
-

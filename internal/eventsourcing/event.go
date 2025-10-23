@@ -34,41 +34,41 @@ func (f EventHandlerFunc) HandleEvent(event *Event) error {
 type EventPublisher interface {
 	// PublishEvent publishes an event
 	PublishEvent(event *Event) error
-	
+
 	// PublishEvents publishes multiple events
 	PublishEvents(events []*Event) error
-	
+
 	// Subscribe subscribes to events
 	Subscribe(handler EventHandler) error
-	
+
 	// SubscribeToType subscribes to events of a specific type
 	SubscribeToType(eventType string, handler EventHandler) error
 }
 
 // EventMetadata contains common metadata keys
 const (
-	MetadataUserID     = "user_id"
-	MetadataTimestamp  = "timestamp"
+	MetadataUserID        = "user_id"
+	MetadataTimestamp     = "timestamp"
 	MetadataCorrelationID = "correlation_id"
 	MetadataCausationID   = "causation_id"
-	MetadataSource     = "source"
-	MetadataIP         = "ip"
-	MetadataUserAgent  = "user_agent"
+	MetadataSource        = "source"
+	MetadataIP            = "ip"
+	MetadataUserAgent     = "user_agent"
 )
 
 // Common event types
 const (
-	EventTypeCreated   = "created"
-	EventTypeUpdated   = "updated"
-	EventTypeDeleted   = "deleted"
-	EventTypeActivated = "activated"
+	EventTypeCreated     = "created"
+	EventTypeUpdated     = "updated"
+	EventTypeDeleted     = "deleted"
+	EventTypeActivated   = "activated"
 	EventTypeDeactivated = "deactivated"
-	EventTypeSubmitted = "submitted"
-	EventTypeApproved  = "approved"
-	EventTypeRejected  = "rejected"
-	EventTypeCancelled = "cancelled"
-	EventTypeExecuted  = "executed"
-	EventTypeExpired   = "expired"
+	EventTypeSubmitted   = "submitted"
+	EventTypeApproved    = "approved"
+	EventTypeRejected    = "rejected"
+	EventTypeCancelled   = "cancelled"
+	EventTypeExecuted    = "executed"
+	EventTypeExpired     = "expired"
 )
 
 // NewEvent creates a new event
@@ -83,12 +83,12 @@ func NewEvent(
 	if metadata == nil {
 		metadata = make(map[string]interface{})
 	}
-	
+
 	// Set timestamp if not provided
 	if _, ok := metadata[MetadataTimestamp]; !ok {
 		metadata[MetadataTimestamp] = time.Now().UnixNano()
 	}
-	
+
 	return &Event{
 		AggregateID:   aggregateID,
 		AggregateType: aggregateType,
@@ -99,4 +99,3 @@ func NewEvent(
 		Metadata:      metadata,
 	}
 }
-

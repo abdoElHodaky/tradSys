@@ -39,4 +39,3 @@ func MigrateSchema(db *gorm.DB, logger *zap.Logger) error {
 	logger.Info("Database migration completed successfully")
 	return nil
 }
-

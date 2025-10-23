@@ -12,7 +12,7 @@ import (
 var CircuitBreakerModule = fx.Options(
 	// Provide the circuit breaker
 	fx.Provide(NewCircuitBreaker),
-	
+
 	// Register lifecycle hooks
 	fx.Invoke(registerCircuitBreakerHooks),
 )
@@ -21,10 +21,10 @@ var CircuitBreakerModule = fx.Options(
 type CircuitBreakerConfig struct {
 	// FailureThreshold is the number of failures before opening the circuit
 	FailureThreshold int
-	
+
 	// ResetTimeout is the time to wait before attempting to close the circuit
 	ResetTimeout string
-	
+
 	// HalfOpenMaxCalls is the maximum number of calls to allow in half-open state
 	HalfOpenMaxCalls int
 }
@@ -42,7 +42,7 @@ func DefaultCircuitBreakerConfig() CircuitBreakerConfig {
 func NewCircuitBreaker(logger *zap.Logger) *integration.CircuitBreaker {
 	// Create the circuit breaker configuration
 	config := integration.DefaultCircuitBreakerConfig()
-	
+
 	// Create the circuit breaker
 	return integration.NewCircuitBreaker(logger, config)
 }
@@ -65,4 +65,3 @@ func registerCircuitBreakerHooks(
 		},
 	})
 }
-

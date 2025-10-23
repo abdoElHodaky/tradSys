@@ -43,14 +43,14 @@ type RiskLimits struct {
 
 // StrategyMetrics tracks strategy performance
 type StrategyMetrics struct {
-	TotalOrders     int64         `json:"total_orders"`
-	SuccessfulTrades int64        `json:"successful_trades"`
-	TotalPnL        float64       `json:"total_pnl"`
-	WinRate         float64       `json:"win_rate"`
-	AverageReturn   float64       `json:"average_return"`
-	MaxDrawdown     float64       `json:"max_drawdown"`
-	SharpeRatio     float64       `json:"sharpe_ratio"`
-	LastUpdateTime  time.Time     `json:"last_update_time"`
+	TotalOrders      int64     `json:"total_orders"`
+	SuccessfulTrades int64     `json:"successful_trades"`
+	TotalPnL         float64   `json:"total_pnl"`
+	WinRate          float64   `json:"win_rate"`
+	AverageReturn    float64   `json:"average_return"`
+	MaxDrawdown      float64   `json:"max_drawdown"`
+	SharpeRatio      float64   `json:"sharpe_ratio"`
+	LastUpdateTime   time.Time `json:"last_update_time"`
 }
 
 // TradingStrategy defines the interface for trading strategies
@@ -98,24 +98,24 @@ type OHLC struct {
 
 // TradingSignal represents a trading signal
 type TradingSignal struct {
-	StrategyID string              `json:"strategy_id"`
-	Symbol     string              `json:"symbol"`
-	Action     SignalAction        `json:"action"`
-	Quantity   float64             `json:"quantity"`
-	Price      float64             `json:"price,omitempty"`
-	Confidence float64             `json:"confidence"`
+	StrategyID string                 `json:"strategy_id"`
+	Symbol     string                 `json:"symbol"`
+	Action     SignalAction           `json:"action"`
+	Quantity   float64                `json:"quantity"`
+	Price      float64                `json:"price,omitempty"`
+	Confidence float64                `json:"confidence"`
 	Metadata   map[string]interface{} `json:"metadata,omitempty"`
-	Timestamp  time.Time           `json:"timestamp"`
+	Timestamp  time.Time              `json:"timestamp"`
 }
 
 // SignalAction defines types of trading signals
 type SignalAction string
 
 const (
-	SignalActionBuy    SignalAction = "buy"
-	SignalActionSell   SignalAction = "sell"
-	SignalActionHold   SignalAction = "hold"
-	SignalActionClose  SignalAction = "close"
+	SignalActionBuy   SignalAction = "buy"
+	SignalActionSell  SignalAction = "sell"
+	SignalActionHold  SignalAction = "hold"
+	SignalActionClose SignalAction = "close"
 )
 
 // Position represents a trading position
@@ -131,28 +131,28 @@ type Position struct {
 
 // MeanReversionStrategy implements a mean reversion strategy
 type MeanReversionStrategy struct {
-	id          string
-	name        string
-	enabled     bool
-	lookback    int
-	threshold   float64
-	prices      []float64
-	metrics     *StrategyMetrics
-	logger      *zap.Logger
-	mu          sync.RWMutex
+	id        string
+	name      string
+	enabled   bool
+	lookback  int
+	threshold float64
+	prices    []float64
+	metrics   *StrategyMetrics
+	logger    *zap.Logger
+	mu        sync.RWMutex
 }
 
 // MomentumStrategy implements a momentum strategy
 type MomentumStrategy struct {
-	id          string
-	name        string
-	enabled     bool
-	period      int
-	threshold   float64
-	prices      []float64
-	metrics     *StrategyMetrics
-	logger      *zap.Logger
-	mu          sync.RWMutex
+	id        string
+	name      string
+	enabled   bool
+	period    int
+	threshold float64
+	prices    []float64
+	metrics   *StrategyMetrics
+	logger    *zap.Logger
+	mu        sync.RWMutex
 }
 
 // NewUnifiedStrategyEngine creates a new unified strategy engine
@@ -262,7 +262,7 @@ func (e *UnifiedStrategyEngine) registerDefaultStrategies() {
 func (e *UnifiedStrategyEngine) RegisterStrategy(strategy TradingStrategy) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	
+
 	e.strategies[strategy.GetID()] = strategy
 	e.logger.Info("Registered strategy",
 		zap.String("id", strategy.GetID()),
@@ -304,13 +304,13 @@ func (e *UnifiedStrategyEngine) processSignal(signal *TradingSignal) {
 
 	// Convert signal to order
 	order := &types.Order{
-		ID:       fmt.Sprintf("strategy_%s_%d", signal.StrategyID, time.Now().UnixNano()),
-		Symbol:   signal.Symbol,
-		Quantity: signal.Quantity,
-		Type:     types.OrderTypeMarket,
-		Status:   types.OrderStatusNew,
+		ID:        fmt.Sprintf("strategy_%s_%d", signal.StrategyID, time.Now().UnixNano()),
+		Symbol:    signal.Symbol,
+		Quantity:  signal.Quantity,
+		Type:      types.OrderTypeMarket,
+		Status:    types.OrderStatusNew,
 		CreatedAt: time.Now(),
-		UserID:   signal.StrategyID,
+		UserID:    signal.StrategyID,
 	}
 
 	switch signal.Action {

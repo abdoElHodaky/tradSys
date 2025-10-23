@@ -15,46 +15,46 @@ import (
 
 // AdvancedOrderMatchingEngine provides enhanced order matching with HFT optimizations
 type AdvancedOrderMatchingEngine struct {
-	orderBooks    sync.Map // map[string]*AdvancedOrderBook
-	tradePool     *pool.ObjectPool
-	orderPool     *pool.ObjectPool
-	logger        *zap.Logger
-	metrics       *MatchingMetrics
-	config        *EngineConfig
-	eventChannel  chan *MatchingEvent
-	stopChannel   chan struct{}
-	isRunning     int32
+	orderBooks   sync.Map // map[string]*AdvancedOrderBook
+	tradePool    *pool.ObjectPool
+	orderPool    *pool.ObjectPool
+	logger       *zap.Logger
+	metrics      *MatchingMetrics
+	config       *EngineConfig
+	eventChannel chan *MatchingEvent
+	stopChannel  chan struct{}
+	isRunning    int32
 }
 
 // EngineConfig contains configuration for the matching engine
 type EngineConfig struct {
-	MaxOrdersPerSymbol    int           `json:"max_orders_per_symbol"`
-	MaxTradesPerSecond    int           `json:"max_trades_per_second"`
-	LatencyTarget         time.Duration `json:"latency_target"`
-	EnablePriceImprovement bool         `json:"enable_price_improvement"`
-	EnableIcebergOrders   bool          `json:"enable_iceberg_orders"`
-	EnableHiddenOrders    bool          `json:"enable_hidden_orders"`
-	TickSize              float64       `json:"tick_size"`
+	MaxOrdersPerSymbol     int           `json:"max_orders_per_symbol"`
+	MaxTradesPerSecond     int           `json:"max_trades_per_second"`
+	LatencyTarget          time.Duration `json:"latency_target"`
+	EnablePriceImprovement bool          `json:"enable_price_improvement"`
+	EnableIcebergOrders    bool          `json:"enable_iceberg_orders"`
+	EnableHiddenOrders     bool          `json:"enable_hidden_orders"`
+	TickSize               float64       `json:"tick_size"`
 }
 
 // MatchingMetrics tracks performance metrics
 type MatchingMetrics struct {
-	TotalTrades       int64         `json:"total_trades"`
-	TotalVolume       float64       `json:"total_volume"`
-	AverageLatency    time.Duration `json:"average_latency"`
-	MaxLatency        time.Duration `json:"max_latency"`
-	OrdersProcessed   int64         `json:"orders_processed"`
-	TradesPerSecond   float64       `json:"trades_per_second"`
-	LastUpdateTime    time.Time     `json:"last_update_time"`
+	TotalTrades     int64         `json:"total_trades"`
+	TotalVolume     float64       `json:"total_volume"`
+	AverageLatency  time.Duration `json:"average_latency"`
+	MaxLatency      time.Duration `json:"max_latency"`
+	OrdersProcessed int64         `json:"orders_processed"`
+	TradesPerSecond float64       `json:"trades_per_second"`
+	LastUpdateTime  time.Time     `json:"last_update_time"`
 }
 
 // MatchingEvent represents events from the matching engine
 type MatchingEvent struct {
 	Type      MatchingEventType `json:"type"`
-	Symbol    string           `json:"symbol"`
-	Order     *types.Order     `json:"order,omitempty"`
-	Trade     *Trade           `json:"trade,omitempty"`
-	Timestamp time.Time        `json:"timestamp"`
+	Symbol    string            `json:"symbol"`
+	Order     *types.Order      `json:"order,omitempty"`
+	Trade     *Trade            `json:"trade,omitempty"`
+	Timestamp time.Time         `json:"timestamp"`
 }
 
 // MatchingEventType defines types of matching events
@@ -71,37 +71,37 @@ const (
 // AdvancedOrderBook extends the basic order book with advanced features
 type AdvancedOrderBook struct {
 	*OrderBook
-	priceImprovement  *PriceImprovementEngine
-	icebergManager    *IcebergOrderManager
-	hiddenOrderPool   *HiddenOrderPool
-	marketImpactCalc  *MarketImpactCalculator
+	priceImprovement   *PriceImprovementEngine
+	icebergManager     *IcebergOrderManager
+	hiddenOrderPool    *HiddenOrderPool
+	marketImpactCalc   *MarketImpactCalculator
 	performanceTracker *PerformanceTracker
 }
 
 // PriceImprovementEngine handles price improvement logic
 type PriceImprovementEngine struct {
-	enabled           bool
-	improvementTicks  int
-	minImprovement    float64
-	maxImprovement    float64
-	tickSize          float64
+	enabled          bool
+	improvementTicks int
+	minImprovement   float64
+	maxImprovement   float64
+	tickSize         float64
 }
 
 // IcebergOrderManager handles iceberg order logic
 type IcebergOrderManager struct {
-	enabled       bool
-	activeOrders  map[string]*IcebergOrder
-	mu            sync.RWMutex
+	enabled      bool
+	activeOrders map[string]*IcebergOrder
+	mu           sync.RWMutex
 }
 
 // IcebergOrder represents an iceberg order
 type IcebergOrder struct {
-	ParentOrder    *types.Order
-	DisplaySize    float64
-	TotalSize      float64
-	RemainingSize  float64
-	RefreshSize    float64
-	CurrentOrder   *types.Order
+	ParentOrder   *types.Order
+	DisplaySize   float64
+	TotalSize     float64
+	RemainingSize float64
+	RefreshSize   float64
+	CurrentOrder  *types.Order
 }
 
 // HiddenOrderPool manages hidden orders
@@ -113,12 +113,12 @@ type HiddenOrderPool struct {
 
 // MarketImpactCalculator calculates market impact of orders
 type MarketImpactCalculator struct {
-	enabled           bool
-	impactModel       string // "linear", "sqrt", "log"
-	liquidityFactor   float64
-	volatilityFactor  float64
-	historicalTrades  []Trade
-	mu                sync.RWMutex
+	enabled          bool
+	impactModel      string // "linear", "sqrt", "log"
+	liquidityFactor  float64
+	volatilityFactor float64
+	historicalTrades []Trade
+	mu               sync.RWMutex
 }
 
 // PerformanceTracker tracks order book performance
@@ -348,7 +348,7 @@ func (e *AdvancedOrderMatchingEngine) calculateMarketImpact(book *AdvancedOrderB
 // applyPriceImprovement applies price improvement to limit orders
 func (e *AdvancedOrderMatchingEngine) applyPriceImprovement(book *AdvancedOrderBook, order *types.Order) {
 	improvement := book.priceImprovement
-	
+
 	if order.Side == types.OrderSideBuy {
 		// For buy orders, improve by increasing the price slightly
 		maxPrice := order.Price + improvement.maxImprovement
@@ -424,7 +424,7 @@ func (e *AdvancedOrderMatchingEngine) createVisibleOrder(iceberg *IcebergOrder) 
 	visibleOrder.Quantity = math.Min(iceberg.DisplaySize, iceberg.RemainingSize)
 	visibleOrder.ParentOrderID = iceberg.ParentOrder.ID
 	visibleOrder.IsIcebergChild = true
-	
+
 	iceberg.CurrentOrder = &visibleOrder
 	return &visibleOrder
 }

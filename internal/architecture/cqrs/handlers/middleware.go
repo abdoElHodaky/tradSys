@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"go.uber.org/zap"
 )
 
@@ -52,15 +51,15 @@ func NewLoggingCommandMiddleware(logger *zap.Logger) *LoggingCommandMiddleware {
 // Execute executes the middleware
 func (m *LoggingCommandMiddleware) Execute(ctx context.Context, cmd command.Command, next func(ctx context.Context, cmd command.Command) error) error {
 	start := time.Now()
-	
+
 	// Log the command
 	m.logger.Info("Executing command",
 		zap.String("command", cmd.CommandName()),
 		zap.Any("payload", cmd))
-	
+
 	// Execute the next middleware
 	err := next(ctx, cmd)
-	
+
 	// Log the result
 	if err != nil {
 		m.logger.Error("Command execution failed",
@@ -72,7 +71,7 @@ func (m *LoggingCommandMiddleware) Execute(ctx context.Context, cmd command.Comm
 			zap.String("command", cmd.CommandName()),
 			zap.Duration("duration", time.Since(start)))
 	}
-	
+
 	return err
 }
 
@@ -91,15 +90,15 @@ func NewLoggingQueryMiddleware(logger *zap.Logger) *LoggingQueryMiddleware {
 // Execute executes the middleware
 func (m *LoggingQueryMiddleware) Execute(ctx context.Context, q query.Query, next func(ctx context.Context, q query.Query) (interface{}, error)) (interface{}, error) {
 	start := time.Now()
-	
+
 	// Log the query
 	m.logger.Info("Executing query",
 		zap.String("query", q.QueryName()),
 		zap.Any("payload", q))
-	
+
 	// Execute the next middleware
 	result, err := next(ctx, q)
-	
+
 	// Log the result
 	if err != nil {
 		m.logger.Error("Query execution failed",
@@ -111,7 +110,7 @@ func (m *LoggingQueryMiddleware) Execute(ctx context.Context, q query.Query, nex
 			zap.String("query", q.QueryName()),
 			zap.Duration("duration", time.Since(start)))
 	}
-	
+
 	return result, err
 }
 
@@ -128,16 +127,16 @@ func NewMetricsCommandMiddleware() *MetricsCommandMiddleware {
 // Execute executes the middleware
 func (m *MetricsCommandMiddleware) Execute(ctx context.Context, cmd command.Command, next func(ctx context.Context, cmd command.Command) error) error {
 	start := time.Now()
-	
+
 	// Execute the next middleware
 	err := next(ctx, cmd)
-	
+
 	// Record metrics
 	duration := time.Since(start)
-	
+
 	// Record command execution time
 	// m.metrics.RecordCommandExecution(cmd.CommandName(), duration, err == nil)
-	
+
 	return err
 }
 
@@ -154,16 +153,16 @@ func NewMetricsQueryMiddleware() *MetricsQueryMiddleware {
 // Execute executes the middleware
 func (m *MetricsQueryMiddleware) Execute(ctx context.Context, q query.Query, next func(ctx context.Context, q query.Query) (interface{}, error)) (interface{}, error) {
 	start := time.Now()
-	
+
 	// Execute the next middleware
 	result, err := next(ctx, q)
-	
+
 	// Record metrics
 	duration := time.Since(start)
-	
+
 	// Record query execution time
 	// m.metrics.RecordQueryExecution(q.QueryName(), duration, err == nil)
-	
+
 	return result, err
 }
 
@@ -195,7 +194,7 @@ func (m *ValidationCommandMiddleware) Execute(ctx context.Context, cmd command.C
 			return err
 		}
 	}
-	
+
 	// Execute the next middleware
 	return next(ctx, cmd)
 }
@@ -228,8 +227,7 @@ func (m *ValidationQueryMiddleware) Execute(ctx context.Context, q query.Query, 
 			return nil, err
 		}
 	}
-	
+
 	// Execute the next middleware
 	return next(ctx, q)
 }
-

@@ -15,8 +15,8 @@ import (
 
 // SecurityMiddleware provides security-related middleware functions
 type SecurityMiddleware struct {
-	jwtService *auth.JWTService
-	logger     *zap.Logger
+	jwtService  *auth.JWTService
+	logger      *zap.Logger
 	rateLimiter *limiter.Limiter
 }
 
@@ -31,8 +31,8 @@ func NewSecurityMiddleware(jwtService *auth.JWTService, logger *zap.Logger) *Sec
 	rateLimiter := limiter.New(store, rate)
 
 	return &SecurityMiddleware{
-		jwtService: jwtService,
-		logger:     logger,
+		jwtService:  jwtService,
+		logger:      logger,
 		rateLimiter: rateLimiter,
 	}
 }

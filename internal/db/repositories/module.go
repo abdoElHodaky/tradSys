@@ -30,10 +30,10 @@ var MarketDataRepositoryModule = fx.Options(
 
 // Repositories contains all repositories
 type Repositories struct {
-	OrderRepository     *OrderRepository
-	TradeRepository     *TradeRepository
-	PositionRepository  *PositionRepository
-	RiskRepository      *RiskRepository
+	OrderRepository      *OrderRepository
+	TradeRepository      *TradeRepository
+	PositionRepository   *PositionRepository
+	RiskRepository       *RiskRepository
 	MarketDataRepository *MarketDataRepository
 }
 
@@ -43,10 +43,10 @@ func NewRepositories(
 	logger *zap.Logger,
 ) *Repositories {
 	return &Repositories{
-		OrderRepository:     NewOrderRepository(db, logger),
-		TradeRepository:     NewTradeRepository(db, logger),
-		PositionRepository:  NewPositionRepository(db, logger),
-		RiskRepository:      NewRiskRepository(db, logger),
+		OrderRepository:      NewOrderRepository(db, logger),
+		TradeRepository:      NewTradeRepository(db, logger),
+		PositionRepository:   NewPositionRepository(db, logger),
+		RiskRepository:       NewRiskRepository(db, logger),
 		MarketDataRepository: NewMarketDataRepository(db, logger),
 	}
 }

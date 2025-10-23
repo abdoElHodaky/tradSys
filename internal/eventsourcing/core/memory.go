@@ -17,12 +17,12 @@ type InMemoryEventStore struct {
 	logger     *zap.Logger
 	snapshots  map[string]map[string]map[int]interface{} // aggregateType -> aggregateID -> version -> snapshot
 	snapshotMu sync.RWMutex
-	
+
 	// Cache settings
 	cacheEnabled bool
 	cacheSize    int
 	cacheTTL     time.Duration
-	
+
 	// Snapshot settings
 	snapshotFrequency int
 }
@@ -38,12 +38,12 @@ func NewInMemoryEventStore(logger *zap.Logger, options ...StoreOption) *InMemory
 		cacheTTL:          5 * time.Minute,
 		snapshotFrequency: 100,
 	}
-	
+
 	// Apply options
 	for _, option := range options {
 		option(store)
 	}
-	
+
 	return store
 }
 
@@ -232,4 +232,3 @@ func (s *InMemoryEventStore) GetLatestSnapshot(ctx context.Context, aggregateID 
 
 	return aggregateSnapshots[latestVersion], latestVersion, nil
 }
-

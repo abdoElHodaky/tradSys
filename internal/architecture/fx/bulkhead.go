@@ -12,7 +12,7 @@ import (
 var BulkheadModule = fx.Options(
 	// Provide the bulkhead factory
 	fx.Provide(NewBulkheadFactory),
-	
+
 	// Register lifecycle hooks
 	fx.Invoke(registerBulkheadHooks),
 )
@@ -21,7 +21,7 @@ var BulkheadModule = fx.Options(
 type BulkheadConfig struct {
 	// DefaultMaxConcurrency is the default maximum number of concurrent calls
 	DefaultMaxConcurrency int64
-	
+
 	// DefaultMaxWaitingQueue is the default maximum size of the waiting queue
 	DefaultMaxWaitingQueue int64
 }
@@ -29,7 +29,7 @@ type BulkheadConfig struct {
 // DefaultBulkheadConfig returns the default bulkhead configuration
 func DefaultBulkheadConfig() BulkheadConfig {
 	return BulkheadConfig{
-		DefaultMaxConcurrency: 10,
+		DefaultMaxConcurrency:  10,
 		DefaultMaxWaitingQueue: 100,
 	}
 }
@@ -78,4 +78,3 @@ func registerBulkheadHooks(
 		},
 	})
 }
-

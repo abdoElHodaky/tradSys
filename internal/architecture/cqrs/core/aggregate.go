@@ -10,37 +10,37 @@ import (
 type Aggregate interface {
 	// ID returns the unique identifier of the aggregate
 	ID() string
-	
+
 	// Type returns the type of the aggregate
 	Type() string
-	
+
 	// Version returns the current version of the aggregate
 	Version() int
-	
+
 	// ApplyEvent applies an event to the aggregate
 	ApplyEvent(event Event) error
-	
+
 	// GetUncommittedEvents returns the uncommitted events of the aggregate
 	GetUncommittedEvents() []Event
-	
+
 	// ClearUncommittedEvents clears the uncommitted events of the aggregate
 	ClearUncommittedEvents()
 }
 
 // BaseAggregate provides a base implementation of the Aggregate interface
 type BaseAggregate struct {
-	id               string
-	aggregateType    string
-	version          int
+	id                string
+	aggregateType     string
+	version           int
 	uncommittedEvents []Event
 }
 
 // NewBaseAggregate creates a new base aggregate
 func NewBaseAggregate(aggregateType string) *BaseAggregate {
 	return &BaseAggregate{
-		id:               ksuid.New().String(),
-		aggregateType:    aggregateType,
-		version:          0,
+		id:                ksuid.New().String(),
+		aggregateType:     aggregateType,
+		version:           0,
 		uncommittedEvents: []Event{},
 	}
 }
@@ -48,9 +48,9 @@ func NewBaseAggregate(aggregateType string) *BaseAggregate {
 // NewBaseAggregateWithID creates a new base aggregate with a specific ID
 func NewBaseAggregateWithID(id string, aggregateType string) *BaseAggregate {
 	return &BaseAggregate{
-		id:               id,
-		aggregateType:    aggregateType,
-		version:          0,
+		id:                id,
+		aggregateType:     aggregateType,
+		version:           0,
 		uncommittedEvents: []Event{},
 	}
 }
@@ -76,18 +76,18 @@ func (a *BaseAggregate) ApplyEvent(event Event) error {
 	if event.AggregateID() != a.id {
 		return errors.New("event aggregate ID does not match aggregate ID")
 	}
-	
+
 	// Check if the event version is correct
 	if event.EventVersion() != a.version+1 {
 		return errors.New("event version does not match expected aggregate version")
 	}
-	
+
 	// Apply the event to the aggregate
 	// This is a base implementation, concrete aggregates should override this method
-	
+
 	// Increment the version
 	a.version++
-	
+
 	return nil
 }
 
@@ -95,7 +95,7 @@ func (a *BaseAggregate) ApplyEvent(event Event) error {
 func (a *BaseAggregate) ApplyNewEvent(eventName string, data interface{}, applyFunc func(event Event) error) error {
 	// Create a new event
 	newEvent := NewEvent(eventName, a.id, data, a.version+1)
-	
+
 	// Apply the event to the aggregate
 	if applyFunc != nil {
 		if err := applyFunc(newEvent); err != nil {
@@ -106,10 +106,10 @@ func (a *BaseAggregate) ApplyNewEvent(eventName string, data interface{}, applyF
 			return err
 		}
 	}
-	
+
 	// Add the event to the uncommitted events
 	a.uncommittedEvents = append(a.uncommittedEvents, newEvent)
-	
+
 	return nil
 }
 
@@ -130,9 +130,9 @@ func (a *BaseAggregate) LoadFromEvents(events []Event) error {
 			return err
 		}
 	}
-	
+
 	// Clear uncommitted events after loading
 	a.ClearUncommittedEvents()
-	
+
 	return nil
 }

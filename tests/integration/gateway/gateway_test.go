@@ -137,4 +137,3 @@ func TestCircuitBreaker(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, gateway.ErrCircuitOpen, err)
 }
-

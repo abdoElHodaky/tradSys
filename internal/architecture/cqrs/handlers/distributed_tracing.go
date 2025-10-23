@@ -15,13 +15,13 @@ import (
 type TracingConfig struct {
 	// Enabled determines if tracing is enabled
 	Enabled bool
-	
+
 	// SamplingRate is the rate at which traces are sampled (1 in N)
 	SamplingRate int
-	
+
 	// ExportEndpoint is the endpoint to export traces to
 	ExportEndpoint string
-	
+
 	// ServiceName is the name of the service
 	ServiceName string
 }
@@ -40,22 +40,22 @@ func DefaultTracingConfig() TracingConfig {
 type SpanContext struct {
 	// TraceID is the ID of the trace
 	TraceID string
-	
+
 	// SpanID is the ID of the span
 	SpanID string
-	
+
 	// ParentSpanID is the ID of the parent span
 	ParentSpanID string
-	
+
 	// StartTime is the start time of the span
 	StartTime time.Time
-	
+
 	// EndTime is the end time of the span
 	EndTime time.Time
-	
+
 	// Operation is the operation being traced
 	Operation string
-	
+
 	// Tags are key-value pairs that provide additional context
 	Tags map[string]string
 }
@@ -63,10 +63,10 @@ type SpanContext struct {
 // DistributedTracer provides distributed tracing functionality
 type DistributedTracer struct {
 	logger *zap.Logger
-	
+
 	// Configuration
 	config TracingConfig
-	
+
 	// Sampling
 	sampleCounter int
 }
@@ -86,24 +86,24 @@ func (t *DistributedTracer) StartSpan(ctx context.Context, operation string) (co
 	if !t.config.Enabled {
 		return ctx, nil
 	}
-	
+
 	// Check if we should sample this trace
 	t.sampleCounter++
-	if t.sampleCounter % t.config.SamplingRate != 0 {
+	if t.sampleCounter%t.config.SamplingRate != 0 {
 		return ctx, nil
 	}
-	
+
 	// Reset the sample counter if it gets too large
 	if t.sampleCounter >= 1000000 {
 		t.sampleCounter = 0
 	}
-	
+
 	// Get the parent span from the context
 	var parentSpanID string
 	if parentSpan, ok := ctx.Value("span").(*SpanContext); ok {
 		parentSpanID = parentSpan.SpanID
 	}
-	
+
 	// Create a new span
 	span := &SpanContext{
 		TraceID:      uuid.New().String(),
@@ -113,10 +113,10 @@ func (t *DistributedTracer) StartSpan(ctx context.Context, operation string) (co
 		Operation:    operation,
 		Tags:         make(map[string]string),
 	}
-	
+
 	// Add the span to the context
 	newCtx := context.WithValue(ctx, "span", span)
-	
+
 	// Log the span start
 	t.logger.Debug("Started span",
 		zap.String("trace_id", span.TraceID),
@@ -124,7 +124,7 @@ func (t *DistributedTracer) StartSpan(ctx context.Context, operation string) (co
 		zap.String("parent_span_id", span.ParentSpanID),
 		zap.String("operation", span.Operation),
 	)
-	
+
 	return newCtx, span
 }
 
@@ -134,13 +134,13 @@ func (t *DistributedTracer) EndSpan(span *SpanContext) {
 	if !t.config.Enabled || span == nil {
 		return
 	}
-	
+
 	// Set the end time
 	span.EndTime = time.Now()
-	
+
 	// Calculate the duration
 	duration := span.EndTime.Sub(span.StartTime)
-	
+
 	// Log the span end
 	t.logger.Debug("Ended span",
 		zap.String("trace_id", span.TraceID),
@@ -150,7 +150,7 @@ func (t *DistributedTracer) EndSpan(span *SpanContext) {
 		zap.Duration("duration", duration),
 		zap.Any("tags", span.Tags),
 	)
-	
+
 	// Export the span
 	t.exportSpan(span)
 }
@@ -161,7 +161,7 @@ func (t *DistributedTracer) AddTag(span *SpanContext, key string, value string) 
 	if !t.config.Enabled || span == nil {
 		return
 	}
-	
+
 	// Add the tag
 	span.Tags[key] = value
 }
@@ -170,7 +170,7 @@ func (t *DistributedTracer) AddTag(span *SpanContext, key string, value string) 
 func (t *DistributedTracer) exportSpan(span *SpanContext) {
 	// This is a placeholder for actual span export logic
 	// In a real implementation, this would send the span to a tracing system like Jaeger or Zipkin
-	
+
 	// For now, we'll just log that we would export the span
 	t.logger.Debug("Would export span",
 		zap.String("trace_id", span.TraceID),
@@ -207,14 +207,14 @@ func (d *TracingEventBusDecorator) PublishEvent(ctx context.Context, event *even
 	// Start a span for the publish operation
 	operation := fmt.Sprintf("publish_event.%s", event.EventType)
 	ctx, span := d.tracer.StartSpan(ctx, operation)
-	
+
 	// Add tags to the span
 	if span != nil {
 		d.tracer.AddTag(span, "event_type", event.EventType)
 		d.tracer.AddTag(span, "aggregate_id", event.AggregateID)
 		d.tracer.AddTag(span, "aggregate_type", event.AggregateType)
 		d.tracer.AddTag(span, "version", fmt.Sprintf("%d", event.Version))
-		
+
 		// Add the trace ID to the event metadata
 		if event.Metadata == nil {
 			event.Metadata = make(map[string]string)
@@ -222,10 +222,10 @@ func (d *TracingEventBusDecorator) PublishEvent(ctx context.Context, event *even
 		event.Metadata["trace_id"] = span.TraceID
 		event.Metadata["span_id"] = span.SpanID
 	}
-	
+
 	// Publish the event
 	err := d.eventBus.PublishEvent(ctx, event)
-	
+
 	// End the span
 	if span != nil {
 		if err != nil {
@@ -233,7 +233,7 @@ func (d *TracingEventBusDecorator) PublishEvent(ctx context.Context, event *even
 		}
 		d.tracer.EndSpan(span)
 	}
-	
+
 	return err
 }
 
@@ -242,15 +242,15 @@ func (d *TracingEventBusDecorator) PublishEvents(ctx context.Context, events []*
 	// Start a span for the publish operation
 	operation := "publish_events"
 	ctx, span := d.tracer.StartSpan(ctx, operation)
-	
+
 	// Add tags to the span
 	if span != nil {
 		d.tracer.AddTag(span, "event_count", fmt.Sprintf("%d", len(events)))
-		
+
 		// Add event types to the span
 		for i, event := range events {
 			d.tracer.AddTag(span, fmt.Sprintf("event_%d_type", i), event.EventType)
-			
+
 			// Add the trace ID to the event metadata
 			if event.Metadata == nil {
 				event.Metadata = make(map[string]string)
@@ -259,10 +259,10 @@ func (d *TracingEventBusDecorator) PublishEvents(ctx context.Context, events []*
 			event.Metadata["span_id"] = span.SpanID
 		}
 	}
-	
+
 	// Publish the events
 	err := d.eventBus.PublishEvents(ctx, events)
-	
+
 	// End the span
 	if span != nil {
 		if err != nil {
@@ -270,7 +270,7 @@ func (d *TracingEventBusDecorator) PublishEvents(ctx context.Context, events []*
 		}
 		d.tracer.EndSpan(span)
 	}
-	
+
 	return err
 }
 
@@ -282,7 +282,7 @@ func (d *TracingEventBusDecorator) Subscribe(handler eventsourcing.EventHandler)
 		tracer:  d.tracer,
 		logger:  d.logger,
 	}
-	
+
 	return d.eventBus.Subscribe(tracingHandler)
 }
 
@@ -294,7 +294,7 @@ func (d *TracingEventBusDecorator) SubscribeToType(eventType string, handler eve
 		tracer:  d.tracer,
 		logger:  d.logger,
 	}
-	
+
 	return d.eventBus.SubscribeToType(eventType, tracingHandler)
 }
 
@@ -306,7 +306,7 @@ func (d *TracingEventBusDecorator) SubscribeToAggregate(aggregateType string, ha
 		tracer:  d.tracer,
 		logger:  d.logger,
 	}
-	
+
 	return d.eventBus.SubscribeToAggregate(aggregateType, tracingHandler)
 }
 
@@ -321,7 +321,7 @@ type TracingEventHandler struct {
 func (h *TracingEventHandler) HandleEvent(event *eventsourcing.Event) error {
 	// Create a context
 	ctx := context.Background()
-	
+
 	// Check if there's a trace ID in the event metadata
 	var parentSpanID string
 	if event.Metadata != nil {
@@ -333,11 +333,11 @@ func (h *TracingEventHandler) HandleEvent(event *eventsourcing.Event) error {
 			parentSpanID = spanID
 		}
 	}
-	
+
 	// Start a span for the handle operation
 	operation := fmt.Sprintf("handle_event.%s", event.EventType)
 	ctx, span := h.tracer.StartSpan(ctx, operation)
-	
+
 	// Add tags to the span
 	if span != nil {
 		h.tracer.AddTag(span, "event_type", event.EventType)
@@ -345,16 +345,16 @@ func (h *TracingEventHandler) HandleEvent(event *eventsourcing.Event) error {
 		h.tracer.AddTag(span, "aggregate_type", event.AggregateType)
 		h.tracer.AddTag(span, "version", fmt.Sprintf("%d", event.Version))
 		h.tracer.AddTag(span, "handler", fmt.Sprintf("%T", h.handler))
-		
+
 		// Set the parent span ID if available
 		if parentSpanID != "" {
 			span.ParentSpanID = parentSpanID
 		}
 	}
-	
+
 	// Handle the event
 	err := h.handler.HandleEvent(event)
-	
+
 	// End the span
 	if span != nil {
 		if err != nil {
@@ -362,7 +362,6 @@ func (h *TracingEventHandler) HandleEvent(event *eventsourcing.Event) error {
 		}
 		h.tracer.EndSpan(span)
 	}
-	
+
 	return err
 }
-

@@ -25,13 +25,13 @@ type ConnectionPool struct {
 
 // ConnectionPoolStats contains statistics about the connection pool
 type ConnectionPoolStats struct {
-	TotalConnections      int
-	ConnectionsByChannel  map[string]int
-	ConnectionsBySymbol   map[string]int
-	MessagesSent          int64
-	MessagesReceived      int64
-	LastStatsReset        time.Time
-	mu                    sync.RWMutex
+	TotalConnections     int
+	ConnectionsByChannel map[string]int
+	ConnectionsBySymbol  map[string]int
+	MessagesSent         int64
+	MessagesReceived     int64
+	LastStatsReset       time.Time
+	mu                   sync.RWMutex
 }
 
 // NewConnectionPool creates a new connection pool
@@ -56,12 +56,12 @@ func (p *ConnectionPool) AddConnection(conn *Connection) {
 
 	// Add to all connections
 	p.allConnections[conn] = true
-	
+
 	// Update stats
 	p.stats.mu.Lock()
 	p.stats.TotalConnections++
 	p.stats.mu.Unlock()
-	
+
 	p.logger.Debug("Connection added to pool",
 		zap.String("remote_addr", conn.conn.RemoteAddr().String()),
 		zap.Int("total_connections", p.stats.TotalConnections))
@@ -74,12 +74,12 @@ func (p *ConnectionPool) RemoveConnection(conn *Connection) {
 
 	// Remove from all connections
 	delete(p.allConnections, conn)
-	
+
 	// Remove from channel connections
 	for channel := range conn.channels {
 		if connections, ok := p.channelConnections[channel]; ok {
 			delete(connections, conn)
-			
+
 			// Update stats
 			p.stats.mu.Lock()
 			p.stats.ConnectionsByChannel[channel]--
@@ -87,19 +87,19 @@ func (p *ConnectionPool) RemoveConnection(conn *Connection) {
 				delete(p.stats.ConnectionsByChannel, channel)
 			}
 			p.stats.mu.Unlock()
-			
+
 			// Clean up empty channel maps
 			if len(connections) == 0 {
 				delete(p.channelConnections, channel)
 			}
 		}
 	}
-	
+
 	// Remove from symbol connections
 	if conn.symbol != "" {
 		if connections, ok := p.symbolConnections[conn.symbol]; ok {
 			delete(connections, conn)
-			
+
 			// Update stats
 			p.stats.mu.Lock()
 			p.stats.ConnectionsBySymbol[conn.symbol]--
@@ -107,19 +107,19 @@ func (p *ConnectionPool) RemoveConnection(conn *Connection) {
 				delete(p.stats.ConnectionsBySymbol, conn.symbol)
 			}
 			p.stats.mu.Unlock()
-			
+
 			// Clean up empty symbol maps
 			if len(connections) == 0 {
 				delete(p.symbolConnections, conn.symbol)
 			}
 		}
 	}
-	
+
 	// Update stats
 	p.stats.mu.Lock()
 	p.stats.TotalConnections--
 	p.stats.mu.Unlock()
-	
+
 	p.logger.Debug("Connection removed from pool",
 		zap.String("remote_addr", conn.conn.RemoteAddr().String()),
 		zap.Int("total_connections", p.stats.TotalConnections))
@@ -129,20 +129,20 @@ func (p *ConnectionPool) RemoveConnection(conn *Connection) {
 func (p *ConnectionPool) SubscribeToChannel(conn *Connection, channel string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	// Initialize channel map if it doesn't exist
 	if _, ok := p.channelConnections[channel]; !ok {
 		p.channelConnections[channel] = make(map[*Connection]bool)
 	}
-	
+
 	// Add connection to channel
 	p.channelConnections[channel][conn] = true
-	
+
 	// Update stats
 	p.stats.mu.Lock()
 	p.stats.ConnectionsByChannel[channel]++
 	p.stats.mu.Unlock()
-	
+
 	p.logger.Debug("Connection subscribed to channel",
 		zap.String("remote_addr", conn.conn.RemoteAddr().String()),
 		zap.String("channel", channel),
@@ -153,11 +153,11 @@ func (p *ConnectionPool) SubscribeToChannel(conn *Connection, channel string) {
 func (p *ConnectionPool) UnsubscribeFromChannel(conn *Connection, channel string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	// Remove connection from channel
 	if connections, ok := p.channelConnections[channel]; ok {
 		delete(connections, conn)
-		
+
 		// Update stats
 		p.stats.mu.Lock()
 		p.stats.ConnectionsByChannel[channel]--
@@ -165,12 +165,12 @@ func (p *ConnectionPool) UnsubscribeFromChannel(conn *Connection, channel string
 			delete(p.stats.ConnectionsByChannel, channel)
 		}
 		p.stats.mu.Unlock()
-		
+
 		// Clean up empty channel maps
 		if len(connections) == 0 {
 			delete(p.channelConnections, channel)
 		}
-		
+
 		p.logger.Debug("Connection unsubscribed from channel",
 			zap.String("remote_addr", conn.conn.RemoteAddr().String()),
 			zap.String("channel", channel))
@@ -181,12 +181,12 @@ func (p *ConnectionPool) UnsubscribeFromChannel(conn *Connection, channel string
 func (p *ConnectionPool) SetSymbol(conn *Connection, symbol string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	// Remove from old symbol if it exists
 	if conn.symbol != "" {
 		if connections, ok := p.symbolConnections[conn.symbol]; ok {
 			delete(connections, conn)
-			
+
 			// Update stats
 			p.stats.mu.Lock()
 			p.stats.ConnectionsBySymbol[conn.symbol]--
@@ -194,32 +194,32 @@ func (p *ConnectionPool) SetSymbol(conn *Connection, symbol string) {
 				delete(p.stats.ConnectionsBySymbol, conn.symbol)
 			}
 			p.stats.mu.Unlock()
-			
+
 			// Clean up empty symbol maps
 			if len(connections) == 0 {
 				delete(p.symbolConnections, conn.symbol)
 			}
 		}
 	}
-	
+
 	// Set new symbol
 	conn.symbol = symbol
-	
+
 	// Add to new symbol if it's not empty
 	if symbol != "" {
 		// Initialize symbol map if it doesn't exist
 		if _, ok := p.symbolConnections[symbol]; !ok {
 			p.symbolConnections[symbol] = make(map[*Connection]bool)
 		}
-		
+
 		// Add connection to symbol
 		p.symbolConnections[symbol][conn] = true
-		
+
 		// Update stats
 		p.stats.mu.Lock()
 		p.stats.ConnectionsBySymbol[symbol]++
 		p.stats.mu.Unlock()
-		
+
 		p.logger.Debug("Connection symbol set",
 			zap.String("remote_addr", conn.conn.RemoteAddr().String()),
 			zap.String("symbol", symbol))
@@ -230,15 +230,15 @@ func (p *ConnectionPool) SetSymbol(conn *Connection, symbol string) {
 func (p *ConnectionPool) GetConnectionsByChannel(channel string) []*Connection {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	
+
 	var connections []*Connection
-	
+
 	if channelConns, ok := p.channelConnections[channel]; ok {
 		for conn := range channelConns {
 			connections = append(connections, conn)
 		}
 	}
-	
+
 	return connections
 }
 
@@ -246,15 +246,15 @@ func (p *ConnectionPool) GetConnectionsByChannel(channel string) []*Connection {
 func (p *ConnectionPool) GetConnectionsBySymbol(symbol string) []*Connection {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	
+
 	var connections []*Connection
-	
+
 	if symbolConns, ok := p.symbolConnections[symbol]; ok {
 		for conn := range symbolConns {
 			connections = append(connections, conn)
 		}
 	}
-	
+
 	return connections
 }
 
@@ -262,9 +262,9 @@ func (p *ConnectionPool) GetConnectionsBySymbol(symbol string) []*Connection {
 func (p *ConnectionPool) GetConnectionsByChannelAndSymbol(channel, symbol string) []*Connection {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	
+
 	var connections []*Connection
-	
+
 	if channelConns, ok := p.channelConnections[channel]; ok {
 		if symbol == "" {
 			// If no symbol specified, return all connections for the channel
@@ -280,7 +280,7 @@ func (p *ConnectionPool) GetConnectionsByChannelAndSymbol(channel, symbol string
 			}
 		}
 	}
-	
+
 	return connections
 }
 
@@ -288,13 +288,13 @@ func (p *ConnectionPool) GetConnectionsByChannelAndSymbol(channel, symbol string
 func (p *ConnectionPool) GetAllConnections() []*Connection {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	
+
 	var connections []*Connection
-	
+
 	for conn := range p.allConnections {
 		connections = append(connections, conn)
 	}
-	
+
 	return connections
 }
 
@@ -302,25 +302,25 @@ func (p *ConnectionPool) GetAllConnections() []*Connection {
 func (p *ConnectionPool) GetStats() ConnectionPoolStats {
 	p.stats.mu.RLock()
 	defer p.stats.mu.RUnlock()
-	
+
 	// Create a copy to avoid race conditions
 	statsCopy := ConnectionPoolStats{
-		TotalConnections:      p.stats.TotalConnections,
-		ConnectionsByChannel:  make(map[string]int),
-		ConnectionsBySymbol:   make(map[string]int),
-		MessagesSent:          p.stats.MessagesSent,
-		MessagesReceived:      p.stats.MessagesReceived,
-		LastStatsReset:        p.stats.LastStatsReset,
+		TotalConnections:     p.stats.TotalConnections,
+		ConnectionsByChannel: make(map[string]int),
+		ConnectionsBySymbol:  make(map[string]int),
+		MessagesSent:         p.stats.MessagesSent,
+		MessagesReceived:     p.stats.MessagesReceived,
+		LastStatsReset:       p.stats.LastStatsReset,
 	}
-	
+
 	for channel, count := range p.stats.ConnectionsByChannel {
 		statsCopy.ConnectionsByChannel[channel] = count
 	}
-	
+
 	for symbol, count := range p.stats.ConnectionsBySymbol {
 		statsCopy.ConnectionsBySymbol[symbol] = count
 	}
-	
+
 	return statsCopy
 }
 
@@ -328,7 +328,7 @@ func (p *ConnectionPool) GetStats() ConnectionPoolStats {
 func (p *ConnectionPool) ResetStats() {
 	p.stats.mu.Lock()
 	defer p.stats.mu.Unlock()
-	
+
 	p.stats.MessagesSent = 0
 	p.stats.MessagesReceived = 0
 	p.stats.LastStatsReset = time.Now()
@@ -338,7 +338,7 @@ func (p *ConnectionPool) ResetStats() {
 func (p *ConnectionPool) IncrementMessagesSent(count int64) {
 	p.stats.mu.Lock()
 	defer p.stats.mu.Unlock()
-	
+
 	p.stats.MessagesSent += count
 }
 
@@ -346,6 +346,6 @@ func (p *ConnectionPool) IncrementMessagesSent(count int64) {
 func (p *ConnectionPool) IncrementMessagesReceived(count int64) {
 	p.stats.mu.Lock()
 	defer p.stats.mu.Unlock()
-	
+
 	p.stats.MessagesReceived += count
 }

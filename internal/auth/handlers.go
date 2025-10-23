@@ -33,7 +33,7 @@ func (h *Handlers) Login(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Validate required fields
 	if req.Username == "" || req.Password == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -41,11 +41,11 @@ func (h *Handlers) Login(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Attempt login
 	response, err := h.service.Login(c.Request.Context(), &req)
 	if err != nil {
-		h.logger.Warn("Login failed", 
+		h.logger.Warn("Login failed",
 			zap.String("username", req.Username),
 			zap.Error(err))
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -53,7 +53,7 @@ func (h *Handlers) Login(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Return successful response
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -73,7 +73,7 @@ func (h *Handlers) RefreshToken(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Validate required fields
 	if req.RefreshToken == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -81,7 +81,7 @@ func (h *Handlers) RefreshToken(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Attempt token refresh
 	response, err := h.service.RefreshToken(c.Request.Context(), &req)
 	if err != nil {
@@ -91,7 +91,7 @@ func (h *Handlers) RefreshToken(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Return successful response
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -106,13 +106,13 @@ func (h *Handlers) Logout(c *gin.Context) {
 	// 1. Invalidate the token in a blacklist/database
 	// 2. Clear any server-side sessions
 	// 3. Log the logout event
-	
+
 	// For now, we'll just return a success response
 	// The client should discard the token
-	h.logger.Info("User logout", 
+	h.logger.Info("User logout",
 		zap.String("user_id", c.GetString("user_id")),
 		zap.String("username", c.GetString("username")))
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "Logout successful",
@@ -128,10 +128,10 @@ func (h *Handlers) Profile(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	user, err := h.service.GetUser(username)
 	if err != nil {
-		h.logger.Error("Failed to get user profile", 
+		h.logger.Error("Failed to get user profile",
 			zap.String("username", username),
 			zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -139,7 +139,7 @@ func (h *Handlers) Profile(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    user,
@@ -152,7 +152,7 @@ func (h *Handlers) ChangePassword(c *gin.Context) {
 		CurrentPassword string `json:"current_password" binding:"required"`
 		NewPassword     string `json:"new_password" binding:"required,min=8"`
 	}
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -175,12 +175,12 @@ func (h *Handlers) ChangePassword(c *gin.Context) {
 	// 2. Hash new password with bcrypt
 	// 3. Update password in database
 	// 4. Invalidate existing JWT tokens
-	
+
 	// Simulate successful password change
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Password changed successfully",
+		"message":   "Password changed successfully",
 		"timestamp": time.Now().Unix(),
-		"user_id": userID,
+		"user_id":   userID,
 	})
 }
 
@@ -194,7 +194,7 @@ func (h *Handlers) ValidateToken(c *gin.Context) {
 		c.Abort()
 		return
 	}
-	
+
 	// Extract token from "Bearer <token>" format
 	const bearerPrefix = "Bearer "
 	if len(authHeader) < len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
@@ -204,9 +204,9 @@ func (h *Handlers) ValidateToken(c *gin.Context) {
 		c.Abort()
 		return
 	}
-	
+
 	tokenString := authHeader[len(bearerPrefix):]
-	
+
 	// Validate token
 	claims, err := h.service.ValidateToken(tokenString)
 	if err != nil {
@@ -217,11 +217,11 @@ func (h *Handlers) ValidateToken(c *gin.Context) {
 		c.Abort()
 		return
 	}
-	
+
 	// Set user information in context
 	c.Set("user_id", claims.UserID)
 	c.Set("username", claims.Username)
 	c.Set("role", claims.Role)
-	
+
 	c.Next()
 }

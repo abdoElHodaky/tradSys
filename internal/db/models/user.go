@@ -66,10 +66,10 @@ type UserRole string
 
 // User roles
 const (
-	RoleAdmin     UserRole = "admin"
-	RoleTrader    UserRole = "trader"
-	RoleAnalyst   UserRole = "analyst"
-	RoleReadOnly  UserRole = "readonly"
+	RoleAdmin    UserRole = "admin"
+	RoleTrader   UserRole = "trader"
+	RoleAnalyst  UserRole = "analyst"
+	RoleReadOnly UserRole = "readonly"
 )
 
 // Permission represents a permission in the system
@@ -77,18 +77,18 @@ type Permission string
 
 // Permissions
 const (
-	PermissionReadMarketData   Permission = "read:market_data"
-	PermissionWriteMarketData  Permission = "write:market_data"
-	PermissionReadOrders       Permission = "read:orders"
-	PermissionWriteOrders      Permission = "write:orders"
-	PermissionReadRisk         Permission = "read:risk"
-	PermissionWriteRisk        Permission = "write:risk"
-	PermissionReadStrategy     Permission = "read:strategy"
-	PermissionWriteStrategy    Permission = "write:strategy"
-	PermissionReadUsers        Permission = "read:users"
-	PermissionWriteUsers       Permission = "write:users"
-	PermissionReadSystem       Permission = "read:system"
-	PermissionWriteSystem      Permission = "write:system"
+	PermissionReadMarketData  Permission = "read:market_data"
+	PermissionWriteMarketData Permission = "write:market_data"
+	PermissionReadOrders      Permission = "read:orders"
+	PermissionWriteOrders     Permission = "write:orders"
+	PermissionReadRisk        Permission = "read:risk"
+	PermissionWriteRisk       Permission = "write:risk"
+	PermissionReadStrategy    Permission = "read:strategy"
+	PermissionWriteStrategy   Permission = "write:strategy"
+	PermissionReadUsers       Permission = "read:users"
+	PermissionWriteUsers      Permission = "write:users"
+	PermissionReadSystem      Permission = "read:system"
+	PermissionWriteSystem     Permission = "write:system"
 )
 
 // RolePermissions maps roles to permissions

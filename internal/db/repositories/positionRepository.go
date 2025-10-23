@@ -31,8 +31,8 @@ func (r *PositionRepository) GetByUserIDAndSymbol(ctx context.Context, userID, s
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
-		r.logger.Error("Failed to get position by user ID and symbol", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to get position by user ID and symbol",
+			zap.Error(result.Error),
 			zap.String("user_id", userID),
 			zap.String("symbol", symbol))
 		return nil, result.Error
@@ -47,8 +47,8 @@ func (r *PositionRepository) GetPositionsByUserID(ctx context.Context, userID st
 		Where("user_id = ?", userID).
 		Find(&positions)
 	if result.Error != nil {
-		r.logger.Error("Failed to get positions by user ID", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to get positions by user ID",
+			zap.Error(result.Error),
 			zap.String("user_id", userID))
 		return nil, result.Error
 	}
@@ -60,37 +60,37 @@ func (r *PositionRepository) CreateOrUpdate(ctx context.Context, position *db.Po
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var existingPosition db.Position
 		result := tx.First(&existingPosition, "user_id = ? AND symbol = ?", position.UserID, position.Symbol)
-		
+
 		if result.Error != nil {
 			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 				// Create new position
 				if err := tx.Create(position).Error; err != nil {
-					r.logger.Error("Failed to create position", 
-						zap.Error(err), 
+					r.logger.Error("Failed to create position",
+						zap.Error(err),
 						zap.String("user_id", position.UserID),
 						zap.String("symbol", position.Symbol))
 					return err
 				}
 				return nil
 			}
-			r.logger.Error("Failed to check existing position", 
-				zap.Error(result.Error), 
+			r.logger.Error("Failed to check existing position",
+				zap.Error(result.Error),
 				zap.String("user_id", position.UserID),
 				zap.String("symbol", position.Symbol))
 			return result.Error
 		}
-		
+
 		// Update existing position
 		position.ID = existingPosition.ID
 		position.CreatedAt = existingPosition.CreatedAt
 		if err := tx.Save(position).Error; err != nil {
-			r.logger.Error("Failed to update position", 
-				zap.Error(err), 
+			r.logger.Error("Failed to update position",
+				zap.Error(err),
 				zap.String("user_id", position.UserID),
 				zap.String("symbol", position.Symbol))
 			return err
 		}
-		
+
 		return nil
 	})
 }
@@ -101,38 +101,38 @@ func (r *PositionRepository) BatchUpdate(ctx context.Context, positions []*db.Po
 		for _, position := range positions {
 			var existingPosition db.Position
 			result := tx.First(&existingPosition, "user_id = ? AND symbol = ?", position.UserID, position.Symbol)
-			
+
 			if result.Error != nil {
 				if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 					// Create new position
 					if err := tx.Create(position).Error; err != nil {
-						r.logger.Error("Failed to create position in batch", 
-							zap.Error(err), 
+						r.logger.Error("Failed to create position in batch",
+							zap.Error(err),
 							zap.String("user_id", position.UserID),
 							zap.String("symbol", position.Symbol))
 						return err
 					}
 					continue
 				}
-				r.logger.Error("Failed to check existing position in batch", 
-					zap.Error(result.Error), 
+				r.logger.Error("Failed to check existing position in batch",
+					zap.Error(result.Error),
 					zap.String("user_id", position.UserID),
 					zap.String("symbol", position.Symbol))
 				return result.Error
 			}
-			
+
 			// Update existing position
 			position.ID = existingPosition.ID
 			position.CreatedAt = existingPosition.CreatedAt
 			if err := tx.Save(position).Error; err != nil {
-				r.logger.Error("Failed to update position in batch", 
-					zap.Error(err), 
+				r.logger.Error("Failed to update position in batch",
+					zap.Error(err),
 					zap.String("user_id", position.UserID),
 					zap.String("symbol", position.Symbol))
 				return err
 			}
 		}
-		
+
 		return nil
 	})
 }
@@ -158,8 +158,8 @@ func (r *PositionRepository) GetTotalExposure(ctx context.Context, userID string
 		Where("user_id = ?", userID).
 		Scan(&totalExposure)
 	if result.Error != nil {
-		r.logger.Error("Failed to get total exposure", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to get total exposure",
+			zap.Error(result.Error),
 			zap.String("user_id", userID))
 		return 0, result.Error
 	}
@@ -173,18 +173,17 @@ func (r *PositionRepository) GetTotalPnL(ctx context.Context, userID string) (fl
 		Where("user_id = ?", userID).
 		Find(&positions)
 	if result.Error != nil {
-		r.logger.Error("Failed to get positions for total PnL", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to get positions for total PnL",
+			zap.Error(result.Error),
 			zap.String("user_id", userID))
 		return 0, 0, result.Error
 	}
-	
+
 	var totalUnrealizedPnL, totalRealizedPnL float64
 	for _, position := range positions {
 		totalUnrealizedPnL += position.UnrealizedPnL
 		totalRealizedPnL += position.RealizedPnL
 	}
-	
+
 	return totalUnrealizedPnL, totalRealizedPnL, nil
 }
-

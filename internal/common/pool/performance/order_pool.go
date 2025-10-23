@@ -94,4 +94,3 @@ func (p *OrderPool) NewOrderResponse(
 	order.UpdatedAt = order.CreatedAt
 	return order
 }
-

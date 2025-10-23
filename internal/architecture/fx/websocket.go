@@ -16,10 +16,10 @@ import (
 var WebSocketModule = fx.Options(
 	// Provide the WebSocket hub
 	fx.Provide(NewWebSocketHub),
-	
+
 	// Provide the WebSocket handler
 	fx.Provide(NewWebSocketHandler),
-	
+
 	// Register lifecycle hooks
 	fx.Invoke(registerWebSocketHooks),
 )
@@ -46,13 +46,13 @@ func registerWebSocketHooks(
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting WebSocket components")
-			
+
 			// Register the WebSocket routes
 			handler.RegisterRoutes(router)
-			
+
 			// Start the hub in a goroutine
 			go hub.Run()
-			
+
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
@@ -70,25 +70,25 @@ func RegisterMarketDataHandlers(hub *websocket.Hub, logger *zap.Logger) {
 		var request struct {
 			Symbol string `json:"symbol"`
 		}
-		
+
 		err := json.Unmarshal(msg.Data, &request)
 		if err != nil {
 			logger.Error("Failed to parse subscription request", zap.Error(err))
 			return
 		}
-		
+
 		logger.Info("Market data subscription request",
 			zap.String("client_id", client.ID),
 			zap.String("symbol", request.Symbol))
-		
+
 		// Subscribe to market data
 		logger.Info("Market data subscription request",
 			zap.String("client_id", client.ID),
 			zap.String("symbol", request.Symbol))
-		
+
 		// Add client to symbol subscription
 		hub.SubscribeToSymbol(client, request.Symbol)
-		
+
 		// Send confirmation
 		response := map[string]interface{}{
 			"type":    "marketdata.subscribed",
@@ -98,32 +98,32 @@ func RegisterMarketDataHandlers(hub *websocket.Hub, logger *zap.Logger) {
 		}
 		client.Send(response)
 	})
-	
+
 	// Register the market data unsubscription handler
 	hub.RegisterMessageHandler("marketdata.unsubscribe", func(client *websocket.Client, msg *websocket.Message) {
 		// Parse the unsubscription request
 		var request struct {
 			Symbol string `json:"symbol"`
 		}
-		
+
 		err := json.Unmarshal(msg.Data, &request)
 		if err != nil {
 			logger.Error("Failed to parse unsubscription request", zap.Error(err))
 			return
 		}
-		
+
 		logger.Info("Market data unsubscription request",
 			zap.String("client_id", client.ID),
 			zap.String("symbol", request.Symbol))
-		
+
 		// Unsubscribe from market data
 		logger.Info("Market data unsubscription request",
 			zap.String("client_id", client.ID),
 			zap.String("symbol", request.Symbol))
-		
+
 		// Remove client from symbol subscription
 		hub.UnsubscribeFromSymbol(client, request.Symbol)
-		
+
 		// Send confirmation
 		response := map[string]interface{}{
 			"type":    "marketdata.unsubscribed",
@@ -146,20 +146,20 @@ func RegisterOrderHandlers(hub *websocket.Hub, logger *zap.Logger) {
 			Price  float64 `json:"price"`
 			Size   float64 `json:"size"`
 		}
-		
+
 		err := json.Unmarshal(msg.Data, &request)
 		if err != nil {
 			logger.Error("Failed to parse order submission request", zap.Error(err))
 			return
 		}
-		
+
 		logger.Info("Order submission request",
 			zap.String("client_id", client.ID),
 			zap.String("symbol", request.Symbol),
 			zap.String("side", request.Side),
 			zap.Float64("price", request.Price),
 			zap.Float64("size", request.Size))
-		
+
 		// Submit the order
 		logger.Info("Order submission request",
 			zap.String("client_id", client.ID),
@@ -167,7 +167,7 @@ func RegisterOrderHandlers(hub *websocket.Hub, logger *zap.Logger) {
 			zap.String("side", request.Side),
 			zap.Float64("quantity", request.Quantity),
 			zap.Float64("price", request.Price))
-		
+
 		// Create order submission response
 		orderID := "order_" + client.ID + "_" + fmt.Sprintf("%d", time.Now().Unix())
 		response := map[string]interface{}{
@@ -182,29 +182,29 @@ func RegisterOrderHandlers(hub *websocket.Hub, logger *zap.Logger) {
 		}
 		client.Send(response)
 	})
-	
+
 	// Register the order cancellation handler
 	hub.RegisterMessageHandler("order.cancel", func(client *websocket.Client, msg *websocket.Message) {
 		// Parse the order cancellation request
 		var request struct {
 			OrderID string `json:"order_id"`
 		}
-		
+
 		err := json.Unmarshal(msg.Data, &request)
 		if err != nil {
 			logger.Error("Failed to parse order cancellation request", zap.Error(err))
 			return
 		}
-		
+
 		logger.Info("Order cancellation request",
 			zap.String("client_id", client.ID),
 			zap.String("order_id", request.OrderID))
-		
+
 		// Cancel the order
 		logger.Info("Order cancellation request",
 			zap.String("client_id", client.ID),
 			zap.String("order_id", request.OrderID))
-		
+
 		// Create order cancellation response
 		response := map[string]interface{}{
 			"type":     "order.cancelled",

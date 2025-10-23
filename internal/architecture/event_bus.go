@@ -24,12 +24,12 @@ func NewEventBus() *EventBus {
 func (eb *EventBus) Subscribe(eventType string, handler EventHandler) {
 	eb.mu.Lock()
 	defer eb.mu.Unlock()
-	
+
 	handlers, exists := eb.handlers[eventType]
 	if !exists {
 		handlers = []EventHandler{}
 	}
-	
+
 	eb.handlers[eventType] = append(handlers, handler)
 }
 
@@ -37,12 +37,12 @@ func (eb *EventBus) Subscribe(eventType string, handler EventHandler) {
 func (eb *EventBus) Unsubscribe(eventType string, handler EventHandler) {
 	eb.mu.Lock()
 	defer eb.mu.Unlock()
-	
+
 	handlers, exists := eb.handlers[eventType]
 	if !exists {
 		return
 	}
-	
+
 	// Find and remove the handler
 	for i, h := range handlers {
 		if &h == &handler {
@@ -50,7 +50,7 @@ func (eb *EventBus) Unsubscribe(eventType string, handler EventHandler) {
 			break
 		}
 	}
-	
+
 	// Remove the event type if there are no more handlers
 	if len(eb.handlers[eventType]) == 0 {
 		delete(eb.handlers, eventType)
@@ -61,12 +61,12 @@ func (eb *EventBus) Unsubscribe(eventType string, handler EventHandler) {
 func (eb *EventBus) Publish(eventType string, event interface{}) {
 	eb.mu.RLock()
 	defer eb.mu.RUnlock()
-	
+
 	handlers, exists := eb.handlers[eventType]
 	if !exists {
 		return
 	}
-	
+
 	// Call all handlers
 	for _, handler := range handlers {
 		go handler(event)
@@ -77,12 +77,12 @@ func (eb *EventBus) Publish(eventType string, event interface{}) {
 func (eb *EventBus) PublishSync(eventType string, event interface{}) {
 	eb.mu.RLock()
 	defer eb.mu.RUnlock()
-	
+
 	handlers, exists := eb.handlers[eventType]
 	if !exists {
 		return
 	}
-	
+
 	// Call all handlers synchronously
 	for _, handler := range handlers {
 		handler(event)
@@ -93,7 +93,7 @@ func (eb *EventBus) PublishSync(eventType string, event interface{}) {
 func (eb *EventBus) HasSubscribers(eventType string) bool {
 	eb.mu.RLock()
 	defer eb.mu.RUnlock()
-	
+
 	handlers, exists := eb.handlers[eventType]
 	return exists && len(handlers) > 0
 }
@@ -102,12 +102,11 @@ func (eb *EventBus) HasSubscribers(eventType string) bool {
 func (eb *EventBus) SubscriberCount(eventType string) int {
 	eb.mu.RLock()
 	defer eb.mu.RUnlock()
-	
+
 	handlers, exists := eb.handlers[eventType]
 	if !exists {
 		return 0
 	}
-	
+
 	return len(handlers)
 }
-

@@ -43,16 +43,16 @@ func (cb *CommandBus) RegisterHandler(commandType reflect.Type, handler CommandH
 	if commandType.Kind() != reflect.Ptr {
 		return errors.New("command type must be a pointer type")
 	}
-	
+
 	commandName := commandType.Elem().Name()
-	
+
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
-	
+
 	if _, exists := cb.handlers[commandName]; exists {
 		return errors.New("handler already registered for command: " + commandName)
 	}
-	
+
 	cb.handlers[commandName] = handler
 	return nil
 }
@@ -67,17 +67,17 @@ func (cb *CommandBus) Dispatch(ctx context.Context, command Command) error {
 	if command == nil {
 		return errors.New("command cannot be nil")
 	}
-	
+
 	commandName := command.CommandName()
-	
+
 	cb.mu.RLock()
 	handler, exists := cb.handlers[commandName]
 	cb.mu.RUnlock()
-	
+
 	if !exists {
 		return errors.New("no handler registered for command: " + commandName)
 	}
-	
+
 	return handler.Handle(ctx, command)
 }
 
@@ -86,13 +86,12 @@ func (cb *CommandBus) HasHandler(commandType reflect.Type) bool {
 	if commandType.Kind() != reflect.Ptr {
 		return false
 	}
-	
+
 	commandName := commandType.Elem().Name()
-	
+
 	cb.mu.RLock()
 	defer cb.mu.RUnlock()
-	
+
 	_, exists := cb.handlers[commandName]
 	return exists
 }
-

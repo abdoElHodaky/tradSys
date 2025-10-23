@@ -13,36 +13,36 @@ import (
 // MetricsCollector collects metrics for the trading system
 type MetricsCollector struct {
 	logger *zap.Logger
-	
+
 	// System metrics
 	systemStartTime time.Time
-	
+
 	// Market data metrics
 	marketDataReceived *prometheus.CounterVec
 	marketDataLatency  *prometheus.HistogramVec
-	
+
 	// Order metrics
-	ordersCreated     *prometheus.CounterVec
-	ordersFilled      *prometheus.CounterVec
-	ordersCancelled   *prometheus.CounterVec
-	ordersRejected    *prometheus.CounterVec
-	orderLatency      *prometheus.HistogramVec
-	
+	ordersCreated   *prometheus.CounterVec
+	ordersFilled    *prometheus.CounterVec
+	ordersCancelled *prometheus.CounterVec
+	ordersRejected  *prometheus.CounterVec
+	orderLatency    *prometheus.HistogramVec
+
 	// WebSocket metrics
-	wsConnections     *prometheus.GaugeVec
+	wsConnections      *prometheus.GaugeVec
 	wsMessagesReceived *prometheus.CounterVec
-	wsMessagesSent    *prometheus.CounterVec
-	
+	wsMessagesSent     *prometheus.CounterVec
+
 	// Strategy metrics
-	strategyPnL       *prometheus.GaugeVec
-	strategyTrades    *prometheus.CounterVec
-	
+	strategyPnL    *prometheus.GaugeVec
+	strategyTrades *prometheus.CounterVec
+
 	// Database metrics
-	dbQueries         *prometheus.CounterVec
-	dbQueryLatency    *prometheus.HistogramVec
-	
+	dbQueries      *prometheus.CounterVec
+	dbQueryLatency *prometheus.HistogramVec
+
 	// Mutex for thread safety
-	mu                sync.RWMutex
+	mu sync.RWMutex
 }
 
 // NewMetricsCollector creates a new metrics collector
@@ -51,10 +51,10 @@ func NewMetricsCollector(logger *zap.Logger) *MetricsCollector {
 		logger:          logger,
 		systemStartTime: time.Now(),
 	}
-	
+
 	// Initialize Prometheus metrics
 	collector.initializeMetrics()
-	
+
 	return collector
 }
 
@@ -68,7 +68,7 @@ func (c *MetricsCollector) initializeMetrics() {
 		},
 		[]string{"symbol", "exchange"},
 	)
-	
+
 	c.marketDataLatency = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "market_data_latency_seconds",
@@ -77,7 +77,7 @@ func (c *MetricsCollector) initializeMetrics() {
 		},
 		[]string{"symbol", "exchange"},
 	)
-	
+
 	// Order metrics
 	c.ordersCreated = promauto.NewCounterVec(
 		prometheus.CounterOpts{
@@ -86,7 +86,7 @@ func (c *MetricsCollector) initializeMetrics() {
 		},
 		[]string{"symbol", "side", "type"},
 	)
-	
+
 	c.ordersFilled = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "orders_filled_total",
@@ -94,7 +94,7 @@ func (c *MetricsCollector) initializeMetrics() {
 		},
 		[]string{"symbol", "side", "type"},
 	)
-	
+
 	c.ordersCancelled = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "orders_cancelled_total",
@@ -102,7 +102,7 @@ func (c *MetricsCollector) initializeMetrics() {
 		},
 		[]string{"symbol", "side", "type"},
 	)
-	
+
 	c.ordersRejected = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "orders_rejected_total",
@@ -110,7 +110,7 @@ func (c *MetricsCollector) initializeMetrics() {
 		},
 		[]string{"symbol", "side", "type", "reason"},
 	)
-	
+
 	c.orderLatency = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "order_latency_seconds",
@@ -119,7 +119,7 @@ func (c *MetricsCollector) initializeMetrics() {
 		},
 		[]string{"symbol", "side", "type"},
 	)
-	
+
 	// WebSocket metrics
 	c.wsConnections = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -128,7 +128,7 @@ func (c *MetricsCollector) initializeMetrics() {
 		},
 		[]string{"type"},
 	)
-	
+
 	c.wsMessagesReceived = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "ws_messages_received_total",
@@ -136,7 +136,7 @@ func (c *MetricsCollector) initializeMetrics() {
 		},
 		[]string{"type", "channel"},
 	)
-	
+
 	c.wsMessagesSent = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "ws_messages_sent_total",
@@ -144,7 +144,7 @@ func (c *MetricsCollector) initializeMetrics() {
 		},
 		[]string{"type", "channel"},
 	)
-	
+
 	// Strategy metrics
 	c.strategyPnL = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -153,7 +153,7 @@ func (c *MetricsCollector) initializeMetrics() {
 		},
 		[]string{"strategy", "symbol"},
 	)
-	
+
 	c.strategyTrades = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "strategy_trades_total",
@@ -161,7 +161,7 @@ func (c *MetricsCollector) initializeMetrics() {
 		},
 		[]string{"strategy", "symbol", "side"},
 	)
-	
+
 	// Database metrics
 	c.dbQueries = promauto.NewCounterVec(
 		prometheus.CounterOpts{
@@ -170,7 +170,7 @@ func (c *MetricsCollector) initializeMetrics() {
 		},
 		[]string{"operation", "table"},
 	)
-	
+
 	c.dbQueryLatency = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "db_query_latency_seconds",
@@ -248,15 +248,15 @@ func (c *MetricsCollector) GetUptime() time.Duration {
 func (c *MetricsCollector) GetMetrics() map[string]interface{} {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	metrics := make(map[string]interface{})
-	
+
 	// System metrics
 	metrics["uptime"] = c.GetUptime().String()
-	
+
 	// Other metrics would be fetched from Prometheus
 	// This is just a placeholder for direct metrics access
-	
+
 	return metrics
 }
 
@@ -264,16 +264,16 @@ func (c *MetricsCollector) GetMetrics() map[string]interface{} {
 func (c *MetricsCollector) GinMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		start := time.Now()
-		
+
 		// Process request
 		ctx.Next()
-		
+
 		// Record metrics
 		duration := time.Since(start)
 		status := ctx.Writer.Status()
 		method := ctx.Request.Method
 		path := ctx.FullPath()
-		
+
 		// Record HTTP request metrics (you can add prometheus metrics here)
 		c.logger.Debug("HTTP request processed",
 			zap.String("method", method),

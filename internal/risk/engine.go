@@ -10,8 +10,6 @@ import (
 	"go.uber.org/zap"
 )
 
-
-
 // OrderRiskCheck represents risk parameters for an order
 type OrderRiskCheck struct {
 	UserID       string  `json:"user_id"`
@@ -26,16 +24,16 @@ type OrderRiskCheck struct {
 
 // RiskLimits represents risk limits for a user or symbol
 type RiskLimits struct {
-	UserID              string  `json:"user_id"`
-	Symbol              string  `json:"symbol,omitempty"`
-	MaxPositionSize     float64 `json:"max_position_size"`
-	MaxOrderSize        float64 `json:"max_order_size"`
-	MaxDailyVolume      float64 `json:"max_daily_volume"`
-	MaxDrawdown         float64 `json:"max_drawdown"`
-	MaxLeverage         float64 `json:"max_leverage"`
-	VaRLimit            float64 `json:"var_limit"`
-	ConcentrationLimit  float64 `json:"concentration_limit"`
-	LastUpdated         time.Time `json:"last_updated"`
+	UserID             string    `json:"user_id"`
+	Symbol             string    `json:"symbol,omitempty"`
+	MaxPositionSize    float64   `json:"max_position_size"`
+	MaxOrderSize       float64   `json:"max_order_size"`
+	MaxDailyVolume     float64   `json:"max_daily_volume"`
+	MaxDrawdown        float64   `json:"max_drawdown"`
+	MaxLeverage        float64   `json:"max_leverage"`
+	VaRLimit           float64   `json:"var_limit"`
+	ConcentrationLimit float64   `json:"concentration_limit"`
+	LastUpdated        time.Time `json:"last_updated"`
 }
 
 // PositionRisk represents position risk metrics
@@ -53,28 +51,28 @@ type PositionRisk struct {
 
 // RiskEngine handles real-time risk management
 type RiskEngine struct {
-	limits          map[string]*RiskLimits // userID -> limits
-	symbolLimits    map[string]*RiskLimits // symbol -> limits
-	positions       map[string]map[string]*PositionRisk // userID -> symbol -> risk
-	dailyVolumes    map[string]float64 // userID -> daily volume
-	logger          *zap.Logger
-	mu              sync.RWMutex
-	
+	limits       map[string]*RiskLimits              // userID -> limits
+	symbolLimits map[string]*RiskLimits              // symbol -> limits
+	positions    map[string]map[string]*PositionRisk // userID -> symbol -> risk
+	dailyVolumes map[string]float64                  // userID -> daily volume
+	logger       *zap.Logger
+	mu           sync.RWMutex
+
 	// Performance metrics
-	checkCount       int64
-	avgCheckTime     time.Duration
-	violationCount   int64
-	
+	checkCount     int64
+	avgCheckTime   time.Duration
+	violationCount int64
+
 	// Market data for risk calculations
-	marketPrices     map[string]float64 // symbol -> price
-	volatilities     map[string]float64 // symbol -> volatility
-	correlations     map[string]map[string]float64 // symbol -> symbol -> correlation
-	pricesMu         sync.RWMutex
-	
+	marketPrices map[string]float64            // symbol -> price
+	volatilities map[string]float64            // symbol -> volatility
+	correlations map[string]map[string]float64 // symbol -> symbol -> correlation
+	pricesMu     sync.RWMutex
+
 	// Configuration
-	varConfidence    float64 // VaR confidence level (e.g., 0.95)
-	varHorizon       int     // VaR time horizon in days
-	maxCheckTime     time.Duration
+	varConfidence float64 // VaR confidence level (e.g., 0.95)
+	varHorizon    int     // VaR time horizon in days
+	maxCheckTime  time.Duration
 }
 
 // NewRiskEngine creates a new risk engine
@@ -107,11 +105,11 @@ func (re *RiskEngine) CheckOrderRisk(ctx context.Context, order *OrderRiskCheck)
 	defer cancel()
 
 	result := &RiskCheckResult{
-		Passed:         true,
-		RiskLevel:      RiskLevelLow,
-		Violations:     make([]string, 0),
-		Warnings:       make([]string, 0),
-		CheckedAt:      time.Now(),
+		Passed:     true,
+		RiskLevel:  RiskLevelLow,
+		Violations: make([]string, 0),
+		Warnings:   make([]string, 0),
+		CheckedAt:  time.Now(),
 	}
 
 	// Check if context is cancelled
@@ -131,14 +129,14 @@ func (re *RiskEngine) CheckOrderRisk(ctx context.Context, order *OrderRiskCheck)
 
 	// Check order size limits
 	if hasUserLimits && order.Quantity > userLimits.MaxOrderSize {
-		result.Violations = append(result.Violations, 
+		result.Violations = append(result.Violations,
 			fmt.Sprintf("Order size %.2f exceeds limit %.2f", order.Quantity, userLimits.MaxOrderSize))
 		result.Passed = false
 		result.RiskLevel = RiskLevelHigh
 	}
 
 	if hasSymbolLimits && order.Quantity > symbolLimits.MaxOrderSize {
-		result.Violations = append(result.Violations, 
+		result.Violations = append(result.Violations,
 			fmt.Sprintf("Order size %.2f exceeds symbol limit %.2f", order.Quantity, symbolLimits.MaxOrderSize))
 		result.Passed = false
 		result.RiskLevel = RiskLevelHigh
@@ -147,7 +145,7 @@ func (re *RiskEngine) CheckOrderRisk(ctx context.Context, order *OrderRiskCheck)
 	// Check daily volume limits
 	newDailyVolume := dailyVolume + order.Value
 	if hasUserLimits && newDailyVolume > userLimits.MaxDailyVolume {
-		result.Violations = append(result.Violations, 
+		result.Violations = append(result.Violations,
 			fmt.Sprintf("Daily volume %.2f would exceed limit %.2f", newDailyVolume, userLimits.MaxDailyVolume))
 		result.Passed = false
 		result.RiskLevel = RiskLevelHigh
@@ -164,7 +162,7 @@ func (re *RiskEngine) CheckOrderRisk(ctx context.Context, order *OrderRiskCheck)
 			}
 
 			if hasUserLimits && math.Abs(newQuantity) > userLimits.MaxPositionSize {
-				result.Violations = append(result.Violations, 
+				result.Violations = append(result.Violations,
 					fmt.Sprintf("Position size %.2f would exceed limit %.2f", math.Abs(newQuantity), userLimits.MaxPositionSize))
 				result.Passed = false
 				result.RiskLevel = RiskLevelHigh
@@ -232,8 +230,8 @@ func (re *RiskEngine) checkConcentrationRisk(order *OrderRiskCheck, result *Risk
 	concentration := newSymbolValue / (totalValue + order.Value)
 
 	if concentration > userLimits.ConcentrationLimit {
-		result.Violations = append(result.Violations, 
-			fmt.Sprintf("Concentration %.2f%% would exceed limit %.2f%%", 
+		result.Violations = append(result.Violations,
+			fmt.Sprintf("Concentration %.2f%% would exceed limit %.2f%%",
 				concentration*100, userLimits.ConcentrationLimit*100))
 		result.Passed = false
 		if result.RiskLevel < RiskLevelMedium {
@@ -265,7 +263,7 @@ func (re *RiskEngine) checkVaRRisk(order *OrderRiskCheck, result *RiskCheckResul
 	re.pricesMu.RUnlock()
 
 	if orderVaR > userLimits.VaRLimit {
-		result.Violations = append(result.Violations, 
+		result.Violations = append(result.Violations,
 			fmt.Sprintf("Order VaR %.2f exceeds limit %.2f", orderVaR, userLimits.VaRLimit))
 		result.Passed = false
 		if result.RiskLevel < RiskLevelMedium {
@@ -298,10 +296,10 @@ func (re *RiskEngine) checkLeverageRisk(order *OrderRiskCheck, result *RiskCheck
 
 	// Add this order's exposure
 	totalExposure += order.Value
-	
+
 	leverage := totalExposure / totalEquity
 	if leverage > userLimits.MaxLeverage {
-		result.Violations = append(result.Violations, 
+		result.Violations = append(result.Violations,
 			fmt.Sprintf("Leverage %.2fx would exceed limit %.2fx", leverage, userLimits.MaxLeverage))
 		result.Passed = false
 		if result.RiskLevel < RiskLevelHigh {
@@ -395,7 +393,7 @@ func (re *RiskEngine) ResetDailyVolumes() {
 func (re *RiskEngine) GetUserLimits(userID string) (*RiskLimits, bool) {
 	re.mu.RLock()
 	defer re.mu.RUnlock()
-	
+
 	limits, exists := re.limits[userID]
 	return limits, exists
 }
@@ -411,14 +409,14 @@ func (re *RiskEngine) GetPerformanceMetrics() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"total_checks":        re.checkCount,
-		"total_violations":    re.violationCount,
-		"violation_rate":      violationRate,
-		"avg_check_time_ns":   re.avgCheckTime.Nanoseconds(),
-		"users_tracked":       len(re.limits),
-		"symbols_tracked":     len(re.symbolLimits),
-		"var_confidence":      re.varConfidence,
-		"var_horizon_days":    re.varHorizon,
+		"total_checks":      re.checkCount,
+		"total_violations":  re.violationCount,
+		"violation_rate":    violationRate,
+		"avg_check_time_ns": re.avgCheckTime.Nanoseconds(),
+		"users_tracked":     len(re.limits),
+		"symbols_tracked":   len(re.symbolLimits),
+		"var_confidence":    re.varConfidence,
+		"var_horizon_days":  re.varHorizon,
 	}
 }
 
@@ -428,7 +426,7 @@ func (re *RiskEngine) GetRiskSummary(userID string) map[string]interface{} {
 	defer re.mu.RUnlock()
 
 	summary := map[string]interface{}{
-		"user_id": userID,
+		"user_id":      userID,
 		"daily_volume": re.dailyVolumes[userID],
 	}
 
@@ -438,7 +436,7 @@ func (re *RiskEngine) GetRiskSummary(userID string) map[string]interface{} {
 
 	if positions, exists := re.positions[userID]; exists {
 		summary["positions"] = positions
-		
+
 		// Calculate aggregate risk metrics
 		totalValue := 0.0
 		totalVaR := 0.0

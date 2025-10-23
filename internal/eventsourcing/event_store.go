@@ -302,4 +302,3 @@ var ErrConcurrencyConflict = errors.New("concurrency conflict")
 
 // ErrSnapshotNotFound is returned when a snapshot is not found
 var ErrSnapshotNotFound = errors.New("snapshot not found")
-

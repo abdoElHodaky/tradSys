@@ -8,8 +8,8 @@ import (
 
 	"github.com/abdoElHodaky/tradSys/internal/core/matching"
 	"github.com/google/uuid"
-	"go.uber.org/zap"
 	cache "github.com/patrickmn/go-cache"
+	"go.uber.org/zap"
 )
 
 // OrderStatus represents the status of an order
@@ -255,23 +255,23 @@ type orderOperationResult struct {
 // NewService creates a new order management service
 func NewService(engine *order_matching.Engine, logger *zap.Logger) *Service {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	service := &Service{
-		Engine:        engine,
-		Orders:        make(map[string]*Order),
-		UserOrders:    make(map[string]map[string]bool),
-		SymbolOrders:  make(map[string]map[string]bool),
+		Engine:         engine,
+		Orders:         make(map[string]*Order),
+		UserOrders:     make(map[string]map[string]bool),
+		SymbolOrders:   make(map[string]map[string]bool),
 		ClientOrderIDs: make(map[string]string),
-		OrderCache:    cache.New(5*time.Minute, 10*time.Minute),
-		logger:        logger,
-		ctx:           ctx,
-		cancel:        cancel,
+		OrderCache:     cache.New(5*time.Minute, 10*time.Minute),
+		logger:         logger,
+		ctx:            ctx,
+		cancel:         cancel,
 		orderBatchChan: make(chan orderOperation, 1000),
 	}
 
 	// Start order expiry checker
 	go service.checkOrderExpiry()
-	
+
 	// Start batch processor
 	go service.processBatchOperations()
 
@@ -282,16 +282,16 @@ func NewService(engine *order_matching.Engine, logger *zap.Logger) *Service {
 func (s *Service) processBatchOperations() {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
-	
+
 	batch := make([]orderOperation, 0, 100)
-	
+
 	for {
 		select {
 		case <-s.ctx.Done():
 			return
 		case op := <-s.orderBatchChan:
 			batch = append(batch, op)
-			
+
 			// Process batch if it's full
 			if len(batch) >= 100 {
 				s.processBatch(batch)
@@ -313,7 +313,7 @@ func (s *Service) processBatch(batch []orderOperation) {
 	addOps := make([]orderOperation, 0)
 	updateOps := make([]orderOperation, 0)
 	cancelOps := make([]orderOperation, 0)
-	
+
 	for _, op := range batch {
 		switch op.opType {
 		case "add":
@@ -324,17 +324,17 @@ func (s *Service) processBatch(batch []orderOperation) {
 			cancelOps = append(cancelOps, op)
 		}
 	}
-	
+
 	// Process add operations
 	if len(addOps) > 0 {
 		s.processAddBatch(addOps)
 	}
-	
+
 	// Process update operations
 	if len(updateOps) > 0 {
 		s.processUpdateBatch(updateOps)
 	}
-	
+
 	// Process cancel operations
 	if len(cancelOps) > 0 {
 		s.processCancelBatch(cancelOps)
@@ -345,36 +345,36 @@ func (s *Service) processBatch(batch []orderOperation) {
 func (s *Service) processAddBatch(ops []orderOperation) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	for _, op := range ops {
 		order := op.order
-		
+
 		// Add order to maps
 		s.Orders[order.ID] = order
-		
+
 		// Add to user orders
 		if _, exists := s.UserOrders[order.UserID]; !exists {
 			s.UserOrders[order.UserID] = make(map[string]bool)
 		}
 		s.UserOrders[order.UserID][order.ID] = true
-		
+
 		// Add to symbol orders
 		if _, exists := s.SymbolOrders[order.Symbol]; !exists {
 			s.SymbolOrders[order.Symbol] = make(map[string]bool)
 		}
 		s.SymbolOrders[order.Symbol][order.ID] = true
-		
+
 		// Add to client order IDs
 		if order.ClientOrderID != "" {
 			s.ClientOrderIDs[order.ClientOrderID] = order.ID
 		}
-		
+
 		// Add to cache
 		s.OrderCache.Set(order.ID, order, cache.DefaultExpiration)
 		if order.ClientOrderID != "" {
 			s.OrderCache.Set("client:"+order.ClientOrderID, order.ID, cache.DefaultExpiration)
 		}
-		
+
 		// Send result
 		op.resultCh <- orderOperationResult{order: order, err: nil}
 	}
@@ -384,16 +384,16 @@ func (s *Service) processAddBatch(ops []orderOperation) {
 func (s *Service) processUpdateBatch(ops []orderOperation) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	for _, op := range ops {
 		order := op.order
-		
+
 		// Update order in maps
 		s.Orders[order.ID] = order
-		
+
 		// Update in cache
 		s.OrderCache.Set(order.ID, order, cache.DefaultExpiration)
-		
+
 		// Send result
 		op.resultCh <- orderOperationResult{order: order, err: nil}
 	}
@@ -403,23 +403,23 @@ func (s *Service) processUpdateBatch(ops []orderOperation) {
 func (s *Service) processCancelBatch(ops []orderOperation) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	for _, op := range ops {
 		orderID := op.requestID
 		order, exists := s.Orders[orderID]
-		
+
 		if !exists {
 			op.resultCh <- orderOperationResult{order: nil, err: ErrOrderNotFound}
 			continue
 		}
-		
+
 		// Update order status
 		order.Status = OrderStatusCancelled
 		order.UpdatedAt = time.Now()
-		
+
 		// Update in cache
 		s.OrderCache.Set(order.ID, order, cache.DefaultExpiration)
-		
+
 		// Send result
 		op.resultCh <- orderOperationResult{order: order, err: nil}
 	}
@@ -438,7 +438,7 @@ func (s *Service) PlaceOrder(ctx context.Context, request *OrderRequest) (*Order
 		if _, found := s.OrderCache.Get("client:" + request.ClientOrderID); found {
 			return nil, ErrDuplicateClientOrderID
 		}
-		
+
 		s.mu.RLock()
 		_, exists := s.ClientOrderIDs[request.ClientOrderID]
 		s.mu.RUnlock()
@@ -474,7 +474,7 @@ func (s *Service) PlaceOrder(ctx context.Context, request *OrderRequest) (*Order
 		now := time.Now()
 		order.ExpiresAt = time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 999999999, now.Location())
 	}
-	
+
 	// Use batch processing for better performance
 	resultCh := make(chan orderOperationResult, 1)
 	s.orderBatchChan <- orderOperation{
@@ -483,13 +483,13 @@ func (s *Service) PlaceOrder(ctx context.Context, request *OrderRequest) (*Order
 		requestID: order.ID,
 		resultCh:  resultCh,
 	}
-	
+
 	// Wait for result
 	result := <-resultCh
 	if result.err != nil {
 		return nil, result.err
 	}
-	
+
 	// Add to cache
 	s.OrderCache.Set(order.ID, order, cache.DefaultExpiration)
 	if order.ClientOrderID != "" {
@@ -498,20 +498,20 @@ func (s *Service) PlaceOrder(ctx context.Context, request *OrderRequest) (*Order
 
 	// Place order in matching engine
 	engineOrder := &order_matching.Order{
-		ID:            order.ID,
-		Symbol:        order.Symbol,
-		Side:          order_matching.OrderSide(order.Side),
-		Type:          order_matching.OrderType(order.Type),
-		Price:         order.Price,
-		Quantity:      order.Quantity,
+		ID:             order.ID,
+		Symbol:         order.Symbol,
+		Side:           order_matching.OrderSide(order.Side),
+		Type:           order_matching.OrderType(order.Type),
+		Price:          order.Price,
+		Quantity:       order.Quantity,
 		FilledQuantity: 0,
-		Status:        order_matching.OrderStatus(order.Status),
-		CreatedAt:     order.CreatedAt,
-		UpdatedAt:     order.UpdatedAt,
-		ClientOrderID: order.ClientOrderID,
-		UserID:        order.UserID,
-		StopPrice:     order.StopPrice,
-		TimeInForce:   string(order.TimeInForce),
+		Status:         order_matching.OrderStatus(order.Status),
+		CreatedAt:      order.CreatedAt,
+		UpdatedAt:      order.UpdatedAt,
+		ClientOrderID:  order.ClientOrderID,
+		UserID:         order.UserID,
+		StopPrice:      order.StopPrice,
+		TimeInForce:    string(order.TimeInForce),
 	}
 
 	// Handle immediate-or-cancel and fill-or-kill orders
@@ -540,22 +540,22 @@ func (s *Service) PlaceOrder(ctx context.Context, request *OrderRequest) (*Order
 		// Add trades to order
 		for _, trade := range trades {
 			orderTrade := &Trade{
-				ID:                trade.ID,
-				OrderID:           order.ID,
-				Symbol:            trade.Symbol,
-				Side:              OrderSide(trade.TakerSide),
-				Price:             trade.Price,
-				Quantity:          trade.Quantity,
-				ExecutedAt:        trade.Timestamp,
-				Fee:               trade.TakerFee,
-				FeeCurrency:       order.Symbol,
+				ID:          trade.ID,
+				OrderID:     order.ID,
+				Symbol:      trade.Symbol,
+				Side:        OrderSide(trade.TakerSide),
+				Price:       trade.Price,
+				Quantity:    trade.Quantity,
+				ExecutedAt:  trade.Timestamp,
+				Fee:         trade.TakerFee,
+				FeeCurrency: order.Symbol,
 				CounterPartyOrderID: func() string {
 					if trade.MakerSide == order_matching.OrderSide(order.Side) {
 						return trade.BuyOrderID
 					}
 					return trade.SellOrderID
 				}(),
-				Metadata:          make(map[string]interface{}),
+				Metadata: make(map[string]interface{}),
 			}
 			order.Trades = append(order.Trades, orderTrade)
 		}
@@ -600,22 +600,22 @@ func (s *Service) PlaceOrder(ctx context.Context, request *OrderRequest) (*Order
 	// Add trades to order
 	for _, trade := range trades {
 		orderTrade := &Trade{
-			ID:                trade.ID,
-			OrderID:           order.ID,
-			Symbol:            trade.Symbol,
-			Side:              OrderSide(trade.TakerSide),
-			Price:             trade.Price,
-			Quantity:          trade.Quantity,
-			ExecutedAt:        trade.Timestamp,
-			Fee:               trade.TakerFee,
-			FeeCurrency:       order.Symbol,
+			ID:          trade.ID,
+			OrderID:     order.ID,
+			Symbol:      trade.Symbol,
+			Side:        OrderSide(trade.TakerSide),
+			Price:       trade.Price,
+			Quantity:    trade.Quantity,
+			ExecutedAt:  trade.Timestamp,
+			Fee:         trade.TakerFee,
+			FeeCurrency: order.Symbol,
 			CounterPartyOrderID: func() string {
 				if trade.MakerSide == order_matching.OrderSide(order.Side) {
 					return trade.BuyOrderID
 				}
 				return trade.SellOrderID
 			}(),
-			Metadata:          make(map[string]interface{}),
+			Metadata: make(map[string]interface{}),
 		}
 		order.Trades = append(order.Trades, orderTrade)
 	}
@@ -681,16 +681,16 @@ func (s *Service) GetOrder(ctx context.Context, orderID string) (*Order, error) 
 	if cachedOrder, found := s.OrderCache.Get(orderID); found {
 		return cachedOrder.(*Order), nil
 	}
-	
+
 	// If not in cache, check the map
 	s.mu.RLock()
 	order, exists := s.Orders[orderID]
 	s.mu.RUnlock()
-	
+
 	if !exists {
 		return nil, ErrOrderNotFound
 	}
-	
+
 	// Add to cache for future requests
 	s.OrderCache.Set(orderID, order, cache.DefaultExpiration)
 
@@ -706,7 +706,7 @@ func (s *Service) GetOrderByClientOrderID(ctx context.Context, clientOrderID str
 			return cachedOrder.(*Order), nil
 		}
 	}
-	
+
 	// If not in cache, check the maps
 	s.mu.RLock()
 	orderID, exists := s.ClientOrderIDs[clientOrderID]
@@ -720,7 +720,7 @@ func (s *Service) GetOrderByClientOrderID(ctx context.Context, clientOrderID str
 	if !exists {
 		return nil, ErrOrderNotFound
 	}
-	
+
 	// Add to cache for future requests
 	s.OrderCache.Set(orderID, order, cache.DefaultExpiration)
 	s.OrderCache.Set("client:"+clientOrderID, orderID, cache.DefaultExpiration)
@@ -735,27 +735,27 @@ func (s *Service) GetOrders(ctx context.Context, filter *OrderFilter) ([]*Order,
 
 	// Get order IDs
 	orderIDs := make(map[string]bool)
-	
+
 	// Filter by user ID
 	if filter.UserID != "" {
 		userOrders, exists := s.UserOrders[filter.UserID]
 		if !exists {
 			return []*Order{}, nil
 		}
-		
+
 		// Add user orders to order IDs
 		for orderID := range userOrders {
 			orderIDs[orderID] = true
 		}
 	}
-	
+
 	// Filter by symbol
 	if filter.Symbol != "" {
 		symbolOrders, exists := s.SymbolOrders[filter.Symbol]
 		if !exists {
 			return []*Order{}, nil
 		}
-		
+
 		// If user ID filter is applied, intersect with symbol orders
 		if filter.UserID != "" {
 			for orderID := range orderIDs {
@@ -770,47 +770,47 @@ func (s *Service) GetOrders(ctx context.Context, filter *OrderFilter) ([]*Order,
 			}
 		}
 	}
-	
+
 	// If no filters applied, get all orders
 	if filter.UserID == "" && filter.Symbol == "" {
 		for orderID := range s.Orders {
 			orderIDs[orderID] = true
 		}
 	}
-	
+
 	// Get orders
 	orders := make([]*Order, 0, len(orderIDs))
 	for orderID := range orderIDs {
 		order := s.Orders[orderID]
-		
+
 		// Filter by side
 		if filter.Side != "" && order.Side != filter.Side {
 			continue
 		}
-		
+
 		// Filter by type
 		if filter.Type != "" && order.Type != filter.Type {
 			continue
 		}
-		
+
 		// Filter by status
 		if filter.Status != "" && order.Status != filter.Status {
 			continue
 		}
-		
+
 		// Filter by start time
 		if !filter.StartTime.IsZero() && order.CreatedAt.Before(filter.StartTime) {
 			continue
 		}
-		
+
 		// Filter by end time
 		if !filter.EndTime.IsZero() && order.CreatedAt.After(filter.EndTime) {
 			continue
 		}
-		
+
 		orders = append(orders, order)
 	}
-	
+
 	return orders, nil
 }
 
@@ -858,32 +858,32 @@ func (s *Service) UpdateOrder(ctx context.Context, request *OrderUpdateRequest) 
 
 	// Update order
 	s.mu.Lock()
-	
+
 	// Update price if provided
 	if request.Price > 0 {
 		order.Price = request.Price
 	}
-	
+
 	// Update stop price if provided
 	if request.StopPrice > 0 {
 		order.StopPrice = request.StopPrice
 	}
-	
+
 	// Update quantity if provided
 	if request.Quantity > 0 {
 		order.Quantity = request.Quantity
 	}
-	
+
 	// Update time in force if provided
 	if request.TimeInForce != "" {
 		order.TimeInForce = request.TimeInForce
 	}
-	
+
 	// Update expires at if provided
 	if !request.ExpiresAt.IsZero() {
 		order.ExpiresAt = request.ExpiresAt
 	}
-	
+
 	// Update status and timestamp
 	order.Status = OrderStatusNew
 	order.UpdatedAt = time.Now()
@@ -891,20 +891,20 @@ func (s *Service) UpdateOrder(ctx context.Context, request *OrderUpdateRequest) 
 
 	// Place updated order in matching engine
 	engineOrder := &order_matching.Order{
-		ID:            order.ID,
-		Symbol:        order.Symbol,
-		Side:          order_matching.OrderSide(order.Side),
-		Type:          order_matching.OrderType(order.Type),
-		Price:         order.Price,
-		Quantity:      order.Quantity,
+		ID:             order.ID,
+		Symbol:         order.Symbol,
+		Side:           order_matching.OrderSide(order.Side),
+		Type:           order_matching.OrderType(order.Type),
+		Price:          order.Price,
+		Quantity:       order.Quantity,
 		FilledQuantity: order.FilledQuantity,
-		Status:        order_matching.OrderStatus(order.Status),
-		CreatedAt:     order.CreatedAt,
-		UpdatedAt:     order.UpdatedAt,
-		ClientOrderID: order.ClientOrderID,
-		UserID:        order.UserID,
-		StopPrice:     order.StopPrice,
-		TimeInForce:   string(order.TimeInForce),
+		Status:         order_matching.OrderStatus(order.Status),
+		CreatedAt:      order.CreatedAt,
+		UpdatedAt:      order.UpdatedAt,
+		ClientOrderID:  order.ClientOrderID,
+		UserID:         order.UserID,
+		StopPrice:      order.StopPrice,
+		TimeInForce:    string(order.TimeInForce),
 	}
 
 	// Place order in matching engine
@@ -922,22 +922,22 @@ func (s *Service) UpdateOrder(ctx context.Context, request *OrderUpdateRequest) 
 	// Add trades to order
 	for _, trade := range trades {
 		orderTrade := &Trade{
-			ID:                trade.ID,
-			OrderID:           order.ID,
-			Symbol:            trade.Symbol,
-			Side:              OrderSide(trade.TakerSide),
-			Price:             trade.Price,
-			Quantity:          trade.Quantity,
-			ExecutedAt:        trade.Timestamp,
-			Fee:               trade.TakerFee,
-			FeeCurrency:       order.Symbol,
+			ID:          trade.ID,
+			OrderID:     order.ID,
+			Symbol:      trade.Symbol,
+			Side:        OrderSide(trade.TakerSide),
+			Price:       trade.Price,
+			Quantity:    trade.Quantity,
+			ExecutedAt:  trade.Timestamp,
+			Fee:         trade.TakerFee,
+			FeeCurrency: order.Symbol,
 			CounterPartyOrderID: func() string {
 				if trade.MakerSide == order_matching.OrderSide(order.Side) {
 					return trade.BuyOrderID
 				}
 				return trade.SellOrderID
 			}(),
-			Metadata:          make(map[string]interface{}),
+			Metadata: make(map[string]interface{}),
 		}
 		order.Trades = append(order.Trades, orderTrade)
 	}
@@ -996,7 +996,7 @@ func (s *Service) checkOrderExpiry() {
 			return
 		case <-ticker.C:
 			now := time.Now()
-			
+
 			// Get expired orders
 			s.mu.RLock()
 			expiredOrders := make([]*Order, 0)
@@ -1006,7 +1006,7 @@ func (s *Service) checkOrderExpiry() {
 				}
 			}
 			s.mu.RUnlock()
-			
+
 			// Process in batches for better performance
 			if len(expiredOrders) > 0 {
 				batchSize := 100
@@ -1015,7 +1015,7 @@ func (s *Service) checkOrderExpiry() {
 					if end > len(expiredOrders) {
 						end = len(expiredOrders)
 					}
-					
+
 					batch := expiredOrders[i:end]
 					s.processExpiredOrdersBatch(batch, now)
 				}
@@ -1029,12 +1029,12 @@ func (s *Service) processExpiredOrdersBatch(orders []*Order, now time.Time) {
 	// Create a wait group for concurrent processing
 	var wg sync.WaitGroup
 	wg.Add(len(orders))
-	
+
 	// Process orders concurrently
 	for _, order := range orders {
 		go func(order *Order) {
 			defer wg.Done()
-			
+
 			// Cancel order in matching engine
 			err := s.Engine.CancelOrder(order.Symbol, order.ID)
 			if err != nil {
@@ -1043,29 +1043,29 @@ func (s *Service) processExpiredOrdersBatch(orders []*Order, now time.Time) {
 					zap.Error(err))
 				return
 			}
-			
+
 			// Update order status using batch operation
 			resultCh := make(chan orderOperationResult, 1)
 			order.Status = OrderStatusExpired
 			order.UpdatedAt = now
-			
+
 			s.orderBatchChan <- orderOperation{
 				opType:    "update",
 				order:     order,
 				requestID: order.ID,
 				resultCh:  resultCh,
 			}
-			
+
 			// Wait for result
 			<-resultCh
-			
+
 			s.logger.Info("Order expired",
 				zap.String("order_id", order.ID),
 				zap.String("symbol", order.Symbol),
 				zap.String("user_id", order.UserID))
 		}(order)
 	}
-	
+
 	// Wait for all orders to be processed
 	wg.Wait()
 }

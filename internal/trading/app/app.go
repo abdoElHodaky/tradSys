@@ -13,8 +13,8 @@ import (
 
 // App represents the HFT application
 type App struct {
-	router *gin.Engine
-	server *http.Server
+	router  *gin.Engine
+	server  *http.Server
 	metrics *Metrics
 }
 
@@ -32,7 +32,7 @@ func New() *App {
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 	metrics := initMetrics()
-	
+
 	return &App{
 		router:  router,
 		metrics: metrics,
@@ -48,7 +48,7 @@ func initMetrics() *Metrics {
 		},
 		[]string{"symbol", "side", "type"},
 	)
-	
+
 	ordersProcessed := *prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "trading_orders_processed_total",
@@ -56,7 +56,7 @@ func initMetrics() *Metrics {
 		},
 		[]string{"symbol", "side", "status"},
 	)
-	
+
 	responseTime := *prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name: "trading_response_time_seconds",
@@ -64,7 +64,7 @@ func initMetrics() *Metrics {
 		},
 		[]string{"operation"},
 	)
-	
+
 	activeOrders := *prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "trading_active_orders",
@@ -72,13 +72,13 @@ func initMetrics() *Metrics {
 		},
 		[]string{"symbol"},
 	)
-	
+
 	// Register metrics
 	prometheus.MustRegister(&ordersTotal)
 	prometheus.MustRegister(&ordersProcessed)
 	prometheus.MustRegister(&responseTime)
 	prometheus.MustRegister(&activeOrders)
-	
+
 	return &Metrics{
 		OrdersTotal:     ordersTotal,
 		OrdersProcessed: ordersProcessed,
@@ -91,11 +91,11 @@ func initMetrics() *Metrics {
 func (a *App) SetupRoutes() {
 	a.router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"status": "healthy",
+			"status":    "healthy",
 			"timestamp": time.Now(),
 		})
 	})
-	
+
 	// Prometheus metrics endpoint
 	a.router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 }
@@ -106,7 +106,7 @@ func (a *App) Start(port string) error {
 		Addr:    ":" + port,
 		Handler: a.router,
 	}
-	
+
 	log.Printf("Starting HFT server on port %s", port)
 	return a.server.ListenAndServe()
 }

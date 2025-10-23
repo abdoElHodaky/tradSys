@@ -12,52 +12,52 @@ import (
 type CircuitBreakerState string
 
 const (
-	CircuitBreakerClosed    CircuitBreakerState = "closed"    // Normal operation
-	CircuitBreakerOpen      CircuitBreakerState = "open"      // Trading halted
-	CircuitBreakerHalfOpen  CircuitBreakerState = "half_open" // Testing recovery
+	CircuitBreakerClosed   CircuitBreakerState = "closed"    // Normal operation
+	CircuitBreakerOpen     CircuitBreakerState = "open"      // Trading halted
+	CircuitBreakerHalfOpen CircuitBreakerState = "half_open" // Testing recovery
 )
 
 // HaltReason represents the reason for a trading halt
 type HaltReason string
 
 const (
-	HaltReasonVolatility     HaltReason = "volatility"
-	HaltReasonVolume         HaltReason = "volume"
-	HaltReasonPriceMove      HaltReason = "price_move"
-	HaltReasonRiskLimit      HaltReason = "risk_limit"
-	HaltReasonSystemError    HaltReason = "system_error"
-	HaltReasonManual         HaltReason = "manual"
-	HaltReasonRegulatory     HaltReason = "regulatory"
+	HaltReasonVolatility  HaltReason = "volatility"
+	HaltReasonVolume      HaltReason = "volume"
+	HaltReasonPriceMove   HaltReason = "price_move"
+	HaltReasonRiskLimit   HaltReason = "risk_limit"
+	HaltReasonSystemError HaltReason = "system_error"
+	HaltReasonManual      HaltReason = "manual"
+	HaltReasonRegulatory  HaltReason = "regulatory"
 )
 
 // CircuitBreakerConfig represents configuration for a circuit breaker
 type CircuitBreakerConfig struct {
-	Symbol                string        `json:"symbol"`
-	MaxVolatility         float64       `json:"max_volatility"`          // Maximum allowed volatility
-	MaxPriceMove          float64       `json:"max_price_move"`          // Maximum price move percentage
-	MaxVolumeSpike        float64       `json:"max_volume_spike"`        // Maximum volume spike multiplier
-	MinRecoveryTime       time.Duration `json:"min_recovery_time"`       // Minimum time before recovery attempt
-	MaxRecoveryTime       time.Duration `json:"max_recovery_time"`       // Maximum time in open state
-	VolatilityWindow      time.Duration `json:"volatility_window"`       // Time window for volatility calculation
-	PriceMoveWindow       time.Duration `json:"price_move_window"`       // Time window for price move calculation
-	VolumeWindow          time.Duration `json:"volume_window"`           // Time window for volume calculation
-	RecoveryTestOrders    int           `json:"recovery_test_orders"`    // Number of test orders in half-open state
-	Enabled               bool          `json:"enabled"`
+	Symbol             string        `json:"symbol"`
+	MaxVolatility      float64       `json:"max_volatility"`       // Maximum allowed volatility
+	MaxPriceMove       float64       `json:"max_price_move"`       // Maximum price move percentage
+	MaxVolumeSpike     float64       `json:"max_volume_spike"`     // Maximum volume spike multiplier
+	MinRecoveryTime    time.Duration `json:"min_recovery_time"`    // Minimum time before recovery attempt
+	MaxRecoveryTime    time.Duration `json:"max_recovery_time"`    // Maximum time in open state
+	VolatilityWindow   time.Duration `json:"volatility_window"`    // Time window for volatility calculation
+	PriceMoveWindow    time.Duration `json:"price_move_window"`    // Time window for price move calculation
+	VolumeWindow       time.Duration `json:"volume_window"`        // Time window for volume calculation
+	RecoveryTestOrders int           `json:"recovery_test_orders"` // Number of test orders in half-open state
+	Enabled            bool          `json:"enabled"`
 }
 
 // CircuitBreakerStatus represents the current status of a circuit breaker
 type CircuitBreakerStatus struct {
-	Symbol           string              `json:"symbol"`
-	State            CircuitBreakerState `json:"state"`
-	HaltReason       HaltReason          `json:"halt_reason,omitempty"`
-	HaltedAt         *time.Time          `json:"halted_at,omitempty"`
-	ResumedAt        *time.Time          `json:"resumed_at,omitempty"`
-	HaltCount        int                 `json:"halt_count"`
-	LastHaltDuration time.Duration       `json:"last_halt_duration"`
-	CurrentVolatility float64            `json:"current_volatility"`
-	CurrentPriceMove  float64            `json:"current_price_move"`
-	CurrentVolumeSpike float64           `json:"current_volume_spike"`
-	TestOrderCount    int                `json:"test_order_count"`
+	Symbol             string              `json:"symbol"`
+	State              CircuitBreakerState `json:"state"`
+	HaltReason         HaltReason          `json:"halt_reason,omitempty"`
+	HaltedAt           *time.Time          `json:"halted_at,omitempty"`
+	ResumedAt          *time.Time          `json:"resumed_at,omitempty"`
+	HaltCount          int                 `json:"halt_count"`
+	LastHaltDuration   time.Duration       `json:"last_halt_duration"`
+	CurrentVolatility  float64             `json:"current_volatility"`
+	CurrentPriceMove   float64             `json:"current_price_move"`
+	CurrentVolumeSpike float64             `json:"current_volume_spike"`
+	TestOrderCount     int                 `json:"test_order_count"`
 }
 
 // PriceData represents price data for circuit breaker calculations
@@ -70,20 +70,20 @@ type PriceData struct {
 
 // CircuitBreakerSystem manages circuit breakers for trading halts
 type CircuitBreakerSystem struct {
-	breakers    map[string]*CircuitBreakerStatus
-	configs     map[string]*CircuitBreakerConfig
-	priceData   map[string][]*PriceData // symbol -> price history
-	logger      *zap.Logger
-	mu          sync.RWMutex
-	
+	breakers  map[string]*CircuitBreakerStatus
+	configs   map[string]*CircuitBreakerConfig
+	priceData map[string][]*PriceData // symbol -> price history
+	logger    *zap.Logger
+	mu        sync.RWMutex
+
 	// Performance metrics
 	haltCount       int64
 	resumeCount     int64
 	avgHaltDuration time.Duration
-	
+
 	// Global circuit breaker
-	globalHalt      bool
-	globalHaltTime  *time.Time
+	globalHalt       bool
+	globalHaltTime   *time.Time
 	globalHaltReason HaltReason
 }
 
@@ -159,7 +159,7 @@ func (cbs *CircuitBreakerSystem) cleanOldPriceData(symbol string) {
 
 	cutoff := time.Now().Add(-maxWindow)
 	priceHistory := cbs.priceData[symbol]
-	
+
 	// Find the first index to keep
 	keepIndex := 0
 	for i, data := range priceHistory {
@@ -188,7 +188,7 @@ func (cbs *CircuitBreakerSystem) checkCircuitBreakerConditions(symbol string, co
 	volatility := cbs.calculateVolatility(symbol, config.VolatilityWindow)
 	breaker.CurrentVolatility = volatility
 	if volatility > config.MaxVolatility {
-		return cbs.triggerCircuitBreaker(symbol, HaltReasonVolatility, 
+		return cbs.triggerCircuitBreaker(symbol, HaltReasonVolatility,
 			fmt.Sprintf("Volatility %.4f exceeds limit %.4f", volatility, config.MaxVolatility))
 	}
 
@@ -523,11 +523,11 @@ func (cbs *CircuitBreakerSystem) GetPerformanceMetrics() map[string]interface{} 
 	defer cbs.mu.RUnlock()
 
 	return map[string]interface{}{
-		"total_halts":         cbs.haltCount,
-		"total_resumes":       cbs.resumeCount,
-		"avg_halt_duration":   cbs.avgHaltDuration.String(),
-		"active_breakers":     len(cbs.breakers),
-		"global_halt":         cbs.globalHalt,
-		"global_halt_reason":  string(cbs.globalHaltReason),
+		"total_halts":        cbs.haltCount,
+		"total_resumes":      cbs.resumeCount,
+		"avg_halt_duration":  cbs.avgHaltDuration.String(),
+		"active_breakers":    len(cbs.breakers),
+		"global_halt":        cbs.globalHalt,
+		"global_halt_reason": string(cbs.globalHaltReason),
 	}
 }

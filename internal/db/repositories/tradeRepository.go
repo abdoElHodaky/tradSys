@@ -56,8 +56,8 @@ func (r *TradeRepository) GetTradesByOrderID(ctx context.Context, orderID string
 		Order("executed_at DESC").
 		Find(&trades)
 	if result.Error != nil {
-		r.logger.Error("Failed to get trades by order ID", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to get trades by order ID",
+			zap.Error(result.Error),
 			zap.String("order_id", orderID))
 		return nil, result.Error
 	}
@@ -74,8 +74,8 @@ func (r *TradeRepository) GetTradesBySymbol(ctx context.Context, symbol string, 
 		Offset(offset).
 		Find(&trades)
 	if result.Error != nil {
-		r.logger.Error("Failed to get trades by symbol", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to get trades by symbol",
+			zap.Error(result.Error),
 			zap.String("symbol", symbol))
 		return nil, result.Error
 	}
@@ -90,8 +90,8 @@ func (r *TradeRepository) GetTradesByTimeRange(ctx context.Context, symbol strin
 		Order("executed_at ASC").
 		Find(&trades)
 	if result.Error != nil {
-		r.logger.Error("Failed to get trades by time range", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to get trades by time range",
+			zap.Error(result.Error),
 			zap.String("symbol", symbol),
 			zap.Time("start", start),
 			zap.Time("end", end))
@@ -105,8 +105,8 @@ func (r *TradeRepository) BatchCreate(ctx context.Context, trades []*db.Trade) e
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		for _, trade := range trades {
 			if err := tx.Create(trade).Error; err != nil {
-				r.logger.Error("Failed to create trade in batch", 
-					zap.Error(err), 
+				r.logger.Error("Failed to create trade in batch",
+					zap.Error(err),
 					zap.String("trade_id", trade.ID))
 				return err
 			}
@@ -123,8 +123,8 @@ func (r *TradeRepository) GetVolumeBySymbol(ctx context.Context, symbol string, 
 		Where("symbol = ? AND executed_at BETWEEN ? AND ?", symbol, start, end).
 		Scan(&volume)
 	if result.Error != nil {
-		r.logger.Error("Failed to get volume by symbol", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to get volume by symbol",
+			zap.Error(result.Error),
 			zap.String("symbol", symbol),
 			zap.Time("start", start),
 			zap.Time("end", end))
@@ -141,60 +141,59 @@ func (r *TradeRepository) GetOHLCBySymbol(ctx context.Context, symbol string, st
 		Low   float64
 		Close float64
 	}
-	
+
 	var ohlc OHLC
-	
+
 	// Get the first trade for open price
 	var firstTrade db.Trade
 	if err := r.db.WithContext(ctx).
 		Where("symbol = ? AND executed_at BETWEEN ? AND ?", symbol, start, end).
 		Order("executed_at ASC").
 		First(&firstTrade).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		r.logger.Error("Failed to get first trade for OHLC", 
-			zap.Error(err), 
+		r.logger.Error("Failed to get first trade for OHLC",
+			zap.Error(err),
 			zap.String("symbol", symbol))
 		return 0, 0, 0, 0, err
 	}
-	
+
 	if firstTrade.ID != "" {
 		ohlc.Open = firstTrade.Price
 	}
-	
+
 	// Get the last trade for close price
 	var lastTrade db.Trade
 	if err := r.db.WithContext(ctx).
 		Where("symbol = ? AND executed_at BETWEEN ? AND ?", symbol, start, end).
 		Order("executed_at DESC").
 		First(&lastTrade).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		r.logger.Error("Failed to get last trade for OHLC", 
-			zap.Error(err), 
+		r.logger.Error("Failed to get last trade for OHLC",
+			zap.Error(err),
 			zap.String("symbol", symbol))
 		return 0, 0, 0, 0, err
 	}
-	
+
 	if lastTrade.ID != "" {
 		ohlc.Close = lastTrade.Price
 	}
-	
+
 	// Get high and low prices
 	var highLow struct {
 		High float64
 		Low  float64
 	}
-	
+
 	if err := r.db.WithContext(ctx).Model(&db.Trade{}).
 		Select("COALESCE(MAX(price), 0) as high, COALESCE(MIN(price), 0) as low").
 		Where("symbol = ? AND executed_at BETWEEN ? AND ?", symbol, start, end).
 		Scan(&highLow).Error; err != nil {
-		r.logger.Error("Failed to get high/low for OHLC", 
-			zap.Error(err), 
+		r.logger.Error("Failed to get high/low for OHLC",
+			zap.Error(err),
 			zap.String("symbol", symbol))
 		return 0, 0, 0, 0, err
 	}
-	
+
 	ohlc.High = highLow.High
 	ohlc.Low = highLow.Low
-	
+
 	return ohlc.Open, ohlc.High, ohlc.Low, ohlc.Close, nil
 }
-

@@ -72,7 +72,7 @@ func (h *HandlerUtils) CreatedResponse(c *gin.Context, data interface{}) {
 func (h *HandlerUtils) ErrorResponse(c *gin.Context, statusCode int, err error) {
 	// Use correlation-aware logging
 	logger := LogWithCorrelationFromGin(h.logger, c)
-	logger.Error("API error", 
+	logger.Error("API error",
 		zap.Error(err),
 		zap.String("path", c.Request.URL.Path),
 		zap.String("method", c.Request.Method),

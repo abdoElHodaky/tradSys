@@ -42,27 +42,27 @@ func DefaultRetryOptions() RetryOptions {
 // Retry executes the given function with retries based on the provided options
 func Retry(ctx context.Context, fn func() error, options RetryOptions) error {
 	var err error
-	
+
 	for attempt := 0; attempt <= options.MaxRetries; attempt++ {
 		// Execute the function
 		err = fn()
-		
+
 		// If no error or error is not retryable, return immediately
 		if err == nil || (options.RetryableErrors != nil && !options.RetryableErrors(err)) {
 			return err
 		}
-		
+
 		// If this was the last attempt, return the error
 		if attempt == options.MaxRetries {
 			return err
 		}
-		
+
 		// Calculate backoff duration
 		backoff := calculateBackoff(attempt, options)
-		
+
 		// Create a timer for the backoff
 		timer := time.NewTimer(backoff)
-		
+
 		// Wait for either the backoff timer or context cancellation
 		select {
 		case <-timer.C:
@@ -72,7 +72,7 @@ func Retry(ctx context.Context, fn func() error, options RetryOptions) error {
 			return errors.New("retry aborted due to context cancellation")
 		}
 	}
-	
+
 	return err
 }
 
@@ -80,18 +80,18 @@ func Retry(ctx context.Context, fn func() error, options RetryOptions) error {
 func calculateBackoff(attempt int, options RetryOptions) time.Duration {
 	// Calculate base backoff with exponential increase
 	backoff := float64(options.InitialBackoff) * math.Pow(options.BackoffFactor, float64(attempt))
-	
+
 	// Apply maximum backoff limit
 	if backoff > float64(options.MaxBackoff) {
 		backoff = float64(options.MaxBackoff)
 	}
-	
+
 	// Apply jitter
 	if options.Jitter > 0 {
 		jitter := options.Jitter * backoff
 		backoff = backoff - (jitter / 2) + (rand.Float64() * jitter)
 	}
-	
+
 	return time.Duration(backoff)
 }
 
@@ -104,4 +104,3 @@ func RetryWithFallback(ctx context.Context, fn func() error, fallback func() err
 	}
 	return err
 }
-

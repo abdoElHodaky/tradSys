@@ -17,7 +17,7 @@ func NewFxEngine(
 	logger *zap.Logger,
 ) *Engine {
 	engine := NewEngine(logger)
-	
+
 	lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting order matching engine")
@@ -28,6 +28,6 @@ func NewFxEngine(
 			return nil
 		},
 	})
-	
+
 	return engine
 }

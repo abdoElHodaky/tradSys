@@ -29,12 +29,12 @@ type HealthCheck struct {
 
 // HealthResponse represents the overall health response
 type HealthResponse struct {
-	Status    HealthStatus   `json:"status"`
-	Timestamp time.Time      `json:"timestamp"`
-	Service   string         `json:"service"`
-	Version   string         `json:"version"`
-	Uptime    time.Duration  `json:"uptime"`
-	Checks    []HealthCheck  `json:"checks"`
+	Status    HealthStatus  `json:"status"`
+	Timestamp time.Time     `json:"timestamp"`
+	Service   string        `json:"service"`
+	Version   string        `json:"version"`
+	Uptime    time.Duration `json:"uptime"`
+	Checks    []HealthCheck `json:"checks"`
 }
 
 // HealthChecker interface for implementing health checks
@@ -82,7 +82,7 @@ func (h *HealthHandler) RegisterRoutes(router gin.IRouter) {
 func (h *HealthHandler) HealthCheck(c *gin.Context) {
 	correlationID := GetCorrelationID(c)
 	logger := LogWithCorrelation(h.logger, correlationID)
-	
+
 	start := time.Now()
 	checks := make([]HealthCheck, 0, len(h.checkers))
 	overallStatus := HealthStatusHealthy
@@ -130,7 +130,7 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 func (h *HealthHandler) LivenessCheck(c *gin.Context) {
 	correlationID := GetCorrelationID(c)
 	logger := LogWithCorrelation(h.logger, correlationID)
-	
+
 	response := map[string]interface{}{
 		"status":    "alive",
 		"timestamp": time.Now(),
@@ -146,7 +146,7 @@ func (h *HealthHandler) LivenessCheck(c *gin.Context) {
 func (h *HealthHandler) ReadinessCheck(c *gin.Context) {
 	correlationID := GetCorrelationID(c)
 	logger := LogWithCorrelation(h.logger, correlationID)
-	
+
 	// Check if all critical dependencies are ready
 	ready := true
 	failedChecks := make([]string, 0)
@@ -203,7 +203,7 @@ func (d *DatabaseHealthChecker) Name() string {
 // Check performs the database health check
 func (d *DatabaseHealthChecker) Check() HealthCheck {
 	start := time.Now()
-	
+
 	check := HealthCheck{
 		Name:        d.name,
 		LastChecked: start,
@@ -247,7 +247,7 @@ func (s *ServiceHealthChecker) Name() string {
 // Check performs the service health check
 func (s *ServiceHealthChecker) Check() HealthCheck {
 	start := time.Now()
-	
+
 	check := HealthCheck{
 		Name:        s.name,
 		LastChecked: start,

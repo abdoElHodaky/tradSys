@@ -56,8 +56,8 @@ func (s *AuthenticatedServer) HandleWebSocket(w http.ResponseWriter, r *http.Req
 	// Start ping handler
 	go s.pingConnection(conn)
 
-	s.logger.Info("WebSocket connection established", 
-		zap.String("user_id", conn.UserID), 
+	s.logger.Info("WebSocket connection established",
+		zap.String("user_id", conn.UserID),
 		zap.String("username", conn.Username),
 		zap.String("role", conn.Role))
 }
@@ -73,8 +73,8 @@ func (s *AuthenticatedServer) handleMessages(conn *AuthenticatedConnection) {
 		// Close connection
 		conn.Close()
 
-		s.logger.Info("WebSocket connection closed", 
-			zap.String("user_id", conn.UserID), 
+		s.logger.Info("WebSocket connection closed",
+			zap.String("user_id", conn.UserID),
 			zap.String("username", conn.Username))
 	}()
 
@@ -234,7 +234,7 @@ func (s *AuthenticatedServer) BroadcastBinaryMessage(message *WebSocketMessage, 
 		Channel: message.Channel,
 		Symbol:  message.Symbol,
 	}
-	
+
 	// Marshal message
 	data, err := proto.Marshal(pbMessage)
 	if err != nil {
@@ -285,7 +285,7 @@ func (s *AuthenticatedServer) SendBinaryMessage(userID string, message *WebSocke
 		Channel: message.Channel,
 		Symbol:  message.Symbol,
 	}
-	
+
 	// Marshal message
 	data, err := proto.Marshal(pbMessage)
 	if err != nil {

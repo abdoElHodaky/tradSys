@@ -12,31 +12,31 @@ import (
 type Event interface {
 	// EventName returns the name of the event
 	EventName() string
-	
+
 	// AggregateID returns the ID of the aggregate that emitted the event
 	AggregateID() string
-	
+
 	// EventID returns the unique ID of the event
 	EventID() string
-	
+
 	// EventTimestamp returns the timestamp when the event occurred
 	EventTimestamp() time.Time
-	
+
 	// EventVersion returns the version of the event
 	EventVersion() int
-	
+
 	// EventData returns the data associated with the event
 	EventData() interface{}
 }
 
 // BaseEvent provides a base implementation of the Event interface
 type BaseEvent struct {
-	ID          string
-	Name        string
-	Aggregate   string
-	Timestamp   time.Time
-	Version     int
-	Data        interface{}
+	ID        string
+	Name      string
+	Aggregate string
+	Timestamp time.Time
+	Version   int
+	Data      interface{}
 }
 
 // EventName returns the name of the event
@@ -72,12 +72,12 @@ func (e BaseEvent) EventData() interface{} {
 // NewEvent creates a new event
 func NewEvent(name string, aggregateID string, data interface{}, version int) Event {
 	return BaseEvent{
-		ID:          ksuid.New().String(),
-		Name:        name,
-		Aggregate:   aggregateID,
-		Timestamp:   time.Now().UTC(),
-		Version:     version,
-		Data:        data,
+		ID:        ksuid.New().String(),
+		Name:      name,
+		Aggregate: aggregateID,
+		Timestamp: time.Now().UTC(),
+		Version:   version,
+		Data:      data,
 	}
 }
 
@@ -85,10 +85,10 @@ func NewEvent(name string, aggregateID string, data interface{}, version int) Ev
 type EventStore interface {
 	// SaveEvents saves events to the event store
 	SaveEvents(ctx context.Context, events []Event) error
-	
+
 	// GetEvents retrieves events for an aggregate from the event store
 	GetEvents(ctx context.Context, aggregateID string) ([]Event, error)
-	
+
 	// GetEventsByType retrieves events of a specific type from the event store
 	GetEventsByType(ctx context.Context, eventType string) ([]Event, error)
 }
@@ -119,7 +119,7 @@ func (s *PostgresEventStore) SaveEvents(ctx context.Context, events []Event) err
 			CreatedAt:   event.EventTimestamp(),
 		}
 	}
-	
+
 	// Save events to the event store
 	return s.store.Save(ctx, esEvents)
 }
@@ -131,20 +131,20 @@ func (s *PostgresEventStore) GetEvents(ctx context.Context, aggregateID string) 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Convert thefabric-io/eventsourcing events to our events
 	events := make([]Event, len(esEvents))
 	for i, esEvent := range esEvents {
 		events[i] = BaseEvent{
-			ID:          esEvent.ID,
-			Name:        esEvent.Type,
-			Aggregate:   esEvent.AggregateID,
-			Timestamp:   esEvent.CreatedAt,
-			Version:     esEvent.Version,
-			Data:        esEvent.Payload,
+			ID:        esEvent.ID,
+			Name:      esEvent.Type,
+			Aggregate: esEvent.AggregateID,
+			Timestamp: esEvent.CreatedAt,
+			Version:   esEvent.Version,
+			Data:      esEvent.Payload,
 		}
 	}
-	
+
 	return events, nil
 }
 
@@ -155,19 +155,19 @@ func (s *PostgresEventStore) GetEventsByType(ctx context.Context, eventType stri
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Convert thefabric-io/eventsourcing events to our events
 	events := make([]Event, len(esEvents))
 	for i, esEvent := range esEvents {
 		events[i] = BaseEvent{
-			ID:          esEvent.ID,
-			Name:        esEvent.Type,
-			Aggregate:   esEvent.AggregateID,
-			Timestamp:   esEvent.CreatedAt,
-			Version:     esEvent.Version,
-			Data:        esEvent.Payload,
+			ID:        esEvent.ID,
+			Name:      esEvent.Type,
+			Aggregate: esEvent.AggregateID,
+			Timestamp: esEvent.CreatedAt,
+			Version:   esEvent.Version,
+			Data:      esEvent.Payload,
 		}
 	}
-	
+
 	return events, nil
 }

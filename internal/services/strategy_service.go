@@ -195,8 +195,8 @@ func (s *StrategyServiceImpl) GetStrategyStatus(ctx context.Context, id string) 
 		ID:           strategy.ID,
 		Status:       strategy.Status,
 		LastUpdated:  strategy.UpdatedAt,
-		OrdersPlaced: 0,    // Would be tracked in real implementation
-		ProfitLoss:   0.0,  // Would be calculated in real implementation
+		OrdersPlaced: 0,   // Would be tracked in real implementation
+		ProfitLoss:   0.0, // Would be calculated in real implementation
 	}
 
 	// Calculate running time if strategy is running

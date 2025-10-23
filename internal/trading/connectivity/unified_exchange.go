@@ -37,14 +37,14 @@ type ConnectivityConfig struct {
 
 // ConnectivityMetrics tracks connectivity performance
 type ConnectivityMetrics struct {
-	TotalMessages       int64         `json:"total_messages"`
-	MarketDataMessages  int64         `json:"market_data_messages"`
-	OrderMessages       int64         `json:"order_messages"`
-	AverageLatency      time.Duration `json:"average_latency"`
-	MaxLatency          time.Duration `json:"max_latency"`
-	ConnectionErrors    int64         `json:"connection_errors"`
-	ReconnectCount      int64         `json:"reconnect_count"`
-	LastUpdateTime      time.Time     `json:"last_update_time"`
+	TotalMessages      int64         `json:"total_messages"`
+	MarketDataMessages int64         `json:"market_data_messages"`
+	OrderMessages      int64         `json:"order_messages"`
+	AverageLatency     time.Duration `json:"average_latency"`
+	MaxLatency         time.Duration `json:"max_latency"`
+	ConnectionErrors   int64         `json:"connection_errors"`
+	ReconnectCount     int64         `json:"reconnect_count"`
+	LastUpdateTime     time.Time     `json:"last_update_time"`
 }
 
 // ExchangeAdapter defines the interface for exchange adapters
@@ -83,19 +83,19 @@ type MarketDataHandler interface {
 
 // MarketDataMessage represents a market data message
 type MarketDataMessage struct {
-	Exchange    string          `json:"exchange"`
-	Symbol      string          `json:"symbol"`
-	Type        MarketDataType  `json:"type"`
-	Price       float64         `json:"price"`
-	Quantity    float64         `json:"quantity"`
-	Timestamp   time.Time       `json:"timestamp"`
-	Sequence    int64           `json:"sequence"`
-	BidPrice    float64         `json:"bid_price,omitempty"`
-	AskPrice    float64         `json:"ask_price,omitempty"`
-	BidSize     float64         `json:"bid_size,omitempty"`
-	AskSize     float64         `json:"ask_size,omitempty"`
-	LastPrice   float64         `json:"last_price,omitempty"`
-	Volume      float64         `json:"volume,omitempty"`
+	Exchange  string         `json:"exchange"`
+	Symbol    string         `json:"symbol"`
+	Type      MarketDataType `json:"type"`
+	Price     float64        `json:"price"`
+	Quantity  float64        `json:"quantity"`
+	Timestamp time.Time      `json:"timestamp"`
+	Sequence  int64          `json:"sequence"`
+	BidPrice  float64        `json:"bid_price,omitempty"`
+	AskPrice  float64        `json:"ask_price,omitempty"`
+	BidSize   float64        `json:"bid_size,omitempty"`
+	AskSize   float64        `json:"ask_size,omitempty"`
+	LastPrice float64        `json:"last_price,omitempty"`
+	Volume    float64        `json:"volume,omitempty"`
 }
 
 // MarketDataType defines types of market data
@@ -110,34 +110,34 @@ const (
 
 // OrderResponse represents a response from order submission
 type OrderResponse struct {
-	OrderID     string    `json:"order_id"`
-	ExchangeID  string    `json:"exchange_id"`
-	Status      string    `json:"status"`
-	Message     string    `json:"message"`
-	Timestamp   time.Time `json:"timestamp"`
-	Latency     time.Duration `json:"latency"`
+	OrderID    string        `json:"order_id"`
+	ExchangeID string        `json:"exchange_id"`
+	Status     string        `json:"status"`
+	Message    string        `json:"message"`
+	Timestamp  time.Time     `json:"timestamp"`
+	Latency    time.Duration `json:"latency"`
 }
 
 // OrderStatus represents the status of an order
 type OrderStatus struct {
-	OrderID       string    `json:"order_id"`
-	ExchangeID    string    `json:"exchange_id"`
-	Status        string    `json:"status"`
-	FilledQty     float64   `json:"filled_qty"`
-	RemainingQty  float64   `json:"remaining_qty"`
-	AveragePrice  float64   `json:"average_price"`
-	LastUpdate    time.Time `json:"last_update"`
+	OrderID      string    `json:"order_id"`
+	ExchangeID   string    `json:"exchange_id"`
+	Status       string    `json:"status"`
+	FilledQty    float64   `json:"filled_qty"`
+	RemainingQty float64   `json:"remaining_qty"`
+	AveragePrice float64   `json:"average_price"`
+	LastUpdate   time.Time `json:"last_update"`
 }
 
 // ExchangeInfo contains information about an exchange
 type ExchangeInfo struct {
-	Name            string            `json:"name"`
-	Status          string            `json:"status"`
-	TradingFees     map[string]float64 `json:"trading_fees"`
-	MinOrderSize    map[string]float64 `json:"min_order_size"`
-	MaxOrderSize    map[string]float64 `json:"max_order_size"`
-	SupportedSymbols []string         `json:"supported_symbols"`
-	Capabilities    []string          `json:"capabilities"`
+	Name             string             `json:"name"`
+	Status           string             `json:"status"`
+	TradingFees      map[string]float64 `json:"trading_fees"`
+	MinOrderSize     map[string]float64 `json:"min_order_size"`
+	MaxOrderSize     map[string]float64 `json:"max_order_size"`
+	SupportedSymbols []string           `json:"supported_symbols"`
+	Capabilities     []string           `json:"capabilities"`
 }
 
 // NewUnifiedExchangeConnector creates a new unified exchange connector
@@ -231,7 +231,7 @@ func (c *UnifiedExchangeConnector) Stop() error {
 func (c *UnifiedExchangeConnector) RegisterExchange(name string, adapter ExchangeAdapter) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	c.exchanges[name] = adapter
 	c.orderRouter.exchanges[name] = adapter
 	c.logger.Info("Registered exchange adapter", zap.String("exchange", name))
@@ -303,7 +303,7 @@ func (c *UnifiedExchangeConnector) checkConnections() {
 		if !adapter.IsConnected() {
 			c.logger.Warn("Exchange connection lost", zap.String("exchange", name))
 			atomic.AddInt64(&c.metrics.ConnectionErrors, 1)
-			
+
 			// Attempt reconnection
 			go c.reconnectExchange(name, adapter)
 		}
@@ -316,7 +316,7 @@ func (c *UnifiedExchangeConnector) reconnectExchange(name string, adapter Exchan
 	defer cancel()
 
 	c.logger.Info("Attempting to reconnect to exchange", zap.String("exchange", name))
-	
+
 	if err := adapter.Connect(ctx); err != nil {
 		c.logger.Error("Failed to reconnect to exchange",
 			zap.String("exchange", name),
@@ -333,7 +333,7 @@ func (c *UnifiedExchangeConnector) updateMetrics(latency time.Duration) {
 	if latency > c.metrics.MaxLatency {
 		c.metrics.MaxLatency = latency
 	}
-	
+
 	// Simple moving average
 	c.metrics.AverageLatency = (c.metrics.AverageLatency + latency) / 2
 	c.metrics.LastUpdateTime = time.Now()

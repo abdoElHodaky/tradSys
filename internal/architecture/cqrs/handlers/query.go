@@ -32,7 +32,7 @@ func (f HandlerFunc[T]) Handle(ctx context.Context, query Query) (T, error) {
 type Bus interface {
 	// Register registers a handler for a query
 	Register(queryType reflect.Type, handler interface{}) error
-	
+
 	// Dispatch dispatches a query to its handler and returns a result
 	Dispatch(ctx context.Context, query Query) (interface{}, error)
 }
@@ -54,30 +54,30 @@ func NewDefaultBus() *DefaultBus {
 func (b *DefaultBus) Register(queryType reflect.Type, handler interface{}) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	
+
 	// Create a zero value of the query type
 	query, ok := reflect.New(queryType).Elem().Interface().(Query)
 	if !ok {
 		return fmt.Errorf("query type %s does not implement Query interface", queryType.Name())
 	}
-	
+
 	// Get the query name
 	queryName := query.QueryName()
-	
+
 	// Check if a handler is already registered for the query
 	if _, exists := b.handlers[queryName]; exists {
 		return fmt.Errorf("handler already registered for query %s", queryName)
 	}
-	
+
 	// Check if the handler implements the Handler interface
 	handlerType := reflect.TypeOf(handler)
 	if handlerType.Kind() != reflect.Func && !handlerImplementsHandler(handlerType) {
 		return fmt.Errorf("handler does not implement Handler interface")
 	}
-	
+
 	// Register the handler
 	b.handlers[queryName] = handler
-	
+
 	return nil
 }
 
@@ -85,16 +85,16 @@ func (b *DefaultBus) Register(queryType reflect.Type, handler interface{}) error
 func (b *DefaultBus) Dispatch(ctx context.Context, query Query) (interface{}, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	
+
 	// Get the query name
 	queryName := query.QueryName()
-	
+
 	// Get the handler for the query
 	handler, exists := b.handlers[queryName]
 	if !exists {
 		return nil, fmt.Errorf("no handler registered for query %s", queryName)
 	}
-	
+
 	// Handle the query
 	return b.invokeHandler(ctx, handler, query)
 }
@@ -105,30 +105,30 @@ func (b *DefaultBus) invokeHandler(ctx context.Context, handler interface{}, que
 	if handlerFunc, ok := handler.(func(context.Context, Query) (interface{}, error)); ok {
 		return handlerFunc(ctx, query)
 	}
-	
+
 	// Get the handler type
 	handlerType := reflect.TypeOf(handler)
-	
+
 	// Check if the handler implements the Handler interface
 	if handlerImplementsHandler(handlerType) {
 		// Get the Handle method
 		method := reflect.ValueOf(handler).MethodByName("Handle")
-		
+
 		// Call the Handle method
 		results := method.Call([]reflect.Value{
 			reflect.ValueOf(ctx),
 			reflect.ValueOf(query),
 		})
-		
+
 		// Check for an error
 		if !results[1].IsNil() {
 			return nil, results[1].Interface().(error)
 		}
-		
+
 		// Return the result
 		return results[0].Interface(), nil
 	}
-	
+
 	return nil, fmt.Errorf("invalid handler type")
 }
 
@@ -150,7 +150,7 @@ func handlerImplementsHandler(t reflect.Type) bool {
 			}
 		}
 	}
-	
+
 	return false
 }
 
@@ -159,4 +159,3 @@ var (
 	ErrQueryNotFound   = errors.New("query not found")
 	ErrHandlerNotFound = errors.New("handler not found")
 )
-

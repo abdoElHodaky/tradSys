@@ -16,9 +16,9 @@ import (
 type RouterParams struct {
 	fx.In
 
-	Logger      *zap.Logger
-	Config      *config.Config
-	Server      *Server
+	Logger         *zap.Logger
+	Config         *config.Config
+	Server         *Server
 	AuthMiddleware *auth.Middleware
 	// Add other handlers as needed
 }
@@ -63,13 +63,13 @@ func (r *Router) registerAuthRoutes(authMiddleware *auth.Middleware) {
 		Config: r.config,
 	})
 	authHandlers := auth.NewHandlers(authService, r.logger)
-	
+
 	authGroup := r.engine.Group("/auth")
 	{
 		// Public routes (no authentication required)
 		authGroup.POST("/login", authHandlers.Login)
 		authGroup.POST("/refresh", authHandlers.RefreshToken)
-		
+
 		// Protected routes (authentication required)
 		protected := authGroup.Group("/")
 		protected.Use(authHandlers.ValidateToken)
@@ -86,7 +86,7 @@ func (r *Router) registerAPIRoutes(authMiddleware *auth.Middleware) {
 	// Create API group with authentication middleware
 	api := r.engine.Group("/api")
 	api.Use(authMiddleware.JWTAuth())
-	
+
 	// Market data routes
 	marketData := api.Group("/market-data")
 	{
@@ -142,7 +142,7 @@ func (r *Router) registerAPIRoutes(authMiddleware *auth.Middleware) {
 	{
 		users.GET("/me", forwardToService("users", "/me"))
 		users.PUT("/me", forwardToService("users", "/me"))
-		
+
 		// Admin-only routes
 		admin := users.Group("/")
 		admin.Use(authMiddleware.RoleAuth("admin"))
@@ -163,7 +163,7 @@ func forwardToService(serviceName, path string) gin.HandlerFunc {
 		serviceURL := getServiceURL(serviceName)
 		if serviceURL == "" {
 			c.JSON(http.StatusServiceUnavailable, gin.H{
-				"error": "Service unavailable",
+				"error":   "Service unavailable",
 				"service": serviceName,
 				"message": "Service not found in registry",
 			})
@@ -172,12 +172,12 @@ func forwardToService(serviceName, path string) gin.HandlerFunc {
 
 		// Forward request to service
 		targetURL := serviceURL + path
-		
+
 		// Create proxy request
 		req, err := http.NewRequest(c.Request.Method, targetURL, c.Request.Body)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Failed to create proxy request",
+				"error":   "Failed to create proxy request",
 				"details": err.Error(),
 			})
 			return
@@ -195,7 +195,7 @@ func forwardToService(serviceName, path string) gin.HandlerFunc {
 		resp, err := client.Do(req)
 		if err != nil {
 			c.JSON(http.StatusBadGateway, gin.H{
-				"error": "Service request failed",
+				"error":   "Service request failed",
 				"service": serviceName,
 				"details": err.Error(),
 			})
@@ -209,7 +209,7 @@ func forwardToService(serviceName, path string) gin.HandlerFunc {
 				c.Header(key, value)
 			}
 		}
-		
+
 		c.Status(resp.StatusCode)
 		io.Copy(c.Writer, resp.Body)
 	}
@@ -220,11 +220,11 @@ func getServiceURL(serviceName string) string {
 	// Service registry mapping
 	services := map[string]string{
 		"orders":     "http://localhost:8081",
-		"risk":       "http://localhost:8082", 
+		"risk":       "http://localhost:8082",
 		"marketdata": "http://localhost:8083",
 		"users":      "http://localhost:8084",
 		"auth":       "http://localhost:8085",
 	}
-	
+
 	return services[serviceName]
 }

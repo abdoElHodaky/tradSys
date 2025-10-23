@@ -10,10 +10,10 @@ import (
 
 // MeshOptions contains options for service mesh configuration
 type MeshOptions struct {
-	EnableTracing       bool
-	EnableMetrics       bool
+	EnableTracing        bool
+	EnableMetrics        bool
 	EnableCircuitBreaker bool
-	EnableRateLimiting  bool
+	EnableRateLimiting   bool
 }
 
 // ConfigureMesh adds service mesh capabilities to a service
@@ -80,9 +80,9 @@ func ConfigureMesh(service gomicro.Service, opts MeshOptions, logger *zap.Logger
 // NewMeshOptions creates mesh options from configuration
 func NewMeshOptions(cfg *config.Config) MeshOptions {
 	return MeshOptions{
-		EnableTracing:       cfg.Tracing.Enabled,
-		EnableMetrics:       cfg.Metrics.Enabled,
+		EnableTracing:        cfg.Tracing.Enabled,
+		EnableMetrics:        cfg.Metrics.Enabled,
 		EnableCircuitBreaker: cfg.Resilience.CircuitBreakerEnabled,
-		EnableRateLimiting:  cfg.Resilience.RateLimitingEnabled,
+		EnableRateLimiting:   cfg.Resilience.RateLimitingEnabled,
 	}
 }

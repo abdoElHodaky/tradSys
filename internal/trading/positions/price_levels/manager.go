@@ -74,22 +74,22 @@ func NewPriceLevelManager() *PriceLevelManager {
 func (plm *PriceLevelManager) GetOrderBook(symbol string) *OrderBook {
 	plm.mutex.RLock()
 	defer plm.mutex.RUnlock()
-	
+
 	if book, exists := plm.orderBooks[symbol]; exists {
 		return book
 	}
-	
+
 	// Create new order book if it doesn't exist
 	plm.mutex.RUnlock()
 	plm.mutex.Lock()
 	defer plm.mutex.Unlock()
 	defer plm.mutex.RLock()
-	
+
 	// Double-check after acquiring write lock
 	if book, exists := plm.orderBooks[symbol]; exists {
 		return book
 	}
-	
+
 	book := &OrderBook{
 		Symbol: symbol,
 		Bids:   &PriceLevelHeap{isBid: true},
@@ -98,7 +98,7 @@ func (plm *PriceLevelManager) GetOrderBook(symbol string) *OrderBook {
 	heap.Init(book.Bids)
 	heap.Init(book.Asks)
 	plm.orderBooks[symbol] = book
-	
+
 	return book
 }
 
@@ -107,20 +107,20 @@ func (plm *PriceLevelManager) UpdatePriceLevel(symbol string, side string, price
 	book := plm.GetOrderBook(symbol)
 	book.mutex.Lock()
 	defer book.mutex.Unlock()
-	
+
 	level := PriceLevel{
 		Price:    price,
 		Quantity: quantity,
 		Orders:   1,
 		Time:     time.Now(),
 	}
-	
+
 	if side == "buy" {
 		heap.Push(book.Bids, level)
 	} else {
 		heap.Push(book.Asks, level)
 	}
-	
+
 	// Update metrics
 	plm.mutex.Lock()
 	plm.metrics["symbols_tracked"] = len(plm.orderBooks)
@@ -133,17 +133,17 @@ func (plm *PriceLevelManager) GetBestBidAsk(symbol string) (float64, float64) {
 	book := plm.GetOrderBook(symbol)
 	book.mutex.RLock()
 	defer book.mutex.RUnlock()
-	
+
 	var bestBid, bestAsk float64
-	
+
 	if book.Bids.Len() > 0 {
 		bestBid = book.Bids.levels[0].Price
 	}
-	
+
 	if book.Asks.Len() > 0 {
 		bestAsk = book.Asks.levels[0].Price
 	}
-	
+
 	return bestBid, bestAsk
 }
 
@@ -161,9 +161,9 @@ func (plm *PriceLevelManager) GetMarketDepth(symbol string, levels int) ([]Price
 	book := plm.GetOrderBook(symbol)
 	book.mutex.RLock()
 	defer book.mutex.RUnlock()
-	
+
 	var bids, asks []PriceLevel
-	
+
 	// Get top bid levels
 	bidCount := book.Bids.Len()
 	if bidCount > levels {
@@ -172,7 +172,7 @@ func (plm *PriceLevelManager) GetMarketDepth(symbol string, levels int) ([]Price
 	for i := 0; i < bidCount; i++ {
 		bids = append(bids, book.Bids.levels[i])
 	}
-	
+
 	// Get top ask levels
 	askCount := book.Asks.Len()
 	if askCount > levels {
@@ -181,7 +181,7 @@ func (plm *PriceLevelManager) GetMarketDepth(symbol string, levels int) ([]Price
 	for i := 0; i < askCount; i++ {
 		asks = append(asks, book.Asks.levels[i])
 	}
-	
+
 	return bids, asks
 }
 
@@ -189,12 +189,12 @@ func (plm *PriceLevelManager) GetMarketDepth(symbol string, levels int) ([]Price
 func (plm *PriceLevelManager) GetPerformanceMetrics() map[string]interface{} {
 	plm.mutex.RLock()
 	defer plm.mutex.RUnlock()
-	
+
 	metrics := make(map[string]interface{})
 	for k, v := range plm.metrics {
 		metrics[k] = v
 	}
-	
+
 	return metrics
 }
 
@@ -203,14 +203,14 @@ func (plm *PriceLevelManager) RemovePriceLevel(symbol string, side string, price
 	book := plm.GetOrderBook(symbol)
 	book.mutex.Lock()
 	defer book.mutex.Unlock()
-	
+
 	var targetHeap *PriceLevelHeap
 	if side == "buy" {
 		targetHeap = book.Bids
 	} else {
 		targetHeap = book.Asks
 	}
-	
+
 	// Find and remove the price level
 	for i, level := range targetHeap.levels {
 		if level.Price == price {
@@ -226,7 +226,7 @@ func (plm *PriceLevelManager) RemovePriceLevel(symbol string, side string, price
 func (plm *PriceLevelManager) ClearOrderBook(symbol string) {
 	plm.mutex.Lock()
 	defer plm.mutex.Unlock()
-	
+
 	if book, exists := plm.orderBooks[symbol]; exists {
 		book.mutex.Lock()
 		book.Bids.levels = book.Bids.levels[:0]
@@ -234,4 +234,3 @@ func (plm *PriceLevelManager) ClearOrderBook(symbol string) {
 		book.mutex.Unlock()
 	}
 }
-

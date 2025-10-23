@@ -11,15 +11,15 @@ type Task func() error
 
 // WorkerPool implements a pool of workers for parallel task execution
 type WorkerPool struct {
-	name         string
-	size         int
-	taskQueue    chan Task
-	wg           sync.WaitGroup
+	name          string
+	size          int
+	taskQueue     chan Task
+	wg            sync.WaitGroup
 	activeWorkers int32 // atomic
-	ctx          context.Context
-	cancel       context.CancelFunc
-	started      bool
-	mu           sync.Mutex
+	ctx           context.Context
+	cancel        context.CancelFunc
+	started       bool
+	mu            sync.Mutex
 }
 
 // WorkerPoolOptions contains options for creating a worker pool
@@ -37,9 +37,9 @@ func NewWorkerPool(options WorkerPoolOptions) *WorkerPool {
 	if options.QueueSize <= 0 {
 		options.QueueSize = 100
 	}
-	
+
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	return &WorkerPool{
 		name:      options.Name,
 		size:      options.Size,
@@ -53,13 +53,13 @@ func NewWorkerPool(options WorkerPoolOptions) *WorkerPool {
 func (wp *WorkerPool) Start() {
 	wp.mu.Lock()
 	defer wp.mu.Unlock()
-	
+
 	if wp.started {
 		return
 	}
-	
+
 	wp.started = true
-	
+
 	// Start workers
 	for i := 0; i < wp.size; i++ {
 		wp.wg.Add(1)
@@ -71,11 +71,11 @@ func (wp *WorkerPool) Start() {
 func (wp *WorkerPool) Stop() {
 	wp.mu.Lock()
 	defer wp.mu.Unlock()
-	
+
 	if !wp.started {
 		return
 	}
-	
+
 	wp.cancel()
 	close(wp.taskQueue)
 	wp.wg.Wait()
@@ -106,7 +106,7 @@ func (wp *WorkerPool) SubmitWait(ctx context.Context, task Task) bool {
 // worker is the main worker loop
 func (wp *WorkerPool) worker() {
 	defer wp.wg.Done()
-	
+
 	for {
 		select {
 		case task, ok := <-wp.taskQueue:
@@ -114,16 +114,16 @@ func (wp *WorkerPool) worker() {
 				// Channel closed, exit worker
 				return
 			}
-			
+
 			// Increment active workers count
 			atomic.AddInt32(&wp.activeWorkers, 1)
-			
+
 			// Execute task
 			_ = task()
-			
+
 			// Decrement active workers count
 			atomic.AddInt32(&wp.activeWorkers, -1)
-			
+
 		case <-wp.ctx.Done():
 			// Context cancelled, exit worker
 			return
@@ -150,4 +150,3 @@ func (wp *WorkerPool) QueueCapacity() int {
 func (wp *WorkerPool) Size() int {
 	return wp.size
 }
-

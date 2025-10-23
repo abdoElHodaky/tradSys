@@ -13,8 +13,8 @@ import (
 type BrokerParams struct {
 	fx.In
 
-	Config *config.Config
-	Logger *zap.Logger
+	Config    *config.Config
+	Logger    *zap.Logger
 	Lifecycle fx.Lifecycle
 }
 

@@ -76,4 +76,3 @@ func SuccessResponse(responseType string, payload []byte, channel string) *Respo
 func ErrorResponse(responseType string, errorMsg string, status int, channel string) *Response {
 	return NewResponse(responseType, nil, status, errorMsg, channel)
 }
-

@@ -11,4 +11,3 @@ var Module = fx.Options(
 	fx.Provide(NewServiceProxy),
 	fx.Provide(NewMiddleware),
 )
-

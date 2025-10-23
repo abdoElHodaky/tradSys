@@ -21,7 +21,7 @@ func NewFxService(
 	orderService *orders.Service,
 ) *Service {
 	service := NewService(orderEngine, orderService, logger)
-	
+
 	lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting risk management service")
@@ -33,6 +33,6 @@ func NewFxService(
 			return nil
 		},
 	})
-	
+
 	return service
 }

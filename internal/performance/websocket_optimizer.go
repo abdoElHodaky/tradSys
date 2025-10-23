@@ -1,6 +1,7 @@
 package performance
 
 import (
+	"net/http"
 	"sync"
 	"time"
 
@@ -11,25 +12,25 @@ import (
 // WebSocketOptimizer provides optimization for WebSocket connections
 type WebSocketOptimizer struct {
 	// Configuration
-	compressionLevel       int
-	writeBufferSize        int
-	readBufferSize         int
-	writeDeadline          time.Duration
-	readDeadline           time.Duration
-	pongWait               time.Duration
-	pingPeriod             time.Duration
-	maxMessageSize         int64
-	enableCompression      bool
-	enableBinaryMessages   bool
-	batchingEnabled        bool
-	batchSize              int
-	batchInterval          time.Duration
-	
+	compressionLevel     int
+	writeBufferSize      int
+	readBufferSize       int
+	writeDeadline        time.Duration
+	readDeadline         time.Duration
+	pongWait             time.Duration
+	pingPeriod           time.Duration
+	maxMessageSize       int64
+	enableCompression    bool
+	enableBinaryMessages bool
+	batchingEnabled      bool
+	batchSize            int
+	batchInterval        time.Duration
+
 	// Logging
-	logger                 *zap.Logger
-	
+	logger *zap.Logger
+
 	// Connection pool
-	connectionPool         sync.Pool
+	connectionPool sync.Pool
 }
 
 // WebSocketOptimizerOptions contains options for the WebSocket optimizer
@@ -52,7 +53,7 @@ type WebSocketOptimizerOptions struct {
 // DefaultWebSocketOptimizerOptions returns default WebSocket optimizer options
 func DefaultWebSocketOptimizerOptions() WebSocketOptimizerOptions {
 	return WebSocketOptimizerOptions{
-		CompressionLevel:     websocket.DefaultCompressionLevel,
+		CompressionLevel:     6, // Default compression level (1-9)
 		WriteBufferSize:      4096,
 		ReadBufferSize:       4096,
 		WriteDeadline:        10 * time.Second,
@@ -99,7 +100,7 @@ func (o *WebSocketOptimizer) GetUpgrader() *websocket.Upgrader {
 		ReadBufferSize:    o.readBufferSize,
 		WriteBufferSize:   o.writeBufferSize,
 		EnableCompression: o.enableCompression,
-		CheckOrigin:       func(r *websocket.Request) bool { return true }, // Allow all origins
+		CheckOrigin:       func(r *http.Request) bool { return true }, // Allow all origins
 	}
 }
 
@@ -243,4 +244,3 @@ func (o *WebSocketOptimizer) StartPinger(conn *websocket.Conn, done chan struct{
 		}
 	}
 }
-

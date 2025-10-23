@@ -19,7 +19,7 @@ func NewFxHandler(
 	orderEngine *order_matching.Engine,
 ) *Handler {
 	handler := NewHandler(orderEngine, logger)
-	
+
 	lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting market data handler")
@@ -31,6 +31,6 @@ func NewFxHandler(
 			return nil
 		},
 	})
-	
+
 	return handler
 }

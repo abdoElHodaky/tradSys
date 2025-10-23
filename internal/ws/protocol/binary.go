@@ -14,13 +14,13 @@ const (
 	BinaryMsgTypeOrderUpdate = 0x02
 	BinaryMsgTypeHeartbeat   = 0x03
 	BinaryMsgTypeError       = 0x04
-	
+
 	// Fixed message sizes
-	BinaryPriceUpdateSize = 32  // 8 + 8 + 8 + 8 bytes
-	BinaryOrderUpdateSize = 64  // Variable size, but max 64 bytes
-	BinaryHeartbeatSize   = 16  // 8 + 8 bytes
-	BinaryErrorSize       = 32  // 4 + 28 bytes
-	
+	BinaryPriceUpdateSize = 32 // 8 + 8 + 8 + 8 bytes
+	BinaryOrderUpdateSize = 64 // Variable size, but max 64 bytes
+	BinaryHeartbeatSize   = 16 // 8 + 8 bytes
+	BinaryErrorSize       = 32 // 4 + 28 bytes
+
 	// Header size
 	BinaryHeaderSize = 4 // 1 byte type + 1 byte flags + 2 bytes length
 )
@@ -60,36 +60,36 @@ type BinaryHeartbeat struct {
 
 // BinaryError represents a binary error message
 type BinaryError struct {
-	Code      uint32   // Error code
-	Message   [28]byte // Error message (fixed size)
+	Code    uint32   // Error code
+	Message [28]byte // Error message (fixed size)
 }
 
 // MarshalBinaryPriceUpdate marshals a price update to binary format
 func MarshalBinaryPriceUpdate(symbol string, price, volume float64, timestamp time.Time) []byte {
 	buf := make([]byte, BinaryHeaderSize+BinaryPriceUpdateSize)
-	
+
 	// Write header
 	buf[0] = BinaryMsgTypePriceUpdate
 	buf[1] = 0 // No flags
 	binary.LittleEndian.PutUint16(buf[2:4], BinaryPriceUpdateSize)
-	
+
 	// Write price update
 	update := BinaryPriceUpdate{
-		Price:     uint64(price * 1e8),     // Scale to avoid floating point
-		Volume:    uint64(volume * 1e8),    // Scale to avoid floating point
+		Price:     uint64(price * 1e8),  // Scale to avoid floating point
+		Volume:    uint64(volume * 1e8), // Scale to avoid floating point
 		Timestamp: timestamp.UnixNano(),
 	}
-	
+
 	// Copy symbol (truncate or pad as needed)
 	copy(update.Symbol[:], []byte(symbol))
-	
+
 	// Write to buffer
 	offset := BinaryHeaderSize
 	copy(buf[offset:offset+8], update.Symbol[:])
 	binary.LittleEndian.PutUint64(buf[offset+8:offset+16], update.Price)
 	binary.LittleEndian.PutUint64(buf[offset+16:offset+24], update.Volume)
 	binary.LittleEndian.PutUint64(buf[offset+24:offset+32], uint64(update.Timestamp))
-	
+
 	return buf
 }
 
@@ -98,38 +98,38 @@ func UnmarshalBinaryPriceUpdate(data []byte) (*BinaryPriceUpdate, error) {
 	if len(data) < BinaryHeaderSize+BinaryPriceUpdateSize {
 		return nil, fmt.Errorf("insufficient data for price update")
 	}
-	
+
 	// Verify header
 	if data[0] != BinaryMsgTypePriceUpdate {
 		return nil, fmt.Errorf("invalid message type: expected %d, got %d", BinaryMsgTypePriceUpdate, data[0])
 	}
-	
+
 	length := binary.LittleEndian.Uint16(data[2:4])
 	if length != BinaryPriceUpdateSize {
 		return nil, fmt.Errorf("invalid message length: expected %d, got %d", BinaryPriceUpdateSize, length)
 	}
-	
+
 	// Parse price update
 	offset := BinaryHeaderSize
 	update := &BinaryPriceUpdate{}
-	
+
 	copy(update.Symbol[:], data[offset:offset+8])
 	update.Price = binary.LittleEndian.Uint64(data[offset+8 : offset+16])
 	update.Volume = binary.LittleEndian.Uint64(data[offset+16 : offset+24])
 	update.Timestamp = int64(binary.LittleEndian.Uint64(data[offset+24 : offset+32]))
-	
+
 	return update, nil
 }
 
 // MarshalBinaryOrderUpdate marshals an order update to binary format
 func MarshalBinaryOrderUpdate(orderID, symbol string, side string, status uint8, filledQty, avgPrice float64, timestamp time.Time) []byte {
 	buf := make([]byte, BinaryHeaderSize+BinaryOrderUpdateSize)
-	
+
 	// Write header
 	buf[0] = BinaryMsgTypeOrderUpdate
 	buf[1] = 0 // No flags
 	binary.LittleEndian.PutUint16(buf[2:4], BinaryOrderUpdateSize)
-	
+
 	// Write order update
 	update := BinaryOrderUpdate{
 		Status:         status,
@@ -137,20 +137,20 @@ func MarshalBinaryOrderUpdate(orderID, symbol string, side string, status uint8,
 		AveragePrice:   uint64(avgPrice * 1e8),
 		Timestamp:      timestamp.UnixNano(),
 	}
-	
+
 	// Copy order ID (assume it's a UUID string)
 	copy(update.OrderID[:], []byte(orderID))
-	
+
 	// Copy symbol
 	copy(update.Symbol[:], []byte(symbol))
-	
+
 	// Set side
 	if side == "sell" {
 		update.Side = 1
 	} else {
 		update.Side = 0 // buy
 	}
-	
+
 	// Write to buffer
 	offset := BinaryHeaderSize
 	copy(buf[offset:offset+16], update.OrderID[:])
@@ -161,7 +161,7 @@ func MarshalBinaryOrderUpdate(orderID, symbol string, side string, status uint8,
 	binary.LittleEndian.PutUint64(buf[offset+34:offset+42], update.AveragePrice)
 	binary.LittleEndian.PutUint64(buf[offset+42:offset+50], uint64(update.Timestamp))
 	// Reserved bytes are already zero
-	
+
 	return buf
 }
 
@@ -170,21 +170,21 @@ func UnmarshalBinaryOrderUpdate(data []byte) (*BinaryOrderUpdate, error) {
 	if len(data) < BinaryHeaderSize+BinaryOrderUpdateSize {
 		return nil, fmt.Errorf("insufficient data for order update")
 	}
-	
+
 	// Verify header
 	if data[0] != BinaryMsgTypeOrderUpdate {
 		return nil, fmt.Errorf("invalid message type: expected %d, got %d", BinaryMsgTypeOrderUpdate, data[0])
 	}
-	
+
 	length := binary.LittleEndian.Uint16(data[2:4])
 	if length != BinaryOrderUpdateSize {
 		return nil, fmt.Errorf("invalid message length: expected %d, got %d", BinaryOrderUpdateSize, length)
 	}
-	
+
 	// Parse order update
 	offset := BinaryHeaderSize
 	update := &BinaryOrderUpdate{}
-	
+
 	copy(update.OrderID[:], data[offset:offset+16])
 	copy(update.Symbol[:], data[offset+16:offset+24])
 	update.Side = data[offset+24]
@@ -193,24 +193,24 @@ func UnmarshalBinaryOrderUpdate(data []byte) (*BinaryOrderUpdate, error) {
 	update.AveragePrice = binary.LittleEndian.Uint64(data[offset+34 : offset+42])
 	update.Timestamp = int64(binary.LittleEndian.Uint64(data[offset+42 : offset+50]))
 	copy(update.Reserved[:], data[offset+50:offset+64])
-	
+
 	return update, nil
 }
 
 // MarshalBinaryHeartbeat marshals a heartbeat to binary format
 func MarshalBinaryHeartbeat(timestamp time.Time, sequence int64) []byte {
 	buf := make([]byte, BinaryHeaderSize+BinaryHeartbeatSize)
-	
+
 	// Write header
 	buf[0] = BinaryMsgTypeHeartbeat
 	buf[1] = 0 // No flags
 	binary.LittleEndian.PutUint16(buf[2:4], BinaryHeartbeatSize)
-	
+
 	// Write heartbeat
 	offset := BinaryHeaderSize
 	binary.LittleEndian.PutUint64(buf[offset:offset+8], uint64(timestamp.UnixNano()))
 	binary.LittleEndian.PutUint64(buf[offset+8:offset+16], uint64(sequence))
-	
+
 	return buf
 }
 
@@ -219,47 +219,47 @@ func UnmarshalBinaryHeartbeat(data []byte) (*BinaryHeartbeat, error) {
 	if len(data) < BinaryHeaderSize+BinaryHeartbeatSize {
 		return nil, fmt.Errorf("insufficient data for heartbeat")
 	}
-	
+
 	// Verify header
 	if data[0] != BinaryMsgTypeHeartbeat {
 		return nil, fmt.Errorf("invalid message type: expected %d, got %d", BinaryMsgTypeHeartbeat, data[0])
 	}
-	
+
 	length := binary.LittleEndian.Uint16(data[2:4])
 	if length != BinaryHeartbeatSize {
 		return nil, fmt.Errorf("invalid message length: expected %d, got %d", BinaryHeartbeatSize, length)
 	}
-	
+
 	// Parse heartbeat
 	offset := BinaryHeaderSize
 	heartbeat := &BinaryHeartbeat{
 		Timestamp: int64(binary.LittleEndian.Uint64(data[offset : offset+8])),
 		Sequence:  int64(binary.LittleEndian.Uint64(data[offset+8 : offset+16])),
 	}
-	
+
 	return heartbeat, nil
 }
 
 // MarshalBinaryError marshals an error to binary format
 func MarshalBinaryError(code uint32, message string) []byte {
 	buf := make([]byte, BinaryHeaderSize+BinaryErrorSize)
-	
+
 	// Write header
 	buf[0] = BinaryMsgTypeError
 	buf[1] = 0 // No flags
 	binary.LittleEndian.PutUint16(buf[2:4], BinaryErrorSize)
-	
+
 	// Write error
 	offset := BinaryHeaderSize
 	binary.LittleEndian.PutUint32(buf[offset:offset+4], code)
-	
+
 	// Copy message (truncate if too long)
 	msgBytes := []byte(message)
 	if len(msgBytes) > 28 {
 		msgBytes = msgBytes[:28]
 	}
 	copy(buf[offset+4:offset+32], msgBytes)
-	
+
 	return buf
 }
 
@@ -268,24 +268,24 @@ func UnmarshalBinaryError(data []byte) (*BinaryError, error) {
 	if len(data) < BinaryHeaderSize+BinaryErrorSize {
 		return nil, fmt.Errorf("insufficient data for error")
 	}
-	
+
 	// Verify header
 	if data[0] != BinaryMsgTypeError {
 		return nil, fmt.Errorf("invalid message type: expected %d, got %d", BinaryMsgTypeError, data[0])
 	}
-	
+
 	length := binary.LittleEndian.Uint16(data[2:4])
 	if length != BinaryErrorSize {
 		return nil, fmt.Errorf("invalid message length: expected %d, got %d", BinaryErrorSize, length)
 	}
-	
+
 	// Parse error
 	offset := BinaryHeaderSize
 	error := &BinaryError{
 		Code: binary.LittleEndian.Uint32(data[offset : offset+4]),
 	}
 	copy(error.Message[:], data[offset+4:offset+32])
-	
+
 	return error, nil
 }
 

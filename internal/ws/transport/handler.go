@@ -20,19 +20,19 @@ type WebSocketHandler struct {
 type WebSocketHandlerConfig struct {
 	// ReadBufferSize is the size of the read buffer for the WebSocket connection
 	ReadBufferSize int
-	
+
 	// WriteBufferSize is the size of the write buffer for the WebSocket connection
 	WriteBufferSize int
-	
+
 	// CheckOrigin is a function that checks the origin of the WebSocket connection
 	CheckOrigin func(r *http.Request) bool
-	
+
 	// PingInterval is the interval at which ping messages are sent
 	PingInterval time.Duration
-	
+
 	// PongWait is the time to wait for a pong response
 	PongWait time.Duration
-	
+
 	// WriteWait is the time to wait for a write to complete
 	WriteWait time.Duration
 }
@@ -70,19 +70,19 @@ func (h *WebSocketHandler) HandleConnection(c *gin.Context) {
 		h.logger.Error("Failed to upgrade connection", zap.Error(err))
 		return
 	}
-	
+
 	// Get the client ID from the query parameters
 	clientID := c.Query("client_id")
 	if clientID == "" {
 		clientID = c.GetString("user_id")
 	}
-	
+
 	// Create a new client
 	client := NewClient(clientID, conn, h.hub, h.logger)
-	
+
 	// Register the client with the hub
 	h.hub.Register(client)
-	
+
 	// Start the client's read and write pumps
 	go client.ReadPump()
 	go client.WritePump()
@@ -92,10 +92,10 @@ func (h *WebSocketHandler) HandleConnection(c *gin.Context) {
 func (h *WebSocketHandler) RegisterRoutes(router *gin.Engine) {
 	// Register the WebSocket route
 	router.GET("/ws", h.HandleConnection)
-	
+
 	// Register the market data WebSocket route
 	router.GET("/ws/marketdata", h.HandleConnection)
-	
+
 	// Register the orders WebSocket route
 	router.GET("/ws/orders", h.HandleConnection)
 }

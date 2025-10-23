@@ -12,7 +12,7 @@ import (
 var EventBusModule = fx.Options(
 	// Provide the event bus factory
 	fx.Provide(NewEventBusFactory),
-	
+
 	// Register lifecycle hooks
 	fx.Invoke(registerEventBusHooks),
 )
@@ -65,4 +65,3 @@ func registerEventBusHooks(
 		},
 	})
 }
-

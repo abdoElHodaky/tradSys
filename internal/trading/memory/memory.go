@@ -19,31 +19,31 @@ type Manager struct {
 
 // Stats represents memory usage statistics
 type Stats struct {
-	TotalAlloc      uint64
-	Sys             uint64
-	Mallocs         uint64
-	Frees           uint64
-	HeapAlloc       uint64
-	HeapSys         uint64
-	HeapIdle        uint64
-	HeapInuse       uint64
-	HeapReleased    uint64
-	HeapObjects     uint64
-	StackInuse      uint64
-	StackSys        uint64
-	MSpanInuse      uint64
-	MSpanSys        uint64
-	MCacheInuse     uint64
-	MCacheSys       uint64
-	BuckHashSys     uint64
-	GCSys           uint64
-	OtherSys        uint64
-	NextGC          uint64
-	LastGC          time.Time
-	PauseTotalNs    uint64
-	NumGC           uint32
-	NumForcedGC     uint32
-	GCCPUFraction   float64
+	TotalAlloc    uint64
+	Sys           uint64
+	Mallocs       uint64
+	Frees         uint64
+	HeapAlloc     uint64
+	HeapSys       uint64
+	HeapIdle      uint64
+	HeapInuse     uint64
+	HeapReleased  uint64
+	HeapObjects   uint64
+	StackInuse    uint64
+	StackSys      uint64
+	MSpanInuse    uint64
+	MSpanSys      uint64
+	MCacheInuse   uint64
+	MCacheSys     uint64
+	BuckHashSys   uint64
+	GCSys         uint64
+	OtherSys      uint64
+	NextGC        uint64
+	LastGC        time.Time
+	PauseTotalNs  uint64
+	NumGC         uint32
+	NumForcedGC   uint32
+	GCCPUFraction float64
 }
 
 // NewManager creates a new memory manager
@@ -59,10 +59,10 @@ func NewManager(maxMemoryUsage uint64, gcTargetPercent int) *Manager {
 func (m *Manager) Start() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	// Set GC target percentage
 	debug.SetGCPercent(m.gcTargetPercent)
-	
+
 	// Start monitoring goroutine
 	go m.monitor()
 }
@@ -77,7 +77,7 @@ func (m *Manager) Stop() {
 func (m *Manager) monitor() {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
-	
+
 	for range ticker.C {
 		m.updateStats()
 		m.checkMemoryPressure()
@@ -88,10 +88,10 @@ func (m *Manager) monitor() {
 func (m *Manager) updateStats() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
-	
+
 	m.stats.TotalAlloc = memStats.TotalAlloc
 	m.stats.Sys = memStats.Sys
 	m.stats.Mallocs = memStats.Mallocs
@@ -117,7 +117,7 @@ func (m *Manager) updateStats() {
 	m.stats.NumGC = memStats.NumGC
 	m.stats.NumForcedGC = memStats.NumForcedGC
 	m.stats.GCCPUFraction = memStats.GCCPUFraction
-	
+
 	m.currentUsage = memStats.HeapAlloc
 }
 
@@ -127,7 +127,7 @@ func (m *Manager) checkMemoryPressure() {
 	usage := m.currentUsage
 	maxUsage := m.maxMemoryUsage
 	m.mu.RUnlock()
-	
+
 	if usage > maxUsage*80/100 { // 80% threshold
 		m.forceGC()
 	}
@@ -137,7 +137,7 @@ func (m *Manager) checkMemoryPressure() {
 func (m *Manager) forceGC() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	now := time.Now()
 	if now.Sub(m.lastGC) > time.Millisecond*100 { // Don't GC more than once per 100ms
 		runtime.GC()
@@ -149,7 +149,7 @@ func (m *Manager) forceGC() {
 func (m *Manager) GetStats() *Stats {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	// Return a copy to avoid race conditions
 	statsCopy := *m.stats
 	return &statsCopy
