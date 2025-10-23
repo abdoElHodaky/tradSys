@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -99,15 +100,18 @@ func (s *BondService) CreateBond(symbol, issuer string, faceValue, couponRate fl
 		return fmt.Errorf("failed to marshal bond attributes: %w", err)
 	}
 
+	// Convert JSON bytes to AssetAttributes
+	var attributes models.AssetAttributes
+	if err := json.Unmarshal(attributesJSON, &attributes); err != nil {
+		return fmt.Errorf("failed to unmarshal bond attributes: %w", err)
+	}
+
 	asset := &models.AssetMetadata{
-		Symbol:    symbol,
-		AssetType: types.BOND,
-		Name:      fmt.Sprintf("%s Bond", issuer),
-		Sector:    "fixed_income",
-		Attributes: attributesJSON,
-		IsActive:  true,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		Symbol:     symbol,
+		AssetType:  types.AssetTypeBond,
+		Sector:     "fixed_income",
+		Attributes: attributes,
+		IsActive:   true,
 	}
 
 	if err := s.db.Create(asset).Error; err != nil {
@@ -122,12 +126,12 @@ func (s *BondService) CreateBond(symbol, issuer string, faceValue, couponRate fl
 func (s *BondService) GetBondMetrics(symbol string) (*BondMetrics, error) {
 	s.logger.Debug("Retrieving bond metrics", zap.String("symbol", symbol))
 
-	asset, err := s.assetService.GetAssetBySymbol(symbol)
+	asset, err := s.assetService.GetAssetMetadata(context.Background(), symbol)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get bond asset: %w", err)
 	}
 
-	if asset.AssetType != types.BOND {
+	if asset.AssetType != types.AssetTypeBond {
 		return nil, fmt.Errorf("asset %s is not a bond", symbol)
 	}
 
@@ -136,7 +140,7 @@ func (s *BondService) GetBondMetrics(symbol string) (*BondMetrics, error) {
 		return nil, fmt.Errorf("failed to parse bond attributes: %w", err)
 	}
 
-	pricing, err := s.assetService.GetCurrentPricing(symbol)
+	pricing, err := s.assetService.GetAssetPricing(context.Background(), symbol)
 	if err != nil {
 		s.logger.Warn("Failed to get current pricing", zap.String("symbol", symbol), zap.Error(err))
 		pricing = &models.AssetPricing{Price: 100.0} // Par value default
@@ -269,7 +273,7 @@ func (s *BondService) GetYieldCurve(curveType string) ([]YieldCurvePoint, error)
 func (s *BondService) AssessCreditRisk(symbol string) (*CreditRiskAssessment, error) {
 	s.logger.Debug("Assessing credit risk", zap.String("symbol", symbol))
 
-	asset, err := s.assetService.GetAssetBySymbol(symbol)
+	asset, err := s.assetService.GetAssetMetadata(context.Background(), symbol)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get bond asset: %w", err)
 	}

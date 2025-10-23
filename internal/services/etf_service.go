@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -142,15 +143,18 @@ func (s *ETFService) CreateETF(symbol, benchmarkIndex string, creationUnitSize i
 		return fmt.Errorf("failed to marshal ETF attributes: %w", err)
 	}
 
+	// Convert JSON bytes to AssetAttributes
+	var assetAttributes models.AssetAttributes
+	if err := json.Unmarshal(attributesJSON, &assetAttributes); err != nil {
+		return fmt.Errorf("failed to unmarshal ETF attributes: %w", err)
+	}
+
 	asset := &models.AssetMetadata{
-		Symbol:    symbol,
-		AssetType: types.ETF,
-		Name:      fmt.Sprintf("%s ETF", symbol),
-		Sector:    "financial",
-		Attributes: attributesJSON,
-		IsActive:  true,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		Symbol:     symbol,
+		AssetType:  types.AssetTypeETF,
+		Sector:     "financial",
+		Attributes: assetAttributes,
+		IsActive:   true,
 	}
 
 	if err := s.db.Create(asset).Error; err != nil {
@@ -159,15 +163,13 @@ func (s *ETFService) CreateETF(symbol, benchmarkIndex string, creationUnitSize i
 
 	// Create default configuration
 	config := &models.AssetConfiguration{
-		AssetType:       types.ETF,
+		AssetType:       types.AssetTypeETF,
 		TradingEnabled:  true,
 		MinOrderSize:    1.0,
 		MaxOrderSize:    1000000.0,
 		RiskMultiplier:  1.0,
 		SettlementDays:  2,
 		TradingHours:    "09:30-16:00",
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
 	}
 
 	if err := s.db.Create(config).Error; err != nil {
@@ -183,12 +185,12 @@ func (s *ETFService) GetETFMetrics(symbol string) (*ETFMetrics, error) {
 	s.logger.Debug("Retrieving ETF metrics", zap.String("symbol", symbol))
 
 	// Get asset metadata
-	asset, err := s.assetService.GetAssetBySymbol(symbol)
+	asset, err := s.assetService.GetAssetMetadata(context.Background(), symbol)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ETF asset: %w", err)
 	}
 
-	if asset.AssetType != types.ETF {
+	if asset.AssetType != types.AssetTypeETF {
 		return nil, fmt.Errorf("asset %s is not an ETF", symbol)
 	}
 
@@ -199,7 +201,7 @@ func (s *ETFService) GetETFMetrics(symbol string) (*ETFMetrics, error) {
 	}
 
 	// Get current pricing
-	pricing, err := s.assetService.GetCurrentPricing(symbol)
+	pricing, err := s.assetService.GetAssetPricing(context.Background(), symbol)
 	if err != nil {
 		s.logger.Warn("Failed to get current pricing", zap.String("symbol", symbol), zap.Error(err))
 		pricing = &models.AssetPricing{Price: 0.0}
@@ -228,15 +230,15 @@ func (s *ETFService) GetETFMetrics(symbol string) (*ETFMetrics, error) {
 func (s *ETFService) UpdateETFMetrics(symbol string, nav, trackingError, aum, dividendYield float64) error {
 	s.logger.Info("Updating ETF metrics", zap.String("symbol", symbol))
 
-	asset, err := s.assetService.GetAssetBySymbol(symbol)
+	asset, err := s.assetService.GetAssetMetadata(context.Background(), symbol)
 	if err != nil {
 		return fmt.Errorf("failed to get ETF asset: %w", err)
 	}
 
-	// Parse existing attributes
-	var attributes map[string]interface{}
-	if err := json.Unmarshal(asset.Attributes, &attributes); err != nil {
-		return fmt.Errorf("failed to parse ETF attributes: %w", err)
+	// Get existing attributes
+	attributes := map[string]interface{}(asset.Attributes)
+	if attributes == nil {
+		attributes = make(map[string]interface{})
 	}
 
 	// Update metrics
@@ -247,21 +249,14 @@ func (s *ETFService) UpdateETFMetrics(symbol string, nav, trackingError, aum, di
 	attributes["last_updated"] = time.Now()
 
 	// Calculate premium/discount
-	pricing, err := s.assetService.GetCurrentPricing(symbol)
+	pricing, err := s.assetService.GetAssetPricing(context.Background(), symbol)
 	if err == nil && pricing.Price > 0 && nav > 0 {
 		premium := ((pricing.Price - nav) / nav) * 100
 		attributes["premium"] = premium
 	}
 
-	// Marshal updated attributes
-	attributesJSON, err := json.Marshal(attributes)
-	if err != nil {
-		return fmt.Errorf("failed to marshal updated ETF attributes: %w", err)
-	}
-
-	// Update asset
-	asset.Attributes = attributesJSON
-	asset.UpdatedAt = time.Now()
+	// Update asset attributes directly
+	asset.Attributes = models.AssetAttributes(attributes)
 
 	if err := s.db.Save(asset).Error; err != nil {
 		return fmt.Errorf("failed to update ETF metrics: %w", err)
@@ -282,14 +277,14 @@ func (s *ETFService) GetTrackingError(symbol string, days int) (float64, error) 
 	}
 
 	// Get benchmark pricing history
-	asset, err := s.assetService.GetAssetBySymbol(symbol)
+	asset, err := s.assetService.GetAssetMetadata(context.Background(), symbol)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get ETF asset: %w", err)
 	}
 
-	var attributes map[string]interface{}
-	if err := json.Unmarshal(asset.Attributes, &attributes); err != nil {
-		return 0, fmt.Errorf("failed to parse ETF attributes: %w", err)
+	attributes := map[string]interface{}(asset.Attributes)
+	if attributes == nil {
+		return 0, fmt.Errorf("ETF attributes not found for symbol: %s", symbol)
 	}
 
 	benchmarkIndex := s.getStringAttribute(attributes, "benchmark_index")
@@ -325,14 +320,14 @@ func (s *ETFService) ProcessCreationRedemption(operation *CreationRedemptionOper
 	}
 
 	// Get ETF metadata
-	asset, err := s.assetService.GetAssetBySymbol(operation.Symbol)
+	asset, err := s.assetService.GetAssetMetadata(context.Background(), operation.Symbol)
 	if err != nil {
 		return fmt.Errorf("failed to get ETF asset: %w", err)
 	}
 
-	var attributes map[string]interface{}
-	if err := json.Unmarshal(asset.Attributes, &attributes); err != nil {
-		return fmt.Errorf("failed to parse ETF attributes: %w", err)
+	attributes := map[string]interface{}(asset.Attributes)
+	if attributes == nil {
+		return fmt.Errorf("ETF attributes not found for symbol: %s", operation.Symbol)
 	}
 
 	// Update shares outstanding
@@ -383,14 +378,14 @@ func (s *ETFService) GetETFHoldings(symbol string) ([]ETFHolding, error) {
 
 	// In a real implementation, this would fetch from a holdings database
 	// For now, return mock data based on ETF type
-	asset, err := s.assetService.GetAssetBySymbol(symbol)
+	asset, err := s.assetService.GetAssetMetadata(context.Background(), symbol)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ETF asset: %w", err)
 	}
 
-	var attributes map[string]interface{}
-	if err := json.Unmarshal(asset.Attributes, &attributes); err != nil {
-		return nil, fmt.Errorf("failed to parse ETF attributes: %w", err)
+	attributes := map[string]interface{}(asset.Attributes)
+	if attributes == nil {
+		return nil, fmt.Errorf("ETF attributes not found for symbol: %s", symbol)
 	}
 
 	// Generate sample holdings based on ETF characteristics
@@ -411,7 +406,7 @@ func (s *ETFService) ValidateETFOrder(symbol string, quantity float64, price flo
 		zap.Float64("price", price))
 
 	// Get ETF configuration
-	config, err := s.assetService.GetAssetConfiguration(types.ETF)
+	config, err := s.assetService.GetAssetConfiguration(types.AssetTypeETF)
 	if err != nil {
 		return fmt.Errorf("failed to get ETF configuration: %w", err)
 	}
@@ -697,4 +692,3 @@ func (s *ETFService) getInt64Attribute(attributes map[string]interface{}, key st
 	}
 	return 0
 }
-
