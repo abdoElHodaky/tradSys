@@ -46,6 +46,87 @@ trading:
     margin_call_level: 120.0
     liquidation_level: 110.0
     
+  # Multi-Asset Support
+  assets:
+    # Enable multi-asset trading
+    multi_asset_enabled: true
+    
+    # Asset-specific configurations
+    stock:
+      enabled: true
+      min_order_size: 1.0
+      max_order_size: 1000000.0
+      price_increment: 0.01
+      quantity_increment: 1.0
+      trading_hours: "09:30-16:00 EST"
+      settlement_days: 2
+      risk_multiplier: 1.0
+      
+    reit:
+      enabled: true
+      min_order_size: 1.0
+      max_order_size: 1000000.0
+      price_increment: 0.01
+      quantity_increment: 1.0
+      trading_hours: "09:30-16:00 EST"
+      settlement_days: 2
+      risk_multiplier: 1.2
+      dividend_tracking: true
+      
+    mutual_fund:
+      enabled: true
+      min_order_size: 1.0
+      max_order_size: 1000000.0
+      price_increment: 0.01
+      quantity_increment: 0.001
+      trading_hours: "16:00 EST"
+      settlement_days: 1
+      risk_multiplier: 1.1
+      nav_based_pricing: true
+      
+    etf:
+      enabled: true
+      min_order_size: 1.0
+      max_order_size: 1000000.0
+      price_increment: 0.01
+      quantity_increment: 1.0
+      trading_hours: "09:30-16:00 EST"
+      settlement_days: 2
+      risk_multiplier: 1.0
+      creation_redemption: true
+      
+    bond:
+      enabled: true
+      min_order_size: 100.0
+      max_order_size: 10000000.0
+      price_increment: 0.01
+      quantity_increment: 100.0
+      trading_hours: "08:00-17:00 EST"
+      settlement_days: 3
+      risk_multiplier: 0.8
+      requires_approval: true
+      yield_calculation: true
+      
+    crypto:
+      enabled: false  # Disabled by default
+      min_order_size: 0.001
+      max_order_size: 1000000.0
+      price_increment: 0.01
+      quantity_increment: 0.00001
+      trading_hours: "24/7"
+      settlement_days: 0
+      risk_multiplier: 2.0
+      
+    forex:
+      enabled: false  # Disabled by default
+      min_order_size: 1000.0
+      max_order_size: 100000000.0
+      price_increment: 0.00001
+      quantity_increment: 1000.0
+      trading_hours: "24/5"
+      settlement_days: 2
+      risk_multiplier: 1.5
+    
   # Settlement
   settlement:
     batch_size: 1000
