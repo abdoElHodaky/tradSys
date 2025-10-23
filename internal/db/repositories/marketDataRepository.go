@@ -28,8 +28,8 @@ func NewMarketDataRepository(db *gorm.DB, logger *zap.Logger) *MarketDataReposit
 func (r *MarketDataRepository) Create(ctx context.Context, marketData *db.MarketData) error {
 	result := r.db.WithContext(ctx).Create(marketData)
 	if result.Error != nil {
-		r.logger.Error("Failed to create market data", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to create market data",
+			zap.Error(result.Error),
 			zap.String("symbol", marketData.Symbol),
 			zap.String("type", marketData.Type))
 		return result.Error
@@ -42,8 +42,8 @@ func (r *MarketDataRepository) BatchCreate(ctx context.Context, marketDataEntrie
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		for _, marketData := range marketDataEntries {
 			if err := tx.Create(marketData).Error; err != nil {
-				r.logger.Error("Failed to create market data in batch", 
-					zap.Error(err), 
+				r.logger.Error("Failed to create market data in batch",
+					zap.Error(err),
 					zap.String("symbol", marketData.Symbol),
 					zap.String("type", marketData.Type))
 				return err
@@ -64,8 +64,8 @@ func (r *MarketDataRepository) GetLatestBySymbolAndType(ctx context.Context, sym
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
-		r.logger.Error("Failed to get latest market data", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to get latest market data",
+			zap.Error(result.Error),
 			zap.String("symbol", symbol),
 			zap.String("type", dataType))
 		return nil, result.Error
@@ -81,8 +81,8 @@ func (r *MarketDataRepository) GetBySymbolAndTimeRange(ctx context.Context, symb
 		Order("timestamp ASC").
 		Find(&marketDataEntries)
 	if result.Error != nil {
-		r.logger.Error("Failed to get market data by time range", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to get market data by time range",
+			zap.Error(result.Error),
 			zap.String("symbol", symbol),
 			zap.String("type", dataType),
 			zap.Time("start", start),
@@ -96,13 +96,13 @@ func (r *MarketDataRepository) GetBySymbolAndTimeRange(ctx context.Context, symb
 func (r *MarketDataRepository) GetOHLCVBySymbolAndTimeRange(ctx context.Context, symbol string, interval string, start, end time.Time) ([]*db.MarketData, error) {
 	var marketDataEntries []*db.MarketData
 	result := r.db.WithContext(ctx).
-		Where("symbol = ? AND type = ? AND data LIKE ? AND timestamp BETWEEN ? AND ?", 
+		Where("symbol = ? AND type = ? AND data LIKE ? AND timestamp BETWEEN ? AND ?",
 			symbol, "ohlcv", "%\"interval\":\""+interval+"\"%", start, end).
 		Order("timestamp ASC").
 		Find(&marketDataEntries)
 	if result.Error != nil {
-		r.logger.Error("Failed to get OHLCV data", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to get OHLCV data",
+			zap.Error(result.Error),
 			zap.String("symbol", symbol),
 			zap.String("interval", interval),
 			zap.Time("start", start),
@@ -118,8 +118,8 @@ func (r *MarketDataRepository) DeleteOlderThan(ctx context.Context, dataType str
 		Where("type = ? AND timestamp < ?", dataType, olderThan).
 		Delete(&db.MarketData{})
 	if result.Error != nil {
-		r.logger.Error("Failed to delete old market data", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to delete old market data",
+			zap.Error(result.Error),
 			zap.String("type", dataType),
 			zap.Time("older_than", olderThan))
 		return result.Error
@@ -148,11 +148,10 @@ func (r *MarketDataRepository) GetDataTypes(ctx context.Context, symbol string) 
 		Distinct("type").
 		Pluck("type", &dataTypes)
 	if result.Error != nil {
-		r.logger.Error("Failed to get data types", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to get data types",
+			zap.Error(result.Error),
 			zap.String("symbol", symbol))
 		return nil, result.Error
 	}
 	return dataTypes, nil
 }
-

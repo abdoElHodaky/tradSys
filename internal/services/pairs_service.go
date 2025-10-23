@@ -8,7 +8,7 @@ import (
 
 // PairsServiceImpl implements the PairsService interface
 type PairsServiceImpl struct {
-	pairs map[string]*TradingPair
+	pairs   map[string]*TradingPair
 	tickers map[string]*Ticker
 }
 
@@ -18,10 +18,10 @@ func NewPairsService() PairsService {
 		pairs:   make(map[string]*TradingPair),
 		tickers: make(map[string]*Ticker),
 	}
-	
+
 	// Initialize with some default pairs
 	service.initializeDefaultPairs()
-	
+
 	return service
 }
 
@@ -31,39 +31,39 @@ func (s *PairsServiceImpl) GetPair(ctx context.Context, symbol string) (*Trading
 	if !exists {
 		return nil, fmt.Errorf("trading pair not found: %s", symbol)
 	}
-	
+
 	return pair, nil
 }
 
 // ListPairs retrieves trading pairs based on filter criteria
 func (s *PairsServiceImpl) ListPairs(ctx context.Context, filter *PairFilter) ([]*TradingPair, error) {
 	var result []*TradingPair
-	
+
 	for _, pair := range s.pairs {
 		if s.matchesPairFilter(pair, filter) {
 			result = append(result, pair)
 		}
 	}
-	
+
 	// Apply pagination
 	if filter != nil {
 		start := filter.Offset
 		if start > len(result) {
 			start = len(result)
 		}
-		
+
 		end := start + filter.Limit
 		if filter.Limit == 0 || end > len(result) {
 			end = len(result)
 		}
-		
+
 		if start < end {
 			result = result[start:end]
 		} else {
 			result = []*TradingPair{}
 		}
 	}
-	
+
 	return result, nil
 }
 
@@ -73,7 +73,7 @@ func (s *PairsServiceImpl) GetPairInfo(ctx context.Context, symbol string) (*Pai
 	if !exists {
 		return nil, fmt.Errorf("trading pair not found: %s", symbol)
 	}
-	
+
 	// Simulate market data
 	info := &PairInfo{
 		Symbol:             symbol,
@@ -84,7 +84,7 @@ func (s *PairsServiceImpl) GetPairInfo(ctx context.Context, symbol string) (*Pai
 		LowPrice:           49000.0 + float64(time.Now().Unix()%1000),
 		LastPrice:          49500.0 + float64(time.Now().Unix()%1000),
 	}
-	
+
 	return info, nil
 }
 
@@ -94,11 +94,11 @@ func (s *PairsServiceImpl) GetTicker(ctx context.Context, symbol string) (*Ticke
 	if _, exists := s.pairs[symbol]; !exists {
 		return nil, fmt.Errorf("trading pair not found: %s", symbol)
 	}
-	
+
 	// Generate or retrieve ticker data
 	ticker := s.generateTicker(symbol)
 	s.tickers[symbol] = ticker
-	
+
 	return ticker, nil
 }
 
@@ -108,11 +108,11 @@ func (s *PairsServiceImpl) GetOrderBook(ctx context.Context, symbol string, dept
 	if _, exists := s.pairs[symbol]; !exists {
 		return nil, fmt.Errorf("trading pair not found: %s", symbol)
 	}
-	
+
 	if depth <= 0 {
 		depth = 10 // Default depth
 	}
-	
+
 	orderBook := s.generateOrderBook(symbol, depth)
 	return orderBook, nil
 }
@@ -123,11 +123,11 @@ func (s *PairsServiceImpl) GetTrades(ctx context.Context, symbol string, limit i
 	if _, exists := s.pairs[symbol]; !exists {
 		return nil, fmt.Errorf("trading pair not found: %s", symbol)
 	}
-	
+
 	if limit <= 0 {
 		limit = 50 // Default limit
 	}
-	
+
 	trades := s.generateRecentTrades(symbol, limit)
 	return trades, nil
 }
@@ -172,7 +172,7 @@ func (s *PairsServiceImpl) initializeDefaultPairs() {
 			TickSize:    0.0001,
 		},
 	}
-	
+
 	for _, pair := range defaultPairs {
 		s.pairs[pair.Symbol] = pair
 	}
@@ -186,11 +186,11 @@ func (s *PairsServiceImpl) generateTicker(symbol string) *Ticker {
 	} else if symbol == "ADAUSDT" {
 		basePrice = 0.5
 	}
-	
+
 	// Add some randomness based on current time
 	variation := float64(time.Now().Unix()%1000) / 1000.0 * 0.1 // ±10% variation
 	price := basePrice * (0.95 + variation)
-	
+
 	return &Ticker{
 		Symbol:        symbol,
 		Price:         price,
@@ -206,9 +206,9 @@ func (s *PairsServiceImpl) generateTicker(symbol string) *Ticker {
 // generateOrderBook creates simulated order book data
 func (s *PairsServiceImpl) generateOrderBook(symbol string, depth int) *OrderBook {
 	ticker := s.generateTicker(symbol)
-	
+
 	var bids, asks []OrderBookEntry
-	
+
 	// Generate bids (buy orders) - prices below current price
 	for i := 0; i < depth; i++ {
 		price := ticker.Price * (1.0 - float64(i+1)*0.001) // Decreasing prices
@@ -218,7 +218,7 @@ func (s *PairsServiceImpl) generateOrderBook(symbol string, depth int) *OrderBoo
 			Quantity: quantity,
 		})
 	}
-	
+
 	// Generate asks (sell orders) - prices above current price
 	for i := 0; i < depth; i++ {
 		price := ticker.Price * (1.0 + float64(i+1)*0.001) // Increasing prices
@@ -228,7 +228,7 @@ func (s *PairsServiceImpl) generateOrderBook(symbol string, depth int) *OrderBoo
 			Quantity: quantity,
 		})
 	}
-	
+
 	return &OrderBook{
 		Symbol:    symbol,
 		Bids:      bids,
@@ -241,18 +241,18 @@ func (s *PairsServiceImpl) generateOrderBook(symbol string, depth int) *OrderBoo
 func (s *PairsServiceImpl) generateRecentTrades(symbol string, limit int) []*Trade {
 	ticker := s.generateTicker(symbol)
 	var trades []*Trade
-	
+
 	for i := 0; i < limit; i++ {
 		// Generate trade data with some variation
 		variation := float64(i%10) / 1000.0 // Small price variations
 		price := ticker.Price * (0.999 + variation)
 		quantity := 0.1 + float64(i%5)*0.2
-		
+
 		side := "buy"
 		if i%2 == 0 {
 			side = "sell"
 		}
-		
+
 		trade := &Trade{
 			ID:         fmt.Sprintf("trade_%s_%d", symbol, i),
 			Symbol:     symbol,
@@ -262,10 +262,10 @@ func (s *PairsServiceImpl) generateRecentTrades(symbol string, limit int) []*Tra
 			Commission: price * quantity * 0.001, // 0.1% commission
 			Timestamp:  time.Now().Add(-time.Duration(i) * time.Minute),
 		}
-		
+
 		trades = append(trades, trade)
 	}
-	
+
 	return trades
 }
 
@@ -274,7 +274,7 @@ func (s *PairsServiceImpl) matchesPairFilter(pair *TradingPair, filter *PairFilt
 	if filter == nil {
 		return true
 	}
-	
+
 	if filter.BaseAsset != nil && pair.BaseAsset != *filter.BaseAsset {
 		return false
 	}
@@ -284,6 +284,6 @@ func (s *PairsServiceImpl) matchesPairFilter(pair *TradingPair, filter *PairFilt
 	if filter.Status != nil && pair.Status != *filter.Status {
 		return false
 	}
-	
+
 	return true
 }

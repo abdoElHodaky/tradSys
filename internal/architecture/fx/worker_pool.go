@@ -12,7 +12,7 @@ import (
 var WorkerPoolModule = fx.Options(
 	// Provide the worker pool factory
 	fx.Provide(NewWorkerPoolFactory),
-	
+
 	// Register lifecycle hooks
 	fx.Invoke(registerWorkerPoolHooks),
 )
@@ -21,7 +21,7 @@ var WorkerPoolModule = fx.Options(
 type WorkerPoolConfig struct {
 	// DefaultSize is the default number of workers in the pool
 	DefaultSize int
-	
+
 	// DefaultQueueSize is the default size of the task queue
 	DefaultQueueSize int
 }
@@ -57,20 +57,20 @@ func (f *WorkerPoolFactory) CreateWorkerPool(name string) *architecture.WorkerPo
 		Size:      f.config.DefaultSize,
 		QueueSize: f.config.DefaultQueueSize,
 	})
-	
+
 	f.pools[name] = pool
 	f.logger.Info("Created worker pool", zap.String("name", name))
-	
+
 	return pool
 }
 
 // CreateCustomWorkerPool creates a new worker pool with custom options
 func (f *WorkerPoolFactory) CreateCustomWorkerPool(options architecture.WorkerPoolOptions) *architecture.WorkerPool {
 	pool := architecture.NewWorkerPool(options)
-	
+
 	f.pools[options.Name] = pool
 	f.logger.Info("Created custom worker pool", zap.String("name", options.Name))
-	
+
 	return pool
 }
 
@@ -88,26 +88,25 @@ func registerWorkerPoolHooks(
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting worker pool components")
-			
+
 			// Start all worker pools
 			for name, pool := range factory.pools {
 				logger.Info("Starting worker pool", zap.String("name", name))
 				pool.Start()
 			}
-			
+
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
 			logger.Info("Stopping worker pool components")
-			
+
 			// Stop all worker pools
 			for name, pool := range factory.pools {
 				logger.Info("Stopping worker pool", zap.String("name", name))
 				pool.Stop()
 			}
-			
+
 			return nil
 		},
 	})
 }
-

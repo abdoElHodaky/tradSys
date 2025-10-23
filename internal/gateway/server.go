@@ -43,7 +43,7 @@ func NewServer(p ServerParams) *Server {
 	// Add middleware
 	router.Use(gin.Recovery())
 	router.Use(RequestLogger(p.Logger))
-	
+
 	// Configure CORS
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},

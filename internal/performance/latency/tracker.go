@@ -9,8 +9,8 @@ import (
 
 // Critical latency thresholds in nanoseconds
 const (
-	StrategyLatencyThresholdNs  = 1000000  // 1ms
-	OrderLatencyThresholdNs     = 500000   // 500μs
+	StrategyLatencyThresholdNs   = 1000000 // 1ms
+	OrderLatencyThresholdNs      = 500000  // 500μs
 	MarketDataLatencyThresholdNs = 100000  // 100μs
 )
 
@@ -159,17 +159,17 @@ func (t *LatencyTracker) TrackStrategyExecution(strategyName string, start time.
 	t.mu.RLock()
 	histogram, exists := t.strategyLatencies[strategyName]
 	t.mu.RUnlock()
-	
+
 	if !exists {
 		t.mu.Lock()
 		histogram = NewSimpleHistogram()
 		t.strategyLatencies[strategyName] = histogram
 		t.mu.Unlock()
 	}
-	
+
 	latencyNs := time.Since(start).Nanoseconds()
 	histogram.Update(latencyNs)
-	
+
 	// Alert on excessive latency
 	if latencyNs > StrategyLatencyThresholdNs {
 		t.logger.Warn("Strategy execution exceeded critical latency threshold",
@@ -183,7 +183,7 @@ func (t *LatencyTracker) TrackStrategyExecution(strategyName string, start time.
 func (t *LatencyTracker) TrackOrderProcessing(orderID string, start time.Time) {
 	latencyNs := time.Since(start).Nanoseconds()
 	t.orderLatencies.Update(latencyNs)
-	
+
 	// Alert on excessive latency
 	if latencyNs > OrderLatencyThresholdNs {
 		t.logger.Warn("Order processing exceeded critical latency threshold",
@@ -197,7 +197,7 @@ func (t *LatencyTracker) TrackOrderProcessing(orderID string, start time.Time) {
 func (t *LatencyTracker) TrackMarketDataProcessing(symbol string, start time.Time) {
 	latencyNs := time.Since(start).Nanoseconds()
 	t.marketDataLatencies.Update(latencyNs)
-	
+
 	// Alert on excessive latency
 	if latencyNs > MarketDataLatencyThresholdNs {
 		t.logger.Warn("Market data processing exceeded critical latency threshold",
@@ -212,27 +212,27 @@ func (t *LatencyTracker) GetStrategyLatencyStats(strategyName string) (min, max,
 	t.mu.RLock()
 	histogram, exists := t.strategyLatencies[strategyName]
 	t.mu.RUnlock()
-	
+
 	if !exists {
 		return 0, 0, 0, 0, 0, ErrStrategyNotFound
 	}
-	
+
 	snapshot := histogram.Snapshot()
-	return snapshot.Min(), snapshot.Max(), int64(snapshot.Mean()), 
+	return snapshot.Min(), snapshot.Max(), int64(snapshot.Mean()),
 		int64(snapshot.Percentile(0.95)), int64(snapshot.Percentile(0.99)), nil
 }
 
 // GetOrderLatencyStats returns latency statistics for order processing
 func (t *LatencyTracker) GetOrderLatencyStats() (min, max, mean, p95, p99 int64) {
 	snapshot := t.orderLatencies.Snapshot()
-	return snapshot.Min(), snapshot.Max(), int64(snapshot.Mean()), 
+	return snapshot.Min(), snapshot.Max(), int64(snapshot.Mean()),
 		int64(snapshot.Percentile(0.95)), int64(snapshot.Percentile(0.99))
 }
 
 // GetMarketDataLatencyStats returns latency statistics for market data processing
 func (t *LatencyTracker) GetMarketDataLatencyStats() (min, max, mean, p95, p99 int64) {
 	snapshot := t.marketDataLatencies.Snapshot()
-	return snapshot.Min(), snapshot.Max(), int64(snapshot.Mean()), 
+	return snapshot.Min(), snapshot.Max(), int64(snapshot.Mean()),
 		int64(snapshot.Percentile(0.95)), int64(snapshot.Percentile(0.99))
 }
 
@@ -250,4 +250,3 @@ type LatencyError struct {
 func (e *LatencyError) Error() string {
 	return e.message
 }
-

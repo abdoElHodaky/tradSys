@@ -16,45 +16,45 @@ import (
 // HFTGRPCPoolConfig contains gRPC connection pool configuration
 type HFTGRPCPoolConfig struct {
 	// Pool settings
-	InitialSize    int           `yaml:"initial_size" default:"5"`
-	MaxSize        int           `yaml:"max_size" default:"20"`
-	MaxIdleTime    time.Duration `yaml:"max_idle_time" default:"5m"`
-	MaxLifetime    time.Duration `yaml:"max_lifetime" default:"30m"`
-	
+	InitialSize int           `yaml:"initial_size" default:"5"`
+	MaxSize     int           `yaml:"max_size" default:"20"`
+	MaxIdleTime time.Duration `yaml:"max_idle_time" default:"5m"`
+	MaxLifetime time.Duration `yaml:"max_lifetime" default:"30m"`
+
 	// Connection settings
 	ConnectTimeout time.Duration `yaml:"connect_timeout" default:"5s"`
 	RequestTimeout time.Duration `yaml:"request_timeout" default:"10s"`
-	
+
 	// Keep-alive settings
-	KeepAliveTime    time.Duration `yaml:"keep_alive_time" default:"30s"`
-	KeepAliveTimeout time.Duration `yaml:"keep_alive_timeout" default:"5s"`
-	PermitWithoutStream bool       `yaml:"permit_without_stream" default:"true"`
-	
+	KeepAliveTime       time.Duration `yaml:"keep_alive_time" default:"30s"`
+	KeepAliveTimeout    time.Duration `yaml:"keep_alive_timeout" default:"5s"`
+	PermitWithoutStream bool          `yaml:"permit_without_stream" default:"true"`
+
 	// Retry settings
-	MaxRetries     int           `yaml:"max_retries" default:"3"`
-	RetryDelay     time.Duration `yaml:"retry_delay" default:"100ms"`
-	BackoffFactor  float64       `yaml:"backoff_factor" default:"2.0"`
+	MaxRetries    int           `yaml:"max_retries" default:"3"`
+	RetryDelay    time.Duration `yaml:"retry_delay" default:"100ms"`
+	BackoffFactor float64       `yaml:"backoff_factor" default:"2.0"`
 }
 
 // PooledConnection represents a pooled gRPC connection
 type PooledConnection struct {
-	conn        *grpc.ClientConn
-	createdAt   time.Time
-	lastUsedAt  time.Time
-	usageCount  int64
-	inUse       bool
-	mu          sync.RWMutex
+	conn       *grpc.ClientConn
+	createdAt  time.Time
+	lastUsedAt time.Time
+	usageCount int64
+	inUse      bool
+	mu         sync.RWMutex
 }
 
 // IsHealthy checks if the connection is healthy
 func (pc *PooledConnection) IsHealthy() bool {
 	pc.mu.RLock()
 	defer pc.mu.RUnlock()
-	
+
 	if pc.conn == nil {
 		return false
 	}
-	
+
 	state := pc.conn.GetState()
 	return state == connectivity.Ready || state == connectivity.Idle
 }
@@ -63,19 +63,19 @@ func (pc *PooledConnection) IsHealthy() bool {
 func (pc *PooledConnection) IsExpired(maxLifetime, maxIdleTime time.Duration) bool {
 	pc.mu.RLock()
 	defer pc.mu.RUnlock()
-	
+
 	now := time.Now()
-	
+
 	// Check lifetime
 	if maxLifetime > 0 && now.Sub(pc.createdAt) > maxLifetime {
 		return true
 	}
-	
+
 	// Check idle time
 	if maxIdleTime > 0 && now.Sub(pc.lastUsedAt) > maxIdleTime {
 		return true
 	}
-	
+
 	return false
 }
 
@@ -83,7 +83,7 @@ func (pc *PooledConnection) IsExpired(maxLifetime, maxIdleTime time.Duration) bo
 func (pc *PooledConnection) MarkUsed() {
 	pc.mu.Lock()
 	defer pc.mu.Unlock()
-	
+
 	pc.lastUsedAt = time.Now()
 	atomic.AddInt64(&pc.usageCount, 1)
 	pc.inUse = true
@@ -93,7 +93,7 @@ func (pc *PooledConnection) MarkUsed() {
 func (pc *PooledConnection) MarkUnused() {
 	pc.mu.Lock()
 	defer pc.mu.Unlock()
-	
+
 	pc.inUse = false
 }
 
@@ -101,7 +101,7 @@ func (pc *PooledConnection) MarkUnused() {
 func (pc *PooledConnection) Close() error {
 	pc.mu.Lock()
 	defer pc.mu.Unlock()
-	
+
 	if pc.conn != nil {
 		return pc.conn.Close()
 	}
@@ -115,12 +115,12 @@ type HFTGRPCPool struct {
 	connections []*PooledConnection
 	mu          sync.RWMutex
 	closed      bool
-	
+
 	// Statistics
-	totalConnections int64
+	totalConnections  int64
 	activeConnections int64
-	totalRequests    int64
-	failedRequests   int64
+	totalRequests     int64
+	failedRequests    int64
 }
 
 // NewHFTGRPCPool creates a new gRPC connection pool
@@ -128,26 +128,26 @@ func NewHFTGRPCPool(target string, config *HFTGRPCPoolConfig) (*HFTGRPCPool, err
 	if config == nil {
 		config = &HFTGRPCPoolConfig{
 			InitialSize:         5,
-			MaxSize:            20,
-			MaxIdleTime:        5 * time.Minute,
-			MaxLifetime:        30 * time.Minute,
-			ConnectTimeout:     5 * time.Second,
-			RequestTimeout:     10 * time.Second,
-			KeepAliveTime:      30 * time.Second,
-			KeepAliveTimeout:   5 * time.Second,
+			MaxSize:             20,
+			MaxIdleTime:         5 * time.Minute,
+			MaxLifetime:         30 * time.Minute,
+			ConnectTimeout:      5 * time.Second,
+			RequestTimeout:      10 * time.Second,
+			KeepAliveTime:       30 * time.Second,
+			KeepAliveTimeout:    5 * time.Second,
 			PermitWithoutStream: true,
-			MaxRetries:         3,
-			RetryDelay:         100 * time.Millisecond,
-			BackoffFactor:      2.0,
+			MaxRetries:          3,
+			RetryDelay:          100 * time.Millisecond,
+			BackoffFactor:       2.0,
 		}
 	}
-	
+
 	pool := &HFTGRPCPool{
 		config:      config,
 		target:      target,
 		connections: make([]*PooledConnection, 0, config.MaxSize),
 	}
-	
+
 	// Create initial connections
 	for i := 0; i < config.InitialSize; i++ {
 		conn, err := pool.createConnection()
@@ -159,10 +159,10 @@ func NewHFTGRPCPool(target string, config *HFTGRPCPoolConfig) (*HFTGRPCPool, err
 		pool.connections = append(pool.connections, conn)
 		atomic.AddInt64(&pool.totalConnections, 1)
 	}
-	
+
 	// Start maintenance goroutine
 	go pool.maintenanceLoop()
-	
+
 	return pool, nil
 }
 
@@ -170,14 +170,14 @@ func NewHFTGRPCPool(target string, config *HFTGRPCPoolConfig) (*HFTGRPCPool, err
 func (p *HFTGRPCPool) createConnection() (*PooledConnection, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), p.config.ConnectTimeout)
 	defer cancel()
-	
+
 	// Configure keep-alive parameters
 	kacp := keepalive.ClientParameters{
 		Time:                p.config.KeepAliveTime,
 		Timeout:             p.config.KeepAliveTimeout,
 		PermitWithoutStream: p.config.PermitWithoutStream,
 	}
-	
+
 	// Create connection with optimized settings
 	conn, err := grpc.DialContext(ctx, p.target,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -191,11 +191,11 @@ func (p *HFTGRPCPool) createConnection() (*PooledConnection, error) {
 		grpc.WithWriteBufferSize(32*1024),         // 32KB
 		grpc.WithReadBufferSize(32*1024),          // 32KB
 	)
-	
+
 	if err != nil {
 		return nil, err
 	}
-	
+
 	now := time.Now()
 	return &PooledConnection{
 		conn:       conn,
@@ -208,13 +208,13 @@ func (p *HFTGRPCPool) createConnection() (*PooledConnection, error) {
 func (p *HFTGRPCPool) GetConnection() (*PooledConnection, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	if p.closed {
 		return nil, fmt.Errorf("connection pool is closed")
 	}
-	
+
 	atomic.AddInt64(&p.totalRequests, 1)
-	
+
 	// Find an available healthy connection
 	for _, conn := range p.connections {
 		if !conn.inUse && conn.IsHealthy() && !conn.IsExpired(p.config.MaxLifetime, p.config.MaxIdleTime) {
@@ -223,7 +223,7 @@ func (p *HFTGRPCPool) GetConnection() (*PooledConnection, error) {
 			return conn, nil
 		}
 	}
-	
+
 	// Create a new connection if pool is not at max capacity
 	if len(p.connections) < p.config.MaxSize {
 		conn, err := p.createConnection()
@@ -231,14 +231,14 @@ func (p *HFTGRPCPool) GetConnection() (*PooledConnection, error) {
 			atomic.AddInt64(&p.failedRequests, 1)
 			return nil, err
 		}
-		
+
 		conn.MarkUsed()
 		p.connections = append(p.connections, conn)
 		atomic.AddInt64(&p.totalConnections, 1)
 		atomic.AddInt64(&p.activeConnections, 1)
 		return conn, nil
 	}
-	
+
 	// Pool is full, wait for a connection to become available
 	// For HFT, we don't want to wait too long
 	atomic.AddInt64(&p.failedRequests, 1)
@@ -250,7 +250,7 @@ func (p *HFTGRPCPool) ReturnConnection(conn *PooledConnection) {
 	if conn == nil {
 		return
 	}
-	
+
 	conn.MarkUnused()
 	atomic.AddInt64(&p.activeConnections, -1)
 }
@@ -259,14 +259,14 @@ func (p *HFTGRPCPool) ReturnConnection(conn *PooledConnection) {
 func (p *HFTGRPCPool) maintenanceLoop() {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
-	
+
 	for range ticker.C {
 		p.mu.Lock()
 		if p.closed {
 			p.mu.Unlock()
 			return
 		}
-		
+
 		// Remove expired or unhealthy connections
 		var activeConnections []*PooledConnection
 		for _, conn := range p.connections {
@@ -282,7 +282,7 @@ func (p *HFTGRPCPool) maintenanceLoop() {
 				atomic.AddInt64(&p.totalConnections, -1)
 			}
 		}
-		
+
 		p.connections = activeConnections
 		p.mu.Unlock()
 	}
@@ -292,7 +292,7 @@ func (p *HFTGRPCPool) maintenanceLoop() {
 func (p *HFTGRPCPool) ExecuteWithRetry(fn func(*grpc.ClientConn) error) error {
 	var lastErr error
 	delay := p.config.RetryDelay
-	
+
 	for attempt := 0; attempt <= p.config.MaxRetries; attempt++ {
 		conn, err := p.GetConnection()
 		if err != nil {
@@ -303,21 +303,21 @@ func (p *HFTGRPCPool) ExecuteWithRetry(fn func(*grpc.ClientConn) error) error {
 			}
 			continue
 		}
-		
+
 		err = fn(conn.conn)
 		p.ReturnConnection(conn)
-		
+
 		if err == nil {
 			return nil
 		}
-		
+
 		lastErr = err
 		if attempt < p.config.MaxRetries {
 			time.Sleep(delay)
 			delay = time.Duration(float64(delay) * p.config.BackoffFactor)
 		}
 	}
-	
+
 	return lastErr
 }
 
@@ -325,7 +325,7 @@ func (p *HFTGRPCPool) ExecuteWithRetry(fn func(*grpc.ClientConn) error) error {
 func (p *HFTGRPCPool) GetStats() map[string]interface{} {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	
+
 	return map[string]interface{}{
 		"total_connections":  atomic.LoadInt64(&p.totalConnections),
 		"active_connections": atomic.LoadInt64(&p.activeConnections),
@@ -342,26 +342,26 @@ func (p *HFTGRPCPool) GetStats() map[string]interface{} {
 func (p *HFTGRPCPool) Close() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	if p.closed {
 		return nil
 	}
-	
+
 	p.closed = true
-	
+
 	var errs []error
 	for _, conn := range p.connections {
 		if err := conn.Close(); err != nil {
 			errs = append(errs, err)
 		}
 	}
-	
+
 	p.connections = nil
-	
+
 	if len(errs) > 0 {
 		return fmt.Errorf("errors closing connections: %v", errs)
 	}
-	
+
 	return nil
 }
 
@@ -386,21 +386,21 @@ func (m *HFTGRPCPoolManager) GetPool(target string, config *HFTGRPCPoolConfig) (
 		return pool, nil
 	}
 	m.mu.RUnlock()
-	
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	// Double-check after acquiring write lock
 	if pool, exists := m.pools[target]; exists {
 		return pool, nil
 	}
-	
+
 	// Create new pool
 	pool, err := NewHFTGRPCPool(target, config)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	m.pools[target] = pool
 	return pool, nil
 }
@@ -409,20 +409,20 @@ func (m *HFTGRPCPoolManager) GetPool(target string, config *HFTGRPCPoolConfig) (
 func (m *HFTGRPCPoolManager) CloseAll() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	var errs []error
 	for target, pool := range m.pools {
 		if err := pool.Close(); err != nil {
 			errs = append(errs, fmt.Errorf("error closing pool for %s: %w", target, err))
 		}
 	}
-	
+
 	m.pools = make(map[string]*HFTGRPCPool)
-	
+
 	if len(errs) > 0 {
 		return fmt.Errorf("errors closing pools: %v", errs)
 	}
-	
+
 	return nil
 }
 
@@ -430,12 +430,12 @@ func (m *HFTGRPCPoolManager) CloseAll() error {
 func (m *HFTGRPCPoolManager) GetAllStats() map[string]interface{} {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	stats := make(map[string]interface{})
 	for target, pool := range m.pools {
 		stats[target] = pool.GetStats()
 	}
-	
+
 	return stats
 }
 

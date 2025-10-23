@@ -7,20 +7,20 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/architecture/discovery"
-	"github.com/gin-gonic/gin"
 	"github.com/asim/go-micro/v3/registry"
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
 // APIGateway provides API gateway functionality
 type APIGateway struct {
-	router       *gin.Engine
-	discovery    *discovery.ServiceDiscovery
-	selector     *discovery.ServiceSelector
-	logger       *zap.Logger
-	httpClient   *http.Client
-	routes       map[string]Route
-	middlewares  []gin.HandlerFunc
+	router      *gin.Engine
+	discovery   *discovery.ServiceDiscovery
+	selector    *discovery.ServiceSelector
+	logger      *zap.Logger
+	httpClient  *http.Client
+	routes      map[string]Route
+	middlewares []gin.HandlerFunc
 }
 
 // Route represents a route in the API gateway
@@ -33,18 +33,18 @@ type Route struct {
 }
 
 // NewAPIGateway creates a new API gateway
-func NewAPIGateway(discovery *discovery.ServiceDiscovery, logger *zap.Logger) *APIGateway {
+func NewAPIGateway(discoveryService *discovery.ServiceDiscovery, logger *zap.Logger) *APIGateway {
 	// Create a new gin router
 	router := gin.New()
 	router.Use(gin.Recovery())
-	
+
 	// Create a service selector with round-robin strategy
 	selector := discovery.NewServiceSelector(
-		discovery,
+		discoveryService,
 		logger,
 		discovery.NewRoundRobinStrategy(),
 	)
-	
+
 	// Create an HTTP client for proxying requests
 	httpClient := &http.Client{
 		Timeout: 10 * time.Second,
@@ -54,10 +54,10 @@ func NewAPIGateway(discovery *discovery.ServiceDiscovery, logger *zap.Logger) *A
 			IdleConnTimeout:     90 * time.Second,
 		},
 	}
-	
+
 	return &APIGateway{
 		router:      router,
-		discovery:   discovery,
+		discovery:   discoveryService,
 		selector:    selector,
 		logger:      logger,
 		httpClient:  httpClient,
@@ -77,10 +77,10 @@ func (g *APIGateway) AddRoute(route Route) {
 	// Add the route to the map
 	routeKey := route.Method + ":" + route.Path
 	g.routes[routeKey] = route
-	
+
 	// Add the route to the router
 	g.router.Handle(route.Method, route.Path, append(g.middlewares, append(route.Middlewares, g.handleRequest(route))...)...)
-	
+
 	g.logger.Info("Added route",
 		zap.String("method", route.Method),
 		zap.String("path", route.Path),
@@ -102,7 +102,7 @@ func (g *APIGateway) handleRequest(route Route) gin.HandlerFunc {
 			})
 			return
 		}
-		
+
 		// Create a new request to the service
 		req, err := http.NewRequestWithContext(
 			c.Request.Context(),
@@ -120,14 +120,14 @@ func (g *APIGateway) handleRequest(route Route) gin.HandlerFunc {
 			})
 			return
 		}
-		
+
 		// Copy headers from the original request
 		for key, values := range c.Request.Header {
 			for _, value := range values {
 				req.Header.Add(key, value)
 			}
 		}
-		
+
 		// Send the request to the service
 		resp, err := g.httpClient.Do(req)
 		if err != nil {
@@ -141,17 +141,17 @@ func (g *APIGateway) handleRequest(route Route) gin.HandlerFunc {
 			return
 		}
 		defer resp.Body.Close()
-		
+
 		// Copy headers from the service response
 		for key, values := range resp.Header {
 			for _, value := range values {
 				c.Header(key, value)
 			}
 		}
-		
+
 		// Copy the status code
 		c.Status(resp.StatusCode)
-		
+
 		// Copy the response body
 		_, err = io.Copy(c.Writer, resp.Body)
 		if err != nil {
@@ -179,12 +179,12 @@ func (g *APIGateway) RegisterService(ctx context.Context, service *registry.Serv
 	if err != nil {
 		return err
 	}
-	
+
 	// Add routes for the service
 	for _, route := range routes {
 		g.AddRoute(route)
 	}
-	
+
 	return nil
 }
 
@@ -218,7 +218,7 @@ func (lb *LoadBalancer) Forward(ctx context.Context, serviceName string, req *ht
 			zap.Error(err))
 		return nil, err
 	}
-	
+
 	// Create a new request to the service
 	serviceReq, err := http.NewRequestWithContext(
 		ctx,
@@ -233,14 +233,14 @@ func (lb *LoadBalancer) Forward(ctx context.Context, serviceName string, req *ht
 			zap.Error(err))
 		return nil, err
 	}
-	
+
 	// Copy headers from the original request
 	for key, values := range req.Header {
 		for _, value := range values {
 			serviceReq.Header.Add(key, value)
 		}
 	}
-	
+
 	// Send the request to the service
 	client := &http.Client{
 		Timeout: 10 * time.Second,

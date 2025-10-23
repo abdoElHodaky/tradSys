@@ -20,12 +20,12 @@ type RiskEngineTestSuite struct {
 
 func (s *RiskEngineTestSuite) SetupTest() {
 	s.ctx, s.cancel = context.WithTimeout(context.Background(), 30*time.Second)
-	
+
 	logger, _ := zap.NewDevelopment()
 	s.engine = &Engine{
 		logger: logger,
 		config: &Config{
-			MaxPositionSize:    1000000,
+			MaxPositionSize:   1000000,
 			MaxDailyLoss:      100000,
 			VaRThreshold:      50000,
 			StressTestEnabled: true,
@@ -118,7 +118,7 @@ func (s *RiskEngineTestSuite) TestValidateOrder() {
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
 			err := s.engine.ValidateOrder(s.ctx, tt.order)
-			
+
 			if tt.expectError {
 				s.Error(err)
 				if tt.errorMsg != "" {
@@ -139,7 +139,7 @@ func (s *RiskEngineTestSuite) TestCalculateVaR() {
 		Price:    50000,
 		Value:    500000,
 	}
-	
+
 	s.engine.positions["ETHUSDT"] = &Position{
 		Symbol:   "ETHUSDT",
 		Quantity: 100.0,
@@ -148,7 +148,7 @@ func (s *RiskEngineTestSuite) TestCalculateVaR() {
 	}
 
 	var95, var99, err := s.engine.CalculateVaR(s.ctx, 0.95, 0.99)
-	
+
 	s.NoError(err)
 	s.Greater(var95, 0.0)
 	s.Greater(var99, var95) // 99% VaR should be higher than 95% VaR
@@ -179,10 +179,10 @@ func (s *RiskEngineTestSuite) TestStressTest() {
 	}
 
 	results, err := s.engine.StressTest(s.ctx, scenarios)
-	
+
 	s.NoError(err)
 	s.Len(results, len(scenarios))
-	
+
 	for _, result := range results {
 		s.NotEmpty(result.Scenario)
 		s.NotZero(result.PnL)
@@ -193,13 +193,13 @@ func (s *RiskEngineTestSuite) TestStressTest() {
 func (s *RiskEngineTestSuite) TestCircuitBreaker() {
 	// Test circuit breaker activation
 	s.engine.metrics.DailyPnL = -150000 // Exceeds max daily loss
-	
+
 	shouldBreak := s.engine.ShouldTriggerCircuitBreaker(s.ctx)
 	s.True(shouldBreak)
-	
+
 	// Test circuit breaker reset
 	s.engine.metrics.DailyPnL = -50000 // Within limits
-	
+
 	shouldBreak = s.engine.ShouldTriggerCircuitBreaker(s.ctx)
 	s.False(shouldBreak)
 }
@@ -305,8 +305,8 @@ func TestOrder_Validate(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "nil order",
-			order: nil,
+			name:    "nil order",
+			order:   nil,
 			wantErr: true,
 		},
 	}
@@ -374,7 +374,7 @@ type StressResult struct {
 }
 
 type Config struct {
-	MaxPositionSize    float64
+	MaxPositionSize   float64
 	MaxDailyLoss      float64
 	VaRThreshold      float64
 	StressTestEnabled bool
@@ -389,17 +389,17 @@ func (e *Engine) ValidateOrder(ctx context.Context, order *Order) error {
 	if order == nil {
 		return fmt.Errorf("order cannot be nil")
 	}
-	
+
 	if err := order.Validate(); err != nil {
 		return err
 	}
-	
+
 	// Check position limits
 	orderValue := order.Quantity * order.Price
 	if orderValue > e.config.MaxPositionSize {
 		return fmt.Errorf("order size exceeds maximum position limit")
 	}
-	
+
 	return nil
 }
 
@@ -409,30 +409,30 @@ func (e *Engine) CalculateVaR(ctx context.Context, confidence ...float64) (float
 	for _, pos := range e.positions {
 		totalValue += pos.Value
 	}
-	
+
 	var95 := totalValue * 0.05 // 5% of total value
 	var99 := totalValue * 0.10 // 10% of total value
-	
+
 	return var95, var99, nil
 }
 
 func (e *Engine) StressTest(ctx context.Context, scenarios []StressScenario) ([]StressResult, error) {
 	results := make([]StressResult, len(scenarios))
-	
+
 	for i, scenario := range scenarios {
 		totalPnL := 0.0
 		for _, pos := range e.positions {
 			pnl := pos.Value * scenario.PriceShock
 			totalPnL += pnl
 		}
-		
+
 		results[i] = StressResult{
 			Scenario:    scenario.Name,
 			PnL:         totalPnL,
 			Probability: scenario.Probability,
 		}
 	}
-	
+
 	return results, nil
 }
 
@@ -443,7 +443,7 @@ func (e *Engine) ShouldTriggerCircuitBreaker(ctx context.Context) bool {
 func (e *Engine) StartRealTimeMonitoring(ctx context.Context) {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -463,4 +463,3 @@ func (e *Engine) updateMetrics() {
 	}
 	// Update other metrics as needed
 }
-

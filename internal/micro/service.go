@@ -15,8 +15,8 @@ import (
 type ServiceParams struct {
 	fx.In
 
-	Logger *zap.Logger
-	Config *config.Config
+	Logger    *zap.Logger
+	Config    *config.Config
 	Lifecycle fx.Lifecycle
 }
 

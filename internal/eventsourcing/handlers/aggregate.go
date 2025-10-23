@@ -35,18 +35,18 @@ type Aggregate interface {
 type Snapshottable interface {
 	// CreateSnapshot creates a snapshot of the aggregate
 	CreateSnapshot() (interface{}, error)
-	
+
 	// ApplySnapshot applies a snapshot to the aggregate
 	ApplySnapshot(snapshot interface{}) error
 }
 
 // BaseAggregate provides a base implementation of the Aggregate interface
 type BaseAggregate struct {
-	ID               string
-	Type             string
-	Version          int
+	ID                string
+	Type              string
+	Version           int
 	UncommittedEvents []*eventsourcing.Event
-	mu               sync.RWMutex
+	mu                sync.RWMutex
 }
 
 // NewBaseAggregate creates a new base aggregate
@@ -135,4 +135,3 @@ var (
 	ErrInvalidEvent      = errors.New("invalid event")
 	ErrInvalidSnapshot   = errors.New("invalid snapshot")
 )
-

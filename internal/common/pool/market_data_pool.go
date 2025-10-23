@@ -74,4 +74,3 @@ func (p *MarketDataPool) NewMarketDataResponse(
 	response.Interval = interval
 	return response
 }
-

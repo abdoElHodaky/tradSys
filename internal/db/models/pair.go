@@ -2,7 +2,7 @@ package models
 
 import (
 	"time"
-	
+
 	"gorm.io/gorm"
 )
 
@@ -29,7 +29,7 @@ type Pair struct {
 	ZScoreThresholdExit  float64    // Z-score threshold for exit
 	LookbackPeriod       int        `gorm:"not null"` // Period for statistical calculations
 	HalfLife             int        // Half-life of mean reversion
-	CreatedBy            uint       `gorm:"index"`    // User who created the pair
+	CreatedBy            uint       `gorm:"index"` // User who created the pair
 	Notes                string
 }
 
@@ -49,7 +49,7 @@ type PairStatistics struct {
 // PairPosition represents an open position in a pair
 type PairPosition struct {
 	gorm.Model
-	PairID         string    `gorm:"index;not null"`
+	PairID         string `gorm:"index;not null"`
 	EntryTimestamp time.Time
 	Symbol1        string
 	Symbol2        string

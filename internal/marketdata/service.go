@@ -14,8 +14,6 @@ import (
 	"go.uber.org/zap"
 )
 
-
-
 // Service represents a market data service
 type Service struct {
 	// MarketDataRepository is the market data repository
@@ -61,10 +59,10 @@ type Subscription struct {
 // NewService creates a new market data service with fx dependency injection
 func NewService(p ServiceParams) *Service {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	// Initialize external manager with default configuration
 	externalManager := external.NewManager(p.Logger)
-	
+
 	service := &Service{
 		MarketDataRepository: p.Repository,
 		ExternalManager:      externalManager,
@@ -76,22 +74,22 @@ func NewService(p ServiceParams) *Service {
 		ctx:                  ctx,
 		cancel:               cancel,
 	}
-	
+
 	return service
 }
 
 // Start starts the market data service
 func (s *Service) Start(ctx context.Context) error {
 	s.logger.Info("Starting market data service")
-	
+
 	// Start data persistence task
 	go s.persistMarketData()
-	
+
 	// Initialize external data sources
 	if err := s.initializeDataSources(); err != nil {
 		return fmt.Errorf("failed to initialize data sources: %w", err)
 	}
-	
+
 	s.logger.Info("Market data service started successfully")
 	return nil
 }
@@ -99,17 +97,17 @@ func (s *Service) Start(ctx context.Context) error {
 // Stop stops the market data service
 func (s *Service) Stop(ctx context.Context) error {
 	s.logger.Info("Stopping market data service")
-	
+
 	// Cancel context to stop all goroutines
 	s.cancel()
-	
+
 	// Close all subscriptions
 	s.mu.Lock()
 	for _, subscription := range s.Subscriptions {
 		close(subscription.Channel)
 	}
 	s.mu.Unlock()
-	
+
 	s.logger.Info("Market data service stopped successfully")
 	return nil
 }
@@ -117,7 +115,7 @@ func (s *Service) Stop(ctx context.Context) error {
 // initializeDataSources initializes external market data sources
 func (s *Service) initializeDataSources() error {
 	s.logger.Info("Initializing market data sources")
-	
+
 	// Add default data sources based on configuration
 	// This is a placeholder - in production, you'd configure actual providers
 	if err := s.ExternalManager.AddSource("binance", map[string]interface{}{
@@ -127,7 +125,7 @@ func (s *Service) initializeDataSources() error {
 	}); err != nil {
 		s.logger.Warn("Failed to add Binance data source", zap.Error(err))
 	}
-	
+
 	return nil
 }
 
@@ -135,7 +133,7 @@ func (s *Service) initializeDataSources() error {
 func (s *Service) persistMarketData() {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-s.ctx.Done():
@@ -150,16 +148,16 @@ func (s *Service) persistMarketData() {
 func (s *Service) persistCachedMarketData() {
 	// Get all items from cache
 	items := s.Cache.Items()
-	
+
 	// Create a batch of market data entries
 	marketDataEntries := make([]*db.MarketData, 0, len(items))
-	
+
 	for _, item := range items {
 		// Skip expired items
 		if item.Expired() {
 			continue
 		}
-		
+
 		// Convert cached data to market data entry
 		switch data := item.Object.(type) {
 		case *external.OrderBookData:
@@ -201,7 +199,7 @@ func (s *Service) persistCachedMarketData() {
 			})
 		}
 	}
-	
+
 	// Persist market data entries
 	if len(marketDataEntries) > 0 {
 		if err := s.MarketDataRepository.BatchCreate(context.Background(), marketDataEntries); err != nil {
@@ -244,33 +242,33 @@ func (s *Service) SubscribeOrderBook(ctx context.Context, symbol string) (*Subsc
 		Channel:   make(chan interface{}, 100),
 		CreatedAt: time.Now(),
 	}
-	
+
 	// Add to subscriptions
 	s.mu.Lock()
 	s.Subscriptions[subscription.ID] = subscription
-	
+
 	// Add to symbol subscriptions
 	if _, exists := s.SymbolSubscriptions[symbol]; !exists {
 		s.SymbolSubscriptions[symbol] = make(map[string]*Subscription)
 	}
 	s.SymbolSubscriptions[symbol][subscription.ID] = subscription
 	s.mu.Unlock()
-	
+
 	// Subscribe to external provider
 	provider, err := s.ExternalManager.GetDefaultProvider()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Create callback function
 	callback := func(data interface{}) {
 		// Cache the data
 		s.Cache.Set(
-			"orderbook:"+symbol, 
-			data, 
+			"orderbook:"+symbol,
+			data,
 			cache.DefaultExpiration,
 		)
-		
+
 		// Send to subscriber
 		select {
 		case subscription.Channel <- data:
@@ -280,12 +278,12 @@ func (s *Service) SubscribeOrderBook(ctx context.Context, symbol string) (*Subsc
 				zap.String("symbol", symbol))
 		}
 	}
-	
+
 	// Subscribe to external provider
 	if err := provider.SubscribeOrderBook(ctx, symbol, callback); err != nil {
 		return nil, err
 	}
-	
+
 	return subscription, nil
 }
 
@@ -299,33 +297,33 @@ func (s *Service) SubscribeTrades(ctx context.Context, symbol string) (*Subscrip
 		Channel:   make(chan interface{}, 100),
 		CreatedAt: time.Now(),
 	}
-	
+
 	// Add to subscriptions
 	s.mu.Lock()
 	s.Subscriptions[subscription.ID] = subscription
-	
+
 	// Add to symbol subscriptions
 	if _, exists := s.SymbolSubscriptions[symbol]; !exists {
 		s.SymbolSubscriptions[symbol] = make(map[string]*Subscription)
 	}
 	s.SymbolSubscriptions[symbol][subscription.ID] = subscription
 	s.mu.Unlock()
-	
+
 	// Subscribe to external provider
 	provider, err := s.ExternalManager.GetDefaultProvider()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Create callback function
 	callback := func(data interface{}) {
 		// Cache the data
 		s.Cache.Set(
-			"trade:"+symbol, 
-			data, 
+			"trade:"+symbol,
+			data,
 			cache.DefaultExpiration,
 		)
-		
+
 		// Send to subscriber
 		select {
 		case subscription.Channel <- data:
@@ -335,12 +333,12 @@ func (s *Service) SubscribeTrades(ctx context.Context, symbol string) (*Subscrip
 				zap.String("symbol", symbol))
 		}
 	}
-	
+
 	// Subscribe to external provider
 	if err := provider.SubscribeTrades(ctx, symbol, callback); err != nil {
 		return nil, err
 	}
-	
+
 	return subscription, nil
 }
 
@@ -354,33 +352,33 @@ func (s *Service) SubscribeTicker(ctx context.Context, symbol string) (*Subscrip
 		Channel:   make(chan interface{}, 100),
 		CreatedAt: time.Now(),
 	}
-	
+
 	// Add to subscriptions
 	s.mu.Lock()
 	s.Subscriptions[subscription.ID] = subscription
-	
+
 	// Add to symbol subscriptions
 	if _, exists := s.SymbolSubscriptions[symbol]; !exists {
 		s.SymbolSubscriptions[symbol] = make(map[string]*Subscription)
 	}
 	s.SymbolSubscriptions[symbol][subscription.ID] = subscription
 	s.mu.Unlock()
-	
+
 	// Subscribe to external provider
 	provider, err := s.ExternalManager.GetDefaultProvider()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Create callback function
 	callback := func(data interface{}) {
 		// Cache the data
 		s.Cache.Set(
-			"ticker:"+symbol, 
-			data, 
+			"ticker:"+symbol,
+			data,
 			cache.DefaultExpiration,
 		)
-		
+
 		// Send to subscriber
 		select {
 		case subscription.Channel <- data:
@@ -390,12 +388,12 @@ func (s *Service) SubscribeTicker(ctx context.Context, symbol string) (*Subscrip
 				zap.String("symbol", symbol))
 		}
 	}
-	
+
 	// Subscribe to external provider
 	if err := provider.SubscribeTicker(ctx, symbol, callback); err != nil {
 		return nil, err
 	}
-	
+
 	return subscription, nil
 }
 
@@ -410,33 +408,33 @@ func (s *Service) SubscribeOHLCV(ctx context.Context, symbol, interval string) (
 		Channel:   make(chan interface{}, 100),
 		CreatedAt: time.Now(),
 	}
-	
+
 	// Add to subscriptions
 	s.mu.Lock()
 	s.Subscriptions[subscription.ID] = subscription
-	
+
 	// Add to symbol subscriptions
 	if _, exists := s.SymbolSubscriptions[symbol]; !exists {
 		s.SymbolSubscriptions[symbol] = make(map[string]*Subscription)
 	}
 	s.SymbolSubscriptions[symbol][subscription.ID] = subscription
 	s.mu.Unlock()
-	
+
 	// Subscribe to external provider
 	provider, err := s.ExternalManager.GetDefaultProvider()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Create callback function
 	callback := func(data interface{}) {
 		// Cache the data
 		s.Cache.Set(
-			"ohlcv:"+symbol+":"+interval, 
-			data, 
+			"ohlcv:"+symbol+":"+interval,
+			data,
 			cache.DefaultExpiration,
 		)
-		
+
 		// Send to subscriber
 		select {
 		case subscription.Channel <- data:
@@ -447,12 +445,12 @@ func (s *Service) SubscribeOHLCV(ctx context.Context, symbol, interval string) (
 				zap.String("interval", interval))
 		}
 	}
-	
+
 	// Subscribe to external provider
 	if err := provider.SubscribeOHLCV(ctx, symbol, interval, callback); err != nil {
 		return nil, err
 	}
-	
+
 	return subscription, nil
 }
 
@@ -464,28 +462,28 @@ func (s *Service) Unsubscribe(ctx context.Context, subscriptionID string) error 
 		s.mu.Unlock()
 		return nil
 	}
-	
+
 	// Remove from subscriptions
 	delete(s.Subscriptions, subscriptionID)
-	
+
 	// Remove from symbol subscriptions
 	if symbolSubs, exists := s.SymbolSubscriptions[subscription.Symbol]; exists {
 		delete(symbolSubs, subscriptionID)
 	}
-	
+
 	// Get subscription details before unlocking
 	symbol := subscription.Symbol
 	dataType := subscription.Type
 	interval := subscription.Interval
-	
+
 	s.mu.Unlock()
-	
+
 	// Unsubscribe from external provider
 	provider, err := s.ExternalManager.GetDefaultProvider()
 	if err != nil {
 		return err
 	}
-	
+
 	// Unsubscribe based on data type
 	switch dataType {
 	case external.MarketDataTypeOrderBook:
@@ -497,7 +495,7 @@ func (s *Service) Unsubscribe(ctx context.Context, subscriptionID string) error 
 	case external.MarketDataTypeOHLCV:
 		return provider.UnsubscribeOHLCV(ctx, symbol, interval)
 	}
-	
+
 	return nil
 }
 
@@ -507,21 +505,21 @@ func (s *Service) GetOrderBook(ctx context.Context, symbol string) (*external.Or
 	if cachedData, found := s.Cache.Get("orderbook:" + symbol); found {
 		return cachedData.(*external.OrderBookData), nil
 	}
-	
+
 	// Get from external provider
 	provider, err := s.ExternalManager.GetDefaultProvider()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	orderBook, err := provider.GetOrderBook(ctx, symbol)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Cache the data
 	s.Cache.Set("orderbook:"+symbol, orderBook, cache.DefaultExpiration)
-	
+
 	return orderBook, nil
 }
 
@@ -532,12 +530,12 @@ func (s *Service) GetTrades(ctx context.Context, symbol string, limit int) ([]ex
 	if err != nil {
 		return nil, err
 	}
-	
+
 	trades, err := provider.GetTrades(ctx, symbol, limit)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return trades, nil
 }
 
@@ -547,21 +545,21 @@ func (s *Service) GetTicker(ctx context.Context, symbol string) (*external.Ticke
 	if cachedData, found := s.Cache.Get("ticker:" + symbol); found {
 		return cachedData.(*external.TickerData), nil
 	}
-	
+
 	// Get from external provider
 	provider, err := s.ExternalManager.GetDefaultProvider()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	ticker, err := provider.GetTicker(ctx, symbol)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Cache the data
 	s.Cache.Set("ticker:"+symbol, ticker, cache.DefaultExpiration)
-	
+
 	return ticker, nil
 }
 
@@ -572,12 +570,12 @@ func (s *Service) GetOHLCV(ctx context.Context, symbol, interval string, limit i
 	if err != nil {
 		return nil, err
 	}
-	
+
 	ohlcv, err := provider.GetOHLCV(ctx, symbol, interval, limit)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return ohlcv, nil
 }
 
@@ -589,12 +587,12 @@ func (s *Service) GetHistoricalOHLCV(ctx context.Context, symbol, interval strin
 // AddMarketDataSource adds a new market data source
 func (s *Service) AddMarketDataSource(ctx context.Context, source string, config interface{}) error {
 	s.logger.Info("Adding market data source", zap.String("source", source))
-	
+
 	// Validate source configuration
 	if source == "" {
 		return fmt.Errorf("source name cannot be empty")
 	}
-	
+
 	// Check if source already exists
 	if s.ExternalManager != nil {
 		// Convert config to the expected type
@@ -602,31 +600,31 @@ func (s *Service) AddMarketDataSource(ctx context.Context, source string, config
 		if !ok {
 			return fmt.Errorf("config must be a map[string]interface{}")
 		}
-		
+
 		// Add the source to the external manager
 		if err := s.ExternalManager.AddSource(source, configMap); err != nil {
-			s.logger.Error("Failed to add market data source", 
-				zap.String("source", source), 
+			s.logger.Error("Failed to add market data source",
+				zap.String("source", source),
 				zap.Error(err))
 			return fmt.Errorf("failed to add source %s: %w", source, err)
 		}
-		
+
 		// Start subscriptions for the new source
 		s.logger.Info("Successfully added market data source", zap.String("source", source))
 	}
-	
+
 	return nil
 }
 
 // GetMarketData retrieves market data for a symbol within a time range
 func (s *Service) GetMarketData(ctx context.Context, symbol string, timeRange interface{}) (interface{}, error) {
 	s.logger.Info("Getting market data", zap.String("symbol", symbol))
-	
+
 	// Validate input parameters
 	if symbol == "" {
 		return nil, fmt.Errorf("symbol cannot be empty")
 	}
-	
+
 	// Check cache first for performance
 	if s.Cache != nil {
 		cacheKey := fmt.Sprintf("market_data:%s", symbol)
@@ -635,13 +633,13 @@ func (s *Service) GetMarketData(ctx context.Context, symbol string, timeRange in
 			return cachedData, nil
 		}
 	}
-	
+
 	// Try to get real-time ticker data first
 	tickerData, err := s.GetTicker(ctx, symbol)
 	if err != nil {
 		s.logger.Warn("Failed to get ticker data", zap.String("symbol", symbol), zap.Error(err))
 	}
-	
+
 	// If external manager is available, try to get current market data
 	var marketData interface{}
 	if s.ExternalManager != nil {
@@ -653,25 +651,23 @@ func (s *Service) GetMarketData(ctx context.Context, symbol string, timeRange in
 			}
 		}
 	}
-	
+
 	// Combine ticker and market data
 	result := map[string]interface{}{
-		"symbol":     symbol,
-		"ticker":     tickerData,
-		"market":     marketData,
-		"timestamp":  time.Now().Unix(),
+		"symbol":    symbol,
+		"ticker":    tickerData,
+		"market":    marketData,
+		"timestamp": time.Now().Unix(),
 	}
-	
+
 	// Cache the result for future requests
 	if s.Cache != nil {
 		cacheKey := fmt.Sprintf("market_data:%s", symbol)
 		s.Cache.Set(cacheKey, result, 30*time.Second) // Cache for 30 seconds
 	}
-	
+
 	return result, nil
 }
-
-
 
 // Helper function to generate a unique ID
 func generateID() string {

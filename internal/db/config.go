@@ -36,14 +36,14 @@ type DBConfig struct {
 // DefaultConfig returns the default database configuration
 func DefaultConfig() *DBConfig {
 	return &DBConfig{
-		Host:           "localhost",
-		Port:           5432,
-		Username:       "postgres",
-		Password:       "postgres",
-		Database:       "tradsys",
-		SSLMode:        "disable",
-		MaxOpenConns:   25,
-		MaxIdleConns:   10,
+		Host:            "localhost",
+		Port:            5432,
+		Username:        "postgres",
+		Password:        "postgres",
+		Database:        "tradsys",
+		SSLMode:         "disable",
+		MaxOpenConns:    25,
+		MaxIdleConns:    10,
 		ConnMaxLifetime: time.Hour,
 	}
 }

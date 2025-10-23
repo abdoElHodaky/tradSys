@@ -5,8 +5,8 @@ import (
 
 	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/handlers"
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
+	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -16,31 +16,31 @@ import (
 var CQRSModule = fx.Options(
 	// Provide the event store
 	fx.Provide(NewEventStore),
-	
+
 	// Provide the aggregate repository
 	fx.Provide(NewAggregateRepository),
-	
+
 	// Provide the event bus
 	fx.Provide(NewEventBus),
-	
+
 	// Provide the CQRS system
 	fx.Provide(NewCQRSSystem),
-	
+
 	// Provide the event ordering validator
 	fx.Provide(NewEventOrderingValidator),
-	
+
 	// Provide the event bus router
 	fx.Provide(NewEventBusRouter),
-	
+
 	// Provide the circuit breaker
 	fx.Provide(NewCircuitBreaker),
-	
+
 	// Provide the distributed tracer
 	fx.Provide(NewDistributedTracer),
-	
+
 	// Provide the event sharding manager
 	fx.Provide(NewEventShardingManager),
-	
+
 	// Register lifecycle hooks
 	fx.Invoke(registerCQRSHooks),
 )
@@ -49,34 +49,34 @@ var CQRSModule = fx.Options(
 type CQRSConfig struct {
 	// UseWatermill determines if Watermill should be used
 	UseWatermill bool
-	
+
 	// UseNats determines if NATS should be used
 	UseNats bool
-	
+
 	// UseCompatLayer determines if the compatibility layer should be used
 	UseCompatLayer bool
-	
+
 	// UseMonitoring determines if performance monitoring should be used
 	UseMonitoring bool
-	
+
 	// NatsConfig contains configuration for NATS
 	NatsConfig integration.NatsCQRSConfig
-	
+
 	// WatermillConfig contains configuration for Watermill
 	WatermillConfig integration.WatermillCQRSConfig
-	
+
 	// EventOrderingGuarantee specifies the required event ordering guarantee
 	EventOrderingGuarantee integration.EventOrderingGuarantee
-	
+
 	// EventRoutingStrategy specifies the event routing strategy
 	EventRoutingStrategy integration.EventRoutingStrategy
-	
+
 	// CircuitBreakerConfig contains configuration for the circuit breaker
 	CircuitBreakerConfig CircuitBreakerConfig
-	
+
 	// TracingConfig contains configuration for distributed tracing
 	TracingConfig TracingConfig
-	
+
 	// ShardingConfig contains configuration for event sharding
 	ShardingConfig ShardingConfig
 }
@@ -84,12 +84,12 @@ type CQRSConfig struct {
 // DefaultCQRSConfig returns the default CQRS configuration
 func DefaultCQRSConfig() CQRSConfig {
 	return CQRSConfig{
-		UseWatermill:          false,
-		UseNats:               true,
-		UseCompatLayer:        true,
-		UseMonitoring:         true,
-		NatsConfig:            integration.DefaultNatsCQRSConfig(),
-		WatermillConfig:       integration.DefaultWatermillCQRSConfig(),
+		UseWatermill:           false,
+		UseNats:                true,
+		UseCompatLayer:         true,
+		UseMonitoring:          true,
+		NatsConfig:             integration.DefaultNatsCQRSConfig(),
+		WatermillConfig:        integration.DefaultWatermillCQRSConfig(),
 		EventOrderingGuarantee: integration.AggregateOrdering,
 		EventRoutingStrategy:   integration.SingleBusStrategy,
 		CircuitBreakerConfig:   DefaultCircuitBreakerConfig(),
@@ -116,7 +116,7 @@ func NewEventBus(
 ) (eventbus.EventBus, error) {
 	// Create an in-memory event bus
 	bus := eventbus.NewInMemoryEventBus(eventStore, logger)
-	
+
 	// Register lifecycle hooks
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
@@ -128,7 +128,7 @@ func NewEventBus(
 			return nil
 		},
 	})
-	
+
 	return bus, nil
 }
 
@@ -149,18 +149,18 @@ func NewCQRSSystem(
 		config.UseCompatLayer,
 		config.UseMonitoring,
 	)
-	
+
 	// Create the CQRS system
 	system, err := factory.CreateCQRSSystem()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Register lifecycle hooks
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting CQRS system")
-			
+
 			// Start the Watermill adapter if enabled
 			if system.WatermillAdapter != nil {
 				err := system.WatermillAdapter.Start()
@@ -168,7 +168,7 @@ func NewCQRSSystem(
 					return err
 				}
 			}
-			
+
 			// Start the NATS adapter if enabled
 			if system.NatsAdapter != nil {
 				err := system.NatsAdapter.Start()
@@ -176,17 +176,17 @@ func NewCQRSSystem(
 					return err
 				}
 			}
-			
+
 			// Start performance monitoring if enabled
 			if system.PerformanceMonitor != nil {
 				go system.PerformanceMonitor.StartPeriodicLogging(ctx, config.NatsConfig.ReconnectWait)
 			}
-			
+
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
 			logger.Info("Stopping CQRS system")
-			
+
 			// Stop the Watermill adapter if enabled
 			if system.WatermillAdapter != nil {
 				err := system.WatermillAdapter.Stop()
@@ -194,7 +194,7 @@ func NewCQRSSystem(
 					logger.Error("Failed to stop Watermill adapter", zap.Error(err))
 				}
 			}
-			
+
 			// Stop the NATS adapter if enabled
 			if system.NatsAdapter != nil {
 				err := system.NatsAdapter.Stop()
@@ -202,11 +202,11 @@ func NewCQRSSystem(
 					logger.Error("Failed to stop NATS adapter", zap.Error(err))
 				}
 			}
-			
+
 			return nil
 		},
 	})
-	
+
 	return system, nil
 }
 
@@ -235,10 +235,10 @@ func NewEventBusRouter(
 		AggregateRoutes: make(map[string]integration.EventBusType),
 		PriorityOrder:   []integration.EventBusType{integration.InMemoryEventBusType, integration.NatsEventBusType, integration.WatermillEventBusType},
 	}
-	
+
 	// Create the router
 	router := integration.NewEventBusRouter(logger, routerConfig)
-	
+
 	// Register lifecycle hooks
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
@@ -250,7 +250,7 @@ func NewEventBusRouter(
 			return nil
 		},
 	})
-	
+
 	return router
 }
 
@@ -271,4 +271,3 @@ func registerCQRSHooks(
 		},
 	})
 }
-

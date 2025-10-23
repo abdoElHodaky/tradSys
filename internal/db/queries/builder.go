@@ -176,24 +176,24 @@ func (b *Builder) Build() (string, []interface{}) {
 // Execute runs the query and scans results into dest
 func (b *Builder) Execute(dest interface{}) error {
 	query, args := b.Build()
-	
+
 	start := time.Now()
 	result := b.db.Raw(query, args...).Scan(dest)
 	duration := time.Since(start)
-	
+
 	// Log query performance
 	if duration > 100*time.Millisecond {
 		b.logger.Warn("Slow query detected",
 			zap.String("query", query),
 			zap.Duration("duration", duration))
 	}
-	
+
 	if result.Error != nil {
 		b.logger.Error("Query execution failed",
 			zap.String("query", query),
 			zap.Error(result.Error))
 	}
-	
+
 	return result.Error
 }
 
@@ -210,7 +210,7 @@ func (b *Builder) Count() (int64, error) {
 		whereArgs: b.whereArgs,
 		hints:     b.hints,
 	}
-	
+
 	query, args := countBuilder.Build()
 	result := b.db.Raw(query, args...).Scan(&count)
 	return count, result.Error

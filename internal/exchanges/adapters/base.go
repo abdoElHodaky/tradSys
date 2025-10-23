@@ -84,24 +84,24 @@ type Trade struct {
 
 // Balance represents account balance
 type Balance struct {
-	Asset     string  `json:"asset"`
-	Free      float64 `json:"free"`
-	Locked    float64 `json:"locked"`
-	Total     float64 `json:"total"`
-	Exchange  string  `json:"exchange"`
+	Asset    string  `json:"asset"`
+	Free     float64 `json:"free"`
+	Locked   float64 `json:"locked"`
+	Total    float64 `json:"total"`
+	Exchange string  `json:"exchange"`
 }
 
 // ExchangeInfo represents exchange information
 type ExchangeInfo struct {
-	Name            string            `json:"name"`
-	Status          string            `json:"status"`
-	TradingFees     map[string]float64 `json:"trading_fees"`
-	WithdrawalFees  map[string]float64 `json:"withdrawal_fees"`
-	MinOrderSizes   map[string]float64 `json:"min_order_sizes"`
-	MaxOrderSizes   map[string]float64 `json:"max_order_sizes"`
-	SupportedPairs  []string          `json:"supported_pairs"`
-	RateLimits      map[string]int    `json:"rate_limits"`
-	LastUpdate      time.Time         `json:"last_update"`
+	Name           string             `json:"name"`
+	Status         string             `json:"status"`
+	TradingFees    map[string]float64 `json:"trading_fees"`
+	WithdrawalFees map[string]float64 `json:"withdrawal_fees"`
+	MinOrderSizes  map[string]float64 `json:"min_order_sizes"`
+	MaxOrderSizes  map[string]float64 `json:"max_order_sizes"`
+	SupportedPairs []string           `json:"supported_pairs"`
+	RateLimits     map[string]int     `json:"rate_limits"`
+	LastUpdate     time.Time          `json:"last_update"`
 }
 
 // ExchangeAdapter defines the interface for exchange adapters
@@ -111,23 +111,23 @@ type ExchangeAdapter interface {
 	Disconnect() error
 	IsConnected() bool
 	GetExchangeInfo() *ExchangeInfo
-	
+
 	// Order management
 	PlaceOrder(ctx context.Context, order *ExchangeOrder) (*ExchangeOrder, error)
 	CancelOrder(ctx context.Context, orderID string, symbol string) error
 	GetOrder(ctx context.Context, orderID string, symbol string) (*ExchangeOrder, error)
 	GetOpenOrders(ctx context.Context, symbol string) ([]*ExchangeOrder, error)
 	GetOrderHistory(ctx context.Context, symbol string, limit int) ([]*ExchangeOrder, error)
-	
+
 	// Market data
 	GetMarketData(ctx context.Context, symbol string) (*MarketData, error)
 	SubscribeMarketData(ctx context.Context, symbols []string, callback func(*MarketData)) error
 	UnsubscribeMarketData(ctx context.Context, symbols []string) error
-	
+
 	// Account management
 	GetBalances(ctx context.Context) ([]*Balance, error)
 	GetTrades(ctx context.Context, symbol string, limit int) ([]*Trade, error)
-	
+
 	// WebSocket streams
 	StartWebSocket(ctx context.Context) error
 	StopWebSocket() error
@@ -184,7 +184,7 @@ func (ba *BaseAdapter) SetConnected(connected bool) {
 func (ba *BaseAdapter) GetExchangeInfo() *ExchangeInfo {
 	ba.mutex.RLock()
 	defer ba.mutex.RUnlock()
-	
+
 	// Return a copy to avoid race conditions
 	info := *ba.exchangeInfo
 	return &info
@@ -208,39 +208,39 @@ func (ba *BaseAdapter) ValidateOrder(order *ExchangeOrder) error {
 	if order.Symbol == "" {
 		return fmt.Errorf("symbol is required")
 	}
-	
+
 	if order.Quantity <= 0 {
 		return fmt.Errorf("quantity must be positive")
 	}
-	
+
 	if order.Type == OrderTypeLimit && order.Price <= 0 {
 		return fmt.Errorf("price must be positive for limit orders")
 	}
-	
+
 	if order.Type == OrderTypeStopLimit && (order.Price <= 0 || order.StopPrice <= 0) {
 		return fmt.Errorf("price and stop price must be positive for stop-limit orders")
 	}
-	
+
 	// Check minimum order size
 	ba.mutex.RLock()
 	minSize, exists := ba.exchangeInfo.MinOrderSizes[order.Symbol]
 	ba.mutex.RUnlock()
-	
+
 	if exists && order.Quantity < minSize {
-		return fmt.Errorf("order quantity %f is below minimum %f for %s", 
+		return fmt.Errorf("order quantity %f is below minimum %f for %s",
 			order.Quantity, minSize, order.Symbol)
 	}
-	
+
 	// Check maximum order size
 	ba.mutex.RLock()
 	maxSize, exists := ba.exchangeInfo.MaxOrderSizes[order.Symbol]
 	ba.mutex.RUnlock()
-	
+
 	if exists && order.Quantity > maxSize {
-		return fmt.Errorf("order quantity %f exceeds maximum %f for %s", 
+		return fmt.Errorf("order quantity %f exceeds maximum %f for %s",
 			order.Quantity, maxSize, order.Symbol)
 	}
-	
+
 	return nil
 }
 
@@ -283,15 +283,15 @@ func NewRateLimiter(requestsPerSecond int) *RateLimiter {
 		ticker:   time.NewTicker(time.Second / time.Duration(requestsPerSecond)),
 		done:     make(chan struct{}),
 	}
-	
+
 	// Fill initial capacity
 	for i := 0; i < requestsPerSecond; i++ {
 		rl.requests <- struct{}{}
 	}
-	
+
 	// Start refill goroutine
 	go rl.refill()
-	
+
 	return rl
 }
 
@@ -396,4 +396,3 @@ func (ob *OrderBuilder) TimeInForce(tif string) *OrderBuilder {
 func (ob *OrderBuilder) Build() *ExchangeOrder {
 	return ob.order
 }
-

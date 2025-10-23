@@ -33,10 +33,10 @@ func (h *BinaryMessageHandler) HandleIncomingMessage(conn *Connection, data []by
 			zap.String("remote_addr", conn.conn.RemoteAddr().String()))
 		return err
 	}
-	
+
 	// Update stats
 	h.server.pool.IncrementMessagesReceived(1)
-	
+
 	// Handle the message based on its type
 	switch message.Type {
 	case "subscribe":
@@ -59,24 +59,24 @@ func (h *BinaryMessageHandler) handleSubscription(conn *Connection, message *ws.
 			zap.String("remote_addr", conn.conn.RemoteAddr().String()))
 		return sendErrorMessage(conn, "Invalid subscription message", 400)
 	}
-	
+
 	subscription := message.GetSubscription()
 	channel := subscription.Channel
 	symbol := subscription.Symbol
-	
+
 	// Subscribe to the channel
 	conn.mu.Lock()
 	conn.channels[channel] = true
 	conn.mu.Unlock()
-	
+
 	// Update the connection pool
 	h.server.pool.SubscribeToChannel(conn, channel)
-	
+
 	// If symbol is provided, update it
 	if symbol != "" {
 		h.server.pool.SetSymbol(conn, symbol)
 	}
-	
+
 	// Send confirmation
 	response := &ws.WebSocketMessage{
 		Type:      "subscribed",
@@ -93,7 +93,7 @@ func (h *BinaryMessageHandler) handleSubscription(conn *Connection, message *ws.
 			},
 		},
 	}
-	
+
 	return sendBinaryMessage(conn, response)
 }
 
@@ -105,18 +105,18 @@ func (h *BinaryMessageHandler) handleUnsubscription(conn *Connection, message *w
 			zap.String("remote_addr", conn.conn.RemoteAddr().String()))
 		return sendErrorMessage(conn, "Invalid unsubscription message", 400)
 	}
-	
+
 	subscription := message.GetSubscription()
 	channel := subscription.Channel
-	
+
 	// Unsubscribe from the channel
 	conn.mu.Lock()
 	delete(conn.channels, channel)
 	conn.mu.Unlock()
-	
+
 	// Update the connection pool
 	h.server.pool.UnsubscribeFromChannel(conn, channel)
-	
+
 	// Send confirmation
 	response := &ws.WebSocketMessage{
 		Type:      "unsubscribed",
@@ -133,7 +133,7 @@ func (h *BinaryMessageHandler) handleUnsubscription(conn *Connection, message *w
 			},
 		},
 	}
-	
+
 	return sendBinaryMessage(conn, response)
 }
 
@@ -149,7 +149,7 @@ func (h *BinaryMessageHandler) handlePing(conn *Connection, message *ws.WebSocke
 			},
 		},
 	}
-	
+
 	return sendBinaryMessage(conn, response)
 }
 
@@ -161,7 +161,7 @@ func (h *BinaryMessageHandler) handleChannelMessage(conn *Connection, message *w
 		zap.String("channel", message.Channel),
 		zap.String("symbol", message.Symbol),
 		zap.String("remote_addr", conn.conn.RemoteAddr().String()))
-	
+
 	// In a real implementation, this would forward the message to the appropriate service
 	return nil
 }
@@ -178,7 +178,7 @@ func sendErrorMessage(conn *Connection, message string, code int32) error {
 			},
 		},
 	}
-	
+
 	return sendBinaryMessage(conn, errorMsg)
 }
 
@@ -189,7 +189,7 @@ func sendBinaryMessage(conn *Connection, message *ws.WebSocketMessage) error {
 	if err != nil {
 		return err
 	}
-	
+
 	// Send the message
 	conn.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 	return conn.conn.WriteMessage(websocket.BinaryMessage, data)
@@ -199,7 +199,7 @@ func sendBinaryMessage(conn *Connection, message *ws.WebSocketMessage) error {
 func (h *BinaryMessageHandler) BroadcastBinaryMessage(message *ws.WebSocketMessage) error {
 	// Get connections for the channel and symbol
 	connections := h.server.pool.GetConnectionsByChannelAndSymbol(message.Channel, message.Symbol)
-	
+
 	// Serialize the message once
 	data, err := proto.Marshal(message)
 	if err != nil {
@@ -210,7 +210,7 @@ func (h *BinaryMessageHandler) BroadcastBinaryMessage(message *ws.WebSocketMessa
 			zap.String("symbol", message.Symbol))
 		return err
 	}
-	
+
 	// Send to all connections
 	for _, conn := range connections {
 		conn.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
@@ -222,10 +222,10 @@ func (h *BinaryMessageHandler) BroadcastBinaryMessage(message *ws.WebSocketMessa
 			continue
 		}
 	}
-	
+
 	// Update stats
 	h.server.pool.IncrementMessagesSent(int64(len(connections)))
-	
+
 	return nil
 }
 

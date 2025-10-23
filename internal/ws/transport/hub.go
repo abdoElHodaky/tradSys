@@ -11,22 +11,22 @@ import (
 type Hub struct {
 	// Clients is a map of client ID to client
 	Clients map[string]*Client
-	
+
 	// register is a channel for registering clients
 	register chan *Client
-	
+
 	// unregister is a channel for unregistering clients
 	unregister chan *Client
-	
+
 	// broadcast is a channel for broadcasting messages to all clients
 	broadcast chan *Message
-	
+
 	// MessageHandlers is a map of message type to handler
 	MessageHandlers map[string]MessageHandler
-	
+
 	// Logger is the logger for the hub
 	Logger *zap.Logger
-	
+
 	// Mutex for protecting the clients map
 	mu sync.RWMutex
 }
@@ -35,10 +35,10 @@ type Hub struct {
 type Message struct {
 	// Type is the type of the message
 	Type string `json:"type"`
-	
+
 	// Data is the data of the message
 	Data json.RawMessage `json:"data"`
-	
+
 	// ClientID is the ID of the client that sent the message
 	ClientID string `json:"client_id,omitempty"`
 }
@@ -67,9 +67,9 @@ func (h *Hub) Run() {
 			h.mu.Lock()
 			h.Clients[client.ID] = client
 			h.mu.Unlock()
-			
+
 			h.Logger.Info("Client registered", zap.String("client_id", client.ID))
-			
+
 		case client := <-h.unregister:
 			// Unregister the client
 			h.mu.Lock()
@@ -78,9 +78,9 @@ func (h *Hub) Run() {
 				close(client.Send)
 			}
 			h.mu.Unlock()
-			
+
 			h.Logger.Info("Client unregistered", zap.String("client_id", client.ID))
-			
+
 		case message := <-h.broadcast:
 			// Broadcast the message to all clients
 			h.mu.RLock()
@@ -123,14 +123,14 @@ func (h *Hub) RegisterMessageHandler(messageType string, handler MessageHandler)
 func (h *Hub) HandleMessage(client *Client, msg *Message) {
 	// Set the client ID
 	msg.ClientID = client.ID
-	
+
 	// Find the handler for the message type
 	handler, ok := h.MessageHandlers[msg.Type]
 	if !ok {
 		h.Logger.Warn("No handler for message type", zap.String("type", msg.Type))
 		return
 	}
-	
+
 	// Handle the message
 	handler(client, msg)
 }
@@ -142,7 +142,7 @@ func (h *Hub) serializeMessage(msg *Message) []byte {
 		h.Logger.Error("Failed to marshal message", zap.Error(err))
 		return []byte{}
 	}
-	
+
 	return payload
 }
 
@@ -152,12 +152,12 @@ func (h *Hub) SendToClient(clientID string, msg *Message) {
 	h.mu.RLock()
 	client, ok := h.Clients[clientID]
 	h.mu.RUnlock()
-	
+
 	if !ok {
 		h.Logger.Warn("Client not found", zap.String("client_id", clientID))
 		return
 	}
-	
+
 	// Send the message
 	client.SendMessage(msg)
 }
@@ -172,7 +172,7 @@ func (h *Hub) BroadcastToClients(clientIDs []string, msg *Message) {
 			h.Logger.Warn("Client not found", zap.String("client_id", clientID))
 			continue
 		}
-		
+
 		// Send the message
 		client.SendMessage(msg)
 	}

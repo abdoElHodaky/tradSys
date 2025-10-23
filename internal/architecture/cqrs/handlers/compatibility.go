@@ -6,10 +6,9 @@ import (
 	"sync"
 
 	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
+	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
 	"go.uber.org/zap"
 )
 
@@ -22,18 +21,18 @@ type CompatibilityLayer struct {
 
 	// CQRS components
 	cqrsAdapter *WatermillCQRSAdapter
-	
+
 	// Event sourcing components
 	eventStore    store.EventStore
 	aggregateRepo aggregate.Repository
 	eventBus      eventbus.EventBus
-	
+
 	// Synchronization
 	mu sync.RWMutex
-	
+
 	// Mapping of event types to handlers
 	eventHandlers map[string][]eventsourcing.EventHandler
-	
+
 	// Feature flags for gradual integration
 	useNewCommandHandling bool
 	useNewEventHandling   bool
@@ -55,7 +54,7 @@ func NewCompatibilityLayer(
 		aggregateRepo: aggregateRepo,
 		eventBus:      eventBus,
 		eventHandlers: make(map[string][]eventsourcing.EventHandler),
-		
+
 		// Default to using existing implementations
 		useNewCommandHandling: false,
 		useNewEventHandling:   false,
@@ -94,25 +93,25 @@ func (c *CompatibilityLayer) RegisterEventHandler(
 ) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	// Register with the existing event bus
 	err := c.eventBus.SubscribeToType(eventType, handler)
 	if err != nil {
 		return fmt.Errorf("failed to register with existing event bus: %w", err)
 	}
-	
+
 	// Register with the new CQRS adapter
 	err = c.cqrsAdapter.RegisterEventHandler(eventType, handler)
 	if err != nil {
 		return fmt.Errorf("failed to register with new CQRS adapter: %w", err)
 	}
-	
+
 	// Store the handler for reference
 	if _, ok := c.eventHandlers[eventType]; !ok {
 		c.eventHandlers[eventType] = make([]eventsourcing.EventHandler, 0)
 	}
 	c.eventHandlers[eventType] = append(c.eventHandlers[eventType], handler)
-	
+
 	return nil
 }
 
@@ -121,12 +120,12 @@ func (c *CompatibilityLayer) DispatchCommand(ctx context.Context, cmd command.Co
 	c.mu.RLock()
 	useNew := c.useNewCommandHandling
 	c.mu.RUnlock()
-	
+
 	if useNew {
 		// Use the new CQRS command handling
 		return c.cqrsAdapter.DispatchCommand(ctx, cmd)
 	}
-	
+
 	// Use the existing command handling
 	// This would typically call your existing command bus or handler
 	// For now, we'll just log that we're using the old system
@@ -134,7 +133,7 @@ func (c *CompatibilityLayer) DispatchCommand(ctx context.Context, cmd command.Co
 		zap.String("command", cmd.CommandName()),
 		zap.String("aggregate_id", cmd.AggregateID()),
 	)
-	
+
 	// This is a placeholder - you would implement this to call your existing command handling
 	return fmt.Errorf("existing command handling not implemented")
 }
@@ -144,22 +143,22 @@ func (c *CompatibilityLayer) PublishEvent(ctx context.Context, event *eventsourc
 	c.mu.RLock()
 	useNew := c.useNewEventHandling
 	c.mu.RUnlock()
-	
+
 	// Always save to the event store for consistency
 	err := c.eventStore.SaveEvents(ctx, []*eventsourcing.Event{event})
 	if err != nil {
 		return fmt.Errorf("failed to save event to store: %w", err)
 	}
-	
+
 	if useNew {
 		// Use the new CQRS event handling
 		// Create an event bus adapter from the CQRS adapter
 		eventBus := c.cqrsAdapter.CreateEventBusAdapter()
-		
+
 		// Publish the event using the new system
 		return eventBus.PublishEvent(ctx, event)
 	}
-	
+
 	// Use the existing event handling
 	return c.eventBus.PublishEvent(ctx, event)
 }
@@ -172,19 +171,19 @@ func (c *CompatibilityLayer) SyncEventStores(ctx context.Context, aggregateID st
 	if err != nil {
 		return fmt.Errorf("failed to get events from existing store: %w", err)
 	}
-	
+
 	// Log the sync operation
 	c.logger.Info("Syncing event stores",
 		zap.String("aggregate_id", aggregateID),
 		zap.String("aggregate_type", aggregateType),
 		zap.Int("event_count", len(events)),
 	)
-	
+
 	// Process each event through both systems
 	for _, event := range events {
 		// Create an event bus adapter from the CQRS adapter
 		eventBus := c.cqrsAdapter.CreateEventBusAdapter()
-		
+
 		// Publish to the new system without saving to the store again
 		// We're bypassing the store since we already have the events
 		err = eventBus.PublishEvent(ctx, event)
@@ -192,7 +191,7 @@ func (c *CompatibilityLayer) SyncEventStores(ctx context.Context, aggregateID st
 			return fmt.Errorf("failed to publish event to new system: %w", err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -208,11 +207,11 @@ func (c *CompatibilityLayer) GetAggregateFromBothSystems(
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to load from existing system: %w", err)
 	}
-	
+
 	// Get from new system (this would be implemented based on your new CQRS system)
 	// For now, we'll just return the same aggregate
 	newAggregate := existingAggregate
-	
+
 	return existingAggregate, newAggregate, nil
 }
 
@@ -223,13 +222,13 @@ func (c *CompatibilityLayer) ValidateConsistency(
 	aggregateType string,
 ) (bool, []string, error) {
 	inconsistencies := make([]string, 0)
-	
+
 	for _, aggregateID := range aggregateIDs {
 		existingAggregate, newAggregate, err := c.GetAggregateFromBothSystems(ctx, aggregateID, aggregateType)
 		if err != nil {
 			return false, nil, err
 		}
-		
+
 		// Compare the aggregates
 		// This is a simple version - you would implement a more thorough comparison
 		if existingAggregate.Version() != newAggregate.Version() {
@@ -241,7 +240,6 @@ func (c *CompatibilityLayer) ValidateConsistency(
 			))
 		}
 	}
-	
+
 	return len(inconsistencies) == 0, inconsistencies, nil
 }
-

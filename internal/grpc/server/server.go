@@ -121,4 +121,3 @@ func (s *Server) GetServer() *grpc.Server {
 func (s *Server) GetListener() net.Listener {
 	return s.listener
 }
-

@@ -51,12 +51,12 @@ func NewTradePool(initialSize int) *TradePool {
 			},
 		},
 	}
-	
+
 	// Pre-populate the pool
 	for i := 0; i < initialSize; i++ {
 		tp.pool.Put(&Trade{})
 	}
-	
+
 	return tp
 }
 
@@ -90,16 +90,16 @@ func PutTradeToPool(trade *Trade) {
 
 // TradeNotification represents a pooled trade notification
 type TradeNotification struct {
-	TradeID     string    `json:"trade_id"`
-	Symbol      string    `json:"symbol"`
-	Price       float64   `json:"price"`
-	Quantity    float64   `json:"quantity"`
-	Side        string    `json:"side"`
-	Timestamp   time.Time `json:"timestamp"`
-	OrderID     string    `json:"order_id"`
-	UserID      string    `json:"user_id"`
-	Commission  float64   `json:"commission"`
-	NetAmount   float64   `json:"net_amount"`
+	TradeID    string    `json:"trade_id"`
+	Symbol     string    `json:"symbol"`
+	Price      float64   `json:"price"`
+	Quantity   float64   `json:"quantity"`
+	Side       string    `json:"side"`
+	Timestamp  time.Time `json:"timestamp"`
+	OrderID    string    `json:"order_id"`
+	UserID     string    `json:"user_id"`
+	Commission float64   `json:"commission"`
+	NetAmount  float64   `json:"net_amount"`
 }
 
 // Reset resets the TradeNotification to zero values
@@ -162,18 +162,18 @@ func PutTradeNotificationToPool(notification *TradeNotification) {
 
 // TradeHistory represents a pooled trade history entry
 type TradeHistory struct {
-	ID          string    `json:"id"`
-	UserID      string    `json:"user_id"`
-	Symbol      string    `json:"symbol"`
-	Side        string    `json:"side"`
-	Price       float64   `json:"price"`
-	Quantity    float64   `json:"quantity"`
-	Commission  float64   `json:"commission"`
-	NetAmount   float64   `json:"net_amount"`
-	OrderID     string    `json:"order_id"`
-	TradeID     string    `json:"trade_id"`
-	Timestamp   time.Time `json:"timestamp"`
-	SettledAt   *time.Time `json:"settled_at,omitempty"`
+	ID         string     `json:"id"`
+	UserID     string     `json:"user_id"`
+	Symbol     string     `json:"symbol"`
+	Side       string     `json:"side"`
+	Price      float64    `json:"price"`
+	Quantity   float64    `json:"quantity"`
+	Commission float64    `json:"commission"`
+	NetAmount  float64    `json:"net_amount"`
+	OrderID    string     `json:"order_id"`
+	TradeID    string     `json:"trade_id"`
+	Timestamp  time.Time  `json:"timestamp"`
+	SettledAt  *time.Time `json:"settled_at,omitempty"`
 }
 
 // Reset resets the TradeHistory to zero values
@@ -255,11 +255,11 @@ func NewBatchTradeProcessor(capacity int) *BatchTradeProcessor {
 func (btp *BatchTradeProcessor) Add(trade *Trade) bool {
 	btp.mu.Lock()
 	defer btp.mu.Unlock()
-	
+
 	if len(btp.trades) >= btp.capacity {
 		return false // Batch is full
 	}
-	
+
 	btp.trades = append(btp.trades, trade)
 	return true
 }
@@ -268,18 +268,18 @@ func (btp *BatchTradeProcessor) Add(trade *Trade) bool {
 func (btp *BatchTradeProcessor) Flush() []*Trade {
 	btp.mu.Lock()
 	defer btp.mu.Unlock()
-	
+
 	if len(btp.trades) == 0 {
 		return nil
 	}
-	
+
 	// Create a copy of the trades
 	result := make([]*Trade, len(btp.trades))
 	copy(result, btp.trades)
-	
+
 	// Reset the batch
 	btp.trades = btp.trades[:0]
-	
+
 	return result
 }
 
@@ -299,16 +299,16 @@ func (btp *BatchTradeProcessor) IsFull() bool {
 
 // TradeMetrics represents trade execution metrics
 type TradeMetrics struct {
-	TotalTrades       uint64    `json:"total_trades"`
-	TotalVolume       float64   `json:"total_volume"`
-	TotalValue        float64   `json:"total_value"`
-	AveragePrice      float64   `json:"average_price"`
-	LastTradeTime     time.Time `json:"last_trade_time"`
-	TradesPerSecond   float64   `json:"trades_per_second"`
-	VolumePerSecond   float64   `json:"volume_per_second"`
-	ValuePerSecond    float64   `json:"value_per_second"`
-	PeakTradesPerSec  float64   `json:"peak_trades_per_second"`
-	PeakVolumePerSec  float64   `json:"peak_volume_per_second"`
+	TotalTrades      uint64    `json:"total_trades"`
+	TotalVolume      float64   `json:"total_volume"`
+	TotalValue       float64   `json:"total_value"`
+	AveragePrice     float64   `json:"average_price"`
+	LastTradeTime    time.Time `json:"last_trade_time"`
+	TradesPerSecond  float64   `json:"trades_per_second"`
+	VolumePerSecond  float64   `json:"volume_per_second"`
+	ValuePerSecond   float64   `json:"value_per_second"`
+	PeakTradesPerSec float64   `json:"peak_trades_per_second"`
+	PeakVolumePerSec float64   `json:"peak_volume_per_second"`
 }
 
 // Reset resets the TradeMetrics to zero values
@@ -330,20 +330,20 @@ func (tm *TradeMetrics) Update(trade *Trade) {
 	tm.TotalTrades++
 	tm.TotalVolume += trade.Quantity
 	tm.TotalValue += trade.Price * trade.Quantity
-	
+
 	if tm.TotalTrades > 0 {
 		tm.AveragePrice = tm.TotalValue / tm.TotalVolume
 	}
-	
+
 	tm.LastTradeTime = trade.Timestamp
-	
+
 	// Calculate rates (simplified - would need time window tracking for accuracy)
 	if !tm.LastTradeTime.IsZero() {
 		duration := time.Since(tm.LastTradeTime).Seconds()
 		if duration > 0 {
 			currentTPS := 1.0 / duration
 			currentVPS := trade.Quantity / duration
-			
+
 			if currentTPS > tm.PeakTradesPerSec {
 				tm.PeakTradesPerSec = currentTPS
 			}
@@ -397,4 +397,3 @@ func GetTradeMetricsFromPool() *TradeMetrics {
 func PutTradeMetricsToPool(metrics *TradeMetrics) {
 	globalTradeMetricsPool.Put(metrics)
 }
-

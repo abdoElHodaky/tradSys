@@ -63,7 +63,7 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 // GetOrder handles GET /orders/:id
 func (h *OrderHandler) GetOrder(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	order, err := h.service.GetOrder(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -76,7 +76,7 @@ func (h *OrderHandler) GetOrder(c *gin.Context) {
 // ListOrders handles GET /orders
 func (h *OrderHandler) ListOrders(c *gin.Context) {
 	filter := &OrderFilter{}
-	
+
 	// Parse query parameters
 	if accountID := c.Query("account_id"); accountID != "" {
 		filter.AccountID = &accountID
@@ -113,7 +113,7 @@ func (h *OrderHandler) ListOrders(c *gin.Context) {
 // CancelOrder handles DELETE /orders/:id
 func (h *OrderHandler) CancelOrder(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	err := h.service.CancelOrder(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -136,7 +136,7 @@ func NewPairsHandler(service PairsService) *PairsHandler {
 // GetPair handles GET /pairs/:symbol
 func (h *PairsHandler) GetPair(c *gin.Context) {
 	symbol := c.Param("symbol")
-	
+
 	pair, err := h.service.GetPair(c.Request.Context(), symbol)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -149,7 +149,7 @@ func (h *PairsHandler) GetPair(c *gin.Context) {
 // ListPairs handles GET /pairs
 func (h *PairsHandler) ListPairs(c *gin.Context) {
 	filter := &PairFilter{}
-	
+
 	// Parse query parameters
 	if baseAsset := c.Query("base_asset"); baseAsset != "" {
 		filter.BaseAsset = &baseAsset
@@ -183,7 +183,7 @@ func (h *PairsHandler) ListPairs(c *gin.Context) {
 // GetTicker handles GET /pairs/:symbol/ticker
 func (h *PairsHandler) GetTicker(c *gin.Context) {
 	symbol := c.Param("symbol")
-	
+
 	ticker, err := h.service.GetTicker(c.Request.Context(), symbol)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -197,13 +197,13 @@ func (h *PairsHandler) GetTicker(c *gin.Context) {
 func (h *PairsHandler) GetOrderBook(c *gin.Context) {
 	symbol := c.Param("symbol")
 	depth := 10 // default depth
-	
+
 	if depthStr := c.Query("depth"); depthStr != "" {
 		if d, err := strconv.Atoi(depthStr); err == nil && d > 0 {
 			depth = d
 		}
 	}
-	
+
 	orderBook, err := h.service.GetOrderBook(c.Request.Context(), symbol, depth)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -226,7 +226,7 @@ func NewSettlementHandler(service SettlementService) *SettlementHandler {
 // GetSettlement handles GET /settlements/:id
 func (h *SettlementHandler) GetSettlement(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	settlement, err := h.service.GetSettlement(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -239,7 +239,7 @@ func (h *SettlementHandler) GetSettlement(c *gin.Context) {
 // ListSettlements handles GET /settlements
 func (h *SettlementHandler) ListSettlements(c *gin.Context) {
 	filter := &SettlementFilter{}
-	
+
 	// Parse query parameters
 	if tradeID := c.Query("trade_id"); tradeID != "" {
 		filter.TradeID = &tradeID
@@ -317,7 +317,7 @@ func (h *StrategyHandler) CreateStrategy(c *gin.Context) {
 // GetStrategy handles GET /strategies/:id
 func (h *StrategyHandler) GetStrategy(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	strategy, err := h.service.GetStrategy(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -330,7 +330,7 @@ func (h *StrategyHandler) GetStrategy(c *gin.Context) {
 // ListStrategies handles GET /strategies
 func (h *StrategyHandler) ListStrategies(c *gin.Context) {
 	filter := &StrategyFilter{}
-	
+
 	// Parse query parameters
 	if strategyType := c.Query("type"); strategyType != "" {
 		filter.Type = &strategyType
@@ -361,7 +361,7 @@ func (h *StrategyHandler) ListStrategies(c *gin.Context) {
 // StartStrategy handles POST /strategies/:id/start
 func (h *StrategyHandler) StartStrategy(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	err := h.service.StartStrategy(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -374,7 +374,7 @@ func (h *StrategyHandler) StartStrategy(c *gin.Context) {
 // StopStrategy handles POST /strategies/:id/stop
 func (h *StrategyHandler) StopStrategy(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	err := h.service.StopStrategy(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

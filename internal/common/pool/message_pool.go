@@ -7,11 +7,11 @@ import (
 
 // PriceMessage represents a market price update message
 type PriceMessage struct {
-	Symbol    string  `json:"symbol"`
-	Price     float64 `json:"price"`
-	Volume    float64 `json:"volume"`
-	Timestamp int64   `json:"timestamp"`
-	Change    float64 `json:"change,omitempty"`
+	Symbol        string  `json:"symbol"`
+	Price         float64 `json:"price"`
+	Volume        float64 `json:"volume"`
+	Timestamp     int64   `json:"timestamp"`
+	Change        float64 `json:"change,omitempty"`
 	ChangePercent float64 `json:"change_percent,omitempty"`
 }
 
@@ -233,9 +233,9 @@ func (p *BufferPool) Put(buf []byte) {
 
 // Global buffer pools for different sizes
 var (
-	smallBufferPool  = NewBufferPool(1024)   // 1KB buffers
-	mediumBufferPool = NewBufferPool(4096)   // 4KB buffers
-	largeBufferPool  = NewBufferPool(16384)  // 16KB buffers
+	smallBufferPool  = NewBufferPool(1024)  // 1KB buffers
+	mediumBufferPool = NewBufferPool(4096)  // 4KB buffers
+	largeBufferPool  = NewBufferPool(16384) // 16KB buffers
 )
 
 // GetSmallBuffer retrieves a 1KB buffer from the global pool

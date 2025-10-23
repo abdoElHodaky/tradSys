@@ -13,7 +13,7 @@ import (
 var ArchitectureCircuitBreakerModule = fx.Options(
 	// Provide the circuit breaker factory
 	fx.Provide(NewArchitectureCircuitBreakerFactory),
-	
+
 	// Register lifecycle hooks
 	fx.Invoke(registerArchitectureCircuitBreakerHooks),
 )
@@ -22,10 +22,10 @@ var ArchitectureCircuitBreakerModule = fx.Options(
 type ArchitectureCircuitBreakerConfig struct {
 	// DefaultFailureThreshold is the default number of failures before opening the circuit
 	DefaultFailureThreshold int64
-	
+
 	// DefaultResetTimeout is the default time to wait before attempting to close the circuit
 	DefaultResetTimeout time.Duration
-	
+
 	// DefaultHalfOpenMaxRequests is the default maximum number of requests to allow in half-open state
 	DefaultHalfOpenMaxRequests int64
 }
@@ -33,8 +33,8 @@ type ArchitectureCircuitBreakerConfig struct {
 // DefaultArchitectureCircuitBreakerConfig returns the default circuit breaker configuration
 func DefaultArchitectureCircuitBreakerConfig() ArchitectureCircuitBreakerConfig {
 	return ArchitectureCircuitBreakerConfig{
-		DefaultFailureThreshold:   5,
-		DefaultResetTimeout:       30 * time.Second,
+		DefaultFailureThreshold:    5,
+		DefaultResetTimeout:        30 * time.Second,
 		DefaultHalfOpenMaxRequests: 1,
 	}
 }
@@ -82,7 +82,7 @@ func (f *ArchitectureCircuitBreakerFactory) CreateCustomCircuitBreaker(options a
 			)
 		}
 	}
-	
+
 	return architecture.NewCircuitBreaker(options)
 }
 
@@ -102,4 +102,3 @@ func registerArchitectureCircuitBreakerHooks(
 		},
 	})
 }
-

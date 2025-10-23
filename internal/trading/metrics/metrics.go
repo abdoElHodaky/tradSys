@@ -94,7 +94,7 @@ func (m *Manager) RecordOrderProcessed() {
 func (m *Manager) GetMetrics() *Metrics {
 	m.metrics.mu.RLock()
 	defer m.metrics.mu.RUnlock()
-	
+
 	// Return a copy to avoid race conditions
 	return &Metrics{
 		OrderLatency:      m.metrics.OrderLatency,
@@ -114,12 +114,12 @@ func (m *Manager) GetMetrics() *Metrics {
 func (m *Manager) CalculateErrorRate() float64 {
 	m.metrics.mu.RLock()
 	defer m.metrics.mu.RUnlock()
-	
+
 	total := m.metrics.OrdersProcessed + m.metrics.OrdersRejected
 	if total == 0 {
 		return 0.0
 	}
-	
+
 	return float64(m.metrics.OrdersRejected) / float64(total) * 100.0
 }
 
@@ -127,7 +127,7 @@ func (m *Manager) CalculateErrorRate() float64 {
 func (m *Manager) Reset() {
 	m.metrics.mu.Lock()
 	defer m.metrics.mu.Unlock()
-	
+
 	m.metrics.OrderLatency = 0
 	m.metrics.ProcessingLatency = 0
 	m.metrics.ThroughputRPS = 0

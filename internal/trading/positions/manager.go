@@ -11,9 +11,9 @@ import (
 type Position struct {
 	UserID       string    `json:"user_id"`
 	Symbol       string    `json:"symbol"`
-	Quantity     float64   `json:"quantity"`     // Positive for long, negative for short
-	AvgPrice     float64   `json:"avg_price"`    // Average entry price
-	MarketValue  float64   `json:"market_value"` // Current market value
+	Quantity     float64   `json:"quantity"`      // Positive for long, negative for short
+	AvgPrice     float64   `json:"avg_price"`     // Average entry price
+	MarketValue  float64   `json:"market_value"`  // Current market value
 	UnrealizedPL float64   `json:"unrealized_pl"` // Unrealized P&L
 	RealizedPL   float64   `json:"realized_pl"`   // Realized P&L
 	LastUpdate   time.Time `json:"last_update"`
@@ -22,23 +22,23 @@ type Position struct {
 
 // PositionUpdate represents a position update
 type PositionUpdate struct {
-	UserID    string  `json:"user_id"`
-	Symbol    string  `json:"symbol"`
-	Quantity  float64 `json:"quantity"`
-	Price     float64 `json:"price"`
-	Side      string  `json:"side"` // "buy" or "sell"
-	TradeID   string  `json:"trade_id"`
+	UserID    string    `json:"user_id"`
+	Symbol    string    `json:"symbol"`
+	Quantity  float64   `json:"quantity"`
+	Price     float64   `json:"price"`
+	Side      string    `json:"side"` // "buy" or "sell"
+	TradeID   string    `json:"trade_id"`
 	Timestamp time.Time `json:"timestamp"`
 }
 
 // PositionManager manages trading positions with real-time P&L calculation
 type PositionManager struct {
-	positions       map[string]*Position // key: userID_symbol
-	marketPrices    map[string]float64   // key: symbol
-	mutex           sync.RWMutex
-	metrics         map[string]interface{}
-	totalPositions  int64
-	totalUpdates    int64
+	positions      map[string]*Position // key: userID_symbol
+	marketPrices   map[string]float64   // key: symbol
+	mutex          sync.RWMutex
+	metrics        map[string]interface{}
+	totalPositions int64
+	totalUpdates   int64
 }
 
 // NewPositionManager creates a new position manager
@@ -55,21 +55,21 @@ func (pm *PositionManager) UpdatePosition(update *PositionUpdate) error {
 	if update.UserID == "" || update.Symbol == "" {
 		return fmt.Errorf("user ID and symbol are required")
 	}
-	
+
 	if update.Quantity <= 0 {
 		return fmt.Errorf("quantity must be positive")
 	}
-	
+
 	if update.Price <= 0 {
 		return fmt.Errorf("price must be positive")
 	}
-	
+
 	pm.mutex.Lock()
 	defer pm.mutex.Unlock()
-	
+
 	positionKey := fmt.Sprintf("%s_%s", update.UserID, update.Symbol)
 	position, exists := pm.positions[positionKey]
-	
+
 	if !exists {
 		// Create new position
 		position = &Position{
@@ -83,7 +83,7 @@ func (pm *PositionManager) UpdatePosition(update *PositionUpdate) error {
 		pm.positions[positionKey] = position
 		atomic.AddInt64(&pm.totalPositions, 1)
 	}
-	
+
 	// Calculate new position based on trade side
 	var quantityChange float64
 	if update.Side == "buy" {
@@ -91,11 +91,11 @@ func (pm *PositionManager) UpdatePosition(update *PositionUpdate) error {
 	} else {
 		quantityChange = -update.Quantity
 	}
-	
+
 	// Update position
 	oldQuantity := position.Quantity
 	newQuantity := oldQuantity + quantityChange
-	
+
 	// Calculate new average price
 	if newQuantity != 0 {
 		if (oldQuantity >= 0 && quantityChange > 0) || (oldQuantity <= 0 && quantityChange < 0) {
@@ -122,16 +122,16 @@ func (pm *PositionManager) UpdatePosition(update *PositionUpdate) error {
 			}
 		}
 	}
-	
+
 	position.Quantity = newQuantity
 	position.LastUpdate = update.Timestamp
-	
+
 	// Update market value and unrealized P&L
 	pm.updatePositionPL(position)
-	
+
 	atomic.AddInt64(&pm.totalUpdates, 1)
 	pm.updateMetrics()
-	
+
 	return nil
 }
 
@@ -141,9 +141,9 @@ func (pm *PositionManager) updatePositionPL(position *Position) {
 	if !exists {
 		return
 	}
-	
+
 	position.MarketValue = position.Quantity * marketPrice
-	
+
 	if position.Quantity != 0 {
 		position.UnrealizedPL = (marketPrice - position.AvgPrice) * position.Quantity
 	} else {
@@ -156,12 +156,12 @@ func (pm *PositionManager) UpdateMarketPrice(symbol string, price float64) {
 	if price <= 0 {
 		return
 	}
-	
+
 	pm.mutex.Lock()
 	defer pm.mutex.Unlock()
-	
+
 	pm.marketPrices[symbol] = price
-	
+
 	// Update all positions for this symbol
 	for _, position := range pm.positions {
 		if position.Symbol == symbol {
@@ -174,16 +174,16 @@ func (pm *PositionManager) UpdateMarketPrice(symbol string, price float64) {
 func (pm *PositionManager) GetPosition(userID, symbol string) (*Position, bool) {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
-	
+
 	positionKey := fmt.Sprintf("%s_%s", userID, symbol)
 	position, exists := pm.positions[positionKey]
-	
+
 	if exists {
 		// Return a copy to avoid race conditions
 		positionCopy := *position
 		return &positionCopy, true
 	}
-	
+
 	return nil, false
 }
 
@@ -191,7 +191,7 @@ func (pm *PositionManager) GetPosition(userID, symbol string) (*Position, bool) 
 func (pm *PositionManager) GetUserPositions(userID string) []*Position {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
-	
+
 	var positions []*Position
 	for _, position := range pm.positions {
 		if position.UserID == userID {
@@ -199,7 +199,7 @@ func (pm *PositionManager) GetUserPositions(userID string) []*Position {
 			positions = append(positions, &positionCopy)
 		}
 	}
-	
+
 	return positions
 }
 
@@ -207,7 +207,7 @@ func (pm *PositionManager) GetUserPositions(userID string) []*Position {
 func (pm *PositionManager) GetSymbolPositions(symbol string) []*Position {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
-	
+
 	var positions []*Position
 	for _, position := range pm.positions {
 		if position.Symbol == symbol {
@@ -215,7 +215,7 @@ func (pm *PositionManager) GetSymbolPositions(symbol string) []*Position {
 			positions = append(positions, &positionCopy)
 		}
 	}
-	
+
 	return positions
 }
 
@@ -223,38 +223,38 @@ func (pm *PositionManager) GetSymbolPositions(symbol string) []*Position {
 func (pm *PositionManager) GetAllPositions() []*Position {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
-	
+
 	var positions []*Position
 	for _, position := range pm.positions {
 		positionCopy := *position
 		positions = append(positions, &positionCopy)
 	}
-	
+
 	return positions
 }
 
 // GetUserPL calculates total P&L for a user
 func (pm *PositionManager) GetUserPL(userID string) (float64, float64) {
 	positions := pm.GetUserPositions(userID)
-	
+
 	var totalRealized, totalUnrealized float64
 	for _, position := range positions {
 		totalRealized += position.RealizedPL
 		totalUnrealized += position.UnrealizedPL
 	}
-	
+
 	return totalRealized, totalUnrealized
 }
 
 // GetSymbolExposure calculates total exposure for a symbol
 func (pm *PositionManager) GetSymbolExposure(symbol string) float64 {
 	positions := pm.GetSymbolPositions(symbol)
-	
+
 	var totalExposure float64
 	for _, position := range positions {
 		totalExposure += position.MarketValue
 	}
-	
+
 	return totalExposure
 }
 
@@ -262,28 +262,28 @@ func (pm *PositionManager) GetSymbolExposure(symbol string) float64 {
 func (pm *PositionManager) ClosePosition(userID, symbol string, closePrice float64) error {
 	pm.mutex.Lock()
 	defer pm.mutex.Unlock()
-	
+
 	positionKey := fmt.Sprintf("%s_%s", userID, symbol)
 	position, exists := pm.positions[positionKey]
-	
+
 	if !exists {
 		return fmt.Errorf("position not found for user %s and symbol %s", userID, symbol)
 	}
-	
+
 	if position.Quantity == 0 {
 		return fmt.Errorf("position already closed")
 	}
-	
+
 	// Calculate realized P&L
 	realizedPL := (closePrice - position.AvgPrice) * position.Quantity
 	position.RealizedPL += realizedPL
-	
+
 	// Close position
 	position.Quantity = 0
 	position.UnrealizedPL = 0
 	position.MarketValue = 0
 	position.LastUpdate = time.Now()
-	
+
 	return nil
 }
 
@@ -291,7 +291,7 @@ func (pm *PositionManager) ClosePosition(userID, symbol string, closePrice float
 func (pm *PositionManager) updateMetrics() {
 	totalPositions := atomic.LoadInt64(&pm.totalPositions)
 	totalUpdates := atomic.LoadInt64(&pm.totalUpdates)
-	
+
 	pm.metrics["total_positions"] = totalPositions
 	pm.metrics["total_updates"] = totalUpdates
 	pm.metrics["active_positions"] = int64(len(pm.positions))
@@ -303,15 +303,15 @@ func (pm *PositionManager) updateMetrics() {
 func (pm *PositionManager) GetPerformanceMetrics() map[string]interface{} {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
-	
+
 	// Update metrics before returning
 	pm.updateMetrics()
-	
+
 	metrics := make(map[string]interface{})
 	for k, v := range pm.metrics {
 		metrics[k] = v
 	}
-	
+
 	return metrics
 }
 
@@ -319,33 +319,33 @@ func (pm *PositionManager) GetPerformanceMetrics() map[string]interface{} {
 func (pm *PositionManager) GetPositionStats() map[string]interface{} {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
-	
+
 	stats := make(map[string]interface{})
 	stats["total_positions"] = len(pm.positions)
 	stats["tracked_symbols"] = len(pm.marketPrices)
-	
+
 	// Calculate aggregate statistics
 	var totalMarketValue, totalRealizedPL, totalUnrealizedPL float64
 	var longPositions, shortPositions int
-	
+
 	for _, position := range pm.positions {
 		totalMarketValue += position.MarketValue
 		totalRealizedPL += position.RealizedPL
 		totalUnrealizedPL += position.UnrealizedPL
-		
+
 		if position.Quantity > 0 {
 			longPositions++
 		} else if position.Quantity < 0 {
 			shortPositions++
 		}
 	}
-	
+
 	stats["total_market_value"] = totalMarketValue
 	stats["total_realized_pl"] = totalRealizedPL
 	stats["total_unrealized_pl"] = totalUnrealizedPL
 	stats["long_positions"] = longPositions
 	stats["short_positions"] = shortPositions
-	
+
 	return stats
 }
 
@@ -353,8 +353,7 @@ func (pm *PositionManager) GetPositionStats() map[string]interface{} {
 func (pm *PositionManager) GetMarketPrice(symbol string) (float64, bool) {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
-	
+
 	price, exists := pm.marketPrices[symbol]
 	return price, exists
 }
-

@@ -1,13 +1,12 @@
 package fx
 
 import (
+	"github.com/abdoElHodaky/tradSys/internal/core/matching"
 	"github.com/abdoElHodaky/tradSys/internal/db"
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"github.com/abdoElHodaky/tradSys/internal/marketdata"
-	"github.com/abdoElHodaky/tradSys/internal/core/matching"
 	"github.com/abdoElHodaky/tradSys/internal/orders"
 	"github.com/abdoElHodaky/tradSys/internal/risk"
-	"github.com/abdoElHodaky/tradSys/internal/marketdata"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -18,10 +17,10 @@ var Module = fx.Options(
 	fx.Provide(func(logger *zap.Logger) *order_matching.Engine {
 		return order_matching.NewEngine(logger)
 	}),
-	
+
 	// Include database module
 	fx.Options(db.Module),
-	
+
 	// Include repositories module
 	fx.Options(repositories.Module),
 )
@@ -33,7 +32,7 @@ func NewOrdersModule() fx.Option {
 		fx.Provide(func(logger *zap.Logger) *order_matching.Engine {
 			return order_matching.NewEngine(logger)
 		}),
-		
+
 		// Provide order management service
 		fx.Provide(func(engine *order_matching.Engine, logger *zap.Logger) *order_management.Service {
 			return order_management.NewService(engine, logger)
@@ -56,7 +55,7 @@ func NewMarketDataModule() fx.Option {
 		fx.Provide(func(engine *order_matching.Engine, logger *zap.Logger) *market_data.Handler {
 			return market_data.NewHandler(engine, logger)
 		}),
-		
+
 		// Include external market data module
 		fx.Options(marketdata.Module),
 	)

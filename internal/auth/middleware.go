@@ -79,4 +79,3 @@ func (m *Middleware) RoleAuth(requiredRole string) gin.HandlerFunc {
 		c.Next()
 	}
 }
-

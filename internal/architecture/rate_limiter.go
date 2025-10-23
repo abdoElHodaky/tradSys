@@ -32,7 +32,7 @@ func NewRateLimiter(options RateLimiterOptions) *RateLimiter {
 	if options.Interval <= 0 {
 		options.Interval = time.Second
 	}
-	
+
 	return &RateLimiter{
 		name:      options.Name,
 		limit:     options.Limit,
@@ -46,21 +46,21 @@ func NewRateLimiter(options RateLimiterOptions) *RateLimiter {
 func (rl *RateLimiter) Allow() bool {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	now := time.Now()
-	
+
 	// Reset tokens if interval has passed
 	if now.Sub(rl.lastReset) >= rl.interval {
 		rl.tokens = rl.limit
 		rl.lastReset = now
 	}
-	
+
 	// Check if we have tokens available
 	if rl.tokens > 0 {
 		rl.tokens--
 		return true
 	}
-	
+
 	return false
 }
 
@@ -70,16 +70,16 @@ func (rl *RateLimiter) Wait(ctx context.Context) error {
 		if rl.Allow() {
 			return nil
 		}
-		
+
 		// Calculate time until next reset
 		rl.mu.Lock()
 		timeUntilReset := rl.interval - time.Since(rl.lastReset)
 		rl.mu.Unlock()
-		
+
 		if timeUntilReset <= 0 {
 			continue
 		}
-		
+
 		// Wait for the shorter of timeUntilReset or context cancellation
 		select {
 		case <-time.After(timeUntilReset):
@@ -94,15 +94,15 @@ func (rl *RateLimiter) Wait(ctx context.Context) error {
 func (rl *RateLimiter) RemainingTokens() int {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	now := time.Now()
-	
+
 	// Reset tokens if interval has passed
 	if now.Sub(rl.lastReset) >= rl.interval {
 		rl.tokens = rl.limit
 		rl.lastReset = now
 	}
-	
+
 	return rl.tokens
 }
 
@@ -110,12 +110,11 @@ func (rl *RateLimiter) RemainingTokens() int {
 func (rl *RateLimiter) ResetIn() time.Duration {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	timeUntilReset := rl.interval - time.Since(rl.lastReset)
 	if timeUntilReset < 0 {
 		return 0
 	}
-	
+
 	return timeUntilReset
 }
-

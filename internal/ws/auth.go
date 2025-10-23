@@ -76,8 +76,8 @@ func (au *AuthenticatedUpgrader) Upgrade(w http.ResponseWriter, r *http.Request)
 		return nil, err
 	}
 
-	au.logger.Info("WebSocket connection authenticated", 
-		zap.String("user_id", claims.UserID), 
+	au.logger.Info("WebSocket connection authenticated",
+		zap.String("user_id", claims.UserID),
 		zap.String("username", claims.Username),
 		zap.String("role", claims.Role))
 

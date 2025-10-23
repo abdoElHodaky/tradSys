@@ -3,12 +3,12 @@ package fx
 import (
 	"context"
 
+	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill-nats/pkg/nats"
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
 	"github.com/nats-io/nats.go"
-	"github.com/ThreeDotsLabs/watermill"
-	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill-nats/pkg/nats"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -17,10 +17,10 @@ import (
 var EventBusAdaptersModule = fx.Options(
 	// Provide the NATS event bus
 	fx.Provide(NewNatsEventBus),
-	
+
 	// Provide the Watermill event bus
 	fx.Provide(NewWatermillEventBus),
-	
+
 	// Register lifecycle hooks
 	fx.Invoke(registerEventBusAdaptersHooks),
 )
@@ -29,10 +29,10 @@ var EventBusAdaptersModule = fx.Options(
 type NatsEventBusConfig struct {
 	// URLs is a list of NATS server URLs
 	URLs []string
-	
+
 	// TopicPrefix is the prefix for all topics
 	TopicPrefix string
-	
+
 	// UseJetStream determines if JetStream should be used
 	UseJetStream bool
 }
@@ -59,7 +59,7 @@ func NewNatsEventBus(
 type WatermillEventBusConfig struct {
 	// NatsURL is the URL of the NATS server
 	NatsURL string
-	
+
 	// TopicPrefix is the prefix for all topics
 	TopicPrefix string
 }
@@ -78,33 +78,33 @@ func NewWatermillEventBus(
 	logger *zap.Logger,
 ) (*eventbus.WatermillEventBus, error) {
 	config := DefaultWatermillEventBusConfig()
-	
+
 	// Create a Watermill logger
 	watermillLogger := watermill.NewStdLogger(false, false)
-	
+
 	// Create a NATS publisher
 	publisherConfig := nats.PublisherConfig{
-		URL:      config.NatsURL,
+		URL:       config.NatsURL,
 		Marshaler: nats.GobMarshaler{},
 	}
-	
+
 	publisher, err := nats.NewPublisher(publisherConfig, watermillLogger)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Create a NATS subscriber
 	subscriberConfig := nats.SubscriberConfig{
-		URL:       config.NatsURL,
+		URL:         config.NatsURL,
 		Unmarshaler: nats.GobMarshaler{},
-		QueueGroup: "tradSys",
+		QueueGroup:  "tradSys",
 	}
-	
+
 	subscriber, err := nats.NewSubscriber(subscriberConfig, watermillLogger)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Create the Watermill event bus
 	return eventbus.NewWatermillEventBus(eventStore, publisher, subscriber, logger, config.TopicPrefix)
 }
@@ -119,38 +119,37 @@ func registerEventBusAdaptersHooks(
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting event bus adapters")
-			
+
 			// Start the NATS event bus
 			err := natsEventBus.Start()
 			if err != nil {
 				return err
 			}
-			
+
 			// Start the Watermill event bus
 			err = watermillEventBus.Start()
 			if err != nil {
 				return err
 			}
-			
+
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
 			logger.Info("Stopping event bus adapters")
-			
+
 			// Stop the NATS event bus
 			err := natsEventBus.Stop()
 			if err != nil {
 				logger.Error("Failed to stop NATS event bus", zap.Error(err))
 			}
-			
+
 			// Stop the Watermill event bus
 			err = watermillEventBus.Stop()
 			if err != nil {
 				logger.Error("Failed to stop Watermill event bus", zap.Error(err))
 			}
-			
+
 			return nil
 		},
 	})
 }
-

@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	
+
 	"github.com/abdoElHodaky/tradSys/internal/trading/metrics"
 )
 
@@ -46,14 +46,14 @@ func HFTAuthMiddlewareWithConfig(config *HFTAuthConfig) gin.HandlerFunc {
 	for _, path := range config.SkipPaths {
 		skipPaths[path] = true
 	}
-	
+
 	return func(c *gin.Context) {
 		// Skip authentication for certain paths
 		if skipPaths[c.Request.URL.Path] {
 			c.Next()
 			return
 		}
-		
+
 		// Get token from Authorization header
 		token := c.GetHeader("Authorization")
 		if len(token) < 7 || token[:7] != "Bearer " {
@@ -66,7 +66,7 @@ func HFTAuthMiddlewareWithConfig(config *HFTAuthConfig) gin.HandlerFunc {
 			}
 			return
 		}
-		
+
 		// Get claims from pool
 		claims := jwtPool.Get().(*Claims)
 		defer func() {
@@ -76,7 +76,7 @@ func HFTAuthMiddlewareWithConfig(config *HFTAuthConfig) gin.HandlerFunc {
 			claims.RegisteredClaims = jwt.RegisteredClaims{}
 			jwtPool.Put(claims)
 		}()
-		
+
 		// Validate token
 		if err := validateTokenFast(token[7:], claims, config.JWTSecret); err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
@@ -88,11 +88,11 @@ func HFTAuthMiddlewareWithConfig(config *HFTAuthConfig) gin.HandlerFunc {
 			}
 			return
 		}
-		
+
 		// Set user context
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
-		
+
 		c.Next()
 	}
 }
@@ -107,15 +107,15 @@ func validateTokenFast(tokenString string, claims *Claims, secret string) error 
 		}
 		return []byte(secret), nil
 	})
-	
+
 	if err != nil {
 		return err
 	}
-	
+
 	if !token.Valid {
 		return jwt.ErrTokenInvalidClaims
 	}
-	
+
 	return nil
 }
 
@@ -133,7 +133,7 @@ func HFTAPIKeyMiddleware() gin.HandlerFunc {
 			}
 			return
 		}
-		
+
 		// Validate API key (this would integrate with your API key service)
 		if !validateAPIKeyFast(apiKey) {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
@@ -145,10 +145,10 @@ func HFTAPIKeyMiddleware() gin.HandlerFunc {
 			}
 			return
 		}
-		
+
 		// Set API key context
 		c.Set("api_key", apiKey)
-		
+
 		c.Next()
 	}
 }
@@ -177,10 +177,10 @@ func HFTIPWhitelistMiddleware(allowedIPs []string) gin.HandlerFunc {
 	for _, ip := range allowedIPs {
 		allowedIPMap[ip] = true
 	}
-	
+
 	return func(c *gin.Context) {
 		clientIP := c.ClientIP()
-		
+
 		if !allowedIPMap[clientIP] {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 				"error":   "forbidden",
@@ -191,7 +191,7 @@ func HFTIPWhitelistMiddleware(allowedIPs []string) gin.HandlerFunc {
 			}
 			return
 		}
-		
+
 		c.Next()
 	}
 }

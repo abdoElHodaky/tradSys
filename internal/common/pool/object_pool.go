@@ -15,14 +15,14 @@ func NewObjectPool(factory func() interface{}, initialSize int) *ObjectPool {
 	p := &ObjectPool{
 		factory: factory,
 	}
-	
+
 	p.pool.New = factory
-	
+
 	// Pre-populate the pool
 	for i := 0; i < initialSize; i++ {
 		p.pool.Put(factory())
 	}
-	
+
 	return p
 }
 

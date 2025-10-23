@@ -22,13 +22,13 @@ func RegisterRoutes(
 ) {
 	// API version group
 	v1 := router.Group("/api/v1")
-	
+
 	// Create service handlers
 	orderHandler := services.NewOrderHandler(orderService)
 	pairsHandler := services.NewPairsHandler(pairsService)
 	settlementHandler := services.NewSettlementHandler(settlementService)
 	strategyHandler := services.NewStrategyHandler(strategyService)
-	
+
 	// Register order routes
 	orderRoutes := v1.Group("/orders")
 	{
@@ -37,7 +37,7 @@ func RegisterRoutes(
 		orderRoutes.GET("/:id", orderHandler.GetOrder)
 		orderRoutes.DELETE("/:id", orderHandler.CancelOrder)
 	}
-	
+
 	// Register pairs routes
 	pairRoutes := v1.Group("/pairs")
 	{
@@ -46,7 +46,7 @@ func RegisterRoutes(
 		pairRoutes.GET("/:symbol/ticker", pairsHandler.GetTicker)
 		pairRoutes.GET("/:symbol/orderbook", pairsHandler.GetOrderBook)
 	}
-	
+
 	// Register settlement routes
 	settlementRoutes := v1.Group("/settlements")
 	{
@@ -54,7 +54,7 @@ func RegisterRoutes(
 		settlementRoutes.GET("", settlementHandler.ListSettlements)
 		settlementRoutes.GET("/:id", settlementHandler.GetSettlement)
 	}
-	
+
 	// Register strategy routes
 	strategyRoutes := v1.Group("/strategies")
 	{
@@ -64,7 +64,7 @@ func RegisterRoutes(
 		strategyRoutes.POST("/:id/start", strategyHandler.StartStrategy)
 		strategyRoutes.POST("/:id/stop", strategyHandler.StopStrategy)
 	}
-	
+
 	// Legacy handlers can be added here if needed for backward compatibility
 	// For now, we use the new service layer exclusively
 }

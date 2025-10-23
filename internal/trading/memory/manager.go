@@ -12,72 +12,72 @@ import (
 // HFTMemoryConfig contains memory management configuration
 type HFTMemoryConfig struct {
 	// Pool settings
-	EnableObjectPools   bool `yaml:"enable_object_pools" default:"true"`
-	EnableBufferPools   bool `yaml:"enable_buffer_pools" default:"true"`
-	EnableStringPools   bool `yaml:"enable_string_pools" default:"true"`
-	
+	EnableObjectPools bool `yaml:"enable_object_pools" default:"true"`
+	EnableBufferPools bool `yaml:"enable_buffer_pools" default:"true"`
+	EnableStringPools bool `yaml:"enable_string_pools" default:"true"`
+
 	// Memory limits
-	MaxHeapSize         int64 `yaml:"max_heap_size" default:"2147483648"`         // 2GB
-	GCTargetPercentage  int   `yaml:"gc_target_percentage" default:"200"`        // 200%
-	
+	MaxHeapSize        int64 `yaml:"max_heap_size" default:"2147483648"` // 2GB
+	GCTargetPercentage int   `yaml:"gc_target_percentage" default:"200"` // 200%
+
 	// Monitoring
 	EnableMemoryMonitoring bool          `yaml:"enable_memory_monitoring" default:"true"`
 	MonitoringInterval     time.Duration `yaml:"monitoring_interval" default:"10s"`
-	
+
 	// Advanced settings
-	EnableMemoryProfiling  bool `yaml:"enable_memory_profiling" default:"false"`
-	EnableLeakDetection    bool `yaml:"enable_leak_detection" default:"true"`
+	EnableMemoryProfiling  bool  `yaml:"enable_memory_profiling" default:"false"`
+	EnableLeakDetection    bool  `yaml:"enable_leak_detection" default:"true"`
 	LeakDetectionThreshold int64 `yaml:"leak_detection_threshold" default:"104857600"` // 100MB
 }
 
 // MemoryStats contains detailed memory statistics
 type MemoryStats struct {
 	// Heap statistics
-	HeapAlloc     uint64 `json:"heap_alloc"`
-	HeapSys       uint64 `json:"heap_sys"`
-	HeapIdle      uint64 `json:"heap_idle"`
-	HeapInuse     uint64 `json:"heap_inuse"`
-	HeapReleased  uint64 `json:"heap_released"`
-	HeapObjects   uint64 `json:"heap_objects"`
-	
+	HeapAlloc    uint64 `json:"heap_alloc"`
+	HeapSys      uint64 `json:"heap_sys"`
+	HeapIdle     uint64 `json:"heap_idle"`
+	HeapInuse    uint64 `json:"heap_inuse"`
+	HeapReleased uint64 `json:"heap_released"`
+	HeapObjects  uint64 `json:"heap_objects"`
+
 	// Stack statistics
 	StackInuse uint64 `json:"stack_inuse"`
 	StackSys   uint64 `json:"stack_sys"`
-	
+
 	// GC statistics
 	NumGC         uint32        `json:"num_gc"`
 	PauseTotal    time.Duration `json:"pause_total"`
 	LastGC        time.Time     `json:"last_gc"`
 	NextGC        uint64        `json:"next_gc"`
 	GCCPUFraction float64       `json:"gc_cpu_fraction"`
-	
+
 	// Custom statistics
 	PoolAllocations   int64 `json:"pool_allocations"`
 	PoolDeallocations int64 `json:"pool_deallocations"`
 	BufferPoolHits    int64 `json:"buffer_pool_hits"`
 	BufferPoolMisses  int64 `json:"buffer_pool_misses"`
-	
+
 	Timestamp time.Time `json:"timestamp"`
 }
 
 // HFTMemoryManager manages memory for HFT workloads
 type HFTMemoryManager struct {
 	config *HFTMemoryConfig
-	
+
 	// Pools
 	objectPools map[string]*sync.Pool
 	bufferPools map[int]*BufferPool
 	stringPool  *StringPool
-	
+
 	// Statistics
 	poolAllocations   int64
 	poolDeallocations int64
 	bufferPoolHits    int64
 	bufferPoolMisses  int64
-	
+
 	// Monitoring
 	stopMonitoring chan struct{}
-	
+
 	mu sync.RWMutex
 }
 
@@ -88,16 +88,16 @@ func NewHFTMemoryManager(config *HFTMemoryConfig) *HFTMemoryManager {
 			EnableObjectPools:      true,
 			EnableBufferPools:      true,
 			EnableStringPools:      true,
-			MaxHeapSize:           2147483648, // 2GB
-			GCTargetPercentage:    200,
+			MaxHeapSize:            2147483648, // 2GB
+			GCTargetPercentage:     200,
 			EnableMemoryMonitoring: true,
-			MonitoringInterval:    10 * time.Second,
-			EnableMemoryProfiling: false,
-			EnableLeakDetection:   true,
+			MonitoringInterval:     10 * time.Second,
+			EnableMemoryProfiling:  false,
+			EnableLeakDetection:    true,
 			LeakDetectionThreshold: 104857600, // 100MB
 		}
 	}
-	
+
 	manager := &HFTMemoryManager{
 		config:         config,
 		objectPools:    make(map[string]*sync.Pool),
@@ -105,24 +105,24 @@ func NewHFTMemoryManager(config *HFTMemoryConfig) *HFTMemoryManager {
 		stringPool:     NewStringPool(),
 		stopMonitoring: make(chan struct{}),
 	}
-	
+
 	// Initialize buffer pools for common sizes
 	if config.EnableBufferPools {
 		manager.initBufferPools()
 	}
-	
+
 	// Start monitoring if enabled
 	if config.EnableMemoryMonitoring {
 		go manager.monitoringLoop()
 	}
-	
+
 	return manager
 }
 
 // initBufferPools initializes buffer pools for common sizes
 func (m *HFTMemoryManager) initBufferPools() {
 	sizes := []int{64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768}
-	
+
 	for _, size := range sizes {
 		m.bufferPools[size] = NewBufferPool(size)
 	}
@@ -136,15 +136,15 @@ func (m *HFTMemoryManager) GetObjectPool(name string, newFunc func() interface{}
 		return pool
 	}
 	m.mu.RUnlock()
-	
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	// Double-check after acquiring write lock
 	if pool, exists := m.objectPools[name]; exists {
 		return pool
 	}
-	
+
 	pool := &sync.Pool{New: newFunc}
 	m.objectPools[name] = pool
 	return pool
@@ -155,7 +155,7 @@ func (m *HFTMemoryManager) GetBuffer(size int) []byte {
 	if !m.config.EnableBufferPools {
 		return make([]byte, size)
 	}
-	
+
 	// Find the smallest pool that can accommodate the requested size
 	poolSize := m.findBufferPoolSize(size)
 	if pool, exists := m.bufferPools[poolSize]; exists {
@@ -163,7 +163,7 @@ func (m *HFTMemoryManager) GetBuffer(size int) []byte {
 		atomic.AddInt64(&m.bufferPoolHits, 1)
 		return buf[:size] // Return slice of requested size
 	}
-	
+
 	// No suitable pool found, allocate directly
 	atomic.AddInt64(&m.bufferPoolMisses, 1)
 	return make([]byte, size)
@@ -174,7 +174,7 @@ func (m *HFTMemoryManager) PutBuffer(buf []byte) {
 	if !m.config.EnableBufferPools || len(buf) == 0 {
 		return
 	}
-	
+
 	// Find the pool that matches the buffer capacity
 	capacity := cap(buf)
 	if pool, exists := m.bufferPools[capacity]; exists {
@@ -189,7 +189,7 @@ func (m *HFTMemoryManager) findBufferPoolSize(size int) int {
 			return poolSize
 		}
 	}
-	
+
 	// Return the largest pool size if no suitable pool found
 	maxSize := 0
 	for poolSize := range m.bufferPools {
@@ -205,7 +205,7 @@ func (m *HFTMemoryManager) GetString(s string) string {
 	if !m.config.EnableStringPools {
 		return s
 	}
-	
+
 	return m.stringPool.Get(s)
 }
 
@@ -230,7 +230,7 @@ func (m *HFTMemoryManager) DeallocateObject(poolName string, obj interface{}) {
 func (m *HFTMemoryManager) GetMemoryStats() *MemoryStats {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
-	
+
 	return &MemoryStats{
 		HeapAlloc:         memStats.HeapAlloc,
 		HeapSys:           memStats.HeapSys,
@@ -257,24 +257,24 @@ func (m *HFTMemoryManager) GetMemoryStats() *MemoryStats {
 func (m *HFTMemoryManager) monitoringLoop() {
 	ticker := time.NewTicker(m.config.MonitoringInterval)
 	defer ticker.Stop()
-	
+
 	var lastStats *MemoryStats
-	
+
 	for {
 		select {
 		case <-m.stopMonitoring:
 			return
 		case <-ticker.C:
 			stats := m.GetMemoryStats()
-			
+
 			// Check for memory leaks
 			if m.config.EnableLeakDetection && lastStats != nil {
 				m.checkForLeaks(lastStats, stats)
 			}
-			
+
 			// Log memory statistics
 			m.logMemoryStats(stats)
-			
+
 			lastStats = stats
 		}
 	}
@@ -283,20 +283,20 @@ func (m *HFTMemoryManager) monitoringLoop() {
 // checkForLeaks checks for potential memory leaks
 func (m *HFTMemoryManager) checkForLeaks(lastStats, currentStats *MemoryStats) {
 	heapGrowth := int64(currentStats.HeapAlloc) - int64(lastStats.HeapAlloc)
-	
+
 	if heapGrowth > m.config.LeakDetectionThreshold {
 		fmt.Printf("[MEMORY LEAK WARNING] Heap grew by %d bytes in %v\n",
 			heapGrowth, currentStats.Timestamp.Sub(lastStats.Timestamp))
-		
+
 		// Force GC to see if memory can be reclaimed
 		runtime.GC()
-		
+
 		// Check again after GC
 		afterGCStats := m.GetMemoryStats()
 		reclaimedMemory := int64(currentStats.HeapAlloc) - int64(afterGCStats.HeapAlloc)
-		
+
 		fmt.Printf("[MEMORY LEAK] Reclaimed %d bytes after forced GC\n", reclaimedMemory)
-		
+
 		if reclaimedMemory < heapGrowth/2 {
 			fmt.Printf("[MEMORY LEAK CRITICAL] Potential memory leak detected!\n")
 		}
@@ -322,9 +322,9 @@ func (m *HFTMemoryManager) ForceGC() {
 func (m *HFTMemoryManager) GetPoolStats() map[string]interface{} {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	stats := make(map[string]interface{})
-	
+
 	// Object pool statistics
 	stats["object_pools"] = len(m.objectPools)
 	stats["buffer_pools"] = len(m.bufferPools)
@@ -332,14 +332,14 @@ func (m *HFTMemoryManager) GetPoolStats() map[string]interface{} {
 	stats["pool_deallocations"] = atomic.LoadInt64(&m.poolDeallocations)
 	stats["buffer_pool_hits"] = atomic.LoadInt64(&m.bufferPoolHits)
 	stats["buffer_pool_misses"] = atomic.LoadInt64(&m.bufferPoolMisses)
-	
+
 	// Buffer pool details
 	bufferPoolStats := make(map[string]interface{})
 	for size, pool := range m.bufferPools {
 		bufferPoolStats[fmt.Sprintf("size_%d", size)] = pool.GetStats()
 	}
 	stats["buffer_pool_details"] = bufferPoolStats
-	
+
 	return stats
 }
 
@@ -379,12 +379,12 @@ func (bp *BufferPool) Put(buf []byte) {
 	if cap(buf) != bp.size {
 		return // Wrong size, don't return to pool
 	}
-	
+
 	// Clear the buffer
 	for i := range buf {
 		buf[i] = 0
 	}
-	
+
 	atomic.AddInt64(&bp.puts, 1)
 	bp.pool.Put(buf[:bp.size]) // Ensure full capacity
 }
@@ -413,7 +413,7 @@ func (sp *StringPool) Get(s string) string {
 	if cached, ok := sp.pool.Load(s); ok {
 		return cached.(string)
 	}
-	
+
 	// Store the string in the pool
 	sp.pool.Store(s, s)
 	return s
@@ -451,14 +451,14 @@ func (mp *MemoryProfiler) Disable() {
 func (mp *MemoryProfiler) Sample(stats MemoryStats) {
 	mp.mu.Lock()
 	defer mp.mu.Unlock()
-	
+
 	if !mp.enabled {
 		return
 	}
-	
+
 	// Add sample
 	mp.samples = append(mp.samples, stats)
-	
+
 	// Keep only last 1000 samples
 	if len(mp.samples) > 1000 {
 		mp.samples = mp.samples[1:]
@@ -469,7 +469,7 @@ func (mp *MemoryProfiler) Sample(stats MemoryStats) {
 func (mp *MemoryProfiler) GetSamples() []MemoryStats {
 	mp.mu.RLock()
 	defer mp.mu.RUnlock()
-	
+
 	samples := make([]MemoryStats, len(mp.samples))
 	copy(samples, mp.samples)
 	return samples

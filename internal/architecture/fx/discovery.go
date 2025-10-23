@@ -13,19 +13,19 @@ import (
 var DiscoveryModule = fx.Options(
 	// Provide the registry
 	fx.Provide(NewRegistry),
-	
+
 	// Provide the service discovery
 	fx.Provide(NewServiceDiscovery),
-	
+
 	// Provide the round-robin strategy
 	fx.Provide(NewRoundRobinStrategy),
-	
+
 	// Provide the random strategy
 	fx.Provide(NewRandomStrategy),
-	
+
 	// Provide the service selector with round-robin strategy
 	fx.Provide(NewServiceSelector),
-	
+
 	// Register lifecycle hooks
 	fx.Invoke(registerDiscoveryHooks),
 )
@@ -76,4 +76,3 @@ func registerDiscoveryHooks(
 		},
 	})
 }
-

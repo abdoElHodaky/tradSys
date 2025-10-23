@@ -12,13 +12,13 @@ import (
 type Strategy interface {
 	// Name returns the strategy name
 	Name() string
-	
+
 	// Execute executes the strategy and returns orders to place
 	Execute(ctx context.Context, marketData *MarketData) ([]*models.Order, error)
-	
+
 	// Initialize initializes the strategy with parameters
 	Initialize(params map[string]interface{}) error
-	
+
 	// Cleanup performs cleanup when strategy is stopped
 	Cleanup() error
 }
@@ -79,21 +79,21 @@ func (m *Manager) StopStrategy(name string) error {
 // ExecuteStrategies executes all active strategies
 func (m *Manager) ExecuteStrategies(ctx context.Context, marketData *MarketData) ([]*models.Order, error) {
 	var allOrders []*models.Order
-	
+
 	for name, strategy := range m.strategies {
 		if !m.active[name] {
 			continue
 		}
-		
+
 		orders, err := strategy.Execute(ctx, marketData)
 		if err != nil {
 			// Log error but continue with other strategies
 			continue
 		}
-		
+
 		allOrders = append(allOrders, orders...)
 	}
-	
+
 	return allOrders, nil
 }
 

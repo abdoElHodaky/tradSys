@@ -15,18 +15,18 @@ var Module = fx.Options(
 // NewDatabase creates a new database connection for the fx application
 func NewDatabase(lifecycle fx.Lifecycle, logger *zap.Logger) (*gorm.DB, error) {
 	config := DefaultConfig()
-	
+
 	// Connect to the database
 	db, err := Connect(config, logger)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Initialize the database
 	if err := InitializeDatabase(db, logger); err != nil {
 		return nil, err
 	}
-	
+
 	// Register lifecycle hooks
 	lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
@@ -42,6 +42,6 @@ func NewDatabase(lifecycle fx.Lifecycle, logger *zap.Logger) (*gorm.DB, error) {
 			return sqlDB.Close()
 		},
 	})
-	
+
 	return db, nil
 }

@@ -12,7 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"go.uber.org/zap"
-	
+
 	"github.com/abdoElHodaky/tradSys/internal/config"
 	"github.com/abdoElHodaky/tradSys/internal/trading/memory"
 	"github.com/abdoElHodaky/tradSys/internal/trading/metrics"
@@ -24,19 +24,19 @@ type HFTMonitoringConfig struct {
 	EnablePrometheus    bool          `yaml:"enable_prometheus" default:"true"`
 	EnableCustomMetrics bool          `yaml:"enable_custom_metrics" default:"true"`
 	MetricsInterval     time.Duration `yaml:"metrics_interval" default:"10s"`
-	
+
 	// Health checks
 	EnableHealthChecks  bool          `yaml:"enable_health_checks" default:"true"`
 	HealthCheckInterval time.Duration `yaml:"health_check_interval" default:"30s"`
-	
+
 	// Alerting
-	EnableAlerting      bool          `yaml:"enable_alerting" default:"true"`
-	AlertThresholds     AlertThresholds `yaml:"alert_thresholds"`
-	
+	EnableAlerting  bool            `yaml:"enable_alerting" default:"true"`
+	AlertThresholds AlertThresholds `yaml:"alert_thresholds"`
+
 	// Performance monitoring
 	EnablePerformanceMonitoring bool          `yaml:"enable_performance_monitoring" default:"true"`
 	PerformanceInterval         time.Duration `yaml:"performance_interval" default:"5s"`
-	
+
 	// Dashboard
 	EnableDashboard bool   `yaml:"enable_dashboard" default:"true"`
 	DashboardPort   int    `yaml:"dashboard_port" default:"9090"`
@@ -45,41 +45,41 @@ type HFTMonitoringConfig struct {
 
 // AlertThresholds contains alerting thresholds
 type AlertThresholds struct {
-	MaxLatency        time.Duration `yaml:"max_latency" default:"100ms"`
-	MaxErrorRate      float64       `yaml:"max_error_rate" default:"0.01"`      // 1%
-	MaxMemoryUsage    int64         `yaml:"max_memory_usage" default:"1073741824"` // 1GB
-	MaxGCPauseTime    time.Duration `yaml:"max_gc_pause_time" default:"10ms"`
-	MinThroughput     int64         `yaml:"min_throughput" default:"1000"`     // requests/sec
+	MaxLatency     time.Duration `yaml:"max_latency" default:"100ms"`
+	MaxErrorRate   float64       `yaml:"max_error_rate" default:"0.01"`         // 1%
+	MaxMemoryUsage int64         `yaml:"max_memory_usage" default:"1073741824"` // 1GB
+	MaxGCPauseTime time.Duration `yaml:"max_gc_pause_time" default:"10ms"`
+	MinThroughput  int64         `yaml:"min_throughput" default:"1000"` // requests/sec
 }
 
 // HFTProductionMonitor provides comprehensive production monitoring
 type HFTProductionMonitor struct {
 	config *HFTMonitoringConfig
-	
+
 	// Prometheus metrics
-	requestDuration    *prometheus.HistogramVec
-	requestCount       *prometheus.CounterVec
-	errorCount         *prometheus.CounterVec
-	memoryUsage        prometheus.Gauge
-	gcPauseTime        prometheus.Gauge
-	activeConnections  prometheus.Gauge
-	throughput         prometheus.Gauge
-	
+	requestDuration   *prometheus.HistogramVec
+	requestCount      *prometheus.CounterVec
+	errorCount        *prometheus.CounterVec
+	memoryUsage       prometheus.Gauge
+	gcPauseTime       prometheus.Gauge
+	activeConnections prometheus.Gauge
+	throughput        prometheus.Gauge
+
 	// Health checks
 	healthChecks map[string]HealthCheck
 	healthStatus atomic.Value // HealthStatus
-	
+
 	// Performance tracking
 	performanceMetrics *PerformanceMetrics
-	
+
 	// Alerting
 	alertManager *AlertManager
-	
+
 	// Control
 	ctx    context.Context
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
-	
+
 	mu sync.RWMutex
 }
 
@@ -103,15 +103,15 @@ type CheckResult struct {
 
 // PerformanceMetrics tracks performance metrics
 type PerformanceMetrics struct {
-	RequestsPerSecond   float64   `json:"requests_per_second"`
-	AverageLatency      time.Duration `json:"average_latency"`
-	P95Latency          time.Duration `json:"p95_latency"`
-	P99Latency          time.Duration `json:"p99_latency"`
-	ErrorRate           float64   `json:"error_rate"`
-	MemoryUsage         uint64    `json:"memory_usage"`
-	GCPauseTime         time.Duration `json:"gc_pause_time"`
-	ActiveConnections   int64     `json:"active_connections"`
-	Timestamp           time.Time `json:"timestamp"`
+	RequestsPerSecond float64       `json:"requests_per_second"`
+	AverageLatency    time.Duration `json:"average_latency"`
+	P95Latency        time.Duration `json:"p95_latency"`
+	P99Latency        time.Duration `json:"p99_latency"`
+	ErrorRate         float64       `json:"error_rate"`
+	MemoryUsage       uint64        `json:"memory_usage"`
+	GCPauseTime       time.Duration `json:"gc_pause_time"`
+	ActiveConnections int64         `json:"active_connections"`
+	Timestamp         time.Time     `json:"timestamp"`
 }
 
 // NewHFTProductionMonitor creates a new production monitor
@@ -120,15 +120,15 @@ func NewHFTProductionMonitor(config *HFTMonitoringConfig) *HFTProductionMonitor 
 		config = &HFTMonitoringConfig{
 			EnablePrometheus:            true,
 			EnableCustomMetrics:         true,
-			MetricsInterval:            10 * time.Second,
-			EnableHealthChecks:         true,
-			HealthCheckInterval:        30 * time.Second,
-			EnableAlerting:             true,
+			MetricsInterval:             10 * time.Second,
+			EnableHealthChecks:          true,
+			HealthCheckInterval:         30 * time.Second,
+			EnableAlerting:              true,
 			EnablePerformanceMonitoring: true,
-			PerformanceInterval:        5 * time.Second,
-			EnableDashboard:            true,
-			DashboardPort:              9090,
-			DashboardPath:              "/dashboard",
+			PerformanceInterval:         5 * time.Second,
+			EnableDashboard:             true,
+			DashboardPort:               9090,
+			DashboardPath:               "/dashboard",
 			AlertThresholds: AlertThresholds{
 				MaxLatency:     100 * time.Millisecond,
 				MaxErrorRate:   0.01,
@@ -138,33 +138,33 @@ func NewHFTProductionMonitor(config *HFTMonitoringConfig) *HFTProductionMonitor 
 			},
 		}
 	}
-	
+
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	monitor := &HFTProductionMonitor{
-		config:         config,
-		healthChecks:   make(map[string]HealthCheck),
+		config:             config,
+		healthChecks:       make(map[string]HealthCheck),
 		performanceMetrics: &PerformanceMetrics{},
-		alertManager:   NewAlertManager(zap.NewNop()),
-		ctx:           ctx,
-		cancel:        cancel,
+		alertManager:       NewAlertManager(zap.NewNop()),
+		ctx:                ctx,
+		cancel:             cancel,
 	}
-	
+
 	// Initialize Prometheus metrics
 	if config.EnablePrometheus {
 		monitor.initPrometheusMetrics()
 	}
-	
+
 	// Initialize health status
 	monitor.healthStatus.Store(HealthStatus{
 		Status:    "unknown",
 		Timestamp: time.Now(),
 		Checks:    make(map[string]CheckResult),
 	})
-	
+
 	// Start monitoring goroutines
 	monitor.start()
-	
+
 	return monitor
 }
 
@@ -178,7 +178,7 @@ func (m *HFTProductionMonitor) initPrometheusMetrics() {
 		},
 		[]string{"method", "endpoint", "status"},
 	)
-	
+
 	m.requestCount = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "hft_requests_total",
@@ -186,7 +186,7 @@ func (m *HFTProductionMonitor) initPrometheusMetrics() {
 		},
 		[]string{"method", "endpoint", "status"},
 	)
-	
+
 	m.errorCount = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "hft_errors_total",
@@ -194,28 +194,28 @@ func (m *HFTProductionMonitor) initPrometheusMetrics() {
 		},
 		[]string{"type", "endpoint"},
 	)
-	
+
 	m.memoryUsage = promauto.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "hft_memory_usage_bytes",
 			Help: "Current memory usage in bytes",
 		},
 	)
-	
+
 	m.gcPauseTime = promauto.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "hft_gc_pause_time_seconds",
 			Help: "Last GC pause time in seconds",
 		},
 	)
-	
+
 	m.activeConnections = promauto.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "hft_active_connections",
 			Help: "Number of active connections",
 		},
 	)
-	
+
 	m.throughput = promauto.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "hft_throughput_requests_per_second",
@@ -230,17 +230,17 @@ func (m *HFTProductionMonitor) start() {
 		m.wg.Add(1)
 		go m.metricsCollectionLoop()
 	}
-	
+
 	if m.config.EnableHealthChecks {
 		m.wg.Add(1)
 		go m.healthCheckLoop()
 	}
-	
+
 	if m.config.EnablePerformanceMonitoring {
 		m.wg.Add(1)
 		go m.performanceMonitoringLoop()
 	}
-	
+
 	if m.config.EnableDashboard {
 		m.wg.Add(1)
 		go m.startDashboard()
@@ -250,10 +250,10 @@ func (m *HFTProductionMonitor) start() {
 // metricsCollectionLoop collects metrics periodically
 func (m *HFTProductionMonitor) metricsCollectionLoop() {
 	defer m.wg.Done()
-	
+
 	ticker := time.NewTicker(m.config.MetricsInterval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-m.ctx.Done():
@@ -276,13 +276,13 @@ func (m *HFTProductionMonitor) collectMetrics() {
 			m.gcPauseTime.Set(memStats.PauseTotal.Seconds())
 		}
 	}
-	
+
 	// Collect GC metrics
 	gcStats := config.GetGCStats()
 	if gcStats != nil && m.gcPauseTime != nil {
 		m.gcPauseTime.Set(gcStats.PauseTotal.Seconds())
 	}
-	
+
 	// Collect connection metrics
 	if metrics.GlobalMetrics != nil {
 		// This would integrate with your WebSocket manager
@@ -293,10 +293,10 @@ func (m *HFTProductionMonitor) collectMetrics() {
 // healthCheckLoop runs health checks periodically
 func (m *HFTProductionMonitor) healthCheckLoop() {
 	defer m.wg.Done()
-	
+
 	ticker := time.NewTicker(m.config.HealthCheckInterval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-m.ctx.Done():
@@ -315,15 +315,15 @@ func (m *HFTProductionMonitor) runHealthChecks() {
 		checks[name] = check
 	}
 	m.mu.RUnlock()
-	
+
 	results := make(map[string]CheckResult)
 	overallStatus := "healthy"
-	
+
 	for name, check := range checks {
 		start := time.Now()
 		err := check()
 		latency := time.Since(start)
-		
+
 		if err != nil {
 			results[name] = CheckResult{
 				Status:  "unhealthy",
@@ -338,7 +338,7 @@ func (m *HFTProductionMonitor) runHealthChecks() {
 			}
 		}
 	}
-	
+
 	// Update health status
 	status := HealthStatus{
 		Status:    overallStatus,
@@ -346,17 +346,17 @@ func (m *HFTProductionMonitor) runHealthChecks() {
 		Checks:    results,
 		Uptime:    time.Since(time.Now()), // This would be calculated from start time
 	}
-	
+
 	m.healthStatus.Store(status)
 }
 
 // performanceMonitoringLoop monitors performance metrics
 func (m *HFTProductionMonitor) performanceMonitoringLoop() {
 	defer m.wg.Done()
-	
+
 	ticker := time.NewTicker(m.config.PerformanceInterval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-m.ctx.Done():
@@ -373,7 +373,7 @@ func (m *HFTProductionMonitor) updatePerformanceMetrics() {
 	if metrics.GlobalMetrics != nil {
 		// Update performance metrics based on collected data
 		m.performanceMetrics.Timestamp = time.Now()
-		
+
 		// Check thresholds and trigger alerts
 		if m.config.EnableAlerting {
 			m.checkAlertThresholds()
@@ -384,7 +384,7 @@ func (m *HFTProductionMonitor) updatePerformanceMetrics() {
 // checkAlertThresholds checks if any alert thresholds are exceeded
 func (m *HFTProductionMonitor) checkAlertThresholds() {
 	thresholds := &m.config.AlertThresholds
-	
+
 	// Check latency
 	if m.performanceMetrics.P99Latency > thresholds.MaxLatency {
 		m.alertManager.Trigger(context.Background(), AlertLevelCritical, "monitoring", fmt.Sprintf(
@@ -393,7 +393,7 @@ func (m *HFTProductionMonitor) checkAlertThresholds() {
 			thresholds.MaxLatency,
 		), nil)
 	}
-	
+
 	// Check error rate
 	if m.performanceMetrics.ErrorRate > thresholds.MaxErrorRate {
 		m.alertManager.Trigger(context.Background(), AlertLevelCritical, "monitoring", fmt.Sprintf(
@@ -402,7 +402,7 @@ func (m *HFTProductionMonitor) checkAlertThresholds() {
 			thresholds.MaxErrorRate,
 		), nil)
 	}
-	
+
 	// Check memory usage
 	if int64(m.performanceMetrics.MemoryUsage) > thresholds.MaxMemoryUsage {
 		m.alertManager.Trigger(context.Background(), AlertLevelCritical, "monitoring", fmt.Sprintf(
@@ -411,7 +411,7 @@ func (m *HFTProductionMonitor) checkAlertThresholds() {
 			thresholds.MaxMemoryUsage,
 		), nil)
 	}
-	
+
 	// Check GC pause time
 	if m.performanceMetrics.GCPauseTime > thresholds.MaxGCPauseTime {
 		m.alertManager.Trigger(context.Background(), AlertLevelCritical, "monitoring", fmt.Sprintf(
@@ -425,39 +425,39 @@ func (m *HFTProductionMonitor) checkAlertThresholds() {
 // startDashboard starts the monitoring dashboard
 func (m *HFTProductionMonitor) startDashboard() {
 	defer m.wg.Done()
-	
+
 	router := gin.New()
 	router.Use(gin.Recovery())
-	
+
 	// Health endpoint
 	router.GET("/health", m.healthHandler)
-	
+
 	// Metrics endpoint
 	router.GET("/metrics", m.metricsHandler)
-	
+
 	// Performance endpoint
 	router.GET("/performance", m.performanceHandler)
-	
+
 	// Dashboard endpoint
 	router.GET(m.config.DashboardPath, m.dashboardHandler)
-	
+
 	server := &http.Server{
 		Addr:    fmt.Sprintf(":%d", m.config.DashboardPort),
 		Handler: router,
 	}
-	
+
 	go func() {
 		<-m.ctx.Done()
 		server.Shutdown(context.Background())
 	}()
-	
+
 	server.ListenAndServe()
 }
 
 // healthHandler handles health check requests
 func (m *HFTProductionMonitor) healthHandler(c *gin.Context) {
 	status := m.healthStatus.Load().(HealthStatus)
-	
+
 	if status.Status == "healthy" {
 		c.JSON(http.StatusOK, status)
 	} else {
@@ -473,7 +473,7 @@ func (m *HFTProductionMonitor) metricsHandler(c *gin.Context) {
 		"gc":     config.GetGCStats(),
 		"pools":  memory.GlobalMemoryManager.GetPoolStats(),
 	}
-	
+
 	c.JSON(http.StatusOK, metrics)
 }
 
@@ -494,7 +494,7 @@ func (m *HFTProductionMonitor) dashboardHandler(c *gin.Context) {
 func (m *HFTProductionMonitor) RegisterHealthCheck(name string, check HealthCheck) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	m.healthChecks[name] = check
 }
 
@@ -503,7 +503,7 @@ func (m *HFTProductionMonitor) RecordRequest(method, endpoint string, status int
 	if m.requestDuration != nil {
 		m.requestDuration.WithLabelValues(method, endpoint, fmt.Sprintf("%d", status)).Observe(duration.Seconds())
 	}
-	
+
 	if m.requestCount != nil {
 		m.requestCount.WithLabelValues(method, endpoint, fmt.Sprintf("%d", status)).Inc()
 	}
@@ -531,8 +531,6 @@ func (m *HFTProductionMonitor) Close() {
 	m.cancel()
 	m.wg.Wait()
 }
-
-
 
 // Global production monitor instance
 var GlobalProductionMonitor *HFTProductionMonitor

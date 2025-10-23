@@ -27,20 +27,20 @@ func (f EventSourcedHandlerFunc) Handle(ctx context.Context, command Command) ([
 
 // EventSourcedCommandBus represents a command bus that uses event sourcing
 type EventSourcedCommandBus struct {
-	handlers     map[string]EventSourcedHandler
-	eventBus     eventbus.EventBus
+	handlers      map[string]EventSourcedHandler
+	eventBus      eventbus.EventBus
 	aggregateRepo aggregate.Repository
-	logger       *zap.Logger
-	mu           sync.RWMutex
+	logger        *zap.Logger
+	mu            sync.RWMutex
 }
 
 // NewEventSourcedCommandBus creates a new event-sourced command bus
 func NewEventSourcedCommandBus(eventBus eventbus.EventBus, aggregateRepo aggregate.Repository, logger *zap.Logger) *EventSourcedCommandBus {
 	return &EventSourcedCommandBus{
-		handlers:     make(map[string]EventSourcedHandler),
-		eventBus:     eventBus,
+		handlers:      make(map[string]EventSourcedHandler),
+		eventBus:      eventBus,
 		aggregateRepo: aggregateRepo,
-		logger:       logger,
+		logger:        logger,
 	}
 }
 
@@ -134,13 +134,13 @@ func (h *AggregateCommandHandler) HandleCreate(ctx context.Context, command Comm
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Save the aggregate
 	err = h.aggregateRepo.Save(ctx, agg)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Return the events
 	return agg.GetUncommittedEvents(), nil
 }
@@ -152,25 +152,25 @@ func (h *AggregateCommandHandler) HandleUpdate(ctx context.Context, command Comm
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Load the aggregate
 	err = h.aggregateRepo.Load(ctx, aggregateID, agg)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Update the aggregate
 	err = updateAggregate(agg, command)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Save the aggregate
 	err = h.aggregateRepo.Save(ctx, agg)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Return the events
 	return agg.GetUncommittedEvents(), nil
 }
@@ -183,6 +183,6 @@ func (h *AggregateCommandHandler) createEmptyAggregate(aggregateID string) (aggr
 	}); ok {
 		return creator.CreateAggregate(h.aggregateType, aggregateID)
 	}
-	
+
 	return nil, fmt.Errorf("aggregate repository does not support creating aggregates")
 }

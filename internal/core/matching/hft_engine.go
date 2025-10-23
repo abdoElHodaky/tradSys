@@ -17,29 +17,29 @@ import (
 type HFTEngine struct {
 	// OrderBooks is a map of symbol to order book (lock-free access)
 	orderBooks unsafe.Pointer // map[string]*HFTOrderBook
-	
+
 	// Trade channel with buffering for high throughput
 	TradeChannel chan *Trade
-	
+
 	// Order pools for zero-allocation order processing
 	fastOrderPool *pool.FastOrderPool
 	tradePool     *pool.TradePool
-	
+
 	// Performance metrics
 	ordersProcessed uint64
 	tradesExecuted  uint64
 	avgLatency      uint64 // nanoseconds
-	
+
 	// Logger
 	logger *zap.Logger
-	
+
 	// Context for graceful shutdown
 	ctx    context.Context
 	cancel context.CancelFunc
-	
+
 	// Worker pool for parallel processing
 	workerPool chan struct{}
-	
+
 	// Lock-free statistics
 	stats *EngineStats
 }
@@ -58,22 +58,22 @@ type EngineStats struct {
 // HFTOrderBook represents a high-frequency trading optimized order book
 type HFTOrderBook struct {
 	Symbol string
-	
+
 	// Lock-free order book using atomic operations
 	bids unsafe.Pointer // *PriceLevelTree
 	asks unsafe.Pointer // *PriceLevelTree
-	
+
 	// Order lookup map with RWMutex for better read performance
 	orders sync.Map // map[string]*Order
-	
+
 	// Last trade price (atomic)
 	lastPrice uint64 // float64 as uint64 for atomic operations
-	
+
 	// Performance counters
 	orderCount  uint64
 	tradeCount  uint64
 	lastUpdated int64 // Unix nanoseconds
-	
+
 	// Logger
 	logger *zap.Logger
 }
@@ -82,13 +82,13 @@ type HFTOrderBook struct {
 type PriceLevelTree struct {
 	// Root node of the tree
 	root *PriceLevelNode
-	
+
 	// Side of the tree (buy or sell)
 	side OrderSide
-	
+
 	// Node count for quick size checks
 	nodeCount uint32
-	
+
 	// RWMutex for concurrent access
 	mu sync.RWMutex
 }
@@ -97,19 +97,19 @@ type PriceLevelTree struct {
 type PriceLevelNode struct {
 	// Price level
 	price float64
-	
+
 	// Orders at this price level (FIFO queue)
 	orders []*Order
-	
+
 	// Total quantity at this price level
 	totalQuantity float64
-	
+
 	// Tree structure
 	left   *PriceLevelNode
 	right  *PriceLevelNode
 	parent *PriceLevelNode
 	height int
-	
+
 	// Order count at this level
 	orderCount uint32
 }
@@ -120,60 +120,60 @@ type FastOrder = pool.FastOrder
 // NewHFTEngine creates a new HFT-optimized order matching engine
 func NewHFTEngine(logger *zap.Logger) *HFTEngine {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	// Initialize order books map
 	orderBooksMap := make(map[string]*HFTOrderBook)
-	
+
 	engine := &HFTEngine{
 		TradeChannel:  make(chan *Trade, 10000), // Large buffer for high throughput
-		fastOrderPool: pool.NewFastOrderPool(), // Fast order pool for zero-allocation processing
-		tradePool:     pool.NewTradePool(1000), // Pre-allocate 1000 trades
-		logger:       logger,
-		ctx:          ctx,
-		cancel:       cancel,
-		workerPool:   make(chan struct{}, runtime.NumCPU()*2), // 2x CPU cores
+		fastOrderPool: pool.NewFastOrderPool(),  // Fast order pool for zero-allocation processing
+		tradePool:     pool.NewTradePool(1000),  // Pre-allocate 1000 trades
+		logger:        logger,
+		ctx:           ctx,
+		cancel:        cancel,
+		workerPool:    make(chan struct{}, runtime.NumCPU()*2), // 2x CPU cores
 		stats: &EngineStats{
 			MinLatencyNanos: ^uint64(0), // Max uint64 value
 		},
 	}
-	
+
 	// Store the map atomically
 	atomic.StorePointer(&engine.orderBooks, unsafe.Pointer(&orderBooksMap))
-	
+
 	// Start performance monitoring
 	go engine.monitorPerformance()
-	
+
 	// Start trade processor
 	go engine.processTradesAsync()
-	
+
 	return engine
 }
 
 // PlaceOrderFast places an order with HFT optimizations
 func (e *HFTEngine) PlaceOrderFast(order *Order) ([]*Trade, error) {
 	startTime := time.Now()
-	
+
 	// Get or create order book
 	orderBook := e.getOrCreateOrderBook(order.Symbol)
-	
+
 	// Convert to fast order for better performance
 	fastOrder := e.fastOrderPool.Get()
 	defer e.fastOrderPool.Put(fastOrder) // Return to pool when done
-	
+
 	fastOrder.Order = *order
 	fastOrder.PriceInt64 = int64(order.Price * 100000000) // 8 decimal places precision
 	fastOrder.QuantityInt64 = int64(order.Quantity * 100000000)
 	fastOrder.CreatedAtNano = startTime.UnixNano()
 	fastOrder.UpdatedAtNano = startTime.UnixNano()
-	
+
 	// Process order
 	trades, err := orderBook.processOrderFast(fastOrder)
-	
+
 	// Update performance metrics
 	latency := uint64(time.Since(startTime).Nanoseconds())
 	e.updateLatencyStats(latency)
 	atomic.AddUint64(&e.ordersProcessed, 1)
-	
+
 	// Send trades to channel asynchronously
 	if len(trades) > 0 {
 		go func() {
@@ -189,7 +189,7 @@ func (e *HFTEngine) PlaceOrderFast(order *Order) ([]*Trade, error) {
 			}
 		}()
 	}
-	
+
 	return trades, err
 }
 
@@ -198,42 +198,42 @@ func (e *HFTEngine) getOrCreateOrderBook(symbol string) *HFTOrderBook {
 	// Load current map
 	orderBooksPtr := atomic.LoadPointer(&e.orderBooks)
 	orderBooksMap := (*map[string]*HFTOrderBook)(orderBooksPtr)
-	
+
 	// Check if order book exists
 	if orderBook, exists := (*orderBooksMap)[symbol]; exists {
 		return orderBook
 	}
-	
+
 	// Create new order book
 	newOrderBook := &HFTOrderBook{
 		Symbol:      symbol,
 		logger:      e.logger,
 		lastUpdated: time.Now().UnixNano(),
 	}
-	
+
 	// Initialize price level trees
 	bidsTree := &PriceLevelTree{side: OrderSideBuy}
 	asksTree := &PriceLevelTree{side: OrderSideSell}
 	atomic.StorePointer(&newOrderBook.bids, unsafe.Pointer(bidsTree))
 	atomic.StorePointer(&newOrderBook.asks, unsafe.Pointer(asksTree))
-	
+
 	// Create new map with the new order book
 	newOrderBooksMap := make(map[string]*HFTOrderBook)
 	for k, v := range *orderBooksMap {
 		newOrderBooksMap[k] = v
 	}
 	newOrderBooksMap[symbol] = newOrderBook
-	
+
 	// Atomically update the map
 	atomic.StorePointer(&e.orderBooks, unsafe.Pointer(&newOrderBooksMap))
-	
+
 	return newOrderBook
 }
 
 // processOrderFast processes an order with HFT optimizations
 func (ob *HFTOrderBook) processOrderFast(order *FastOrder) ([]*Trade, error) {
 	trades := make([]*Trade, 0, 4) // Pre-allocate for common case
-	
+
 	// Handle market orders with optimized matching
 	if order.Type == OrderTypeMarket {
 		if order.Side == OrderSideBuy {
@@ -248,11 +248,11 @@ func (ob *HFTOrderBook) processOrderFast(order *FastOrder) ([]*Trade, error) {
 			trades = ob.matchLimitSellOrder(order, trades)
 		}
 	}
-	
+
 	// Update order book statistics
 	atomic.AddUint64(&ob.orderCount, 1)
 	atomic.StoreInt64(&ob.lastUpdated, time.Now().UnixNano())
-	
+
 	return trades, nil
 }
 
@@ -260,39 +260,39 @@ func (ob *HFTOrderBook) processOrderFast(order *FastOrder) ([]*Trade, error) {
 func (ob *HFTOrderBook) matchMarketBuyOrder(order *FastOrder, trades []*Trade) []*Trade {
 	asksPtr := atomic.LoadPointer(&ob.asks)
 	asksTree := (*PriceLevelTree)(asksPtr)
-	
+
 	asksTree.mu.Lock()
 	defer asksTree.mu.Unlock()
-	
+
 	// Find best ask prices and match
 	for order.FilledQuantity < order.Quantity && asksTree.root != nil {
 		bestAsk := asksTree.findBestPrice()
 		if bestAsk == nil {
 			break
 		}
-		
+
 		// Match with best ask
 		trade := ob.executeTradeOptimized(order, bestAsk.orders[0])
 		if trade != nil {
 			trades = append(trades, trade)
-			
+
 			// Update last price atomically
 			priceUint64 := *(*uint64)(unsafe.Pointer(&trade.Price))
 			atomic.StoreUint64(&ob.lastPrice, priceUint64)
 		}
-		
+
 		// Remove filled orders
 		if bestAsk.orders[0].Status == OrderStatusFilled {
 			bestAsk.orders = bestAsk.orders[1:]
 			bestAsk.orderCount--
-			
+
 			// Remove price level if empty
 			if len(bestAsk.orders) == 0 {
 				asksTree.removeNode(bestAsk)
 			}
 		}
 	}
-	
+
 	return trades
 }
 
@@ -300,39 +300,39 @@ func (ob *HFTOrderBook) matchMarketBuyOrder(order *FastOrder, trades []*Trade) [
 func (ob *HFTOrderBook) matchMarketSellOrder(order *FastOrder, trades []*Trade) []*Trade {
 	bidsPtr := atomic.LoadPointer(&ob.bids)
 	bidsTree := (*PriceLevelTree)(bidsPtr)
-	
+
 	bidsTree.mu.Lock()
 	defer bidsTree.mu.Unlock()
-	
+
 	// Find best bid prices and match
 	for order.FilledQuantity < order.Quantity && bidsTree.root != nil {
 		bestBid := bidsTree.findBestPrice()
 		if bestBid == nil {
 			break
 		}
-		
+
 		// Match with best bid
 		trade := ob.executeTradeOptimized(order, bestBid.orders[0])
 		if trade != nil {
 			trades = append(trades, trade)
-			
+
 			// Update last price atomically
 			priceUint64 := *(*uint64)(unsafe.Pointer(&trade.Price))
 			atomic.StoreUint64(&ob.lastPrice, priceUint64)
 		}
-		
+
 		// Remove filled orders
 		if bestBid.orders[0].Status == OrderStatusFilled {
 			bestBid.orders = bestBid.orders[1:]
 			bestBid.orderCount--
-			
+
 			// Remove price level if empty
 			if len(bestBid.orders) == 0 {
 				bidsTree.removeNode(bestBid)
 			}
 		}
 	}
-	
+
 	return trades
 }
 
@@ -340,46 +340,46 @@ func (ob *HFTOrderBook) matchMarketSellOrder(order *FastOrder, trades []*Trade) 
 func (ob *HFTOrderBook) matchLimitBuyOrder(order *FastOrder, trades []*Trade) []*Trade {
 	asksPtr := atomic.LoadPointer(&ob.asks)
 	asksTree := (*PriceLevelTree)(asksPtr)
-	
+
 	asksTree.mu.Lock()
 	defer asksTree.mu.Unlock()
-	
+
 	// Match against asks at or below the limit price
 	for order.FilledQuantity < order.Quantity {
 		bestAsk := asksTree.findBestPrice()
 		if bestAsk == nil || bestAsk.price > order.Price {
 			break
 		}
-		
+
 		// Match with best ask
 		trade := ob.executeTradeOptimized(order, bestAsk.orders[0])
 		if trade != nil {
 			trades = append(trades, trade)
-			
+
 			// Update last price atomically
 			priceUint64 := *(*uint64)(unsafe.Pointer(&trade.Price))
 			atomic.StoreUint64(&ob.lastPrice, priceUint64)
 		}
-		
+
 		// Remove filled orders
 		if bestAsk.orders[0].Status == OrderStatusFilled {
 			bestAsk.orders = bestAsk.orders[1:]
 			bestAsk.orderCount--
-			
+
 			// Remove price level if empty
 			if len(bestAsk.orders) == 0 {
 				asksTree.removeNode(bestAsk)
 			}
 		}
 	}
-	
+
 	// Add remaining quantity to order book if not fully filled
 	if order.FilledQuantity < order.Quantity {
 		bidsPtr := atomic.LoadPointer(&ob.bids)
 		bidsTree := (*PriceLevelTree)(bidsPtr)
 		bidsTree.addOrder(&order.Order)
 	}
-	
+
 	return trades
 }
 
@@ -387,46 +387,46 @@ func (ob *HFTOrderBook) matchLimitBuyOrder(order *FastOrder, trades []*Trade) []
 func (ob *HFTOrderBook) matchLimitSellOrder(order *FastOrder, trades []*Trade) []*Trade {
 	bidsPtr := atomic.LoadPointer(&ob.bids)
 	bidsTree := (*PriceLevelTree)(bidsPtr)
-	
+
 	bidsTree.mu.Lock()
 	defer bidsTree.mu.Unlock()
-	
+
 	// Match against bids at or above the limit price
 	for order.FilledQuantity < order.Quantity {
 		bestBid := bidsTree.findBestPrice()
 		if bestBid == nil || bestBid.price < order.Price {
 			break
 		}
-		
+
 		// Match with best bid
 		trade := ob.executeTradeOptimized(order, bestBid.orders[0])
 		if trade != nil {
 			trades = append(trades, trade)
-			
+
 			// Update last price atomically
 			priceUint64 := *(*uint64)(unsafe.Pointer(&trade.Price))
 			atomic.StoreUint64(&ob.lastPrice, priceUint64)
 		}
-		
+
 		// Remove filled orders
 		if bestBid.orders[0].Status == OrderStatusFilled {
 			bestBid.orders = bestBid.orders[1:]
 			bestBid.orderCount--
-			
+
 			// Remove price level if empty
 			if len(bestBid.orders) == 0 {
 				bidsTree.removeNode(bestBid)
 			}
 		}
 	}
-	
+
 	// Add remaining quantity to order book if not fully filled
 	if order.FilledQuantity < order.Quantity {
 		asksPtr := atomic.LoadPointer(&ob.asks)
 		asksTree := (*PriceLevelTree)(asksPtr)
 		asksTree.addOrder(&order.Order)
 	}
-	
+
 	return trades
 }
 
@@ -439,33 +439,33 @@ func (ob *HFTOrderBook) executeTradeOptimized(taker *FastOrder, maker *Order) *T
 	if makerRemaining < tradeQuantity {
 		tradeQuantity = makerRemaining
 	}
-	
+
 	// Trade price is the maker's price (price-time priority)
 	tradePrice := maker.Price
-	
+
 	// Update order quantities
 	taker.FilledQuantity += tradeQuantity
 	maker.FilledQuantity += tradeQuantity
-	
+
 	// Update order statuses
 	if taker.FilledQuantity >= taker.Quantity {
 		taker.Status = OrderStatusFilled
 	} else {
 		taker.Status = OrderStatusPartiallyFilled
 	}
-	
+
 	if maker.FilledQuantity >= maker.Quantity {
 		maker.Status = OrderStatusFilled
 	} else {
 		maker.Status = OrderStatusPartiallyFilled
 	}
-	
+
 	// Update timestamps
 	now := time.Now()
 	taker.UpdatedAt = now
 	maker.UpdatedAt = now
 	taker.UpdatedAtNano = now.UnixNano()
-	
+
 	// Create trade with pre-allocated ID
 	trade := &Trade{
 		ID:        uuid.New().String(),
@@ -476,7 +476,7 @@ func (ob *HFTOrderBook) executeTradeOptimized(taker *FastOrder, maker *Order) *T
 		TakerSide: taker.Side,
 		MakerSide: maker.Side,
 	}
-	
+
 	// Set order IDs
 	if taker.Side == OrderSideBuy {
 		trade.BuyOrderID = taker.ID
@@ -485,7 +485,7 @@ func (ob *HFTOrderBook) executeTradeOptimized(taker *FastOrder, maker *Order) *T
 		trade.BuyOrderID = maker.ID
 		trade.SellOrderID = taker.ID
 	}
-	
+
 	return trade
 }
 
@@ -496,7 +496,7 @@ func (tree *PriceLevelTree) findBestPrice() *PriceLevelNode {
 	if tree.root == nil {
 		return nil
 	}
-	
+
 	if tree.side == OrderSideBuy {
 		// For buy orders, find maximum price (rightmost node)
 		node := tree.root
@@ -518,7 +518,7 @@ func (tree *PriceLevelTree) findBestPrice() *PriceLevelNode {
 func (tree *PriceLevelTree) addOrder(order *Order) {
 	tree.mu.Lock()
 	defer tree.mu.Unlock()
-	
+
 	if tree.root == nil {
 		tree.root = &PriceLevelNode{
 			price:         order.Price,
@@ -529,7 +529,7 @@ func (tree *PriceLevelTree) addOrder(order *Order) {
 		atomic.AddUint32(&tree.nodeCount, 1)
 		return
 	}
-	
+
 	// Find or create price level
 	node := tree.findOrCreatePriceLevel(order.Price)
 	node.orders = append(node.orders, order)
@@ -540,7 +540,7 @@ func (tree *PriceLevelTree) addOrder(order *Order) {
 // findOrCreatePriceLevel finds or creates a price level node
 func (tree *PriceLevelTree) findOrCreatePriceLevel(price float64) *PriceLevelNode {
 	node := tree.root
-	
+
 	for {
 		if price == node.price {
 			return node
@@ -578,7 +578,7 @@ func (tree *PriceLevelTree) findOrCreatePriceLevel(price float64) *PriceLevelNod
 func (tree *PriceLevelTree) removeNode(node *PriceLevelNode) {
 	// Implementation of AVL tree node removal
 	// This is a simplified version - full AVL implementation would include rebalancing
-	
+
 	if node.left == nil && node.right == nil {
 		// Leaf node
 		if node.parent != nil {
@@ -622,18 +622,18 @@ func (tree *PriceLevelTree) removeNode(node *PriceLevelNode) {
 		for successor.left != nil {
 			successor = successor.left
 		}
-		
+
 		// Copy successor data to current node
 		node.price = successor.price
 		node.orders = successor.orders
 		node.totalQuantity = successor.totalQuantity
 		node.orderCount = successor.orderCount
-		
+
 		// Remove successor (which has at most one child)
 		tree.removeNode(successor)
 		return // Don't decrement node count twice
 	}
-	
+
 	atomic.AddUint32(&tree.nodeCount, ^uint32(0)) // Subtract 1
 }
 
@@ -645,7 +645,7 @@ func (e *HFTEngine) updateLatencyStats(latency uint64) {
 	currentAvg := atomic.LoadUint64(&e.stats.AvgLatencyNanos)
 	newAvg := (currentAvg*9 + latency) / 10 // 90% weight to previous, 10% to current
 	atomic.StoreUint64(&e.stats.AvgLatencyNanos, newAvg)
-	
+
 	// Update min latency
 	for {
 		currentMin := atomic.LoadUint64(&e.stats.MinLatencyNanos)
@@ -656,7 +656,7 @@ func (e *HFTEngine) updateLatencyStats(latency uint64) {
 			break
 		}
 	}
-	
+
 	// Update max latency
 	for {
 		currentMax := atomic.LoadUint64(&e.stats.MaxLatencyNanos)
@@ -667,7 +667,7 @@ func (e *HFTEngine) updateLatencyStats(latency uint64) {
 			break
 		}
 	}
-	
+
 	// Update total latency
 	atomic.AddUint64(&e.stats.TotalLatencyNanos, latency)
 	atomic.StoreInt64(&e.stats.LastUpdateTime, time.Now().UnixNano())
@@ -677,7 +677,7 @@ func (e *HFTEngine) updateLatencyStats(latency uint64) {
 func (e *HFTEngine) monitorPerformance() {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-e.ctx.Done():
@@ -732,11 +732,11 @@ func (e *HFTEngine) GetStats() *EngineStats {
 func (e *HFTEngine) GetOrderBook(symbol string) *HFTOrderBook {
 	orderBooksPtr := atomic.LoadPointer(&e.orderBooks)
 	orderBooksMap := (*map[string]*HFTOrderBook)(orderBooksPtr)
-	
+
 	if orderBook, exists := (*orderBooksMap)[symbol]; exists {
 		return orderBook
 	}
-	
+
 	return nil
 }
 

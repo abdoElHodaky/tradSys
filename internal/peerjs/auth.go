@@ -23,14 +23,16 @@ type AuthenticatedPeerConnection struct {
 // AuthenticatedPeerServer extends the PeerServer with authentication
 type AuthenticatedPeerServer struct {
 	*PeerServer
-	logger *zap.Logger
+	logger      *zap.Logger
+	authService *auth.Service
 }
 
 // NewAuthenticatedPeerServer creates a new authenticated PeerJS server
-func NewAuthenticatedPeerServer(logger *zap.Logger, options *PeerServerOptions) *AuthenticatedPeerServer {
+func NewAuthenticatedPeerServer(logger *zap.Logger, authService *auth.Service, options *PeerServerOptions) *AuthenticatedPeerServer {
 	return &AuthenticatedPeerServer{
-		PeerServer: NewPeerServer(options),
-		logger:     logger,
+		PeerServer:  NewPeerServer(logger),
+		logger:      logger,
+		authService: authService,
 	}
 }
 
@@ -59,7 +61,7 @@ func (s *AuthenticatedPeerServer) HandleConnection(w http.ResponseWriter, r *htt
 	}
 
 	// Validate token
-	claims, err := auth.ValidateToken(token)
+	claims, err := s.authService.ValidateToken(token)
 	if err != nil {
 		s.logger.Error("Invalid authentication token", zap.Error(err))
 		http.Error(w, "Invalid authentication token", http.StatusUnauthorized)

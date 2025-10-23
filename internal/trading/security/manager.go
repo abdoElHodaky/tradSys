@@ -17,28 +17,28 @@ import (
 
 // HFTSecurityManager manages security for HFT applications
 type HFTSecurityManager struct {
-	jwtSecret    []byte
-	tokenExpiry  time.Duration
-	rateLimiter  *rate.Limiter
-	enableTLS    bool
-	tlsCertFile  string
-	tlsKeyFile   string
+	jwtSecret   []byte
+	tokenExpiry time.Duration
+	rateLimiter *rate.Limiter
+	enableTLS   bool
+	tlsCertFile string
+	tlsKeyFile  string
 }
 
 // SecurityConfig contains security configuration
 type SecurityConfig struct {
-	JWTSecret    string        `yaml:"jwt_secret"`
-	TokenExpiry  time.Duration `yaml:"token_expiry" default:"24h"`
-	EnableTLS    bool          `yaml:"enable_tls" default:"false"`
-	TLSCertFile  string        `yaml:"tls_cert_file"`
-	TLSKeyFile   string        `yaml:"tls_key_file"`
-	RateLimit    RateLimitConfig `yaml:"rate_limit"`
+	JWTSecret   string          `yaml:"jwt_secret"`
+	TokenExpiry time.Duration   `yaml:"token_expiry" default:"24h"`
+	EnableTLS   bool            `yaml:"enable_tls" default:"false"`
+	TLSCertFile string          `yaml:"tls_cert_file"`
+	TLSKeyFile  string          `yaml:"tls_key_file"`
+	RateLimit   RateLimitConfig `yaml:"rate_limit"`
 }
 
 // RateLimitConfig contains rate limiting configuration
 type RateLimitConfig struct {
-	RequestsPerSecond int           `yaml:"requests_per_second" default:"1000"`
-	BurstSize         int           `yaml:"burst_size" default:"100"`
+	RequestsPerSecond int `yaml:"requests_per_second" default:"1000"`
+	BurstSize         int `yaml:"burst_size" default:"100"`
 }
 
 // Claims represents JWT claims
@@ -65,13 +65,13 @@ func NewHFTSecurityManager(config *SecurityConfig) (*HFTSecurityManager, error) 
 	if config.JWTSecret == "" {
 		return nil, fmt.Errorf("JWT secret is required")
 	}
-	
+
 	// Create rate limiter
 	rateLimiter := rate.NewLimiter(
 		rate.Limit(config.RateLimit.RequestsPerSecond),
 		config.RateLimit.BurstSize,
 	)
-	
+
 	return &HFTSecurityManager{
 		jwtSecret:   []byte(config.JWTSecret),
 		tokenExpiry: config.TokenExpiry,
@@ -97,7 +97,7 @@ func (sm *HFTSecurityManager) GenerateToken(user *User) (string, error) {
 			Subject:   user.ID,
 		},
 	}
-	
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(sm.jwtSecret)
 }
@@ -110,15 +110,15 @@ func (sm *HFTSecurityManager) ValidateToken(tokenString string) (*Claims, error)
 		}
 		return sm.jwtSecret, nil
 	})
-	
+
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
 		return claims, nil
 	}
-	
+
 	return nil, fmt.Errorf("invalid token")
 }
 
@@ -156,7 +156,7 @@ func (sm *HFTSecurityManager) AuthMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		
+
 		// Check Bearer prefix
 		tokenParts := strings.SplitN(authHeader, " ", 2)
 		if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
@@ -164,7 +164,7 @@ func (sm *HFTSecurityManager) AuthMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		
+
 		// Validate token
 		claims, err := sm.ValidateToken(tokenParts[1])
 		if err != nil {
@@ -172,13 +172,13 @@ func (sm *HFTSecurityManager) AuthMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		
+
 		// Store claims in context
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Set("roles", claims.Roles)
 		c.Set("claims", claims)
-		
+
 		c.Next()
 	}
 }
@@ -193,14 +193,14 @@ func (sm *HFTSecurityManager) RoleMiddleware(requiredRoles ...string) gin.Handle
 			c.Abort()
 			return
 		}
-		
+
 		userRoles, ok := rolesInterface.([]string)
 		if !ok {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Invalid roles format"})
 			c.Abort()
 			return
 		}
-		
+
 		// Check if user has any of the required roles
 		hasRole := false
 		for _, requiredRole := range requiredRoles {
@@ -214,13 +214,13 @@ func (sm *HFTSecurityManager) RoleMiddleware(requiredRoles ...string) gin.Handle
 				break
 			}
 		}
-		
+
 		if !hasRole {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
 			c.Abort()
 			return
 		}
-		
+
 		c.Next()
 	}
 }
@@ -249,10 +249,10 @@ func (sm *HFTSecurityManager) SecurityHeadersMiddleware() gin.HandlerFunc {
 		c.Header("X-XSS-Protection", "1; mode=block")
 		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
 		c.Header("Content-Security-Policy", "default-src 'self'")
-		
+
 		// Remove server information
 		c.Header("Server", "")
-		
+
 		c.Next()
 	}
 }
@@ -268,7 +268,7 @@ func (sm *HFTSecurityManager) InputValidationMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		
+
 		// Validate content type for POST/PUT requests
 		if c.Request.Method == "POST" || c.Request.Method == "PUT" {
 			contentType := c.GetHeader("Content-Type")
@@ -282,7 +282,7 @@ func (sm *HFTSecurityManager) InputValidationMiddleware() gin.HandlerFunc {
 				return
 			}
 		}
-		
+
 		c.Next()
 	}
 }
@@ -291,14 +291,14 @@ func (sm *HFTSecurityManager) InputValidationMiddleware() gin.HandlerFunc {
 func (sm *HFTSecurityManager) AuditMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-		
+
 		// Process request
 		c.Next()
-		
+
 		// Log audit information
 		duration := time.Since(start)
 		userID, _ := c.Get("user_id")
-		
+
 		// In production, this would write to an audit log
 		fmt.Printf("[AUDIT] %s %s %d %v user=%v ip=%s\n",
 			c.Request.Method,
@@ -317,7 +317,7 @@ func (sm *HFTSecurityManager) ValidateInput(input string, maxLength int) (string
 	if len(input) > maxLength {
 		return "", fmt.Errorf("input too long")
 	}
-	
+
 	// Basic sanitization - remove null bytes and control characters
 	sanitized := strings.Map(func(r rune) rune {
 		if r == 0 || (r < 32 && r != '\t' && r != '\n' && r != '\r') {
@@ -325,7 +325,7 @@ func (sm *HFTSecurityManager) ValidateInput(input string, maxLength int) (string
 		}
 		return r
 	}, input)
-	
+
 	return sanitized, nil
 }
 
@@ -350,17 +350,17 @@ func (sm *HFTSecurityManager) GetUserFromContext(c *gin.Context) (*User, error) 
 	if !exists {
 		return nil, fmt.Errorf("user not found in context")
 	}
-	
+
 	username, _ := c.Get("username")
 	roles, _ := c.Get("roles")
-	
+
 	user := &User{
 		ID:       userID.(string),
 		Username: username.(string),
 		Roles:    roles.([]string),
 		IsActive: true,
 	}
-	
+
 	return user, nil
 }
 
@@ -371,7 +371,7 @@ func (sm *HFTSecurityManager) RequireHTTPS() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		
+
 		if c.Request.Header.Get("X-Forwarded-Proto") != "https" &&
 			c.Request.TLS == nil {
 			httpsURL := "https://" + c.Request.Host + c.Request.RequestURI
@@ -379,7 +379,7 @@ func (sm *HFTSecurityManager) RequireHTTPS() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		
+
 		c.Next()
 	}
 }

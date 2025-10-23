@@ -12,7 +12,7 @@ import (
 var ServiceRegistryModule = fx.Options(
 	// Provide the service registry
 	fx.Provide(NewServiceRegistry),
-	
+
 	// Register lifecycle hooks
 	fx.Invoke(registerServiceRegistryHooks),
 )
@@ -41,4 +41,3 @@ func registerServiceRegistryHooks(
 		},
 	})
 }
-

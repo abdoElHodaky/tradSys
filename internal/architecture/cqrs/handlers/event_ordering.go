@@ -18,13 +18,13 @@ type EventOrderingGuarantee int
 const (
 	// NoOrdering indicates no ordering guarantees
 	NoOrdering EventOrderingGuarantee = iota
-	
+
 	// AggregateOrdering guarantees ordering within a single aggregate
 	AggregateOrdering
-	
+
 	// TypeOrdering guarantees ordering within an event type
 	TypeOrdering
-	
+
 	// GlobalOrdering guarantees global ordering of all events
 	GlobalOrdering
 )
@@ -32,22 +32,22 @@ const (
 // EventOrderingValidator validates event ordering across different event bus implementations
 type EventOrderingValidator struct {
 	logger *zap.Logger
-	
+
 	// Sequence tracking
 	aggregateSequences map[string]int64 // aggregateID -> sequence
 	typeSequences      map[string]int64 // eventType -> sequence
 	globalSequence     int64
-	
+
 	// Correlation tracking
 	correlations map[string]time.Time // correlationID -> timestamp
-	
+
 	// Configuration
 	requiredGuarantee EventOrderingGuarantee
-	
+
 	// Statistics
-	violations         int64
-	processed          int64
-	
+	violations int64
+	processed  int64
+
 	// Synchronization
 	mu sync.RWMutex
 }
@@ -73,9 +73,9 @@ func NewEventOrderingValidator(
 func (v *EventOrderingValidator) ValidateEvent(event *eventsourcing.Event) error {
 	v.mu.Lock()
 	defer v.mu.Unlock()
-	
+
 	v.processed++
-	
+
 	// Check correlation ID
 	if correlationID, ok := event.Metadata["correlation_id"]; ok {
 		if timestamp, exists := v.correlations[correlationID]; exists {
@@ -91,7 +91,7 @@ func (v *EventOrderingValidator) ValidateEvent(event *eventsourcing.Event) error
 			v.correlations[correlationID] = time.Now()
 		}
 	}
-	
+
 	// Validate based on the required guarantee
 	switch v.requiredGuarantee {
 	case GlobalOrdering:
@@ -102,10 +102,10 @@ func (v *EventOrderingValidator) ValidateEvent(event *eventsourcing.Event) error
 				event.Version, v.globalSequence)
 		}
 		v.globalSequence = event.Version
-		
+
 		// Fall through to also check type and aggregate ordering
 		fallthrough
-		
+
 	case TypeOrdering:
 		// Check type sequence
 		if seq, ok := v.typeSequences[event.EventType]; ok {
@@ -116,10 +116,10 @@ func (v *EventOrderingValidator) ValidateEvent(event *eventsourcing.Event) error
 			}
 		}
 		v.typeSequences[event.EventType] = event.Version
-		
+
 		// Fall through to also check aggregate ordering
 		fallthrough
-		
+
 	case AggregateOrdering:
 		// Check aggregate sequence
 		aggregateKey := event.AggregateID + ":" + event.AggregateType
@@ -132,7 +132,7 @@ func (v *EventOrderingValidator) ValidateEvent(event *eventsourcing.Event) error
 		}
 		v.aggregateSequences[aggregateKey] = event.Version
 	}
-	
+
 	return nil
 }
 
@@ -140,14 +140,14 @@ func (v *EventOrderingValidator) ValidateEvent(event *eventsourcing.Event) error
 func (v *EventOrderingValidator) GetStatistics() (processed int64, violations int64) {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
-	
+
 	return v.processed, v.violations
 }
 
 // LogStatistics logs statistics about the validator
 func (v *EventOrderingValidator) LogStatistics() {
 	processed, violations := v.GetStatistics()
-	
+
 	v.logger.Info("Event ordering statistics",
 		zap.Int64("processed", processed),
 		zap.Int64("violations", violations),
@@ -181,7 +181,7 @@ func (h *OrderingEventHandler) HandleEvent(event *eventsourcing.Event) error {
 			zap.Error(err),
 		)
 	}
-	
+
 	return nil
 }
 
@@ -206,7 +206,7 @@ func NewOrderingEventBusDecorator(
 		logger:     logger,
 		addHandler: addHandler,
 	}
-	
+
 	// Add a handler to validate all events if requested
 	if addHandler {
 		handler := NewOrderingEventHandler(validator, logger)
@@ -215,7 +215,7 @@ func NewOrderingEventBusDecorator(
 			logger.Error("Failed to subscribe ordering handler", zap.Error(err))
 		}
 	}
-	
+
 	return decorator
 }
 
@@ -228,7 +228,7 @@ func (d *OrderingEventBusDecorator) PublishEvent(ctx context.Context, event *eve
 		}
 		event.Metadata["correlation_id"] = uuid.New().String()
 	}
-	
+
 	// Validate the event ordering
 	err := d.validator.ValidateEvent(event)
 	if err != nil {
@@ -241,7 +241,7 @@ func (d *OrderingEventBusDecorator) PublishEvent(ctx context.Context, event *eve
 		)
 		// Continue publishing despite the violation
 	}
-	
+
 	// Publish the event
 	return d.eventBus.PublishEvent(ctx, event)
 }
@@ -257,7 +257,7 @@ func (d *OrderingEventBusDecorator) PublishEvents(ctx context.Context, events []
 			}
 			event.Metadata["correlation_id"] = uuid.New().String()
 		}
-		
+
 		// Validate the event ordering
 		err := d.validator.ValidateEvent(event)
 		if err != nil {
@@ -271,7 +271,7 @@ func (d *OrderingEventBusDecorator) PublishEvents(ctx context.Context, events []
 			// Continue publishing despite the violation
 		}
 	}
-	
+
 	// Publish the events
 	return d.eventBus.PublishEvents(ctx, events)
 }
@@ -290,4 +290,3 @@ func (d *OrderingEventBusDecorator) SubscribeToType(eventType string, handler ev
 func (d *OrderingEventBusDecorator) SubscribeToAggregate(aggregateType string, handler eventsourcing.EventHandler) error {
 	return d.eventBus.SubscribeToAggregate(aggregateType, handler)
 }
-

@@ -31,8 +31,8 @@ func (r *RiskRepository) GetRiskLimitByID(ctx context.Context, id string) (*db.R
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
-		r.logger.Error("Failed to get risk limit by ID", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to get risk limit by ID",
+			zap.Error(result.Error),
 			zap.String("risk_limit_id", id))
 		return nil, result.Error
 	}
@@ -46,8 +46,8 @@ func (r *RiskRepository) GetRiskLimitsByUserID(ctx context.Context, userID strin
 		Where("user_id = ?", userID).
 		Find(&riskLimits)
 	if result.Error != nil {
-		r.logger.Error("Failed to get risk limits by user ID", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to get risk limits by user ID",
+			zap.Error(result.Error),
 			zap.String("user_id", userID))
 		return nil, result.Error
 	}
@@ -61,8 +61,8 @@ func (r *RiskRepository) GetRiskLimitsByType(ctx context.Context, userID, limitT
 		Where("user_id = ? AND type = ?", userID, limitType).
 		Find(&riskLimits)
 	if result.Error != nil {
-		r.logger.Error("Failed to get risk limits by type", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to get risk limits by type",
+			zap.Error(result.Error),
 			zap.String("user_id", userID),
 			zap.String("type", limitType))
 		return nil, result.Error
@@ -74,8 +74,8 @@ func (r *RiskRepository) GetRiskLimitsByType(ctx context.Context, userID, limitT
 func (r *RiskRepository) CreateRiskLimit(ctx context.Context, riskLimit *db.RiskLimit) error {
 	result := r.db.WithContext(ctx).Create(riskLimit)
 	if result.Error != nil {
-		r.logger.Error("Failed to create risk limit", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to create risk limit",
+			zap.Error(result.Error),
 			zap.String("risk_limit_id", riskLimit.ID))
 		return result.Error
 	}
@@ -86,8 +86,8 @@ func (r *RiskRepository) CreateRiskLimit(ctx context.Context, riskLimit *db.Risk
 func (r *RiskRepository) UpdateRiskLimit(ctx context.Context, riskLimit *db.RiskLimit) error {
 	result := r.db.WithContext(ctx).Save(riskLimit)
 	if result.Error != nil {
-		r.logger.Error("Failed to update risk limit", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to update risk limit",
+			zap.Error(result.Error),
 			zap.String("risk_limit_id", riskLimit.ID))
 		return result.Error
 	}
@@ -98,8 +98,8 @@ func (r *RiskRepository) UpdateRiskLimit(ctx context.Context, riskLimit *db.Risk
 func (r *RiskRepository) DeleteRiskLimit(ctx context.Context, id string) error {
 	result := r.db.WithContext(ctx).Delete(&db.RiskLimit{}, "id = ?", id)
 	if result.Error != nil {
-		r.logger.Error("Failed to delete risk limit", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to delete risk limit",
+			zap.Error(result.Error),
 			zap.String("risk_limit_id", id))
 		return result.Error
 	}
@@ -114,8 +114,8 @@ func (r *RiskRepository) GetCircuitBreakerBySymbol(ctx context.Context, symbol s
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
-		r.logger.Error("Failed to get circuit breaker by symbol", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to get circuit breaker by symbol",
+			zap.Error(result.Error),
 			zap.String("symbol", symbol))
 		return nil, result.Error
 	}
@@ -138,34 +138,34 @@ func (r *RiskRepository) CreateOrUpdateCircuitBreaker(ctx context.Context, circu
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var existingCircuitBreaker db.CircuitBreaker
 		result := tx.First(&existingCircuitBreaker, "symbol = ?", circuitBreaker.Symbol)
-		
+
 		if result.Error != nil {
 			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 				// Create new circuit breaker
 				if err := tx.Create(circuitBreaker).Error; err != nil {
-					r.logger.Error("Failed to create circuit breaker", 
-						zap.Error(err), 
+					r.logger.Error("Failed to create circuit breaker",
+						zap.Error(err),
 						zap.String("symbol", circuitBreaker.Symbol))
 					return err
 				}
 				return nil
 			}
-			r.logger.Error("Failed to check existing circuit breaker", 
-				zap.Error(result.Error), 
+			r.logger.Error("Failed to check existing circuit breaker",
+				zap.Error(result.Error),
 				zap.String("symbol", circuitBreaker.Symbol))
 			return result.Error
 		}
-		
+
 		// Update existing circuit breaker
 		circuitBreaker.ID = existingCircuitBreaker.ID
 		circuitBreaker.CreatedAt = existingCircuitBreaker.CreatedAt
 		if err := tx.Save(circuitBreaker).Error; err != nil {
-			r.logger.Error("Failed to update circuit breaker", 
-				zap.Error(err), 
+			r.logger.Error("Failed to update circuit breaker",
+				zap.Error(err),
 				zap.String("symbol", circuitBreaker.Symbol))
 			return err
 		}
-		
+
 		return nil
 	})
 }
@@ -182,4 +182,3 @@ func (r *RiskRepository) GetTriggeredCircuitBreakers(ctx context.Context) ([]*db
 	}
 	return circuitBreakers, nil
 }
-
