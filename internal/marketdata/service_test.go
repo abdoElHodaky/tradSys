@@ -11,12 +11,10 @@ import (
 	"go.uber.org/zap"
 )
 
-
-
 func TestService_AddMarketDataSource(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	manager := external.NewManager(logger)
-	
+
 	service := &Service{
 		logger:          logger,
 		ExternalManager: manager,
@@ -30,9 +28,9 @@ func TestService_AddMarketDataSource(t *testing.T) {
 		expectError bool
 	}{
 		{
-			name:   "successful source addition",
-			source: "binance",
-			config: map[string]interface{}{"api_key": "test"},
+			name:        "successful source addition",
+			source:      "binance",
+			config:      map[string]interface{}{"api_key": "test"},
 			expectError: false,
 		},
 		{
@@ -60,7 +58,7 @@ func TestService_GetMarketData(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	manager := external.NewManager(logger)
 	testCache := cache.New(5*time.Minute, 10*time.Minute)
-	
+
 	service := &Service{
 		logger:          logger,
 		ExternalManager: manager,
@@ -80,9 +78,9 @@ func TestService_GetMarketData(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name:      "cache hit",
-			symbol:    "ETHUSDT",
-			timeRange: "1h",
+			name:        "cache hit",
+			symbol:      "ETHUSDT",
+			timeRange:   "1h",
 			expectError: false,
 		},
 	}
@@ -90,7 +88,7 @@ func TestService_GetMarketData(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			testCache.Flush()
-			
+
 			// For cache hit test, set up cache
 			if tt.name == "cache hit" {
 				testCache.Set("market_data:ETHUSDT", map[string]interface{}{
@@ -116,10 +114,10 @@ func TestService_GetTicker(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	manager := external.NewManager(logger)
 	testCache := cache.New(5*time.Minute, 10*time.Minute)
-	
+
 	// Add a provider to the manager for testing
 	_ = manager.AddSource("binance", map[string]interface{}{"api_key": "test"})
-	
+
 	service := &Service{
 		logger:          logger,
 		ExternalManager: manager,
@@ -161,7 +159,7 @@ func TestService_GetTicker(t *testing.T) {
 func BenchmarkService_GetMarketData(b *testing.B) {
 	logger, _ := zap.NewDevelopment()
 	testCache := cache.New(5*time.Minute, 10*time.Minute)
-	
+
 	service := &Service{
 		logger: logger,
 		Cache:  testCache,
@@ -181,10 +179,10 @@ func BenchmarkService_GetTicker(b *testing.B) {
 	logger, _ := zap.NewDevelopment()
 	manager := external.NewManager(logger)
 	testCache := cache.New(5*time.Minute, 10*time.Minute)
-	
+
 	// Add a provider to the manager for testing
 	_ = manager.AddSource("binance", map[string]interface{}{"api_key": "test"})
-	
+
 	service := &Service{
 		logger:          logger,
 		ExternalManager: manager,

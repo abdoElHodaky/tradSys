@@ -1,20 +1,20 @@
 package pool
 
 import (
-	"sync"
 	"github.com/abdoElHodaky/tradSys/internal/trading/types"
+	"sync"
 )
 
 // FastOrder represents an optimized order structure for HFT
 type FastOrder struct {
 	types.Order
-	
+
 	// Pre-allocated fields for performance
-	PriceInt64    int64   // Price as int64 for faster comparison
-	QuantityInt64 int64   // Quantity as int64 for faster arithmetic
-	CreatedAtNano int64   // Created time as nanoseconds
-	UpdatedAtNano int64   // Updated time as nanoseconds
-	
+	PriceInt64    int64 // Price as int64 for faster comparison
+	QuantityInt64 int64 // Quantity as int64 for faster arithmetic
+	CreatedAtNano int64 // Created time as nanoseconds
+	UpdatedAtNano int64 // Updated time as nanoseconds
+
 	// Memory pool index for recycling
 	PoolIndex int32
 }

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	
+
 	"github.com/abdoElHodaky/tradSys/internal/trading/metrics"
 )
 
@@ -36,12 +36,12 @@ func HFTRecoveryMiddlewareWithConfig(config *HFTRecoveryConfig) gin.HandlerFunc 
 				if metrics.GlobalMetrics != nil {
 					metrics.GlobalMetrics.RecordError()
 				}
-				
+
 				// Log the panic if enabled
 				if config.EnableLogging {
 					logPanic(err, config)
 				}
-				
+
 				// Return error response
 				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 					"error":     "internal_server_error",
@@ -50,7 +50,7 @@ func HFTRecoveryMiddlewareWithConfig(config *HFTRecoveryConfig) gin.HandlerFunc 
 				})
 			}
 		}()
-		
+
 		c.Next()
 	}
 }
@@ -59,7 +59,7 @@ func HFTRecoveryMiddlewareWithConfig(config *HFTRecoveryConfig) gin.HandlerFunc 
 func logPanic(err interface{}, config *HFTRecoveryConfig) {
 	// In a real implementation, this would use a proper logger
 	fmt.Printf("[PANIC] %v\n", err)
-	
+
 	if config.EnableStackTrace {
 		// Get stack trace
 		stack := make([]byte, config.MaxStackSize)
@@ -74,19 +74,19 @@ func HFTLoggerMiddleware() gin.HandlerFunc {
 		start := time.Now()
 		path := c.Request.URL.Path
 		raw := c.Request.URL.RawQuery
-		
+
 		// Process request
 		c.Next()
-		
+
 		// Calculate latency
 		latency := time.Since(start)
-		
+
 		// Log only errors and slow requests for HFT performance
 		if c.Writer.Status() >= 400 || latency > 100*time.Millisecond {
 			if raw != "" {
 				path = path + "?" + raw
 			}
-			
+
 			fmt.Printf("[HFT] %s %s %d %v\n",
 				c.Request.Method,
 				path,
@@ -105,24 +105,22 @@ func HFTRequestIDMiddleware() gin.HandlerFunc {
 		if requestID == "" {
 			requestID = generateRequestID()
 		}
-		
+
 		// Set request ID in context and response header
 		c.Set("request_id", requestID)
 		c.Header("X-Request-ID", requestID)
-		
+
 		c.Next()
 	}
 }
-
-
 
 // HFTResponseTimeMiddleware adds response time header
 func HFTResponseTimeMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-		
+
 		c.Next()
-		
+
 		// Calculate and set response time in microseconds
 		duration := time.Since(start)
 		microseconds := duration.Nanoseconds() / 1000

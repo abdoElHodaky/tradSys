@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"strconv"
 	"time"
-	
-	"github.com/gin-gonic/gin"
+
 	order_matching "github.com/abdoElHodaky/tradSys/internal/core/matching"
 	"github.com/abdoElHodaky/tradSys/internal/trading/types"
+	"github.com/gin-gonic/gin"
 )
 
 // TradingSystemInterface defines the interface for the trading system
@@ -28,7 +28,7 @@ func SetupRoutes(router *gin.RouterGroup, tradingSystem TradingSystemInterface) 
 			"metrics":   metrics,
 		})
 	})
-	
+
 	// Order management endpoints
 	orderGroup := router.Group("/orders")
 	{
@@ -37,21 +37,21 @@ func SetupRoutes(router *gin.RouterGroup, tradingSystem TradingSystemInterface) 
 		orderGroup.DELETE("/:id", cancelOrderHandler(tradingSystem))
 		orderGroup.GET("/", getOrdersHandler(tradingSystem))
 	}
-	
+
 	// Trade endpoints
 	tradeGroup := router.Group("/trades")
 	{
 		tradeGroup.GET("/", getTradesHandler(tradingSystem))
 		tradeGroup.GET("/:symbol", getTradesBySymbolHandler(tradingSystem))
 	}
-	
+
 	// Position endpoints
 	positionGroup := router.Group("/positions")
 	{
 		positionGroup.GET("/", getPositionsHandler(tradingSystem))
 		positionGroup.GET("/:symbol", getPositionBySymbolHandler(tradingSystem))
 	}
-	
+
 	// Market data endpoints
 	marketGroup := router.Group("/market")
 	{
@@ -59,7 +59,7 @@ func SetupRoutes(router *gin.RouterGroup, tradingSystem TradingSystemInterface) 
 		marketGroup.GET("/ticker/:symbol", getTickerHandler(tradingSystem))
 		marketGroup.GET("/symbols", getSymbolsHandler(tradingSystem))
 	}
-	
+
 	// Performance and metrics endpoints
 	metricsGroup := router.Group("/metrics")
 	{
@@ -79,16 +79,16 @@ func createOrderHandler(ts TradingSystemInterface) gin.HandlerFunc {
 			Price     float64 `json:"price"`
 			StopPrice float64 `json:"stop_price"`
 		}
-		
+
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		
+
 		// Convert string types to internal types
 		var side types.OrderSide
 		var orderType types.OrderType
-		
+
 		switch req.Side {
 		case "buy", "BUY":
 			side = types.OrderSideBuy
@@ -98,7 +98,7 @@ func createOrderHandler(ts TradingSystemInterface) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid side"})
 			return
 		}
-		
+
 		switch req.Type {
 		case "market", "MARKET":
 			orderType = types.OrderTypeMarket
@@ -110,7 +110,7 @@ func createOrderHandler(ts TradingSystemInterface) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order type"})
 			return
 		}
-		
+
 		// Create order
 		order := &types.Order{
 			Symbol:    req.Symbol,
@@ -121,7 +121,7 @@ func createOrderHandler(ts TradingSystemInterface) gin.HandlerFunc {
 			StopPrice: req.StopPrice,
 			CreatedAt: time.Now(),
 		}
-		
+
 		// Process order through matching engine
 		engine := ts.GetMatchingEngine()
 		trades, err := engine.PlaceOrder(order)
@@ -129,7 +129,7 @@ func createOrderHandler(ts TradingSystemInterface) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		
+
 		c.JSON(http.StatusCreated, gin.H{
 			"order":  order,
 			"trades": trades,
@@ -141,7 +141,7 @@ func createOrderHandler(ts TradingSystemInterface) gin.HandlerFunc {
 func getOrderHandler(ts TradingSystemInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		orderID := c.Param("id")
-		
+
 		// In a real implementation, this would query the order from storage
 		c.JSON(http.StatusOK, gin.H{
 			"order_id": orderID,
@@ -154,7 +154,7 @@ func getOrderHandler(ts TradingSystemInterface) gin.HandlerFunc {
 func cancelOrderHandler(ts TradingSystemInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		orderID := c.Param("id")
-		
+
 		c.JSON(http.StatusOK, gin.H{
 			"order_id": orderID,
 			"status":   "cancelled",
@@ -172,10 +172,10 @@ func getOrdersHandler(ts TradingSystemInterface) gin.HandlerFunc {
 				limit = parsed
 			}
 		}
-		
+
 		c.JSON(http.StatusOK, gin.H{
-			"orders": []interface{}{},
-			"limit":  limit,
+			"orders":  []interface{}{},
+			"limit":   limit,
 			"message": "Order listing - implementation would query from order storage",
 		})
 	}
@@ -195,7 +195,7 @@ func getTradesHandler(ts TradingSystemInterface) gin.HandlerFunc {
 func getTradesBySymbolHandler(ts TradingSystemInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		symbol := c.Param("symbol")
-		
+
 		c.JSON(http.StatusOK, gin.H{
 			"symbol":  symbol,
 			"trades":  []interface{}{},
@@ -218,7 +218,7 @@ func getPositionsHandler(ts TradingSystemInterface) gin.HandlerFunc {
 func getPositionBySymbolHandler(ts TradingSystemInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		symbol := c.Param("symbol")
-		
+
 		c.JSON(http.StatusOK, gin.H{
 			"symbol":   symbol,
 			"position": nil,
@@ -231,7 +231,7 @@ func getPositionBySymbolHandler(ts TradingSystemInterface) gin.HandlerFunc {
 func getOrderBookHandler(ts TradingSystemInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		symbol := c.Param("symbol")
-		
+
 		c.JSON(http.StatusOK, gin.H{
 			"symbol":    symbol,
 			"bids":      []interface{}{},
@@ -246,7 +246,7 @@ func getOrderBookHandler(ts TradingSystemInterface) gin.HandlerFunc {
 func getTickerHandler(ts TradingSystemInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		symbol := c.Param("symbol")
-		
+
 		c.JSON(http.StatusOK, gin.H{
 			"symbol":     symbol,
 			"last_price": 0.0,
@@ -261,7 +261,7 @@ func getTickerHandler(ts TradingSystemInterface) gin.HandlerFunc {
 func getSymbolsHandler(ts TradingSystemInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		symbols := []string{"BTC-USD", "ETH-USD", "EUR-USD", "GBP-USD"}
-		
+
 		c.JSON(http.StatusOK, gin.H{
 			"symbols": symbols,
 			"count":   len(symbols),
@@ -273,7 +273,7 @@ func getSymbolsHandler(ts TradingSystemInterface) gin.HandlerFunc {
 func getMetricsHandler(ts TradingSystemInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		metrics := ts.GetPerformanceMetrics()
-		
+
 		c.JSON(http.StatusOK, gin.H{
 			"metrics":   metrics,
 			"timestamp": time.Now().Unix(),
@@ -285,7 +285,7 @@ func getMetricsHandler(ts TradingSystemInterface) gin.HandlerFunc {
 func getPerformanceHandler(ts TradingSystemInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		metrics := ts.GetPerformanceMetrics()
-		
+
 		c.JSON(http.StatusOK, gin.H{
 			"performance": metrics,
 			"timestamp":   time.Now().Unix(),

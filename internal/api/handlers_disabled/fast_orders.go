@@ -9,9 +9,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
+	"github.com/abdoElHodaky/tradSys/internal/common/pool"
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
 	"github.com/abdoElHodaky/tradSys/internal/trading/metrics"
-	"github.com/abdoElHodaky/tradSys/internal/common/pool"
 )
 
 // FastOrderHandler provides high-performance order handling with minimal allocations
@@ -31,17 +31,17 @@ func (h *FastOrderHandler) FastCreateOrder(c *gin.Context) {
 	// Start latency tracking
 	tracker := metrics.TrackOrderLatency()
 	defer tracker.Finish()
-	
+
 	// Get pooled objects
 	req := pools.GetOrderRequestFromPool()
 	defer pools.PutOrderRequestToPool(req)
-	
+
 	resp := pools.GetOrderResponseFromPool()
 	defer pools.PutOrderResponseToPool(resp)
-	
+
 	order := pools.GetOrderFromPool()
 	defer pools.PutOrderToPool(order)
-	
+
 	// Bind JSON request with minimal allocations
 	if err := c.ShouldBindJSON(req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -50,7 +50,7 @@ func (h *FastOrderHandler) FastCreateOrder(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Validate request
 	if err := h.validateOrderRequest(req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -59,10 +59,10 @@ func (h *FastOrderHandler) FastCreateOrder(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Convert request to order model
 	h.populateOrderFromRequest(order, req, c)
-	
+
 	// Process order (this would call actual order service)
 	if err := h.processOrderFast(order); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -71,11 +71,11 @@ func (h *FastOrderHandler) FastCreateOrder(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Populate response from order
 	resp.FromOrder(order)
 	resp.ProcessingTime = time.Since(tracker.startTime).Nanoseconds()
-	
+
 	// Return response
 	c.JSON(http.StatusCreated, resp)
 }
@@ -84,7 +84,7 @@ func (h *FastOrderHandler) FastCreateOrder(c *gin.Context) {
 func (h *FastOrderHandler) FastGetOrder(c *gin.Context) {
 	tracker := metrics.TrackOrderLatency()
 	defer tracker.Finish()
-	
+
 	orderID := c.Param("id")
 	if orderID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -93,14 +93,14 @@ func (h *FastOrderHandler) FastGetOrder(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Get pooled objects
 	order := pools.GetOrderFromPool()
 	defer pools.PutOrderToPool(order)
-	
+
 	resp := pools.GetOrderResponseFromPool()
 	defer pools.PutOrderResponseToPool(resp)
-	
+
 	// Retrieve order (this would call actual order service)
 	if err := h.getOrderFast(orderID, order); err != nil {
 		if err.Error() == "order_not_found" {
@@ -110,18 +110,18 @@ func (h *FastOrderHandler) FastGetOrder(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "retrieval_failed",
 			"message": err.Error(),
 		})
 		return
 	}
-	
+
 	// Populate response
 	resp.FromOrder(order)
 	resp.ProcessingTime = time.Since(tracker.startTime).Nanoseconds()
-	
+
 	c.JSON(http.StatusOK, resp)
 }
 
@@ -129,7 +129,7 @@ func (h *FastOrderHandler) FastGetOrder(c *gin.Context) {
 func (h *FastOrderHandler) FastUpdateOrder(c *gin.Context) {
 	tracker := metrics.TrackOrderLatency()
 	defer tracker.Finish()
-	
+
 	orderID := c.Param("id")
 	if orderID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -138,17 +138,17 @@ func (h *FastOrderHandler) FastUpdateOrder(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Get pooled objects
 	req := pools.GetOrderRequestFromPool()
 	defer pools.PutOrderRequestToPool(req)
-	
+
 	order := pools.GetOrderFromPool()
 	defer pools.PutOrderToPool(order)
-	
+
 	resp := pools.GetOrderResponseFromPool()
 	defer pools.PutOrderResponseToPool(resp)
-	
+
 	// Bind JSON request
 	if err := c.ShouldBindJSON(req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -157,7 +157,7 @@ func (h *FastOrderHandler) FastUpdateOrder(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Get existing order
 	if err := h.getOrderFast(orderID, order); err != nil {
 		if err.Error() == "order_not_found" {
@@ -167,17 +167,17 @@ func (h *FastOrderHandler) FastUpdateOrder(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "retrieval_failed",
 			"message": err.Error(),
 		})
 		return
 	}
-	
+
 	// Update order fields
 	h.updateOrderFromRequest(order, req)
-	
+
 	// Process update
 	if err := h.updateOrderFast(order); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -186,11 +186,11 @@ func (h *FastOrderHandler) FastUpdateOrder(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Populate response
 	resp.FromOrder(order)
 	resp.ProcessingTime = time.Since(tracker.startTime).Nanoseconds()
-	
+
 	c.JSON(http.StatusOK, resp)
 }
 
@@ -198,7 +198,7 @@ func (h *FastOrderHandler) FastUpdateOrder(c *gin.Context) {
 func (h *FastOrderHandler) FastCancelOrder(c *gin.Context) {
 	tracker := metrics.TrackOrderLatency()
 	defer tracker.Finish()
-	
+
 	orderID := c.Param("id")
 	if orderID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -207,14 +207,14 @@ func (h *FastOrderHandler) FastCancelOrder(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Get pooled objects
 	order := pools.GetOrderFromPool()
 	defer pools.PutOrderToPool(order)
-	
+
 	resp := pools.GetOrderResponseFromPool()
 	defer pools.PutOrderResponseToPool(resp)
-	
+
 	// Get existing order
 	if err := h.getOrderFast(orderID, order); err != nil {
 		if err.Error() == "order_not_found" {
@@ -224,14 +224,14 @@ func (h *FastOrderHandler) FastCancelOrder(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "retrieval_failed",
 			"message": err.Error(),
 		})
 		return
 	}
-	
+
 	// Cancel order
 	if err := h.cancelOrderFast(order); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -240,11 +240,11 @@ func (h *FastOrderHandler) FastCancelOrder(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Populate response
 	resp.FromOrder(order)
 	resp.ProcessingTime = time.Since(tracker.startTime).Nanoseconds()
-	
+
 	c.JSON(http.StatusOK, resp)
 }
 
@@ -252,7 +252,7 @@ func (h *FastOrderHandler) FastCancelOrder(c *gin.Context) {
 func (h *FastOrderHandler) FastListOrders(c *gin.Context) {
 	tracker := metrics.TrackOrderLatency()
 	defer tracker.Finish()
-	
+
 	userID := c.GetString("user_id") // From auth middleware
 	if userID == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -261,14 +261,14 @@ func (h *FastOrderHandler) FastListOrders(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Parse query parameters
 	limitStr := c.DefaultQuery("limit", "50")
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 || limit > 1000 {
 		limit = 50
 	}
-	
+
 	// Get orders (this would call actual order service)
 	orders, err := h.listOrdersFast(userID, limit)
 	if err != nil {
@@ -278,7 +278,7 @@ func (h *FastOrderHandler) FastListOrders(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Convert to response format using pools
 	responses := make([]*pools.OrderResponse, 0, len(orders))
 	for _, order := range orders {
@@ -286,16 +286,16 @@ func (h *FastOrderHandler) FastListOrders(c *gin.Context) {
 		resp.FromOrder(order)
 		responses = append(responses, resp)
 	}
-	
+
 	// Clean up pooled responses after sending
 	defer func() {
 		for _, resp := range responses {
 			pools.PutOrderResponseToPool(resp)
 		}
 	}()
-	
+
 	processingTime := time.Since(tracker.startTime).Nanoseconds()
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"orders":          responses,
 		"count":           len(responses),
@@ -375,7 +375,7 @@ func (h *FastOrderHandler) getOrderFast(orderID string, order *models.Order) err
 	if orderID == "not-found" {
 		return fmt.Errorf("order_not_found")
 	}
-	
+
 	// Populate with dummy data
 	order.ID = orderID
 	order.UserID = "user123"
@@ -389,7 +389,7 @@ func (h *FastOrderHandler) getOrderFast(orderID string, order *models.Order) err
 	order.AveragePrice = 50000.0
 	order.CreatedAt = time.Now().Add(-time.Hour)
 	order.UpdatedAt = time.Now()
-	
+
 	return nil
 }
 
@@ -410,25 +410,25 @@ func (h *FastOrderHandler) listOrdersFast(userID string, limit int) ([]*models.O
 	// This would integrate with the actual order listing service
 	// For now, return dummy data
 	orders := make([]*models.Order, 0, limit)
-	
+
 	for i := 0; i < min(limit, 10); i++ {
 		order := &models.Order{
-			ID:              fmt.Sprintf("order-%d", i),
-			UserID:          userID,
-			Symbol:          "BTCUSD",
-			Side:            "buy",
-			Type:            "limit",
-			Quantity:        1.0,
-			Price:           50000.0 + float64(i*100),
-			Status:          "filled",
-			FilledQuantity:  1.0,
-			AveragePrice:    50000.0 + float64(i*100),
-			CreatedAt:       time.Now().Add(-time.Duration(i) * time.Hour),
-			UpdatedAt:       time.Now().Add(-time.Duration(i) * time.Hour),
+			ID:             fmt.Sprintf("order-%d", i),
+			UserID:         userID,
+			Symbol:         "BTCUSD",
+			Side:           "buy",
+			Type:           "limit",
+			Quantity:       1.0,
+			Price:          50000.0 + float64(i*100),
+			Status:         "filled",
+			FilledQuantity: 1.0,
+			AveragePrice:   50000.0 + float64(i*100),
+			CreatedAt:      time.Now().Add(-time.Duration(i) * time.Hour),
+			UpdatedAt:      time.Now().Add(-time.Duration(i) * time.Hour),
 		}
 		orders = append(orders, order)
 	}
-	
+
 	return orders, nil
 }
 

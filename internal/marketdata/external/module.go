@@ -19,7 +19,7 @@ func NewFxManager(
 	binanceProvider *BinanceProvider,
 ) *Manager {
 	manager := NewManager(logger)
-	
+
 	// Register lifecycle hooks
 	lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
@@ -31,7 +31,7 @@ func NewFxManager(
 			return nil
 		},
 	})
-	
+
 	return manager
 }
 
@@ -42,6 +42,6 @@ func NewFxBinanceProvider(
 	// In a real application, these would be loaded from environment variables or configuration
 	apiKey := ""
 	apiSecret := ""
-	
+
 	return NewBinanceProvider(apiKey, apiSecret, logger)
 }

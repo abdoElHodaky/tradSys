@@ -67,7 +67,7 @@ func (l *DefaultLogger) WithField(key string, value interface{}) Logger {
 		newFields[k] = v
 	}
 	newFields[key] = value
-	
+
 	return &DefaultLogger{
 		logger: l.logger,
 		fields: newFields,
@@ -82,7 +82,7 @@ func (l *DefaultLogger) WithFields(fields map[string]interface{}) Logger {
 	for k, v := range fields {
 		newFields[k] = v
 	}
-	
+
 	return &DefaultLogger{
 		logger: l.logger,
 		fields: newFields,
@@ -92,7 +92,7 @@ func (l *DefaultLogger) WithFields(fields map[string]interface{}) Logger {
 func (l *DefaultLogger) logWithLevel(level, msg string, fields ...interface{}) {
 	// Build the log message with fields
 	logMsg := msg
-	
+
 	// Add persistent fields
 	if len(l.fields) > 0 {
 		logMsg += " |"
@@ -100,7 +100,7 @@ func (l *DefaultLogger) logWithLevel(level, msg string, fields ...interface{}) {
 			logMsg += " " + k + "=" + formatValue(v)
 		}
 	}
-	
+
 	// Add additional fields
 	if len(fields) > 0 {
 		if len(l.fields) == 0 {
@@ -112,7 +112,7 @@ func (l *DefaultLogger) logWithLevel(level, msg string, fields ...interface{}) {
 			}
 		}
 	}
-	
+
 	l.logger.Printf("[%s] %s", level, logMsg)
 }
 
@@ -152,8 +152,8 @@ func NewTradingLogger(component string) *TradingLogger {
 // LogOrder logs order-related events
 func (tl *TradingLogger) LogOrder(orderID string, action string, details map[string]interface{}) {
 	fields := map[string]interface{}{
-		"order_id": orderID,
-		"action":   action,
+		"order_id":  orderID,
+		"action":    action,
 		"component": tl.component,
 	}
 	for k, v := range details {

@@ -54,6 +54,8 @@ type Order struct {
 	ID string
 	// Symbol is the trading symbol
 	Symbol string
+	// AssetType is the type of asset being traded
+	AssetType AssetType
 	// Side is the side of the order (buy or sell)
 	Side OrderSide
 	// Type is the type of the order
@@ -110,6 +112,7 @@ type Order struct {
 func (o *Order) Reset() {
 	o.ID = ""
 	o.Symbol = ""
+	o.AssetType = ""
 	o.Side = ""
 	o.Type = ""
 	o.Price = 0
@@ -123,7 +126,7 @@ func (o *Order) Reset() {
 	o.StopPrice = 0
 	o.TimeInForce = ""
 	o.Index = 0
-	
+
 	// Reset advanced features
 	o.DisplayQuantity = 0
 	o.IsHidden = false
@@ -174,7 +177,7 @@ func (o *Order) CanMatch(other *Order) bool {
 	if o.IsExpired() || other.IsExpired() {
 		return false
 	}
-	
+
 	// Price matching logic
 	if o.Side == OrderSideBuy && other.Side == OrderSideSell {
 		return o.Price >= other.Price
@@ -182,7 +185,7 @@ func (o *Order) CanMatch(other *Order) bool {
 	if o.Side == OrderSideSell && other.Side == OrderSideBuy {
 		return o.Price <= other.Price
 	}
-	
+
 	return false
 }
 

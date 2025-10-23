@@ -18,10 +18,10 @@ type PeerJSHandler struct {
 // NewPeerJSHandler creates a new PeerJS handler
 func NewPeerJSHandler(logger *zap.Logger) *PeerJSHandler {
 	server := peerjs.NewPeerServer(logger)
-	
+
 	// Start cleanup task
 	server.StartCleanupTask(5*time.Minute, 10*time.Minute)
-	
+
 	return &PeerJSHandler{
 		logger: logger,
 		server: server,
@@ -38,7 +38,7 @@ func (h *PeerJSHandler) GetStats(c *gin.Context) {
 	stats := map[string]interface{}{
 		"peer_count": h.server.GetPeerCount(),
 	}
-	
+
 	c.JSON(http.StatusOK, stats)
 }
 
@@ -48,7 +48,7 @@ func (h *PeerJSHandler) RegisterRoutes(router *gin.Engine) {
 	{
 		// WebSocket endpoint
 		peerGroup.GET("/ws", h.HandleConnection)
-		
+
 		// Stats endpoint
 		peerGroup.GET("/stats", h.GetStats)
 	}

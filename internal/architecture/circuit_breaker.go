@@ -22,25 +22,25 @@ const (
 // CircuitBreaker implements the circuit breaker pattern to prevent
 // cascading failures in distributed systems
 type CircuitBreaker struct {
-	name           string
-	state          int32 // atomic
-	failureCount   int64 // atomic
-	successCount   int64 // atomic
-	lastFailure    int64 // atomic, unix timestamp
-	failureThreshold int64
-	resetTimeout   time.Duration
+	name                string
+	state               int32 // atomic
+	failureCount        int64 // atomic
+	successCount        int64 // atomic
+	lastFailure         int64 // atomic, unix timestamp
+	failureThreshold    int64
+	resetTimeout        time.Duration
 	halfOpenMaxRequests int64
-	mu             sync.RWMutex
-	onStateChange  func(name string, from, to CircuitBreakerState)
+	mu                  sync.RWMutex
+	onStateChange       func(name string, from, to CircuitBreakerState)
 }
 
 // CircuitBreakerOptions contains options for creating a circuit breaker
 type CircuitBreakerOptions struct {
-	Name               string
-	FailureThreshold   int64
-	ResetTimeout       time.Duration
+	Name                string
+	FailureThreshold    int64
+	ResetTimeout        time.Duration
 	HalfOpenMaxRequests int64
-	OnStateChange      func(name string, from, to CircuitBreakerState)
+	OnStateChange       func(name string, from, to CircuitBreakerState)
 }
 
 // NewCircuitBreaker creates a new circuit breaker
@@ -57,14 +57,14 @@ func NewCircuitBreaker(options CircuitBreakerOptions) *CircuitBreaker {
 	if options.OnStateChange == nil {
 		options.OnStateChange = func(name string, from, to CircuitBreakerState) {}
 	}
-	
+
 	return &CircuitBreaker{
-		name:               options.Name,
-		state:              int32(CircuitClosed),
-		failureThreshold:   options.FailureThreshold,
-		resetTimeout:       options.ResetTimeout,
+		name:                options.Name,
+		state:               int32(CircuitClosed),
+		failureThreshold:    options.FailureThreshold,
+		resetTimeout:        options.ResetTimeout,
 		halfOpenMaxRequests: options.HalfOpenMaxRequests,
-		onStateChange:      options.OnStateChange,
+		onStateChange:       options.OnStateChange,
 	}
 }
 
@@ -74,14 +74,14 @@ func (cb *CircuitBreaker) Execute(fn func() error) error {
 	if !cb.allowRequest() {
 		return errors.New("circuit breaker is open")
 	}
-	
+
 	err := fn()
-	
+
 	if err != nil {
 		cb.recordFailure()
 		return err
 	}
-	
+
 	cb.recordSuccess()
 	return nil
 }
@@ -89,7 +89,7 @@ func (cb *CircuitBreaker) Execute(fn func() error) error {
 // allowRequest checks if a request should be allowed based on the circuit state
 func (cb *CircuitBreaker) allowRequest() bool {
 	state := CircuitBreakerState(atomic.LoadInt32(&cb.state))
-	
+
 	switch state {
 	case CircuitClosed:
 		return true
@@ -115,7 +115,7 @@ func (cb *CircuitBreaker) allowRequest() bool {
 // recordSuccess records a successful request
 func (cb *CircuitBreaker) recordSuccess() {
 	state := CircuitBreakerState(atomic.LoadInt32(&cb.state))
-	
+
 	switch state {
 	case CircuitClosed:
 		// Nothing to do in closed state
@@ -132,9 +132,9 @@ func (cb *CircuitBreaker) recordSuccess() {
 // recordFailure records a failed request
 func (cb *CircuitBreaker) recordFailure() {
 	atomic.StoreInt64(&cb.lastFailure, time.Now().Unix())
-	
+
 	state := CircuitBreakerState(atomic.LoadInt32(&cb.state))
-	
+
 	switch state {
 	case CircuitClosed:
 		newCount := atomic.AddInt64(&cb.failureCount, 1)
@@ -171,4 +171,3 @@ func (cb *CircuitBreaker) Reset() {
 	atomic.StoreInt64(&cb.failureCount, 0)
 	atomic.StoreInt64(&cb.successCount, 0)
 }
-

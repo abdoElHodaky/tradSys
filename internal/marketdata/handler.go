@@ -25,8 +25,6 @@ const (
 	MarketDataTypeOHLCV MarketDataType = "ohlcv"
 )
 
-
-
 // OrderBookUpdate represents an order book update
 type OrderBookUpdate struct {
 	// Symbol is the trading symbol
@@ -120,7 +118,7 @@ type Handler struct {
 // NewHandler creates a new market data handler
 func NewHandler(engine *order_matching.Engine, logger *zap.Logger) *Handler {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	handler := &Handler{
 		Engine:              engine,
 		Subscriptions:       make(map[string]*Subscription),
@@ -132,25 +130,25 @@ func NewHandler(engine *order_matching.Engine, logger *zap.Logger) *Handler {
 		tickers:             make(map[string]*TickerUpdate),
 		ohlcv:               make(map[string]map[string]*OHLCVUpdate),
 	}
-	
+
 	// Initialize type subscriptions
 	handler.TypeSubscriptions[MarketDataTypeOrderBook] = make(map[string]*Subscription)
 	handler.TypeSubscriptions[MarketDataTypeTrade] = make(map[string]*Subscription)
 	handler.TypeSubscriptions[MarketDataTypeTicker] = make(map[string]*Subscription)
 	handler.TypeSubscriptions[MarketDataTypeOHLCV] = make(map[string]*Subscription)
-	
+
 	// Start trade processor
 	go handler.processTrades()
-	
+
 	// Start order book processor
 	go handler.processOrderBooks()
-	
+
 	// Start ticker processor
 	go handler.processTickers()
-	
+
 	// Start OHLCV processor
 	go handler.processOHLCV()
-	
+
 	return handler
 }
 
@@ -158,7 +156,7 @@ func NewHandler(engine *order_matching.Engine, logger *zap.Logger) *Handler {
 func (h *Handler) Subscribe(userID, symbol string, dataType MarketDataType) (*Subscription, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	// Create subscription
 	subscription := &Subscription{
 		ID:        uuid.New().String(),
@@ -168,19 +166,19 @@ func (h *Handler) Subscribe(userID, symbol string, dataType MarketDataType) (*Su
 		Channel:   make(chan interface{}, 100),
 		CreatedAt: time.Now(),
 	}
-	
+
 	// Add to subscriptions
 	h.Subscriptions[subscription.ID] = subscription
-	
+
 	// Add to symbol subscriptions
 	if _, exists := h.SymbolSubscriptions[symbol]; !exists {
 		h.SymbolSubscriptions[symbol] = make(map[string]*Subscription)
 	}
 	h.SymbolSubscriptions[symbol][subscription.ID] = subscription
-	
+
 	// Add to type subscriptions
 	h.TypeSubscriptions[dataType][subscription.ID] = subscription
-	
+
 	return subscription, nil
 }
 
@@ -188,26 +186,26 @@ func (h *Handler) Subscribe(userID, symbol string, dataType MarketDataType) (*Su
 func (h *Handler) Unsubscribe(subscriptionID string) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	subscription, exists := h.Subscriptions[subscriptionID]
 	if !exists {
 		return nil
 	}
-	
+
 	// Remove from subscriptions
 	delete(h.Subscriptions, subscriptionID)
-	
+
 	// Remove from symbol subscriptions
 	if symbolSubs, exists := h.SymbolSubscriptions[subscription.Symbol]; exists {
 		delete(symbolSubs, subscriptionID)
 	}
-	
+
 	// Remove from type subscriptions
 	delete(h.TypeSubscriptions[MarketDataType(subscription.Type)], subscriptionID)
-	
+
 	// Close channel
 	close(subscription.Channel)
-	
+
 	return nil
 }
 
@@ -226,16 +224,16 @@ func (h *Handler) processTrades() {
 				Side:      string(trade.TakerSide),
 				Timestamp: trade.Timestamp,
 			}
-			
+
 			// Update ticker
 			h.updateTicker(trade.Symbol, trade.Price, trade.Quantity)
-			
+
 			// Update OHLCV
 			h.updateOHLCV(trade.Symbol, trade.Price, trade.Quantity, trade.Timestamp)
-			
+
 			// Send to subscribers
 			h.mu.RLock()
-			
+
 			// Send to symbol subscribers
 			if symbolSubs, exists := h.SymbolSubscriptions[trade.Symbol]; exists {
 				for _, sub := range symbolSubs {
@@ -250,7 +248,7 @@ func (h *Handler) processTrades() {
 					}
 				}
 			}
-			
+
 			h.mu.RUnlock()
 		}
 	}
@@ -260,14 +258,14 @@ func (h *Handler) processTrades() {
 func (h *Handler) processOrderBooks() {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-h.ctx.Done():
 			return
 		case <-ticker.C:
 			h.mu.RLock()
-			
+
 			// Process each symbol
 			for symbol := range h.SymbolSubscriptions {
 				// Get order book
@@ -275,7 +273,7 @@ func (h *Handler) processOrderBooks() {
 				if err != nil {
 					continue
 				}
-				
+
 				// Create order book update
 				update := &OrderBookUpdate{
 					Symbol:    symbol,
@@ -283,7 +281,7 @@ func (h *Handler) processOrderBooks() {
 					Asks:      asks,
 					Timestamp: time.Now(),
 				}
-				
+
 				// Send to subscribers
 				if symbolSubs, exists := h.SymbolSubscriptions[symbol]; exists {
 					for _, sub := range symbolSubs {
@@ -299,7 +297,7 @@ func (h *Handler) processOrderBooks() {
 					}
 				}
 			}
-			
+
 			h.mu.RUnlock()
 		}
 	}
@@ -309,14 +307,14 @@ func (h *Handler) processOrderBooks() {
 func (h *Handler) processTickers() {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-h.ctx.Done():
 			return
 		case <-ticker.C:
 			h.mu.RLock()
-			
+
 			// Process each ticker
 			for symbol, tickerData := range h.tickers {
 				// Send to subscribers
@@ -334,7 +332,7 @@ func (h *Handler) processTickers() {
 					}
 				}
 			}
-			
+
 			h.mu.RUnlock()
 		}
 	}
@@ -344,14 +342,14 @@ func (h *Handler) processTickers() {
 func (h *Handler) processOHLCV() {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-h.ctx.Done():
 			return
 		case <-ticker.C:
 			h.mu.RLock()
-			
+
 			// Process each symbol
 			for symbol, intervals := range h.ohlcv {
 				// Process each interval
@@ -373,7 +371,7 @@ func (h *Handler) processOHLCV() {
 					}
 				}
 			}
-			
+
 			h.mu.RUnlock()
 		}
 	}
@@ -383,7 +381,7 @@ func (h *Handler) processOHLCV() {
 func (h *Handler) updateTicker(symbol string, price, quantity float64) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	ticker, exists := h.tickers[symbol]
 	if !exists {
 		ticker = &TickerUpdate{
@@ -398,11 +396,11 @@ func (h *Handler) updateTicker(symbol string, price, quantity float64) {
 		}
 		h.tickers[symbol] = ticker
 	}
-	
+
 	// Update ticker
 	ticker.Price = price
 	ticker.Volume += quantity
-	
+
 	// Update high and low
 	if price > ticker.High {
 		ticker.High = price
@@ -410,7 +408,7 @@ func (h *Handler) updateTicker(symbol string, price, quantity float64) {
 	if price < ticker.Low {
 		ticker.Low = price
 	}
-	
+
 	// Update timestamp
 	ticker.Timestamp = time.Now()
 }
@@ -419,16 +417,16 @@ func (h *Handler) updateTicker(symbol string, price, quantity float64) {
 func (h *Handler) updateOHLCV(symbol string, price, quantity float64, timestamp time.Time) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	// Initialize symbol if not exists
 	if _, exists := h.ohlcv[symbol]; !exists {
 		h.ohlcv[symbol] = make(map[string]*OHLCVUpdate)
 	}
-	
+
 	// Update 1-minute OHLCV
 	interval := "1m"
 	ohlcv, exists := h.ohlcv[symbol][interval]
-	
+
 	// Check if we need to create a new candle
 	if !exists || timestamp.Minute() != ohlcv.Timestamp.Minute() {
 		ohlcv = &OHLCVUpdate{
@@ -446,7 +444,7 @@ func (h *Handler) updateOHLCV(symbol string, price, quantity float64, timestamp 
 		// Update existing candle
 		ohlcv.Close = price
 		ohlcv.Volume += quantity
-		
+
 		// Update high and low
 		if price > ohlcv.High {
 			ohlcv.High = price
@@ -460,11 +458,11 @@ func (h *Handler) updateOHLCV(symbol string, price, quantity float64, timestamp 
 // Stop stops the handler
 func (h *Handler) Stop() {
 	h.cancel()
-	
+
 	// Close all subscription channels
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	for _, subscription := range h.Subscriptions {
 		close(subscription.Channel)
 	}

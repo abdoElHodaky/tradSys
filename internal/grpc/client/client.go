@@ -191,4 +191,3 @@ type PoolError struct {
 func (e *PoolError) Error() string {
 	return e.Message
 }
-

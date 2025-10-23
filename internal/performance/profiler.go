@@ -15,58 +15,58 @@ import (
 // Profiler provides profiling functionality
 type Profiler struct {
 	// Configuration
-	enabled       bool
-	cpuProfile    bool
-	memProfile    bool
-	blockProfile  bool
-	mutexProfile  bool
-	traceProfile  bool
-	profileDir    string
-	sampleRate    int
-	
+	enabled      bool
+	cpuProfile   bool
+	memProfile   bool
+	blockProfile bool
+	mutexProfile bool
+	traceProfile bool
+	profileDir   string
+	sampleRate   int
+
 	// State
-	cpuFile       *os.File
-	logger        *zap.Logger
+	cpuFile *os.File
+	logger  *zap.Logger
 }
 
 // ProfilerOptions contains options for the profiler
 type ProfilerOptions struct {
-	Enabled       bool
-	CPUProfile    bool
-	MemProfile    bool
-	BlockProfile  bool
-	MutexProfile  bool
-	TraceProfile  bool
-	ProfileDir    string
-	SampleRate    int
+	Enabled      bool
+	CPUProfile   bool
+	MemProfile   bool
+	BlockProfile bool
+	MutexProfile bool
+	TraceProfile bool
+	ProfileDir   string
+	SampleRate   int
 }
 
 // DefaultProfilerOptions returns default profiler options
 func DefaultProfilerOptions() ProfilerOptions {
 	return ProfilerOptions{
-		Enabled:       true,
-		CPUProfile:    true,
-		MemProfile:    true,
-		BlockProfile:  true,
-		MutexProfile:  true,
-		TraceProfile:  false,
-		ProfileDir:    "profiles",
-		SampleRate:    1000,
+		Enabled:      true,
+		CPUProfile:   true,
+		MemProfile:   true,
+		BlockProfile: true,
+		MutexProfile: true,
+		TraceProfile: false,
+		ProfileDir:   "profiles",
+		SampleRate:   1000,
 	}
 }
 
 // NewProfiler creates a new profiler
 func NewProfiler(logger *zap.Logger, options ProfilerOptions) *Profiler {
 	return &Profiler{
-		enabled:       options.Enabled,
-		cpuProfile:    options.CPUProfile,
-		memProfile:    options.MemProfile,
-		blockProfile:  options.BlockProfile,
-		mutexProfile:  options.MutexProfile,
-		traceProfile:  options.TraceProfile,
-		profileDir:    options.ProfileDir,
-		sampleRate:    options.SampleRate,
-		logger:        logger,
+		enabled:      options.Enabled,
+		cpuProfile:   options.CPUProfile,
+		memProfile:   options.MemProfile,
+		blockProfile: options.BlockProfile,
+		mutexProfile: options.MutexProfile,
+		traceProfile: options.TraceProfile,
+		profileDir:   options.ProfileDir,
+		sampleRate:   options.SampleRate,
+		logger:       logger,
 	}
 }
 
@@ -313,4 +313,3 @@ func (p *Profiler) EnableContinuousMemoryProfiling(ctx context.Context, interval
 		}
 	}()
 }
-

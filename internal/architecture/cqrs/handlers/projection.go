@@ -12,10 +12,10 @@ import (
 
 // ProjectionQueryHandler represents a query handler that uses projections
 type ProjectionQueryHandler[T any] struct {
-	projectionName string
+	projectionName    string
 	projectionManager projection.ProjectionManager
-	queryFunc      func(ctx context.Context, projection interface{}, query Query) (T, error)
-	logger         *zap.Logger
+	queryFunc         func(ctx context.Context, projection interface{}, query Query) (T, error)
+	logger            *zap.Logger
 }
 
 // NewProjectionQueryHandler creates a new projection query handler
@@ -41,7 +41,7 @@ func (h *ProjectionQueryHandler[T]) Handle(ctx context.Context, query Query) (T,
 		var zero T
 		return zero, err
 	}
-	
+
 	// Execute the query function
 	return h.queryFunc(ctx, proj, query)
 }
@@ -54,20 +54,20 @@ func (h *ProjectionQueryHandler[T]) getProjection(ctx context.Context) (interfac
 	}); ok {
 		return getter.GetProjection(ctx, h.projectionName)
 	}
-	
+
 	return nil, ErrProjectionNotFound
 }
 
 // CachedProjectionQueryHandler represents a query handler that uses cached projections
 type CachedProjectionQueryHandler[T any] struct {
-	projectionName string
+	projectionName    string
 	projectionManager projection.ProjectionManager
-	queryFunc      func(ctx context.Context, projection interface{}, query Query) (T, error)
-	logger         *zap.Logger
-	cache          map[string]interface{}
-	cacheTTL       time.Duration
-	cacheTime      time.Time
-	mu             sync.RWMutex
+	queryFunc         func(ctx context.Context, projection interface{}, query Query) (T, error)
+	logger            *zap.Logger
+	cache             map[string]interface{}
+	cacheTTL          time.Duration
+	cacheTime         time.Time
+	mu                sync.RWMutex
 }
 
 // NewCachedProjectionQueryHandler creates a new cached projection query handler
@@ -96,7 +96,7 @@ func (h *CachedProjectionQueryHandler[T]) Handle(ctx context.Context, query Quer
 		var zero T
 		return zero, err
 	}
-	
+
 	// Execute the query function
 	return h.queryFunc(ctx, proj, query)
 }
@@ -104,24 +104,24 @@ func (h *CachedProjectionQueryHandler[T]) Handle(ctx context.Context, query Quer
 // getProjection gets the projection
 func (h *CachedProjectionQueryHandler[T]) getProjection(ctx context.Context) (interface{}, error) {
 	h.mu.RLock()
-	
+
 	// Check if the cache is valid
 	if time.Since(h.cacheTime) < h.cacheTTL {
 		// Get the projection from the cache
 		proj, ok := h.cache[h.projectionName]
 		h.mu.RUnlock()
-		
+
 		if ok {
 			return proj, nil
 		}
 	} else {
 		h.mu.RUnlock()
 	}
-	
+
 	// Cache is invalid or projection not found, get the projection from the manager
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	// Check if the projection manager implements the GetProjection method
 	if getter, ok := h.projectionManager.(interface {
 		GetProjection(ctx context.Context, projectionName string) (interface{}, error)
@@ -130,14 +130,14 @@ func (h *CachedProjectionQueryHandler[T]) getProjection(ctx context.Context) (in
 		if err != nil {
 			return nil, err
 		}
-		
+
 		// Update the cache
 		h.cache[h.projectionName] = proj
 		h.cacheTime = time.Now()
-		
+
 		return proj, nil
 	}
-	
+
 	return nil, ErrProjectionNotFound
 }
 
@@ -168,7 +168,7 @@ func (h *ProjectionEventHandler) HandleEvent(event *eventsourcing.Event) error {
 			zap.Error(err))
 		return err
 	}
-	
+
 	return nil
 }
 

@@ -36,11 +36,11 @@ type Aggregate interface {
 
 // BaseAggregate provides a base implementation of the Aggregate interface
 type BaseAggregate struct {
-	ID               string
-	Type             string
-	Version          int
+	ID                string
+	Type              string
+	Version           int
 	UncommittedEvents []*Event
-	mu               sync.RWMutex
+	mu                sync.RWMutex
 }
 
 // GetID returns the ID of the aggregate
@@ -114,16 +114,16 @@ func (a *BaseAggregate) AddEvent(eventType string, payload map[string]interface{
 
 // AggregateRepository provides a repository for aggregates
 type AggregateRepository struct {
-	store       EventStore
-	logger      *zap.Logger
+	store             EventStore
+	logger            *zap.Logger
 	snapshotFrequency int
 }
 
 // NewAggregateRepository creates a new aggregate repository
 func NewAggregateRepository(store EventStore, logger *zap.Logger, snapshotFrequency int) *AggregateRepository {
 	return &AggregateRepository{
-		store:       store,
-		logger:      logger,
+		store:             store,
+		logger:            logger,
 		snapshotFrequency: snapshotFrequency,
 	}
 }
@@ -208,7 +208,7 @@ func (r *AggregateRepository) Save(ctx context.Context, aggregate Aggregate) err
 	aggregate.ClearUncommittedEvents()
 
 	// Check if a snapshot should be created
-	if r.snapshotFrequency > 0 && aggregate.GetVersion() % r.snapshotFrequency == 0 {
+	if r.snapshotFrequency > 0 && aggregate.GetVersion()%r.snapshotFrequency == 0 {
 		// Create a snapshot
 		err := r.createSnapshot(aggregate)
 		if err != nil {
@@ -281,4 +281,3 @@ func (r *AggregateRepository) createSnapshot(aggregate Aggregate) error {
 
 	return nil
 }
-

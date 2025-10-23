@@ -45,16 +45,16 @@ func (qb *QueryBus) RegisterHandler(queryType reflect.Type, handler QueryHandler
 	if queryType.Kind() != reflect.Ptr {
 		return errors.New("query type must be a pointer type")
 	}
-	
+
 	queryName := queryType.Elem().Name()
-	
+
 	qb.mu.Lock()
 	defer qb.mu.Unlock()
-	
+
 	if _, exists := qb.handlers[queryName]; exists {
 		return errors.New("handler already registered for query: " + queryName)
 	}
-	
+
 	qb.handlers[queryName] = handler
 	return nil
 }
@@ -69,17 +69,17 @@ func (qb *QueryBus) Dispatch(ctx context.Context, query Query) (interface{}, err
 	if query == nil {
 		return nil, errors.New("query cannot be nil")
 	}
-	
+
 	queryName := query.QueryName()
-	
+
 	qb.mu.RLock()
 	handler, exists := qb.handlers[queryName]
 	qb.mu.RUnlock()
-	
+
 	if !exists {
 		return nil, errors.New("no handler registered for query: " + queryName)
 	}
-	
+
 	return handler.Handle(ctx, query)
 }
 

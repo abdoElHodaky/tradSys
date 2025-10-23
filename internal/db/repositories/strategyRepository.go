@@ -25,47 +25,47 @@ func NewStrategyRepository(db *gorm.DB, logger *zap.Logger) *StrategyRepository 
 		logger:    logger,
 		optimizer: queries.NewOptimizer(db, logger),
 	}
-	
+
 	return repo
 }
 
 // GetStrategy retrieves a strategy by name
 func (r *StrategyRepository) GetStrategy(ctx context.Context, name string) (*models.Strategy, error) {
 	var strategy models.Strategy
-	
+
 	builder := queries.NewBuilder(r.db, r.logger).
 		Table("strategies").
 		Where("name = ?", name)
-	
+
 	err := builder.First(&strategy)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
-		
+
 		r.logger.Error("Failed to get strategy",
 			zap.Error(err),
 			zap.String("name", name))
 		return nil, err
 	}
-	
+
 	return &strategy, nil
 }
 
 // GetAllStrategies retrieves all strategies
 func (r *StrategyRepository) GetAllStrategies(ctx context.Context) ([]*models.Strategy, error) {
 	var strategies []*models.Strategy
-	
+
 	builder := queries.NewBuilder(r.db, r.logger).
 		Table("strategies").
 		OrderBy("name ASC")
-	
+
 	err := builder.Execute(&strategies)
 	if err != nil {
 		r.logger.Error("Failed to get all strategies", zap.Error(err))
 		return nil, err
 	}
-	
+
 	return strategies, nil
 }
 
@@ -73,7 +73,7 @@ func (r *StrategyRepository) GetAllStrategies(ctx context.Context) ([]*models.St
 func (r *StrategyRepository) CreateStrategy(ctx context.Context, strategy *models.Strategy) error {
 	result := r.db.WithContext(ctx).Create(strategy)
 	if result.Error != nil {
-		r.logger.Error("Failed to create strategy", 
+		r.logger.Error("Failed to create strategy",
 			zap.Error(result.Error),
 			zap.String("name", strategy.Name))
 		return result.Error
@@ -85,7 +85,7 @@ func (r *StrategyRepository) CreateStrategy(ctx context.Context, strategy *model
 func (r *StrategyRepository) UpdateStrategy(ctx context.Context, strategy *models.Strategy) error {
 	result := r.db.WithContext(ctx).Save(strategy)
 	if result.Error != nil {
-		r.logger.Error("Failed to update strategy", 
+		r.logger.Error("Failed to update strategy",
 			zap.Error(result.Error),
 			zap.String("name", strategy.Name))
 		return result.Error
@@ -97,7 +97,7 @@ func (r *StrategyRepository) UpdateStrategy(ctx context.Context, strategy *model
 func (r *StrategyRepository) DeleteStrategy(ctx context.Context, name string) error {
 	result := r.db.WithContext(ctx).Where("name = ?", name).Delete(&models.Strategy{})
 	if result.Error != nil {
-		r.logger.Error("Failed to delete strategy", 
+		r.logger.Error("Failed to delete strategy",
 			zap.Error(result.Error),
 			zap.String("name", name))
 		return result.Error
@@ -109,7 +109,7 @@ func (r *StrategyRepository) DeleteStrategy(ctx context.Context, name string) er
 func (r *StrategyRepository) CreateStrategyExecution(ctx context.Context, execution *models.StrategyExecution) error {
 	result := r.db.WithContext(ctx).Create(execution)
 	if result.Error != nil {
-		r.logger.Error("Failed to create strategy execution", 
+		r.logger.Error("Failed to create strategy execution",
 			zap.Error(result.Error),
 			zap.Uint("strategy_id", execution.StrategyID))
 		return result.Error
@@ -121,7 +121,7 @@ func (r *StrategyRepository) CreateStrategyExecution(ctx context.Context, execut
 func (r *StrategyRepository) UpdateStrategyExecution(ctx context.Context, execution *models.StrategyExecution) error {
 	result := r.db.WithContext(ctx).Save(execution)
 	if result.Error != nil {
-		r.logger.Error("Failed to update strategy execution", 
+		r.logger.Error("Failed to update strategy execution",
 			zap.Error(result.Error),
 			zap.Uint("id", execution.ID))
 		return result.Error
@@ -132,12 +132,12 @@ func (r *StrategyRepository) UpdateStrategyExecution(ctx context.Context, execut
 // GetStrategyExecutions retrieves executions for a strategy
 func (r *StrategyRepository) GetStrategyExecutions(ctx context.Context, strategyID uint) ([]*models.StrategyExecution, error) {
 	var executions []*models.StrategyExecution
-	
+
 	builder := queries.NewBuilder(r.db, r.logger).
 		Table("strategy_executions").
 		Where("strategy_id = ?", strategyID).
 		OrderBy("start_time DESC")
-	
+
 	err := builder.Execute(&executions)
 	if err != nil {
 		r.logger.Error("Failed to get strategy executions",
@@ -145,7 +145,7 @@ func (r *StrategyRepository) GetStrategyExecutions(ctx context.Context, strategy
 			zap.Uint("strategy_id", strategyID))
 		return nil, err
 	}
-	
+
 	return executions, nil
 }
 
@@ -153,7 +153,7 @@ func (r *StrategyRepository) GetStrategyExecutions(ctx context.Context, strategy
 func (r *StrategyRepository) CreateSignal(ctx context.Context, signal *models.Signal) error {
 	result := r.db.WithContext(ctx).Create(signal)
 	if result.Error != nil {
-		r.logger.Error("Failed to create signal", 
+		r.logger.Error("Failed to create signal",
 			zap.Error(result.Error),
 			zap.Uint("strategy_id", signal.StrategyID),
 			zap.String("symbol", signal.Symbol))
@@ -165,14 +165,14 @@ func (r *StrategyRepository) CreateSignal(ctx context.Context, signal *models.Si
 // GetActiveSignals retrieves active signals for a symbol
 func (r *StrategyRepository) GetActiveSignals(ctx context.Context, symbol string) ([]*models.Signal, error) {
 	var signals []*models.Signal
-	
+
 	builder := queries.NewBuilder(r.db, r.logger).
 		Table("signals").
 		Where("symbol = ?", symbol).
 		Where("executed = ?", false).
 		Where("expires_at > ?", time.Now()).
 		OrderBy("generated_at DESC")
-	
+
 	err := builder.Execute(&signals)
 	if err != nil {
 		r.logger.Error("Failed to get active signals",
@@ -180,7 +180,7 @@ func (r *StrategyRepository) GetActiveSignals(ctx context.Context, symbol string
 			zap.String("symbol", symbol))
 		return nil, err
 	}
-	
+
 	return signals, nil
 }
 
@@ -188,7 +188,7 @@ func (r *StrategyRepository) GetActiveSignals(ctx context.Context, symbol string
 func (r *StrategyRepository) UpdateSignal(ctx context.Context, signal *models.Signal) error {
 	result := r.db.WithContext(ctx).Save(signal)
 	if result.Error != nil {
-		r.logger.Error("Failed to update signal", 
+		r.logger.Error("Failed to update signal",
 			zap.Error(result.Error),
 			zap.Uint("id", signal.ID))
 		return result.Error

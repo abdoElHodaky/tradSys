@@ -11,67 +11,67 @@ import (
 type UnifiedConfig struct {
 	// System configuration
 	System SystemConfig `yaml:"system"`
-	
+
 	// Server configuration
 	Server ServerConfig `yaml:"server"`
-	
+
 	// Database configuration
 	Database DatabaseConfig `yaml:"database"`
-	
+
 	// Trading configuration
 	Trading TradingConfig `yaml:"trading"`
-	
+
 	// Risk management configuration
 	Risk RiskConfig `yaml:"risk"`
-	
+
 	// API configuration
 	API APIConfig `yaml:"api"`
-	
+
 	// Performance configuration
 	Performance PerformanceConfig `yaml:"performance"`
-	
+
 	// Monitoring configuration
 	Monitoring MonitoringConfig `yaml:"monitoring"`
-	
+
 	// External integrations
 	Exchanges ExchangesConfig `yaml:"exchanges"`
-	
+
 	// WebSocket configuration
 	WebSocket WebSocketConfig `yaml:"websocket"`
-	
+
 	// JWT configuration
 	JWT JWTConfig `yaml:"jwt"`
-	
+
 	// HFT configuration (for backward compatibility)
 	HFT UnifiedHFTConfig `yaml:"hft"`
-	
+
 	// Gateway configuration
 	Gateway GatewayConfig `yaml:"gateway"`
-	
+
 	// Broker configuration
 	Broker BrokerConfig `yaml:"broker"`
-	
+
 	// Service configuration
 	Service ServiceConfig `yaml:"service"`
-	
+
 	// Connectivity configuration
 	Connectivity ConnectivityConfig `yaml:"connectivity"`
-	
+
 	// Compliance configuration
 	Compliance ComplianceConfig `yaml:"compliance"`
-	
+
 	// Strategies configuration
 	Strategies StrategiesConfig `yaml:"strategies"`
-	
+
 	// Tracing configuration
 	Tracing TracingConfig `yaml:"tracing"`
-	
+
 	// Metrics configuration
 	Metrics MetricsConfig `yaml:"metrics"`
-	
+
 	// Resilience configuration
 	Resilience ResilienceConfig `yaml:"resilience"`
-	
+
 	// Registry configuration
 	Registry RegistryConfig `yaml:"registry"`
 }
@@ -109,10 +109,10 @@ type DatabaseConfig struct {
 
 // TradingConfig contains trading engine settings
 type TradingConfig struct {
-	Engine      TradingEngineConfig `yaml:"engine"`
-	OrderBook   OrderBookConfig     `yaml:"order_book"`
-	Execution   ExecutionConfig     `yaml:"execution"`
-	Settlement  SettlementConfig    `yaml:"settlement"`
+	Engine     TradingEngineConfig `yaml:"engine"`
+	OrderBook  OrderBookConfig     `yaml:"order_book"`
+	Execution  ExecutionConfig     `yaml:"execution"`
+	Settlement SettlementConfig    `yaml:"settlement"`
 }
 
 // TradingEngineConfig contains trading engine specific settings
@@ -136,17 +136,17 @@ type ExecutionConfig struct {
 
 // SettlementConfig contains settlement processing settings
 type SettlementConfig struct {
-	AutoSettle      bool          `yaml:"auto_settle" default:"true"`
-	SettleTimeout   time.Duration `yaml:"settle_timeout" default:"60s"`
-	BatchSize       int           `yaml:"batch_size" default:"100"`
+	AutoSettle    bool          `yaml:"auto_settle" default:"true"`
+	SettleTimeout time.Duration `yaml:"settle_timeout" default:"60s"`
+	BatchSize     int           `yaml:"batch_size" default:"100"`
 }
 
 // RiskConfig contains risk management settings
 type RiskConfig struct {
-	MaxPositionSize    float64 `yaml:"max_position_size" default:"10000"`
-	MaxDailyLoss       float64 `yaml:"max_daily_loss" default:"1000"`
-	EnableRiskChecks   bool    `yaml:"enable_risk_checks" default:"true"`
-	CircuitBreaker     CircuitBreakerConfig `yaml:"circuit_breaker"`
+	MaxPositionSize  float64              `yaml:"max_position_size" default:"10000"`
+	MaxDailyLoss     float64              `yaml:"max_daily_loss" default:"1000"`
+	EnableRiskChecks bool                 `yaml:"enable_risk_checks" default:"true"`
+	CircuitBreaker   CircuitBreakerConfig `yaml:"circuit_breaker"`
 }
 
 // CircuitBreakerConfig contains circuit breaker settings
@@ -158,9 +158,9 @@ type CircuitBreakerConfig struct {
 
 // APIConfig contains API server settings
 type APIConfig struct {
-	RateLimit   RateLimitConfig `yaml:"rate_limit"`
-	CORS        CORSConfig      `yaml:"cors"`
-	EnableDocs  bool            `yaml:"enable_docs" default:"true"`
+	RateLimit  RateLimitConfig `yaml:"rate_limit"`
+	CORS       CORSConfig      `yaml:"cors"`
+	EnableDocs bool            `yaml:"enable_docs" default:"true"`
 }
 
 // RateLimitConfig contains rate limiting settings
@@ -179,10 +179,10 @@ type CORSConfig struct {
 
 // PerformanceConfig contains performance optimization settings
 type PerformanceConfig struct {
-	EnableProfiling   bool `yaml:"enable_profiling" default:"false"`
-	EnableMetrics     bool `yaml:"enable_metrics" default:"true"`
-	GCTargetPercent   int  `yaml:"gc_target_percent" default:"100"`
-	MaxProcs          int  `yaml:"max_procs" default:"0"` // 0 = use all CPUs
+	EnableProfiling bool `yaml:"enable_profiling" default:"false"`
+	EnableMetrics   bool `yaml:"enable_metrics" default:"true"`
+	GCTargetPercent int  `yaml:"gc_target_percent" default:"100"`
+	MaxProcs        int  `yaml:"max_procs" default:"0"` // 0 = use all CPUs
 }
 
 // MonitoringConfig contains monitoring and observability settings
@@ -213,22 +213,22 @@ type ExchangeConfig struct {
 
 // WebSocketConfig contains WebSocket server settings
 type WebSocketConfig struct {
-	Port                int           `yaml:"port" default:"8081"`
-	ReadBufferSize      int           `yaml:"read_buffer_size" default:"1024"`
-	WriteBufferSize     int           `yaml:"write_buffer_size" default:"1024"`
-	HandshakeTimeout    time.Duration `yaml:"handshake_timeout" default:"10s"`
-	EnableCompression   bool          `yaml:"enable_compression" default:"true"`
-	CompressionLevel    int           `yaml:"compression_level" default:"6"`
-	MaxMessageSize      int64         `yaml:"max_message_size" default:"512"`
-	PingPeriod          time.Duration `yaml:"ping_period" default:"54s"`
-	PongWait            time.Duration `yaml:"pong_wait" default:"60s"`
-	WriteWait           time.Duration `yaml:"write_wait" default:"10s"`
+	Port              int           `yaml:"port" default:"8081"`
+	ReadBufferSize    int           `yaml:"read_buffer_size" default:"1024"`
+	WriteBufferSize   int           `yaml:"write_buffer_size" default:"1024"`
+	HandshakeTimeout  time.Duration `yaml:"handshake_timeout" default:"10s"`
+	EnableCompression bool          `yaml:"enable_compression" default:"true"`
+	CompressionLevel  int           `yaml:"compression_level" default:"6"`
+	MaxMessageSize    int64         `yaml:"max_message_size" default:"512"`
+	PingPeriod        time.Duration `yaml:"ping_period" default:"54s"`
+	PongWait          time.Duration `yaml:"pong_wait" default:"60s"`
+	WriteWait         time.Duration `yaml:"write_wait" default:"10s"`
 }
 
 // JWTConfig contains JWT authentication settings
 type JWTConfig struct {
 	Secret        string        `yaml:"secret"`
-	SecretKey     string        `yaml:"secret_key"`     // Alias for Secret for backward compatibility
+	SecretKey     string        `yaml:"secret_key"` // Alias for Secret for backward compatibility
 	Expiration    time.Duration `yaml:"expiration" default:"24h"`
 	TokenDuration time.Duration `yaml:"token_duration" default:"24h"` // Alias for Expiration
 	Issuer        string        `yaml:"issuer" default:"tradsys"`
@@ -284,6 +284,7 @@ type BrokerConfig struct {
 type ServiceConfig struct {
 	Name     string `yaml:"name" default:"tradsys"`
 	Version  string `yaml:"version" default:"1.0.0"`
+	Address  string `yaml:"address" default:"localhost:8080"`
 	GRPCPort int    `yaml:"grpc_port" default:"9090"`
 }
 
@@ -320,8 +321,9 @@ type ResilienceConfig struct {
 
 // RegistryConfig contains service registry settings
 type RegistryConfig struct {
-	Enabled bool   `yaml:"enabled" default:"false"`
-	Type    string `yaml:"type" default:"consul"`
+	Enabled   bool     `yaml:"enabled" default:"false"`
+	Type      string   `yaml:"type" default:"consul"`
+	Addresses []string `yaml:"addresses" default:"localhost:8500"`
 }
 
 // Global configuration instance
@@ -331,7 +333,7 @@ var GlobalConfig *UnifiedConfig
 func LoadConfig(configPath string) (*UnifiedConfig, error) {
 	// Implementation will be added in next step
 	config := &UnifiedConfig{}
-	
+
 	// Set defaults
 	config.System.Environment = "development"
 	config.System.LogLevel = "info"
@@ -352,7 +354,7 @@ func LoadConfig(configPath string) (*UnifiedConfig, error) {
 	config.Resilience.RateLimitingEnabled = true
 	config.Registry.Enabled = false
 	config.Registry.Type = "consul"
-	
+
 	GlobalConfig = config
 	return config, nil
 }

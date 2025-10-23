@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/performance/latency"
 	"github.com/abdoElHodaky/tradSys/internal/common/pool/performance"
+	"github.com/abdoElHodaky/tradSys/internal/performance/latency"
 	"github.com/abdoElHodaky/tradSys/proto/marketdata"
 	"github.com/abdoElHodaky/tradSys/proto/orders"
 	"go.uber.org/zap"
@@ -17,26 +17,26 @@ import (
 // OptimizedStrategyManager is an enhanced version of StrategyManager
 // optimized for high-frequency trading scenarios
 type OptimizedStrategyManager struct {
-	logger            *zap.Logger
-	strategies        map[string]Strategy
+	logger             *zap.Logger
+	strategies         map[string]Strategy
 	strategyPriorities map[string]int
-	running           map[string]bool
-	mu                sync.RWMutex
-	
+	running            map[string]bool
+	mu                 sync.RWMutex
+
 	// Worker pool for strategy execution
-	workerPool        chan struct{}
-	
+	workerPool chan struct{}
+
 	// Object pools to reduce GC pressure
-	marketDataPool    *pools.MarketDataPool
-	orderPool         *pools.OrderPool
-	
+	marketDataPool *pools.MarketDataPool
+	orderPool      *pools.OrderPool
+
 	// Latency tracking
-	latencyTracker    *latency.LatencyTracker
-	
+	latencyTracker *latency.LatencyTracker
+
 	// Statistics
 	processedMarketData uint64
 	processedOrders     uint64
-	
+
 	// Circuit breaker
 	circuitBreakerEnabled bool
 	circuitBreakerTripped int32 // atomic
@@ -48,16 +48,16 @@ func NewOptimizedStrategyManager(logger *zap.Logger, workerCount int) *Optimized
 	if workerCount <= 0 {
 		workerCount = runtime.NumCPU()
 	}
-	
+
 	return &OptimizedStrategyManager{
-		logger:               logger,
-		strategies:           make(map[string]Strategy),
-		strategyPriorities:   make(map[string]int),
-		running:              make(map[string]bool),
-		workerPool:           make(chan struct{}, workerCount),
-		marketDataPool:       pools.NewMarketDataPool(),
-		orderPool:            pools.NewOrderPool(),
-		latencyTracker:       latency.NewLatencyTracker(logger),
+		logger:                logger,
+		strategies:            make(map[string]Strategy),
+		strategyPriorities:    make(map[string]int),
+		running:               make(map[string]bool),
+		workerPool:            make(chan struct{}, workerCount),
+		marketDataPool:        pools.NewMarketDataPool(),
+		orderPool:             pools.NewOrderPool(),
+		latencyTracker:        latency.NewLatencyTracker(logger),
 		circuitBreakerEnabled: true,
 	}
 }
@@ -67,20 +67,20 @@ func NewOptimizedStrategyManager(logger *zap.Logger, workerCount int) *Optimized
 func (m *OptimizedStrategyManager) RegisterStrategy(strategy Strategy, priority int) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	name := strategy.GetName()
 	if _, exists := m.strategies[name]; exists {
 		return ErrStrategyAlreadyRegistered
 	}
-	
+
 	m.strategies[name] = strategy
 	m.strategyPriorities[name] = priority
 	m.running[name] = false
-	
-	m.logger.Info("Strategy registered", 
+
+	m.logger.Info("Strategy registered",
 		zap.String("name", name),
 		zap.Int("priority", priority))
-	
+
 	return nil
 }
 
@@ -88,11 +88,11 @@ func (m *OptimizedStrategyManager) RegisterStrategy(strategy Strategy, priority 
 func (m *OptimizedStrategyManager) UnregisterStrategy(name string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	if _, exists := m.strategies[name]; !exists {
 		return ErrStrategyNotFound
 	}
-	
+
 	// Stop the strategy if it's running
 	if m.running[name] {
 		m.mu.Unlock()
@@ -102,13 +102,13 @@ func (m *OptimizedStrategyManager) UnregisterStrategy(name string) error {
 		}
 		m.mu.Lock()
 	}
-	
+
 	delete(m.strategies, name)
 	delete(m.strategyPriorities, name)
 	delete(m.running, name)
-	
+
 	m.logger.Info("Strategy unregistered", zap.String("name", name))
-	
+
 	return nil
 }
 
@@ -116,26 +116,26 @@ func (m *OptimizedStrategyManager) UnregisterStrategy(name string) error {
 func (m *OptimizedStrategyManager) StartStrategy(ctx context.Context, name string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	strategy, exists := m.strategies[name]
 	if !exists {
 		return ErrStrategyNotFound
 	}
-	
+
 	if m.running[name] {
 		return ErrStrategyAlreadyRunning
 	}
-	
+
 	startTime := time.Now()
 	if err := strategy.Start(ctx); err != nil {
 		return err
 	}
 	m.latencyTracker.TrackStrategyExecution(name+"_start", startTime)
-	
+
 	m.running[name] = true
-	
+
 	m.logger.Info("Strategy started", zap.String("name", name))
-	
+
 	return nil
 }
 
@@ -143,26 +143,26 @@ func (m *OptimizedStrategyManager) StartStrategy(ctx context.Context, name strin
 func (m *OptimizedStrategyManager) StopStrategy(ctx context.Context, name string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	strategy, exists := m.strategies[name]
 	if !exists {
 		return ErrStrategyNotFound
 	}
-	
+
 	if !m.running[name] {
 		return ErrStrategyNotRunning
 	}
-	
+
 	startTime := time.Now()
 	if err := strategy.Stop(ctx); err != nil {
 		return err
 	}
 	m.latencyTracker.TrackStrategyExecution(name+"_stop", startTime)
-	
+
 	m.running[name] = false
-	
+
 	m.logger.Info("Strategy stopped", zap.String("name", name))
-	
+
 	return nil
 }
 
@@ -170,12 +170,12 @@ func (m *OptimizedStrategyManager) StopStrategy(ctx context.Context, name string
 func (m *OptimizedStrategyManager) GetStrategy(name string) (Strategy, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	strategy, exists := m.strategies[name]
 	if !exists {
 		return nil, ErrStrategyNotFound
 	}
-	
+
 	return strategy, nil
 }
 
@@ -183,12 +183,12 @@ func (m *OptimizedStrategyManager) GetStrategy(name string) (Strategy, error) {
 func (m *OptimizedStrategyManager) ListStrategies() []string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	var strategies []string
 	for name := range m.strategies {
 		strategies = append(strategies, name)
 	}
-	
+
 	return strategies
 }
 
@@ -196,11 +196,11 @@ func (m *OptimizedStrategyManager) ListStrategies() []string {
 func (m *OptimizedStrategyManager) IsStrategyRunning(name string) (bool, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	if _, exists := m.strategies[name]; !exists {
 		return false, ErrStrategyNotFound
 	}
-	
+
 	return m.running[name], nil
 }
 
@@ -213,24 +213,24 @@ func (m *OptimizedStrategyManager) ProcessMarketData(ctx context.Context, data *
 			zap.String("symbol", data.Symbol))
 		return
 	}
-	
+
 	// Track market data processing
 	startTime := time.Now()
 	defer m.latencyTracker.TrackMarketDataProcessing(data.Symbol, startTime)
-	
+
 	// Increment processed count
 	atomic.AddUint64(&m.processedMarketData, 1)
-	
+
 	// Get prioritized strategies
 	strategies := m.getPrioritizedStrategies()
 	if len(strategies) == 0 {
 		return
 	}
-	
+
 	// Create a copy of the market data to avoid race conditions
 	dataCopy := m.marketDataPool.Get()
 	*dataCopy = *data
-	
+
 	// Try to get a worker from the pool
 	select {
 	case m.workerPool <- struct{}{}:
@@ -239,7 +239,7 @@ func (m *OptimizedStrategyManager) ProcessMarketData(ctx context.Context, data *
 				<-m.workerPool
 				m.marketDataPool.Put(dataCopy)
 			}()
-			
+
 			for _, s := range strategies {
 				strategyStartTime := time.Now()
 				if err := s.OnMarketData(ctx, dataCopy); err != nil {
@@ -255,7 +255,7 @@ func (m *OptimizedStrategyManager) ProcessMarketData(ctx context.Context, data *
 		// Worker pool is full, process in current goroutine
 		m.logger.Warn("Worker pool full, processing market data in current goroutine",
 			zap.String("symbol", data.Symbol))
-		
+
 		for _, s := range strategies {
 			strategyStartTime := time.Now()
 			if err := s.OnMarketData(ctx, dataCopy); err != nil {
@@ -266,7 +266,7 @@ func (m *OptimizedStrategyManager) ProcessMarketData(ctx context.Context, data *
 			}
 			m.latencyTracker.TrackStrategyExecution(s.GetName()+"_market_data", strategyStartTime)
 		}
-		
+
 		m.marketDataPool.Put(dataCopy)
 	}
 }
@@ -280,24 +280,24 @@ func (m *OptimizedStrategyManager) ProcessOrderUpdate(ctx context.Context, order
 			zap.String("order_id", order.OrderId))
 		return
 	}
-	
+
 	// Track order processing
 	startTime := time.Now()
 	defer m.latencyTracker.TrackOrderProcessing(order.OrderId, startTime)
-	
+
 	// Increment processed count
 	atomic.AddUint64(&m.processedOrders, 1)
-	
+
 	// Get prioritized strategies
 	strategies := m.getPrioritizedStrategies()
 	if len(strategies) == 0 {
 		return
 	}
-	
+
 	// Create a copy of the order to avoid race conditions
 	orderCopy := m.orderPool.Get()
 	*orderCopy = *order
-	
+
 	// Try to get a worker from the pool
 	select {
 	case m.workerPool <- struct{}{}:
@@ -306,7 +306,7 @@ func (m *OptimizedStrategyManager) ProcessOrderUpdate(ctx context.Context, order
 				<-m.workerPool
 				m.orderPool.Put(orderCopy)
 			}()
-			
+
 			for _, s := range strategies {
 				strategyStartTime := time.Now()
 				if err := s.OnOrderUpdate(ctx, orderCopy); err != nil {
@@ -322,7 +322,7 @@ func (m *OptimizedStrategyManager) ProcessOrderUpdate(ctx context.Context, order
 		// Worker pool is full, process in current goroutine
 		m.logger.Warn("Worker pool full, processing order update in current goroutine",
 			zap.String("order_id", order.OrderId))
-		
+
 		for _, s := range strategies {
 			strategyStartTime := time.Now()
 			if err := s.OnOrderUpdate(ctx, orderCopy); err != nil {
@@ -333,7 +333,7 @@ func (m *OptimizedStrategyManager) ProcessOrderUpdate(ctx context.Context, order
 			}
 			m.latencyTracker.TrackStrategyExecution(s.GetName()+"_order_update", strategyStartTime)
 		}
-		
+
 		m.orderPool.Put(orderCopy)
 	}
 }
@@ -343,17 +343,17 @@ func (m *OptimizedStrategyManager) ProcessOrderUpdate(ctx context.Context, order
 func (m *OptimizedStrategyManager) SetStrategyPriority(name string, priority int) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	if _, exists := m.strategies[name]; !exists {
 		return ErrStrategyNotFound
 	}
-	
+
 	m.strategyPriorities[name] = priority
-	
+
 	m.logger.Info("Strategy priority updated",
 		zap.String("name", name),
 		zap.Int("priority", priority))
-	
+
 	return nil
 }
 
@@ -361,11 +361,11 @@ func (m *OptimizedStrategyManager) SetStrategyPriority(name string, priority int
 func (m *OptimizedStrategyManager) GetStrategyPriority(name string) (int, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	if _, exists := m.strategies[name]; !exists {
 		return 0, ErrStrategyNotFound
 	}
-	
+
 	return m.strategyPriorities[name], nil
 }
 
@@ -416,15 +416,15 @@ func (m *OptimizedStrategyManager) GetProcessedCounts() (marketData, orders uint
 func (m *OptimizedStrategyManager) getPrioritizedStrategies() []Strategy {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	// Create a slice of strategy-priority pairs
 	type strategyPriorityPair struct {
 		strategy Strategy
 		priority int
 	}
-	
+
 	var pairs []strategyPriorityPair
-	
+
 	for name, strategy := range m.strategies {
 		if m.running[name] {
 			pairs = append(pairs, strategyPriorityPair{
@@ -433,7 +433,7 @@ func (m *OptimizedStrategyManager) getPrioritizedStrategies() []Strategy {
 			})
 		}
 	}
-	
+
 	// Sort by priority (lower number = higher priority)
 	// Using a simple bubble sort for clarity, could use sort.Slice in production
 	for i := 0; i < len(pairs); i++ {
@@ -443,13 +443,12 @@ func (m *OptimizedStrategyManager) getPrioritizedStrategies() []Strategy {
 			}
 		}
 	}
-	
+
 	// Extract just the strategies
 	strategies := make([]Strategy, len(pairs))
 	for i, pair := range pairs {
 		strategies[i] = pair.strategy
 	}
-	
+
 	return strategies
 }
-

@@ -31,11 +31,11 @@ type Server struct {
 
 // Client represents a WebSocket client connection
 type Client struct {
-	ID           string
-	UserID       string
-	Conn         *websocket.Conn
+	ID            string
+	UserID        string
+	Conn          *websocket.Conn
 	Subscriptions map[string]bool
-	Send         chan []byte
+	Send          chan []byte
 }
 
 // NewServer creates a new WebSocket server with fx dependency injection

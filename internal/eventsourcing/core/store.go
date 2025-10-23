@@ -21,7 +21,7 @@ type EventStore interface {
 
 	// GetAggregateEvents gets events for multiple aggregates
 	GetAggregateEvents(ctx context.Context, aggregateIDs []string, aggregateType string, fromVersion int) ([]*eventsourcing.Event, error)
-	
+
 	// GetAllEvents gets all events
 	GetAllEvents(ctx context.Context, fromTimestamp time.Time, limit int) ([]*eventsourcing.Event, error)
 }
@@ -106,4 +106,3 @@ var (
 	ErrAggregateNotFound   = errors.New("aggregate not found")
 	ErrEventNotFound       = errors.New("event not found")
 )
-

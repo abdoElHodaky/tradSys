@@ -9,10 +9,9 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
+	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 )
@@ -20,52 +19,52 @@ import (
 // NatsCQRSAdapter provides an adapter for NATS-based CQRS
 type NatsCQRSAdapter struct {
 	logger *zap.Logger
-	
+
 	// NATS components
-	conn   *nats.Conn
-	js     nats.JetStreamContext
-	
+	conn *nats.Conn
+	js   nats.JetStreamContext
+
 	// Our components
 	eventStore    store.EventStore
 	aggregateRepo aggregate.Repository
-	
+
 	// Command handlers
 	commandHandlers map[string]command.EventSourcedHandler
-	
+
 	// Event handlers
 	eventHandlers map[string][]eventsourcing.EventHandler
-	
+
 	// Subscriptions
-	subs   []*nats.Subscription
-	
+	subs []*nats.Subscription
+
 	// Context for managing subscriptions
 	ctx    context.Context
 	cancel context.CancelFunc
-	
+
 	// Synchronization
-	mu     sync.RWMutex
+	mu sync.RWMutex
 }
 
 // NatsCQRSConfig contains configuration for the NatsCQRSAdapter
 type NatsCQRSConfig struct {
 	// URLs is a list of NATS server URLs
 	URLs []string
-	
+
 	// ConnectionTimeout is the timeout for connecting to NATS
 	ConnectionTimeout time.Duration
-	
+
 	// MaxReconnects is the maximum number of reconnect attempts
 	MaxReconnects int
-	
+
 	// ReconnectWait is the time to wait between reconnect attempts
 	ReconnectWait time.Duration
-	
+
 	// UseJetStream determines if JetStream should be used
 	UseJetStream bool
-	
+
 	// CommandStreamConfig is the configuration for the command stream
 	CommandStreamConfig *nats.StreamConfig
-	
+
 	// EventStreamConfig is the configuration for the event stream
 	EventStreamConfig *nats.StreamConfig
 }
@@ -108,7 +107,7 @@ func NewNatsCQRSAdapter(
 ) (*NatsCQRSAdapter, error) {
 	// Create a context for managing subscriptions
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	// Create NATS connection options
 	opts := []nats.Option{
 		nats.Name("tradSys-cqrs"),
@@ -125,14 +124,14 @@ func NewNatsCQRSAdapter(
 			logger.Error("NATS error", zap.Error(err), zap.String("subject", sub.Subject))
 		}),
 	}
-	
+
 	// Connect to NATS
 	nc, err := nats.Connect(config.URLs[0], opts...)
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("failed to connect to NATS: %w", err)
 	}
-	
+
 	// Create the adapter
 	adapter := &NatsCQRSAdapter{
 		logger:          logger,
@@ -145,7 +144,7 @@ func NewNatsCQRSAdapter(
 		ctx:             ctx,
 		cancel:          cancel,
 	}
-	
+
 	// Setup JetStream if enabled
 	if config.UseJetStream {
 		// Create JetStream context
@@ -155,7 +154,7 @@ func NewNatsCQRSAdapter(
 			cancel()
 			return nil, fmt.Errorf("failed to create JetStream context: %w", err)
 		}
-		
+
 		// Create the command stream if it doesn't exist
 		_, err = js.StreamInfo(config.CommandStreamConfig.Name)
 		if err != nil {
@@ -167,7 +166,7 @@ func NewNatsCQRSAdapter(
 				return nil, fmt.Errorf("failed to create command stream: %w", err)
 			}
 		}
-		
+
 		// Create the event stream if it doesn't exist
 		_, err = js.StreamInfo(config.EventStreamConfig.Name)
 		if err != nil {
@@ -179,10 +178,10 @@ func NewNatsCQRSAdapter(
 				return nil, fmt.Errorf("failed to create event stream: %w", err)
 			}
 		}
-		
+
 		adapter.js = js
 	}
-	
+
 	return adapter, nil
 }
 
@@ -196,7 +195,7 @@ func (a *NatsCQRSAdapter) Start() error {
 func (a *NatsCQRSAdapter) Stop() error {
 	// Cancel the context to stop all subscriptions
 	a.cancel()
-	
+
 	// Drain and close all subscriptions
 	for _, sub := range a.subs {
 		err := sub.Drain()
@@ -204,10 +203,10 @@ func (a *NatsCQRSAdapter) Stop() error {
 			a.logger.Error("Failed to drain subscription", zap.Error(err))
 		}
 	}
-	
+
 	// Close the connection
 	a.conn.Close()
-	
+
 	return nil
 }
 
@@ -221,24 +220,24 @@ func (a *NatsCQRSAdapter) RegisterCommandHandler(
 	if !ok {
 		return fmt.Errorf("command type %s does not implement Command interface", commandType.Name())
 	}
-	
+
 	// Get the command name
 	commandName := cmd.CommandName()
-	
+
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	
+
 	// Check if the handler is already registered
 	if _, exists := a.commandHandlers[commandName]; exists {
 		return fmt.Errorf("handler already registered for command %s", commandName)
 	}
-	
+
 	// Register the handler
 	a.commandHandlers[commandName] = handler
-	
+
 	// Subscribe to the command
 	subject := "commands." + commandName
-	
+
 	// Create a message handler
 	msgHandler := func(msg *nats.Msg) {
 		// Unmarshal the command
@@ -248,7 +247,7 @@ func (a *NatsCQRSAdapter) RegisterCommandHandler(
 			a.logger.Error("Failed to unmarshal command", zap.Error(err))
 			return
 		}
-		
+
 		// Handle the command
 		events, err := handler.Handle(context.Background(), cmd)
 		if err != nil {
@@ -258,7 +257,7 @@ func (a *NatsCQRSAdapter) RegisterCommandHandler(
 				zap.Error(err))
 			return
 		}
-		
+
 		// Save and publish events
 		if len(events) > 0 {
 			// Save events to the event store
@@ -270,7 +269,7 @@ func (a *NatsCQRSAdapter) RegisterCommandHandler(
 					zap.Error(err))
 				return
 			}
-			
+
 			// Publish events
 			for _, event := range events {
 				// Marshal the event
@@ -282,10 +281,10 @@ func (a *NatsCQRSAdapter) RegisterCommandHandler(
 						zap.Error(err))
 					continue
 				}
-				
+
 				// Create the subject
 				eventSubject := "events." + event.EventType
-				
+
 				// Publish the event
 				if a.js != nil {
 					// Publish with JetStream
@@ -294,7 +293,7 @@ func (a *NatsCQRSAdapter) RegisterCommandHandler(
 					// Publish with standard NATS
 					err = a.conn.Publish(eventSubject, payload)
 				}
-				
+
 				if err != nil {
 					a.logger.Error("Failed to publish event",
 						zap.String("event_type", event.EventType),
@@ -303,7 +302,7 @@ func (a *NatsCQRSAdapter) RegisterCommandHandler(
 				}
 			}
 		}
-		
+
 		// Acknowledge the message if using JetStream
 		if a.js != nil && msg.Reply != "" {
 			err = msg.Ack()
@@ -312,11 +311,11 @@ func (a *NatsCQRSAdapter) RegisterCommandHandler(
 			}
 		}
 	}
-	
+
 	// Subscribe to the subject
 	var sub *nats.Subscription
 	var err error
-	
+
 	if a.js != nil {
 		// Subscribe with JetStream
 		sub, err = a.js.QueueSubscribe(subject, "tradSys-command-handlers", msgHandler)
@@ -324,14 +323,14 @@ func (a *NatsCQRSAdapter) RegisterCommandHandler(
 		// Subscribe with standard NATS
 		sub, err = a.conn.QueueSubscribe(subject, "tradSys-command-handlers", msgHandler)
 	}
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to subscribe to command: %w", err)
 	}
-	
+
 	// Add the subscription to the list
 	a.subs = append(a.subs, sub)
-	
+
 	return nil
 }
 
@@ -342,16 +341,16 @@ func (a *NatsCQRSAdapter) RegisterEventHandler(
 ) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	
+
 	// Add the handler to the map
 	if _, ok := a.eventHandlers[eventType]; !ok {
 		a.eventHandlers[eventType] = make([]eventsourcing.EventHandler, 0)
 	}
 	a.eventHandlers[eventType] = append(a.eventHandlers[eventType], handler)
-	
+
 	// Subscribe to the event
 	subject := "events." + eventType
-	
+
 	// Create a message handler
 	msgHandler := func(msg *nats.Msg) {
 		// Unmarshal the event
@@ -361,7 +360,7 @@ func (a *NatsCQRSAdapter) RegisterEventHandler(
 			a.logger.Error("Failed to unmarshal event", zap.Error(err))
 			return
 		}
-		
+
 		// Handle the event
 		err = handler.HandleEvent(&event)
 		if err != nil {
@@ -370,7 +369,7 @@ func (a *NatsCQRSAdapter) RegisterEventHandler(
 				zap.String("aggregate_id", event.AggregateID),
 				zap.Error(err))
 		}
-		
+
 		// Acknowledge the message if using JetStream
 		if a.js != nil && msg.Reply != "" {
 			err = msg.Ack()
@@ -379,11 +378,11 @@ func (a *NatsCQRSAdapter) RegisterEventHandler(
 			}
 		}
 	}
-	
+
 	// Subscribe to the subject
 	var sub *nats.Subscription
 	var err error
-	
+
 	if a.js != nil {
 		// Subscribe with JetStream
 		sub, err = a.js.QueueSubscribe(subject, "tradSys-event-handlers", msgHandler)
@@ -391,14 +390,14 @@ func (a *NatsCQRSAdapter) RegisterEventHandler(
 		// Subscribe with standard NATS
 		sub, err = a.conn.QueueSubscribe(subject, "tradSys-event-handlers", msgHandler)
 	}
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to subscribe to event: %w", err)
 	}
-	
+
 	// Add the subscription to the list
 	a.subs = append(a.subs, sub)
-	
+
 	return nil
 }
 
@@ -409,10 +408,10 @@ func (a *NatsCQRSAdapter) DispatchCommand(ctx context.Context, cmd command.Comma
 	if err != nil {
 		return err
 	}
-	
+
 	// Create the subject
 	subject := "commands." + cmd.CommandName()
-	
+
 	// Publish the command
 	if a.js != nil {
 		// Publish with JetStream
@@ -421,11 +420,11 @@ func (a *NatsCQRSAdapter) DispatchCommand(ctx context.Context, cmd command.Comma
 		// Publish with standard NATS
 		err = a.conn.Publish(subject, payload)
 	}
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to publish command: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -433,14 +432,13 @@ func (a *NatsCQRSAdapter) DispatchCommand(ctx context.Context, cmd command.Comma
 func (a *NatsCQRSAdapter) CreateEventBusAdapter() eventbus.EventBus {
 	// Create a NATS event bus configuration
 	config := eventbus.DefaultNatsEventBusConfig()
-	
+
 	// Create a NATS event bus
 	bus, err := eventbus.NewNatsEventBus(a.eventStore, a.logger, config)
 	if err != nil {
 		a.logger.Error("Failed to create NATS event bus", zap.Error(err))
 		return nil
 	}
-	
+
 	return bus
 }
-

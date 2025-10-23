@@ -56,9 +56,9 @@ func (r *OrderRepository) GetByClientOrderID(ctx context.Context, userID, client
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
-		r.logger.Error("Failed to get order by client order ID", 
-			zap.Error(result.Error), 
-			zap.String("user_id", userID), 
+		r.logger.Error("Failed to get order by client order ID",
+			zap.Error(result.Error),
+			zap.String("user_id", userID),
 			zap.String("client_order_id", clientOrderID))
 		return nil, result.Error
 	}
@@ -79,9 +79,9 @@ func (r *OrderRepository) Update(ctx context.Context, order *db.Order) error {
 func (r *OrderRepository) UpdateStatus(ctx context.Context, id, status string) error {
 	result := r.db.WithContext(ctx).Model(&db.Order{}).Where("id = ?", id).Update("status", status)
 	if result.Error != nil {
-		r.logger.Error("Failed to update order status", 
-			zap.Error(result.Error), 
-			zap.String("order_id", id), 
+		r.logger.Error("Failed to update order status",
+			zap.Error(result.Error),
+			zap.String("order_id", id),
 			zap.String("status", status))
 		return result.Error
 	}
@@ -98,8 +98,8 @@ func (r *OrderRepository) GetOrdersByUserID(ctx context.Context, userID string, 
 		Offset(offset).
 		Find(&orders)
 	if result.Error != nil {
-		r.logger.Error("Failed to get orders by user ID", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to get orders by user ID",
+			zap.Error(result.Error),
 			zap.String("user_id", userID))
 		return nil, result.Error
 	}
@@ -116,8 +116,8 @@ func (r *OrderRepository) GetOrdersBySymbol(ctx context.Context, symbol string, 
 		Offset(offset).
 		Find(&orders)
 	if result.Error != nil {
-		r.logger.Error("Failed to get orders by symbol", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to get orders by symbol",
+			zap.Error(result.Error),
 			zap.String("symbol", symbol))
 		return nil, result.Error
 	}
@@ -132,8 +132,8 @@ func (r *OrderRepository) GetActiveOrdersByUserID(ctx context.Context, userID st
 		Order("created_at DESC").
 		Find(&orders)
 	if result.Error != nil {
-		r.logger.Error("Failed to get active orders by user ID", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to get active orders by user ID",
+			zap.Error(result.Error),
 			zap.String("user_id", userID))
 		return nil, result.Error
 	}
@@ -144,7 +144,7 @@ func (r *OrderRepository) GetActiveOrdersByUserID(ctx context.Context, userID st
 func (r *OrderRepository) GetExpiredOrders(ctx context.Context, now time.Time) ([]*db.Order, error) {
 	var orders []*db.Order
 	result := r.db.WithContext(ctx).
-		Where("status IN ? AND expires_at <= ? AND expires_at IS NOT NULL", 
+		Where("status IN ? AND expires_at <= ? AND expires_at IS NOT NULL",
 			[]string{"new", "partially_filled"}, now).
 		Find(&orders)
 	if result.Error != nil {
@@ -159,8 +159,8 @@ func (r *OrderRepository) BatchUpdate(ctx context.Context, orders []*db.Order) e
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		for _, order := range orders {
 			if err := tx.Save(order).Error; err != nil {
-				r.logger.Error("Failed to update order in batch", 
-					zap.Error(err), 
+				r.logger.Error("Failed to update order in batch",
+					zap.Error(err),
 					zap.String("order_id", order.ID))
 				return err
 			}
@@ -174,8 +174,8 @@ func (r *OrderRepository) CountOrdersByUserID(ctx context.Context, userID string
 	var count int64
 	result := r.db.WithContext(ctx).Model(&db.Order{}).Where("user_id = ?", userID).Count(&count)
 	if result.Error != nil {
-		r.logger.Error("Failed to count orders by user ID", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to count orders by user ID",
+			zap.Error(result.Error),
 			zap.String("user_id", userID))
 		return 0, result.Error
 	}
@@ -193,11 +193,10 @@ func (r *OrderRepository) GetOrdersWithTrades(ctx context.Context, userID string
 		Offset(offset).
 		Find(&orders)
 	if result.Error != nil {
-		r.logger.Error("Failed to get orders with trades", 
-			zap.Error(result.Error), 
+		r.logger.Error("Failed to get orders with trades",
+			zap.Error(result.Error),
 			zap.String("user_id", userID))
 		return nil, result.Error
 	}
 	return orders, nil
 }
-

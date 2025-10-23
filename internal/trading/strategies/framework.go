@@ -8,6 +8,7 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"github.com/abdoElHodaky/tradSys/internal/orders"
+	"github.com/abdoElHodaky/tradSys/internal/services"
 	"github.com/abdoElHodaky/tradSys/proto/marketdata"
 	orderspb "github.com/abdoElHodaky/tradSys/proto/orders"
 	"go.uber.org/zap"
@@ -17,47 +18,45 @@ import (
 type Strategy interface {
 	// Initialize initializes the strategy
 	Initialize(ctx context.Context) error
-	
+
 	// Start starts the strategy
 	Start(ctx context.Context) error
-	
+
 	// Stop stops the strategy
 	Stop(ctx context.Context) error
-	
+
 	// OnMarketData processes market data updates
 	OnMarketData(ctx context.Context, data *marketdata.MarketDataResponse) error
-	
+
 	// OnOrderUpdate processes order updates
-	OnOrderUpdate(ctx context.Context, order *orders.OrderResponse) error
-	OnOrderUpdate(ctx context.Context, order *orderspb.OrderResponse) error
-	OnOrderUpdate(ctx context.Context, order *orders.OrderResponse) error
-	
+	OnOrderUpdate(ctx context.Context, order *services.Order) error
+
 	// GetName returns the name of the strategy
 	GetName() string
-	
+
 	// GetParameters returns the strategy parameters
 	GetParameters() map[string]interface{}
-	
+
 	// SetParameters sets the strategy parameters
 	SetParameters(params map[string]interface{}) error
 }
 
 // StrategyManager manages trading strategies
 type StrategyManager struct {
-	logger         *zap.Logger
-	strategies     map[string]Strategy
-	running        map[string]bool
-	mu             sync.RWMutex
-	orderService   orders.OrderService
-	pairRepo       *repositories.PairRepository
-	statsRepo      *repositories.PairStatisticsRepository
-	positionRepo   *repositories.PairPositionRepository
+	logger       *zap.Logger
+	strategies   map[string]Strategy
+	running      map[string]bool
+	mu           sync.RWMutex
+	orderService services.OrderService
+	pairRepo     *repositories.PairRepository
+	statsRepo    *repositories.PairStatisticsRepository
+	positionRepo *repositories.PairPositionRepository
 }
 
 // NewStrategyManager creates a new strategy manager
 func NewStrategyManager(
 	logger *zap.Logger,
-	orderService orders.OrderService,
+	orderService services.OrderService,
 	pairRepo *repositories.PairRepository,
 	statsRepo *repositories.PairStatisticsRepository,
 	positionRepo *repositories.PairPositionRepository,
@@ -70,18 +69,6 @@ func NewStrategyManager(
 		pairRepo:     pairRepo,
 		statsRepo:    statsRepo,
 		positionRepo: positionRepo,
-	logger     *zap.Logger
-	strategies map[string]Strategy
-	running    map[string]bool
-	mu         sync.RWMutex
-}
-
-// NewStrategyManager creates a new strategy manager
-func NewStrategyManager(logger *zap.Logger) *StrategyManager {
-	return &StrategyManager{
-		logger:     logger,
-		strategies: make(map[string]Strategy),
-		running:    make(map[string]bool),
 	}
 }
 
@@ -89,17 +76,17 @@ func NewStrategyManager(logger *zap.Logger) *StrategyManager {
 func (m *StrategyManager) RegisterStrategy(strategy Strategy) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	name := strategy.GetName()
 	if _, exists := m.strategies[name]; exists {
 		return ErrStrategyAlreadyRegistered
 	}
-	
+
 	m.strategies[name] = strategy
 	m.running[name] = false
-	
+
 	m.logger.Info("Strategy registered", zap.String("name", name))
-	
+
 	return nil
 }
 
@@ -107,11 +94,11 @@ func (m *StrategyManager) RegisterStrategy(strategy Strategy) error {
 func (m *StrategyManager) UnregisterStrategy(name string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	if _, exists := m.strategies[name]; !exists {
 		return ErrStrategyNotFound
 	}
-	
+
 	// Stop the strategy if it's running
 	if m.running[name] {
 		m.mu.Unlock()
@@ -121,12 +108,12 @@ func (m *StrategyManager) UnregisterStrategy(name string) error {
 		}
 		m.mu.Lock()
 	}
-	
+
 	delete(m.strategies, name)
 	delete(m.running, name)
-	
+
 	m.logger.Info("Strategy unregistered", zap.String("name", name))
-	
+
 	return nil
 }
 
@@ -134,24 +121,24 @@ func (m *StrategyManager) UnregisterStrategy(name string) error {
 func (m *StrategyManager) StartStrategy(ctx context.Context, name string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	strategy, exists := m.strategies[name]
 	if !exists {
 		return ErrStrategyNotFound
 	}
-	
+
 	if m.running[name] {
 		return ErrStrategyAlreadyRunning
 	}
-	
+
 	if err := strategy.Start(ctx); err != nil {
 		return err
 	}
-	
+
 	m.running[name] = true
-	
+
 	m.logger.Info("Strategy started", zap.String("name", name))
-	
+
 	return nil
 }
 
@@ -159,24 +146,24 @@ func (m *StrategyManager) StartStrategy(ctx context.Context, name string) error 
 func (m *StrategyManager) StopStrategy(ctx context.Context, name string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	strategy, exists := m.strategies[name]
 	if !exists {
 		return ErrStrategyNotFound
 	}
-	
+
 	if !m.running[name] {
 		return ErrStrategyNotRunning
 	}
-	
+
 	if err := strategy.Stop(ctx); err != nil {
 		return err
 	}
-	
+
 	m.running[name] = false
-	
+
 	m.logger.Info("Strategy stopped", zap.String("name", name))
-	
+
 	return nil
 }
 
@@ -184,12 +171,12 @@ func (m *StrategyManager) StopStrategy(ctx context.Context, name string) error {
 func (m *StrategyManager) GetStrategy(name string) (Strategy, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	strategy, exists := m.strategies[name]
 	if !exists {
 		return nil, ErrStrategyNotFound
 	}
-	
+
 	return strategy, nil
 }
 
@@ -197,12 +184,12 @@ func (m *StrategyManager) GetStrategy(name string) (Strategy, error) {
 func (m *StrategyManager) ListStrategies() []string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	var strategies []string
 	for name := range m.strategies {
 		strategies = append(strategies, name)
 	}
-	
+
 	return strategies
 }
 
@@ -210,15 +197,15 @@ func (m *StrategyManager) ListStrategies() []string {
 func (m *StrategyManager) IsStrategyRunning(name string) (bool, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	if _, exists := m.strategies[name]; !exists {
 		return false, ErrStrategyNotFound
 	}
-	
+
 	return m.running[name], nil
 }
 
-//<<<<<< codegen-bot/fix-order-model-syntax
+// <<<<<< codegen-bot/fix-order-model-syntax
 // CreatePairsStrategy creates a new statistical arbitrage strategy
 func (m *StrategyManager) CreatePairsStrategy(ctx context.Context, params StatisticalArbitrageParams) (Strategy, error) {
 	// Create a new statistical arbitrage strategy
@@ -230,19 +217,19 @@ func (m *StrategyManager) CreatePairsStrategy(ctx context.Context, params Statis
 		m.statsRepo,
 		m.positionRepo,
 	)
-	
+
 	// Register the strategy
 	if err := m.RegisterStrategy(strategy); err != nil {
 		return nil, err
 	}
-	
+
 	// Initialize the strategy
 	if err := strategy.Initialize(ctx); err != nil {
 		// Unregister the strategy if initialization fails
 		m.UnregisterStrategy(strategy.GetName())
 		return nil, err
 	}
-	
+
 	return strategy, nil
 }
 
@@ -250,7 +237,7 @@ func (m *StrategyManager) CreatePairsStrategy(ctx context.Context, params Statis
 func (m *StrategyManager) ProcessMarketData(ctx context.Context, data *marketdata.MarketDataResponse) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	for name, strategy := range m.strategies {
 		if m.running[name] {
 			go func(s Strategy, d *marketdata.MarketDataResponse) {
@@ -265,15 +252,13 @@ func (m *StrategyManager) ProcessMarketData(ctx context.Context, data *marketdat
 }
 
 // ProcessOrderUpdate processes order updates for all running strategies
-func (m *StrategyManager) ProcessOrderUpdate(ctx context.Context, order *orders.OrderResponse) {
-func (m *StrategyManager) ProcessOrderUpdate(ctx context.Context, order *orderspb.OrderResponse) {
-func (m *StrategyManager) ProcessOrderUpdate(ctx context.Context, order *orders.OrderResponse) {
+func (m *StrategyManager) ProcessOrderUpdate(ctx context.Context, order *services.Order) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	for name, strategy := range m.strategies {
 		if m.running[name] {
-			go func(s Strategy, o *orders.OrderResponse) {
+			go func(s Strategy, o *services.Order) {
 				if err := s.OnOrderUpdate(ctx, o); err != nil {
 					m.logger.Error("Failed to process order update",
 						zap.Error(err),
@@ -312,13 +297,13 @@ func (s *BaseStrategy) Initialize(ctx context.Context) error {
 func (s *BaseStrategy) Start(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	if s.running {
 		return ErrStrategyAlreadyRunning
 	}
-	
+
 	s.running = true
-	
+
 	return nil
 }
 
@@ -326,13 +311,13 @@ func (s *BaseStrategy) Start(ctx context.Context) error {
 func (s *BaseStrategy) Stop(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	if !s.running {
 		return ErrStrategyNotRunning
 	}
-	
+
 	s.running = false
-	
+
 	return nil
 }
 
@@ -343,9 +328,7 @@ func (s *BaseStrategy) OnMarketData(ctx context.Context, data *marketdata.Market
 }
 
 // OnOrderUpdate processes order updates
-func (s *BaseStrategy) OnOrderUpdate(ctx context.Context, order *orders.OrderResponse) error {
-func (s *BaseStrategy) OnOrderUpdate(ctx context.Context, order *orderspb.OrderResponse) error {
-func (s *BaseStrategy) OnOrderUpdate(ctx context.Context, order *orders.OrderResponse) error {
+func (s *BaseStrategy) OnOrderUpdate(ctx context.Context, order *services.Order) error {
 	// To be implemented by derived strategies
 	return nil
 }
@@ -359,13 +342,13 @@ func (s *BaseStrategy) GetName() string {
 func (s *BaseStrategy) GetParameters() map[string]interface{} {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	// Create a copy to avoid race conditions
 	params := make(map[string]interface{})
 	for k, v := range s.parameters {
 		params[k] = v
 	}
-	
+
 	return params
 }
 
@@ -373,13 +356,13 @@ func (s *BaseStrategy) GetParameters() map[string]interface{} {
 func (s *BaseStrategy) SetParameters(params map[string]interface{}) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	// Validate parameters
 	for k, v := range params {
 		// Add validation logic here if needed
 		s.parameters[k] = v
 	}
-	
+
 	return nil
 }
 
@@ -387,7 +370,7 @@ func (s *BaseStrategy) SetParameters(params map[string]interface{}) error {
 func (s *BaseStrategy) IsRunning() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	return s.running
 }
 
@@ -405,15 +388,15 @@ type StrategyResult struct {
 
 // BacktestResult represents the result of a backtest
 type BacktestResult struct {
-	Strategy      string
-	StartTime     time.Time
-	EndTime       time.Time
-	Symbols       []string
+	Strategy       string
+	StartTime      time.Time
+	EndTime        time.Time
+	Symbols        []string
 	InitialCapital float64
-	FinalCapital  float64
-	PnL           float64
-	Trades        []models.Trade
-	Metrics       map[string]float64
+	FinalCapital   float64
+	PnL            float64
+	Trades         []models.Trade
+	Metrics        map[string]float64
 }
 
 // StatisticalArbitrageParams contains parameters for the statistical arbitrage strategy
@@ -433,11 +416,11 @@ type StatisticalArbitrageParams struct {
 
 // Errors
 var (
-	ErrStrategyNotFound         = NewError("strategy not found")
+	ErrStrategyNotFound          = NewError("strategy not found")
 	ErrStrategyAlreadyRegistered = NewError("strategy already registered")
-	ErrStrategyAlreadyRunning   = NewError("strategy already running")
-	ErrStrategyNotRunning       = NewError("strategy not running")
-	ErrInvalidParameters        = NewError("invalid parameters")
+	ErrStrategyAlreadyRunning    = NewError("strategy already running")
+	ErrStrategyNotRunning        = NewError("strategy not running")
+	ErrInvalidParameters         = NewError("invalid parameters")
 )
 
 // Error represents a strategy error

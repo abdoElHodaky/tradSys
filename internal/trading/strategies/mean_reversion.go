@@ -14,17 +14,17 @@ import (
 // MeanReversionStrategy implements a mean reversion trading strategy
 type MeanReversionStrategy struct {
 	BaseStrategy
-	lookbackPeriod    int
+	lookbackPeriod     int
 	deviationThreshold float64
-	bollingerPeriod   int
-	bollingerStdDev   float64
-	positionSize      float64
-	stopLossPercent   float64
-	takeProfitPercent float64
-	prices            map[string][]float64
-	means             map[string]float64
-	stdDevs           map[string]float64
-	mutex             sync.RWMutex
+	bollingerPeriod    int
+	bollingerStdDev    float64
+	positionSize       float64
+	stopLossPercent    float64
+	takeProfitPercent  float64
+	prices             map[string][]float64
+	means              map[string]float64
+	stdDevs            map[string]float64
+	mutex              sync.RWMutex
 }
 
 // MeanReversionStrategyParams contains parameters for the mean reversion strategy

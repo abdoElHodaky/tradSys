@@ -15,34 +15,34 @@ import (
 
 // RealTimeRiskEngine provides real-time risk management with HFT performance
 type RealTimeRiskEngine struct {
-	config           *RiskEngineConfig
-	logger           *zap.Logger
-	positionManager  *PositionManager
-	limitManager     *LimitManager
-	varCalculator    *VaRCalculator
-	circuitBreaker   *CircuitBreaker
-	metrics          *RiskMetrics
-	eventPool        *pool.ObjectPool
-	checkPool        *pool.ObjectPool
-	isRunning        int32
-	stopChannel      chan struct{}
-	eventChannel     chan *RiskEvent
-	mu               sync.RWMutex
+	config          *RiskEngineConfig
+	logger          *zap.Logger
+	positionManager *PositionManager
+	limitManager    *LimitManager
+	varCalculator   *VaRCalculator
+	circuitBreaker  *CircuitBreaker
+	metrics         *RiskMetrics
+	eventPool       *pool.ObjectPool
+	checkPool       *pool.ObjectPool
+	isRunning       int32
+	stopChannel     chan struct{}
+	eventChannel    chan *RiskEvent
+	mu              sync.RWMutex
 }
 
 // RiskEngineConfig contains configuration for the risk engine
 type RiskEngineConfig struct {
-	MaxLatency           time.Duration `json:"max_latency"`           // Target: <10μs
-	EnablePreTradeChecks bool          `json:"enable_pre_trade_checks"`
-	EnablePostTradeChecks bool         `json:"enable_post_trade_checks"`
-	EnableVaRCalculation bool          `json:"enable_var_calculation"`
-	EnableCircuitBreaker bool          `json:"enable_circuit_breaker"`
-	VaRConfidenceLevel   float64       `json:"var_confidence_level"`  // 95%, 99%
-	VaRTimeHorizon       time.Duration `json:"var_time_horizon"`      // 1 day
-	MaxPositionSize      float64       `json:"max_position_size"`
-	MaxOrderSize         float64       `json:"max_order_size"`
-	MaxDailyLoss         float64       `json:"max_daily_loss"`
-	StressTestEnabled    bool          `json:"stress_test_enabled"`
+	MaxLatency            time.Duration `json:"max_latency"` // Target: <10μs
+	EnablePreTradeChecks  bool          `json:"enable_pre_trade_checks"`
+	EnablePostTradeChecks bool          `json:"enable_post_trade_checks"`
+	EnableVaRCalculation  bool          `json:"enable_var_calculation"`
+	EnableCircuitBreaker  bool          `json:"enable_circuit_breaker"`
+	VaRConfidenceLevel    float64       `json:"var_confidence_level"` // 95%, 99%
+	VaRTimeHorizon        time.Duration `json:"var_time_horizon"`     // 1 day
+	MaxPositionSize       float64       `json:"max_position_size"`
+	MaxOrderSize          float64       `json:"max_order_size"`
+	MaxDailyLoss          float64       `json:"max_daily_loss"`
+	StressTestEnabled     bool          `json:"stress_test_enabled"`
 }
 
 // RiskMetrics tracks risk engine performance
@@ -58,85 +58,85 @@ type RiskMetrics struct {
 
 // PositionManager manages real-time positions
 type PositionManager struct {
-	positions    sync.Map // map[string]*Position
-	totalPnL     float64
-	dailyPnL     float64
+	positions     sync.Map // map[string]*Position
+	totalPnL      float64
+	dailyPnL      float64
 	unrealizedPnL float64
 	realizedPnL   float64
-	mu           sync.RWMutex
+	mu            sync.RWMutex
 }
 
 // Position represents a trading position
 type Position struct {
-	Symbol          string    `json:"symbol"`
-	Quantity        float64   `json:"quantity"`
-	AveragePrice    float64   `json:"average_price"`
-	MarketPrice     float64   `json:"market_price"`
-	UnrealizedPnL   float64   `json:"unrealized_pnl"`
-	RealizedPnL     float64   `json:"realized_pnl"`
-	Delta           float64   `json:"delta"`
-	Gamma           float64   `json:"gamma"`
-	Vega            float64   `json:"vega"`
-	Theta           float64   `json:"theta"`
-	LastUpdateTime  time.Time `json:"last_update_time"`
+	Symbol         string    `json:"symbol"`
+	Quantity       float64   `json:"quantity"`
+	AveragePrice   float64   `json:"average_price"`
+	MarketPrice    float64   `json:"market_price"`
+	UnrealizedPnL  float64   `json:"unrealized_pnl"`
+	RealizedPnL    float64   `json:"realized_pnl"`
+	Delta          float64   `json:"delta"`
+	Gamma          float64   `json:"gamma"`
+	Vega           float64   `json:"vega"`
+	Theta          float64   `json:"theta"`
+	LastUpdateTime time.Time `json:"last_update_time"`
 }
 
 // LimitManager manages trading limits
 type LimitManager struct {
-	positionLimits map[string]float64 // symbol -> max position
-	orderLimits    map[string]float64 // symbol -> max order size
-	dailyLossLimit float64
+	positionLimits   map[string]float64 // symbol -> max position
+	orderLimits      map[string]float64 // symbol -> max order size
+	dailyLossLimit   float64
 	currentDailyLoss float64
-	mu             sync.RWMutex
+	mu               sync.RWMutex
 }
 
 // VaRCalculator calculates Value at Risk
 type VaRCalculator struct {
-	enabled          bool
-	confidenceLevel  float64
-	timeHorizon      time.Duration
+	enabled           bool
+	confidenceLevel   float64
+	timeHorizon       time.Duration
 	historicalReturns map[string][]float64 // symbol -> returns
 	correlationMatrix map[string]map[string]float64
-	currentVaR       float64
-	lastCalculation  time.Time
-	mu               sync.RWMutex
+	currentVaR        float64
+	lastCalculation   time.Time
+	mu                sync.RWMutex
 }
 
 // CircuitBreaker implements circuit breaker functionality
 type CircuitBreaker struct {
-	enabled           bool
-	volatilityThreshold float64
+	enabled              bool
+	volatilityThreshold  float64
 	priceChangeThreshold float64
-	volumeThreshold   float64
-	isTripped         bool
-	tripTime          time.Time
-	cooldownPeriod    time.Duration
-	referencePrice    float64
-	mu                sync.RWMutex
+	volumeThreshold      float64
+	isTripped            bool
+	tripTime             time.Time
+	cooldownPeriod       time.Duration
+	referencePrice       float64
+	mu                   sync.RWMutex
 }
 
 // RiskEvent represents a risk management event
 type RiskEvent struct {
-	Type        RiskEventType `json:"type"`
-	Symbol      string        `json:"symbol"`
-	Order       *types.Order  `json:"order,omitempty"`
-	Position    *Position     `json:"position,omitempty"`
-	RiskCheck   *RiskCheck    `json:"risk_check,omitempty"`
-	Timestamp   time.Time     `json:"timestamp"`
-	Severity    RiskSeverity  `json:"severity"`
-	Message     string        `json:"message"`
+	Type      RiskEventType `json:"type"`
+	Symbol    string        `json:"symbol"`
+	Order     *types.Order  `json:"order,omitempty"`
+	Position  *Position     `json:"position,omitempty"`
+	RiskCheck *RiskCheck    `json:"risk_check,omitempty"`
+	Timestamp time.Time     `json:"timestamp"`
+	Severity  RiskSeverity  `json:"severity"`
+	Message   string        `json:"message"`
 }
 
 // RiskEventType defines types of risk events
 type RiskEventType string
 
 const (
-	EventPreTradeCheck    RiskEventType = "pre_trade_check"
-	EventPostTradeCheck   RiskEventType = "post_trade_check"
-	EventLimitBreach      RiskEventType = "limit_breach"
-	EventCircuitBreaker   RiskEventType = "circuit_breaker"
-	EventVaRCalculation   RiskEventType = "var_calculation"
-	EventPositionUpdate   RiskEventType = "position_update"
+	EventPreTradeCheck  RiskEventType = "pre_trade_check"
+	EventPostTradeCheck RiskEventType = "post_trade_check"
+	EventLimitBreach    RiskEventType = "limit_breach"
+	EventCircuitBreaker RiskEventType = "circuit_breaker"
+	EventVaRCalculation RiskEventType = "var_calculation"
+	EventPositionUpdate RiskEventType = "position_update"
 )
 
 // RiskSeverity defines risk event severity levels
@@ -151,23 +151,23 @@ const (
 
 // RiskCheck represents a risk check result
 type RiskCheck struct {
-	CheckType    string    `json:"check_type"`
-	Passed       bool      `json:"passed"`
-	CurrentValue float64   `json:"current_value"`
-	LimitValue   float64   `json:"limit_value"`
-	Message      string    `json:"message"`
+	CheckType    string        `json:"check_type"`
+	Passed       bool          `json:"passed"`
+	CurrentValue float64       `json:"current_value"`
+	LimitValue   float64       `json:"limit_value"`
+	Message      string        `json:"message"`
 	Latency      time.Duration `json:"latency"`
-	Timestamp    time.Time `json:"timestamp"`
+	Timestamp    time.Time     `json:"timestamp"`
 }
 
 // NewRealTimeRiskEngine creates a new real-time risk engine
 func NewRealTimeRiskEngine(config *RiskEngineConfig, logger *zap.Logger) *RealTimeRiskEngine {
 	engine := &RealTimeRiskEngine{
-		config:      config,
-		logger:      logger,
-		metrics:     &RiskMetrics{LastUpdateTime: time.Now()},
-		stopChannel: make(chan struct{}),
-		eventChannel: make(chan *RiskEvent, 10000),
+		config:          config,
+		logger:          logger,
+		metrics:         &RiskMetrics{LastUpdateTime: time.Now()},
+		stopChannel:     make(chan struct{}),
+		eventChannel:    make(chan *RiskEvent, 10000),
 		positionManager: &PositionManager{},
 		limitManager: &LimitManager{
 			positionLimits: make(map[string]float64),
@@ -183,8 +183,8 @@ func NewRealTimeRiskEngine(config *RiskEngineConfig, logger *zap.Logger) *RealTi
 		},
 		circuitBreaker: &CircuitBreaker{
 			enabled:              config.EnableCircuitBreaker,
-			volatilityThreshold:  0.05, // 5% volatility threshold
-			priceChangeThreshold: 0.10, // 10% price change threshold
+			volatilityThreshold:  0.05,    // 5% volatility threshold
+			priceChangeThreshold: 0.10,    // 10% price change threshold
 			volumeThreshold:      1000000, // Volume threshold
 			cooldownPeriod:       time.Minute * 5,
 		},
@@ -244,7 +244,7 @@ func (e *RealTimeRiskEngine) PreTradeCheck(order *types.Order) (*RiskCheck, erro
 	defer func() {
 		latency := time.Since(startTime)
 		e.updateMetrics(latency)
-		
+
 		// Log if latency exceeds target
 		if latency > e.config.MaxLatency {
 			e.logger.Warn("Pre-trade check exceeded latency target",
@@ -379,7 +379,7 @@ func (e *RealTimeRiskEngine) checkOrderSizeLimits(order *types.Order) error {
 func (e *RealTimeRiskEngine) checkPositionLimits(order *types.Order) error {
 	// Get current position
 	position := e.getPosition(order.Symbol)
-	
+
 	// Calculate new position after order
 	var newQuantity float64
 	if order.Side == types.OrderSideBuy {
@@ -433,7 +433,7 @@ func (e *RealTimeRiskEngine) getPosition(symbol string) *Position {
 	if pos, exists := e.positionManager.positions.Load(symbol); exists {
 		return pos.(*Position)
 	}
-	
+
 	// Return empty position if not found
 	return &Position{
 		Symbol:         symbol,
@@ -449,7 +449,7 @@ func (e *RealTimeRiskEngine) updatePosition(trade *Trade) {
 	// This is a simplified implementation
 	// In practice, this would be more complex with proper P&L calculation
 	position := e.getPosition(trade.Symbol)
-	
+
 	// Update position quantity and average price
 	// This is a basic implementation - real systems would be more sophisticated
 	if trade.TakerSide == types.OrderSideBuy {
@@ -457,7 +457,7 @@ func (e *RealTimeRiskEngine) updatePosition(trade *Trade) {
 	} else {
 		position.Quantity -= trade.Quantity
 	}
-	
+
 	position.LastUpdateTime = time.Now()
 	e.positionManager.positions.Store(trade.Symbol, position)
 }
@@ -467,7 +467,7 @@ func (e *RealTimeRiskEngine) updateMetrics(latency time.Duration) {
 	if latency > e.metrics.MaxLatency {
 		e.metrics.MaxLatency = latency
 	}
-	
+
 	// Simple moving average
 	e.metrics.AverageLatency = (e.metrics.AverageLatency + latency) / 2
 	e.metrics.LastUpdateTime = time.Now()
@@ -547,23 +547,23 @@ func (e *RealTimeRiskEngine) calculateVaR() {
 		e.logger.Debug("No positions for VaR calculation")
 		return
 	}
-	
+
 	// Calculate portfolio value
 	portfolioValue := e.calculatePortfolioValue(positions)
-	
+
 	// Historical simulation VaR (simplified)
 	// In production, this would use actual historical price data
-	volatility := 0.02      // 2% daily volatility assumption
-	
+	volatility := 0.02 // 2% daily volatility assumption
+
 	// Calculate VaR using normal distribution approximation
 	// VaR = Portfolio Value * Z-score * Volatility
 	zScore := 1.645 // 95% confidence level z-score
 	var95 := portfolioValue * zScore * volatility
-	
+
 	// Store VaR result
 	e.varCalculator.currentVaR = var95
 	e.varCalculator.lastCalculation = time.Now()
-	
+
 	e.logger.Info("VaR calculation completed",
 		zap.Float64("portfolio_value", portfolioValue),
 		zap.Float64("var_95", var95),
@@ -592,12 +592,12 @@ func (e *RealTimeRiskEngine) monitorCircuitBreaker(ctx context.Context) {
 func (e *RealTimeRiskEngine) checkCircuitBreakerConditions() {
 	// This is a simplified implementation
 	// Real systems would monitor market conditions and trigger based on volatility, etc.
-	
+
 	e.circuitBreaker.mu.Lock()
 	defer e.circuitBreaker.mu.Unlock()
 
 	// Check if circuit breaker should be reset
-	if e.circuitBreaker.isTripped && 
+	if e.circuitBreaker.isTripped &&
 		time.Since(e.circuitBreaker.tripTime) > e.circuitBreaker.cooldownPeriod {
 		e.circuitBreaker.isTripped = false
 		e.logger.Info("Circuit breaker reset after cooldown period")
@@ -684,19 +684,19 @@ func (e *RealTimeRiskEngine) GetPosition(symbol string) *Position {
 
 // Trade represents a trade (imported from order matching)
 type Trade struct {
-	ID         string
-	Symbol     string
-	Price      float64
-	Quantity   float64
-	TakerSide  types.OrderSide
-	Timestamp  time.Time
+	ID        string
+	Symbol    string
+	Price     float64
+	Quantity  float64
+	TakerSide types.OrderSide
+	Timestamp time.Time
 }
 
 // getPortfolioPositions returns all current positions
 func (e *RealTimeRiskEngine) getPortfolioPositions() map[string]*Position {
 	e.positionManager.mu.RLock()
 	defer e.positionManager.mu.RUnlock()
-	
+
 	positions := make(map[string]*Position)
 	e.positionManager.positions.Range(func(key, value interface{}) bool {
 		symbol := key.(string)
@@ -711,26 +711,26 @@ func (e *RealTimeRiskEngine) getPortfolioPositions() map[string]*Position {
 		}
 		return true
 	})
-	
+
 	return positions
 }
 
 // calculatePortfolioValue calculates the total portfolio value
 func (e *RealTimeRiskEngine) calculatePortfolioValue(positions map[string]*Position) float64 {
 	totalValue := 0.0
-	
+
 	for symbol, position := range positions {
 		// In production, you would get current market price
 		// For now, use the average price as an approximation
 		positionValue := position.Quantity * position.AveragePrice
 		totalValue += positionValue
-		
+
 		e.logger.Debug("Position value calculated",
 			zap.String("symbol", symbol),
 			zap.Float64("quantity", position.Quantity),
 			zap.Float64("avg_price", position.AveragePrice),
 			zap.Float64("position_value", positionValue))
 	}
-	
+
 	return totalValue
 }

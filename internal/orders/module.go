@@ -19,7 +19,7 @@ func NewFxService(
 	orderEngine *order_matching.Engine,
 ) *Service {
 	service := NewService(orderEngine, logger)
-	
+
 	lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting order management service")
@@ -31,6 +31,6 @@ func NewFxService(
 			return nil
 		},
 	})
-	
+
 	return service
 }

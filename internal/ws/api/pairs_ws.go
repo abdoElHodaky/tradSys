@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"sync"
 	"time"
-	
+
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"github.com/gorilla/websocket"
@@ -44,7 +44,7 @@ func (h *PairsWebSocketHandler) HandleConnection(conn *websocket.Conn) {
 	h.clientsMu.Lock()
 	h.clients[conn] = make(map[string]bool)
 	h.clientsMu.Unlock()
-	
+
 	// Clean up on disconnect
 	defer func() {
 		h.clientsMu.Lock()
@@ -52,10 +52,10 @@ func (h *PairsWebSocketHandler) HandleConnection(conn *websocket.Conn) {
 		h.clientsMu.Unlock()
 		conn.Close()
 	}()
-	
+
 	// Start a goroutine to handle messages from the client
 	go h.readPump(conn)
-	
+
 	// Start a goroutine to send periodic updates
 	go h.writePump(conn)
 }
@@ -70,18 +70,18 @@ func (h *PairsWebSocketHandler) readPump(conn *websocket.Conn) {
 			}
 			break
 		}
-		
+
 		// Parse the message
 		var msg struct {
-			Action string   `json:"action"`
+			Action  string   `json:"action"`
 			PairIDs []string `json:"pair_ids"`
 		}
-		
+
 		if err := json.Unmarshal(message, &msg); err != nil {
 			h.logger.Error("Failed to parse WebSocket message", zap.Error(err))
 			continue
 		}
-		
+
 		// Handle the message
 		switch msg.Action {
 		case "subscribe":
@@ -90,14 +90,14 @@ func (h *PairsWebSocketHandler) readPump(conn *websocket.Conn) {
 				h.clients[conn][pairID] = true
 			}
 			h.clientsMu.Unlock()
-			
+
 		case "unsubscribe":
 			h.clientsMu.Lock()
 			for _, pairID := range msg.PairIDs {
 				delete(h.clients[conn], pairID)
 			}
 			h.clientsMu.Unlock()
-			
+
 		default:
 			h.logger.Warn("Unknown WebSocket action", zap.String("action", msg.Action))
 		}
@@ -108,7 +108,7 @@ func (h *PairsWebSocketHandler) readPump(conn *websocket.Conn) {
 func (h *PairsWebSocketHandler) writePump(conn *websocket.Conn) {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -119,12 +119,12 @@ func (h *PairsWebSocketHandler) writePump(conn *websocket.Conn) {
 				pairIDs = append(pairIDs, pairID)
 			}
 			h.clientsMu.RUnlock()
-			
+
 			// If no subscriptions, continue
 			if len(pairIDs) == 0 {
 				continue
 			}
-			
+
 			// Get updates for each pair
 			for _, pairID := range pairIDs {
 				// Get latest statistics
@@ -132,17 +132,17 @@ func (h *PairsWebSocketHandler) writePump(conn *websocket.Conn) {
 				if err != nil {
 					continue
 				}
-				
+
 				// Get open positions
 				positions, err := h.positionRepo.GetOpenPositions(context.Background(), pairID)
 				if err != nil {
 					continue
 				}
-				
+
 				// Create update message
 				update := struct {
-					Type      string                `json:"type"`
-					PairID    string                `json:"pair_id"`
+					Type      string                 `json:"type"`
+					PairID    string                 `json:"pair_id"`
 					Stats     *models.PairStatistics `json:"stats"`
 					Positions []*models.PairPosition `json:"positions"`
 				}{
@@ -151,7 +151,7 @@ func (h *PairsWebSocketHandler) writePump(conn *websocket.Conn) {
 					Stats:     stats,
 					Positions: positions,
 				}
-				
+
 				// Send update
 				if err := conn.WriteJSON(update); err != nil {
 					h.logger.Error("Failed to send WebSocket update",
@@ -168,19 +168,19 @@ func (h *PairsWebSocketHandler) writePump(conn *websocket.Conn) {
 func (h *PairsWebSocketHandler) BroadcastPairUpdate(pairID string, stats *models.PairStatistics) {
 	h.clientsMu.RLock()
 	defer h.clientsMu.RUnlock()
-	
+
 	for conn, subscriptions := range h.clients {
 		if subscriptions[pairID] {
 			update := struct {
-				Type   string                `json:"type"`
-				PairID string                `json:"pair_id"`
+				Type   string                 `json:"type"`
+				PairID string                 `json:"pair_id"`
 				Stats  *models.PairStatistics `json:"stats"`
 			}{
 				Type:   "pair_update",
 				PairID: pairID,
 				Stats:  stats,
 			}
-			
+
 			if err := conn.WriteJSON(update); err != nil {
 				h.logger.Error("Failed to broadcast WebSocket update",
 					zap.Error(err),

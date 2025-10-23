@@ -12,13 +12,13 @@ import (
 type Serializer interface {
 	// SerializeEvent serializes an event
 	SerializeEvent(event *eventsourcing.Event) ([]byte, error)
-	
+
 	// DeserializeEvent deserializes an event
 	DeserializeEvent(data []byte) (*eventsourcing.Event, error)
-	
+
 	// SerializeSnapshot serializes a snapshot
 	SerializeSnapshot(snapshot interface{}) ([]byte, error)
-	
+
 	// DeserializeSnapshot deserializes a snapshot
 	DeserializeSnapshot(data []byte, snapshotType reflect.Type) (interface{}, error)
 }
@@ -66,13 +66,13 @@ func (s *JSONSerializer) DeserializeSnapshot(data []byte, snapshotType reflect.T
 	// Create a new instance of the snapshot type
 	snapshotValue := reflect.New(snapshotType)
 	snapshot := snapshotValue.Interface()
-	
+
 	// Unmarshal the data into the snapshot
 	err := json.Unmarshal(data, snapshot)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return snapshot, nil
 }
 
@@ -123,12 +123,12 @@ func (s *BinarySerializer) DeserializeSnapshot(data []byte, snapshotType reflect
 	// For now, use JSON deserialization
 	snapshotValue := reflect.New(snapshotType)
 	snapshot := snapshotValue.Interface()
-	
+
 	err := json.Unmarshal(data, snapshot)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return snapshot, nil
 }
 
@@ -138,4 +138,3 @@ var (
 	ErrDeserializationFailed = errors.New("deserialization failed")
 	ErrUnknownSnapshotType   = errors.New("unknown snapshot type")
 )
-

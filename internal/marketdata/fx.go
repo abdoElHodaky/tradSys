@@ -22,7 +22,7 @@ var (
 var CQRSModule = fx.Options(
 	// Provide the market data service
 	fx.Provide(NewService),
-	
+
 	// Register command and query handlers
 	fx.Invoke(RegisterHandlers),
 )
@@ -30,7 +30,7 @@ var CQRSModule = fx.Options(
 // ServiceParams contains the parameters for creating a market data service
 type ServiceParams struct {
 	fx.In
-	
+
 	Logger     *zap.Logger
 	Repository *repositories.MarketDataRepository
 	Config     *config.Config
@@ -50,13 +50,13 @@ func RegisterHandlers(
 	lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			logger.Info("Registering market data service handlers")
-			
+
 			// Register command handlers
 			registerCommandHandlers(service, commandBus, logger)
-			
+
 			// Register query handlers
 			registerQueryHandlers(service, queryBus, logger)
-			
+
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
@@ -82,7 +82,7 @@ func registerCommandHandlers(service *Service, commandBus *cqrs.CommandBus, logg
 	if err != nil {
 		logger.Error("Failed to register AddMarketDataSourceCommand handler", zap.Error(err))
 	}
-	
+
 	// Register other command handlers...
 }
 
@@ -102,7 +102,7 @@ func registerQueryHandlers(service *Service, queryBus *cqrs.QueryBus, logger *za
 	if err != nil {
 		logger.Error("Failed to register GetMarketDataQuery handler", zap.Error(err))
 	}
-	
+
 	// Register other query handlers...
 }
 

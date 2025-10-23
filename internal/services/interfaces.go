@@ -13,7 +13,7 @@ type OrderService interface {
 	CancelOrder(ctx context.Context, id string) error
 	GetOrder(ctx context.Context, id string) (*Order, error)
 	ListOrders(ctx context.Context, filter *OrderFilter) ([]*Order, error)
-	
+
 	// Order execution operations
 	ExecuteOrder(ctx context.Context, id string) (*ExecutionResult, error)
 	GetOrderStatus(ctx context.Context, id string) (*OrderStatus, error)
@@ -25,7 +25,7 @@ type SettlementService interface {
 	ProcessSettlement(ctx context.Context, trade *Trade) (*Settlement, error)
 	GetSettlement(ctx context.Context, id string) (*Settlement, error)
 	ListSettlements(ctx context.Context, filter *SettlementFilter) ([]*Settlement, error)
-	
+
 	// Batch operations
 	ProcessBatchSettlement(ctx context.Context, trades []*Trade) ([]*Settlement, error)
 	GetPendingSettlements(ctx context.Context) ([]*Settlement, error)
@@ -37,7 +37,7 @@ type RiskService interface {
 	CheckRisk(ctx context.Context, order *Order) (*RiskCheckResult, error)
 	ValidatePosition(ctx context.Context, position *Position) error
 	GetRiskMetrics(ctx context.Context, portfolio *Portfolio) (*RiskMetrics, error)
-	
+
 	// Risk monitoring
 	MonitorRisk(ctx context.Context) error
 	GetRiskLimits(ctx context.Context, accountID string) (*RiskLimits, error)
@@ -52,7 +52,7 @@ type StrategyService interface {
 	DeleteStrategy(ctx context.Context, id string) error
 	GetStrategy(ctx context.Context, id string) (*Strategy, error)
 	ListStrategies(ctx context.Context, filter *StrategyFilter) ([]*Strategy, error)
-	
+
 	// Strategy execution
 	StartStrategy(ctx context.Context, id string) error
 	StopStrategy(ctx context.Context, id string) error
@@ -65,7 +65,7 @@ type PairsService interface {
 	GetPair(ctx context.Context, symbol string) (*TradingPair, error)
 	ListPairs(ctx context.Context, filter *PairFilter) ([]*TradingPair, error)
 	GetPairInfo(ctx context.Context, symbol string) (*PairInfo, error)
-	
+
 	// Market data
 	GetTicker(ctx context.Context, symbol string) (*Ticker, error)
 	GetOrderBook(ctx context.Context, symbol string, depth int) (*OrderBook, error)
@@ -76,18 +76,18 @@ type PairsService interface {
 
 // Order represents a trading order
 type Order struct {
-	ID          string    `json:"id"`
-	AccountID   string    `json:"account_id"`
-	Symbol      string    `json:"symbol"`
-	Side        string    `json:"side"` // "buy" or "sell"
-	Type        string    `json:"type"` // "market", "limit", "stop", etc.
-	Quantity    float64   `json:"quantity"`
-	Price       float64   `json:"price,omitempty"`
-	StopPrice   float64   `json:"stop_price,omitempty"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	ExecutedAt  *time.Time `json:"executed_at,omitempty"`
+	ID         string     `json:"id"`
+	AccountID  string     `json:"account_id"`
+	Symbol     string     `json:"symbol"`
+	Side       string     `json:"side"` // "buy" or "sell"
+	Type       string     `json:"type"` // "market", "limit", "stop", etc.
+	Quantity   float64    `json:"quantity"`
+	Price      float64    `json:"price,omitempty"`
+	StopPrice  float64    `json:"stop_price,omitempty"`
+	Status     string     `json:"status"`
+	CreatedAt  time.Time  `json:"created_at"`
+	UpdatedAt  time.Time  `json:"updated_at"`
+	ExecutedAt *time.Time `json:"executed_at,omitempty"`
 }
 
 // OrderUpdate represents order update parameters
@@ -111,12 +111,12 @@ type OrderFilter struct {
 
 // OrderStatus represents order execution status
 type OrderStatus struct {
-	ID              string    `json:"id"`
-	Status          string    `json:"status"`
-	FilledQuantity  float64   `json:"filled_quantity"`
-	RemainingQuantity float64 `json:"remaining_quantity"`
-	AveragePrice    float64   `json:"average_price"`
-	LastUpdated     time.Time `json:"last_updated"`
+	ID                string    `json:"id"`
+	Status            string    `json:"status"`
+	FilledQuantity    float64   `json:"filled_quantity"`
+	RemainingQuantity float64   `json:"remaining_quantity"`
+	AveragePrice      float64   `json:"average_price"`
+	LastUpdated       time.Time `json:"last_updated"`
 }
 
 // ExecutionResult represents order execution result
@@ -130,36 +130,36 @@ type ExecutionResult struct {
 
 // Trade represents a completed trade
 type Trade struct {
-	ID        string    `json:"id"`
-	OrderID   string    `json:"order_id"`
-	Symbol    string    `json:"symbol"`
-	Side      string    `json:"side"`
-	Quantity  float64   `json:"quantity"`
-	Price     float64   `json:"price"`
-	Commission float64  `json:"commission"`
-	Timestamp time.Time `json:"timestamp"`
+	ID         string    `json:"id"`
+	OrderID    string    `json:"order_id"`
+	Symbol     string    `json:"symbol"`
+	Side       string    `json:"side"`
+	Quantity   float64   `json:"quantity"`
+	Price      float64   `json:"price"`
+	Commission float64   `json:"commission"`
+	Timestamp  time.Time `json:"timestamp"`
 }
 
 // Settlement represents a trade settlement
 type Settlement struct {
-	ID          string    `json:"id"`
-	TradeID     string    `json:"trade_id"`
-	Status      string    `json:"status"`
-	Amount      float64   `json:"amount"`
-	Currency    string    `json:"currency"`
+	ID          string     `json:"id"`
+	TradeID     string     `json:"trade_id"`
+	Status      string     `json:"status"`
+	Amount      float64    `json:"amount"`
+	Currency    string     `json:"currency"`
 	ProcessedAt *time.Time `json:"processed_at,omitempty"`
-	CreatedAt   time.Time `json:"created_at"`
+	CreatedAt   time.Time  `json:"created_at"`
 }
 
 // SettlementFilter represents settlement filtering parameters
 type SettlementFilter struct {
-	TradeID   *string    `json:"trade_id,omitempty"`
-	Status    *string    `json:"status,omitempty"`
-	Currency  *string    `json:"currency,omitempty"`
-	From      *time.Time `json:"from,omitempty"`
-	To        *time.Time `json:"to,omitempty"`
-	Limit     int        `json:"limit,omitempty"`
-	Offset    int        `json:"offset,omitempty"`
+	TradeID  *string    `json:"trade_id,omitempty"`
+	Status   *string    `json:"status,omitempty"`
+	Currency *string    `json:"currency,omitempty"`
+	From     *time.Time `json:"from,omitempty"`
+	To       *time.Time `json:"to,omitempty"`
+	Limit    int        `json:"limit,omitempty"`
+	Offset   int        `json:"offset,omitempty"`
 }
 
 // Position represents a trading position
@@ -192,12 +192,12 @@ type RiskCheckResult struct {
 
 // RiskMetrics represents portfolio risk metrics
 type RiskMetrics struct {
-	VaR           float64 `json:"var"`           // Value at Risk
-	MaxDrawdown   float64 `json:"max_drawdown"`
-	Sharpe        float64 `json:"sharpe"`
-	Beta          float64 `json:"beta"`
-	Volatility    float64 `json:"volatility"`
-	Exposure      float64 `json:"exposure"`
+	VaR         float64 `json:"var"` // Value at Risk
+	MaxDrawdown float64 `json:"max_drawdown"`
+	Sharpe      float64 `json:"sharpe"`
+	Beta        float64 `json:"beta"`
+	Volatility  float64 `json:"volatility"`
+	Exposure    float64 `json:"exposure"`
 }
 
 // RiskLimits represents risk management limits
@@ -237,12 +237,12 @@ type StrategyFilter struct {
 
 // StrategyStatus represents strategy execution status
 type StrategyStatus struct {
-	ID            string    `json:"id"`
-	Status        string    `json:"status"`
-	RunningTime   time.Duration `json:"running_time"`
-	OrdersPlaced  int       `json:"orders_placed"`
-	ProfitLoss    float64   `json:"profit_loss"`
-	LastUpdated   time.Time `json:"last_updated"`
+	ID           string        `json:"id"`
+	Status       string        `json:"status"`
+	RunningTime  time.Duration `json:"running_time"`
+	OrdersPlaced int           `json:"orders_placed"`
+	ProfitLoss   float64       `json:"profit_loss"`
+	LastUpdated  time.Time     `json:"last_updated"`
 }
 
 // TradingPair represents a trading pair
@@ -261,13 +261,13 @@ type TradingPair struct {
 
 // PairInfo represents detailed pair information
 type PairInfo struct {
-	Symbol       string  `json:"symbol"`
-	Volume24h    float64 `json:"volume_24h"`
-	PriceChange  float64 `json:"price_change"`
+	Symbol             string  `json:"symbol"`
+	Volume24h          float64 `json:"volume_24h"`
+	PriceChange        float64 `json:"price_change"`
 	PriceChangePercent float64 `json:"price_change_percent"`
-	HighPrice    float64 `json:"high_price"`
-	LowPrice     float64 `json:"low_price"`
-	LastPrice    float64 `json:"last_price"`
+	HighPrice          float64 `json:"high_price"`
+	LowPrice           float64 `json:"low_price"`
+	LastPrice          float64 `json:"last_price"`
 }
 
 // PairFilter represents pair filtering parameters
@@ -281,14 +281,14 @@ type PairFilter struct {
 
 // Ticker represents market ticker data
 type Ticker struct {
-	Symbol   string  `json:"symbol"`
-	Price    float64 `json:"price"`
-	Bid      float64 `json:"bid"`
-	Ask      float64 `json:"ask"`
-	Volume   float64 `json:"volume"`
-	Change   float64 `json:"change"`
-	ChangePercent float64 `json:"change_percent"`
-	Timestamp time.Time `json:"timestamp"`
+	Symbol        string    `json:"symbol"`
+	Price         float64   `json:"price"`
+	Bid           float64   `json:"bid"`
+	Ask           float64   `json:"ask"`
+	Volume        float64   `json:"volume"`
+	Change        float64   `json:"change"`
+	ChangePercent float64   `json:"change_percent"`
+	Timestamp     time.Time `json:"timestamp"`
 }
 
 // OrderBook represents market order book

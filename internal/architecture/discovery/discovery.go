@@ -77,7 +77,7 @@ func (d *ServiceDiscovery) GetService(ctx context.Context, name string) ([]*Serv
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Convert registry services to our Service type
 	services = make([]*Service, len(regServices))
 	for i, regSvc := range regServices {
@@ -119,7 +119,7 @@ func (d *ServiceDiscovery) ListServices(ctx context.Context) ([]*Service, error)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Convert registry services to our Service type
 	services := make([]*Service, len(regServices))
 	for i, regSvc := range regServices {
@@ -138,7 +138,7 @@ func (d *ServiceDiscovery) ListServices(ctx context.Context) ([]*Service, error)
 			Nodes:    nodes,
 		}
 	}
-	
+
 	return services, nil
 }
 
@@ -190,7 +190,7 @@ func (s *ServiceSelector) Select(ctx context.Context, name string) (*registry.No
 			Metadata: node.Metadata,
 		}
 	}
-	
+
 	// Select a node using the strategy
 	return s.strategy.Select(regNodes)
 }

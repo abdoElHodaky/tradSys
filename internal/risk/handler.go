@@ -57,16 +57,16 @@ func (h *Handler) GetAccountRisk(ctx context.Context, req *risk.AccountRiskReque
 	// Implementation would go here
 	// For now, just return placeholder risk data
 	rsp := &risk.AccountRiskResponse{
-		AccountId:       req.AccountId,
-		TotalValue:      100000.0,
-		AvailableMargin: 50000.0,
-		UsedMargin:      25000.0,
-		MarginLevel:     200.0,
-		MarginCallLevel: 120.0,
+		AccountId:        req.AccountId,
+		TotalValue:       100000.0,
+		AvailableMargin:  50000.0,
+		UsedMargin:       25000.0,
+		MarginLevel:      200.0,
+		MarginCallLevel:  120.0,
 		LiquidationLevel: 100.0,
-		DailyPnl:        1500.0,
-		TotalPnl:        5000.0,
-		RiskLevel:       risk.RiskLevel_MEDIUM,
+		DailyPnl:         1500.0,
+		TotalPnl:         5000.0,
+		RiskLevel:        risk.RiskLevel_MEDIUM,
 		Positions: []*risk.Position{
 			{
 				Symbol:        "BTC-USD",
@@ -100,16 +100,16 @@ func (h *Handler) GetPositionRisk(ctx context.Context, req *risk.PositionRiskReq
 	// For now, just return placeholder position risk data
 	rsp := &risk.PositionRiskResponse{
 		AccountId:         req.AccountId,
-		Symbol:           req.Symbol,
-		Size:             1.5,
-		EntryPrice:       48000.0,
-		CurrentPrice:     50000.0,
-		LiquidationPrice: 40000.0,
-		UnrealizedPnl:    3000.0,
-		RealizedPnl:      1000.0,
-		InitialMargin:    9600.0,
+		Symbol:            req.Symbol,
+		Size:              1.5,
+		EntryPrice:        48000.0,
+		CurrentPrice:      50000.0,
+		LiquidationPrice:  40000.0,
+		UnrealizedPnl:     3000.0,
+		RealizedPnl:       1000.0,
+		InitialMargin:     9600.0,
 		MaintenanceMargin: 4800.0,
-		RiskLevel:        risk.RiskLevel_MEDIUM,
+		RiskLevel:         risk.RiskLevel_MEDIUM,
 	}
 
 	return rsp, nil
@@ -125,11 +125,11 @@ func (h *Handler) GetOrderRisk(ctx context.Context, req *risk.OrderRiskRequest) 
 	orderValue := req.Quantity * req.Price
 	marginRate := h.getMarginRate(req.Symbol) // Get symbol-specific margin rate
 	requiredMargin := orderValue * marginRate
-	
+
 	// Get current account balance (in production, this would come from account service)
 	currentBalance := h.getCurrentAccountBalance(req.AccountId)
 	availableMarginAfter := currentBalance - requiredMargin
-	
+
 	// Calculate margin level after order
 	var marginLevelAfter float64
 	if requiredMargin > 0 {
@@ -137,15 +137,15 @@ func (h *Handler) GetOrderRisk(ctx context.Context, req *risk.OrderRiskRequest) 
 	} else {
 		marginLevelAfter = 100.0
 	}
-	
+
 	// Determine risk level based on margin level and order size
 	riskLevel := h.calculateRiskLevel(marginLevelAfter, orderValue, currentBalance)
-	
+
 	// Check if order is allowed based on risk assessment
 	isAllowed := h.isOrderAllowed(riskLevel, marginLevelAfter, availableMarginAfter)
 
 	rsp := &risk.OrderRiskResponse{
-		AccountId:             req.AccountId,
+		AccountId:            req.AccountId,
 		Symbol:               req.Symbol,
 		Side:                 req.Side,
 		Type:                 req.Type,
@@ -185,11 +185,11 @@ func (h *Handler) getMarginRate(symbol string) float64 {
 		"ETHUSDT": 0.15, // 15% margin for ETH
 		"ADAUSDT": 0.2,  // 20% margin for ADA
 	}
-	
+
 	if rate, exists := marginRates[symbol]; exists {
 		return rate
 	}
-	
+
 	// Default margin rate for unknown symbols
 	return 0.25 // 25% margin
 }
@@ -205,7 +205,7 @@ func (h *Handler) getCurrentAccountBalance(accountID string) float64 {
 func (h *Handler) calculateRiskLevel(marginLevel, orderValue, accountBalance float64) risk.RiskLevel {
 	// Calculate order size as percentage of account balance
 	orderSizePercent := (orderValue / accountBalance) * 100
-	
+
 	// Determine risk level based on margin level and order size
 	if marginLevel < 50 || orderSizePercent > 50 {
 		return risk.RiskLevel_HIGH
@@ -222,12 +222,12 @@ func (h *Handler) isOrderAllowed(riskLevel risk.RiskLevel, marginLevel, availabl
 	if availableMargin < 0 {
 		return false
 	}
-	
+
 	// Reject high-risk orders with low margin levels
 	if riskLevel == risk.RiskLevel_HIGH && marginLevel < 25 {
 		return false
 	}
-	
+
 	// Allow all other orders
 	return true
 }

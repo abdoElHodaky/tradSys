@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
+	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
 	"go.uber.org/zap"
 )
 
@@ -13,24 +13,24 @@ type CQRSSystem struct {
 	EventStore    store.EventStore
 	AggregateRepo aggregate.Repository
 	EventBus      eventbus.EventBus
-	
+
 	// Adapters
 	WatermillAdapter *WatermillCQRSAdapter
 	NatsAdapter      *NatsCQRSAdapter
-	
+
 	// Compatibility and monitoring
 	CompatibilityLayer *CompatibilityLayer
 	PerformanceMonitor *PerformanceMonitor
-	
+
 	// Logger
 	Logger *zap.Logger
 }
 
 // CQRSFactory creates CQRS systems
 type CQRSFactory struct {
-	logger        *zap.Logger
-	useWatermill  bool
-	useNats       bool
+	logger         *zap.Logger
+	useWatermill   bool
+	useNats        bool
 	useCompatLayer bool
 	useMonitoring  bool
 }
@@ -44,9 +44,9 @@ func NewCQRSFactory(
 	useMonitoring bool,
 ) *CQRSFactory {
 	return &CQRSFactory{
-		logger:        logger,
-		useWatermill:  useWatermill,
-		useNats:       useNats,
+		logger:         logger,
+		useWatermill:   useWatermill,
+		useNats:        useNats,
 		useCompatLayer: useCompatLayer,
 		useMonitoring:  useMonitoring,
 	}
@@ -59,17 +59,17 @@ func (f *CQRSFactory) CreateCQRSSystem() (*CQRSSystem, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Create the aggregate repository
 	aggregateRepo := aggregate.NewRepository(eventStore)
-	
+
 	// Create the system
 	system := &CQRSSystem{
 		EventStore:    eventStore,
 		AggregateRepo: aggregateRepo,
 		Logger:        f.logger,
 	}
-	
+
 	// Create the Watermill adapter if enabled
 	if f.useWatermill {
 		// Create the Watermill adapter
@@ -83,21 +83,21 @@ func (f *CQRSFactory) CreateCQRSSystem() (*CQRSSystem, error) {
 		if err != nil {
 			return nil, err
 		}
-		
+
 		// Start the adapter
 		err = watermillAdapter.Start()
 		if err != nil {
 			return nil, err
 		}
-		
+
 		// Create an event bus adapter
 		eventBus := watermillAdapter.CreateEventBusAdapter()
-		
+
 		// Set the components
 		system.WatermillAdapter = watermillAdapter
 		system.EventBus = eventBus
 	}
-	
+
 	// Create the NATS adapter if enabled
 	if f.useNats {
 		// Create the NATS adapter
@@ -111,30 +111,30 @@ func (f *CQRSFactory) CreateCQRSSystem() (*CQRSSystem, error) {
 		if err != nil {
 			return nil, err
 		}
-		
+
 		// Start the adapter
 		err = natsAdapter.Start()
 		if err != nil {
 			return nil, err
 		}
-		
+
 		// Create an event bus adapter
 		eventBus := natsAdapter.CreateEventBusAdapter()
-		
+
 		// Set the components
 		system.NatsAdapter = natsAdapter
 		system.EventBus = eventBus
 	}
-	
+
 	// If neither Watermill nor NATS is enabled, create a default event bus
 	if !f.useWatermill && !f.useNats {
 		// Create a default event bus
 		eventBus := eventbus.NewInMemoryEventBus(eventStore, f.logger)
-		
+
 		// Set the event bus
 		system.EventBus = eventBus
 	}
-	
+
 	// Create the compatibility layer if enabled
 	if f.useCompatLayer {
 		// Create the compatibility layer
@@ -145,20 +145,19 @@ func (f *CQRSFactory) CreateCQRSSystem() (*CQRSSystem, error) {
 			system.EventBus,
 			f.logger,
 		)
-		
+
 		// Set the compatibility layer
 		system.CompatibilityLayer = compatLayer
 	}
-	
+
 	// Create the performance monitor if enabled
 	if f.useMonitoring {
 		// Create the performance monitor
 		monitor := NewPerformanceMonitor(f.logger, 100)
-		
+
 		// Set the performance monitor
 		system.PerformanceMonitor = monitor
 	}
-	
+
 	return system, nil
 }
-

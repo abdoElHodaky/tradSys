@@ -41,11 +41,11 @@ func HFTCORSMiddlewareWithConfig(config *HFTCORSConfig) gin.HandlerFunc {
 	allowMethodsHeader := strings.Join(config.AllowMethods, ", ")
 	allowHeadersHeader := strings.Join(config.AllowHeaders, ", ")
 	exposeHeadersHeader := strings.Join(config.ExposeHeaders, ", ")
-	
+
 	// Pre-compile origin map for faster lookup
 	allowOriginMap := make(map[string]bool)
 	allowAllOrigins := false
-	
+
 	for _, origin := range config.AllowOrigins {
 		if origin == "*" {
 			allowAllOrigins = true
@@ -53,10 +53,10 @@ func HFTCORSMiddlewareWithConfig(config *HFTCORSConfig) gin.HandlerFunc {
 		}
 		allowOriginMap[origin] = true
 	}
-	
+
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
-		
+
 		// Set CORS headers
 		if allowAllOrigins {
 			c.Header("Access-Control-Allow-Origin", "*")
@@ -65,28 +65,28 @@ func HFTCORSMiddlewareWithConfig(config *HFTCORSConfig) gin.HandlerFunc {
 		} else if len(config.AllowOrigins) > 0 {
 			c.Header("Access-Control-Allow-Origin", allowOriginHeader)
 		}
-		
+
 		c.Header("Access-Control-Allow-Methods", allowMethodsHeader)
 		c.Header("Access-Control-Allow-Headers", allowHeadersHeader)
-		
+
 		if len(config.ExposeHeaders) > 0 {
 			c.Header("Access-Control-Expose-Headers", exposeHeadersHeader)
 		}
-		
+
 		if config.AllowCredentials {
 			c.Header("Access-Control-Allow-Credentials", "true")
 		}
-		
+
 		if config.MaxAge > 0 {
 			c.Header("Access-Control-Max-Age", string(rune(config.MaxAge)))
 		}
-		
+
 		// Handle preflight requests
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(http.StatusNoContent)
 			return
 		}
-		
+
 		c.Next()
 	}
 }
@@ -99,10 +99,10 @@ func HFTSecurityHeadersMiddleware() gin.HandlerFunc {
 		c.Header("X-Frame-Options", "DENY")
 		c.Header("X-XSS-Protection", "1; mode=block")
 		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
-		
+
 		// Remove server information for security
 		c.Header("Server", "")
-		
+
 		c.Next()
 	}
 }

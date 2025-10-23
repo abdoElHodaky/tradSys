@@ -29,24 +29,24 @@ type Order struct {
 // Trade represents a trade in the database
 type Trade struct {
 	gorm.Model
-	ID                string `gorm:"primaryKey;type:uuid"`
-	OrderID           string `gorm:"index"`
-	Symbol            string `gorm:"index"`
-	Side              string
-	Price             float64
-	Quantity          float64
-	ExecutedAt        time.Time `gorm:"index"`
-	Fee               float64
-	FeeCurrency       string
+	ID                  string `gorm:"primaryKey;type:uuid"`
+	OrderID             string `gorm:"index"`
+	Symbol              string `gorm:"index"`
+	Side                string
+	Price               float64
+	Quantity            float64
+	ExecutedAt          time.Time `gorm:"index"`
+	Fee                 float64
+	FeeCurrency         string
 	CounterPartyOrderID string
-	Metadata          string `gorm:"type:jsonb"`
+	Metadata            string `gorm:"type:jsonb"`
 }
 
 // Position represents a position in the database
 type Position struct {
 	gorm.Model
-	UserID            string  `gorm:"index"`
-	Symbol            string  `gorm:"index"`
+	UserID            string `gorm:"index"`
+	Symbol            string `gorm:"index"`
 	Quantity          float64
 	AverageEntryPrice float64
 	UnrealizedPnL     float64
@@ -57,19 +57,19 @@ type Position struct {
 // RiskLimit represents a risk limit in the database
 type RiskLimit struct {
 	gorm.Model
-	ID        string `gorm:"primaryKey;type:uuid"`
-	UserID    string `gorm:"index"`
-	Symbol    string
-	Type      string `gorm:"index"`
-	Value     float64
-	Enabled   bool
+	ID      string `gorm:"primaryKey;type:uuid"`
+	UserID  string `gorm:"index"`
+	Symbol  string
+	Type    string `gorm:"index"`
+	Value   float64
+	Enabled bool
 }
 
 // MarketData represents market data in the database
 type MarketData struct {
 	gorm.Model
-	Symbol    string    `gorm:"index"`
-	Type      string    `gorm:"index"`
+	Symbol    string `gorm:"index"`
+	Type      string `gorm:"index"`
 	Price     float64
 	Volume    float64
 	Open      float64
@@ -83,7 +83,7 @@ type MarketData struct {
 // CircuitBreaker represents a circuit breaker in the database
 type CircuitBreaker struct {
 	gorm.Model
-	Symbol              string  `gorm:"primaryKey"`
+	Symbol              string `gorm:"primaryKey"`
 	PercentageThreshold float64
 	TimeWindow          int64 // stored in seconds
 	CooldownPeriod      int64 // stored in seconds
@@ -121,4 +121,3 @@ func (MarketData) TableName() string {
 func (CircuitBreaker) TableName() string {
 	return "circuit_breakers"
 }
-

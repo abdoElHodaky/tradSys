@@ -38,12 +38,12 @@ func (r *ServiceRegistry) Get(name string) (interface{}, bool) {
 func (r *ServiceRegistry) GetTyped(name string, target interface{}) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	service, exists := r.services[name]
 	if !exists {
 		return false
 	}
-	
+
 	// Use type assertion to set the target pointer
 	switch ptr := target.(type) {
 	case *interface{}:
@@ -55,14 +55,14 @@ func (r *ServiceRegistry) GetTyped(name string, target interface{}) bool {
 		if targetValue.Kind() != reflect.Ptr || targetValue.IsNil() {
 			return false
 		}
-		
+
 		serviceValue := reflect.ValueOf(service)
 		targetElemType := targetValue.Elem().Type()
-		
+
 		if !serviceValue.Type().AssignableTo(targetElemType) {
 			return false
 		}
-		
+
 		targetValue.Elem().Set(serviceValue)
 		return true
 	}
@@ -79,12 +79,11 @@ func (r *ServiceRegistry) Unregister(name string) {
 func (r *ServiceRegistry) ListServices() []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	services := make([]string, 0, len(r.services))
 	for name := range r.services {
 		services = append(services, name)
 	}
-	
+
 	return services
 }
-

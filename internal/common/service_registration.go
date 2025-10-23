@@ -2,10 +2,10 @@ package common
 
 import (
 	"context"
-	
+
+	"go-micro.dev/v4/server"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
-	"go-micro.dev/v4/server"
 )
 
 // ServiceHandler represents a generic service handler interface
@@ -35,12 +35,12 @@ func RegisterServiceHandler(serviceName string, registrar ServiceRegistrar) fx.O
 	) {
 		// Register the handler with the service
 		if err := registrar(server, handler); err != nil {
-			logger.Fatal("Failed to register handler", 
+			logger.Fatal("Failed to register handler",
 				zap.String("service", serviceName),
 				zap.Error(err))
 		}
 
-		logger.Info("Service registered successfully", 
+		logger.Info("Service registered successfully",
 			zap.String("service", serviceName))
 	})
 }
@@ -48,16 +48,16 @@ func RegisterServiceHandler(serviceName string, registrar ServiceRegistrar) fx.O
 // MicroserviceApp creates a standardized fx application for microservices
 func MicroserviceApp(serviceName string, modules ...fx.Option) *fx.App {
 	logger, _ := zap.NewProduction()
-	
+
 	// Base modules that all services need
 	baseModules := []fx.Option{
 		fx.Supply(logger),
 		fx.Provide(func() *zap.Logger { return logger }),
 	}
-	
+
 	// Combine base modules with service-specific modules
 	allModules := append(baseModules, modules...)
-	
+
 	// Add lifecycle management
 	allModules = append(allModules, fx.Invoke(func(lc fx.Lifecycle, logger *zap.Logger) {
 		lc.Append(fx.Hook{
@@ -71,6 +71,6 @@ func MicroserviceApp(serviceName string, modules ...fx.Option) *fx.App {
 			},
 		})
 	}))
-	
+
 	return fx.New(allModules...)
 }

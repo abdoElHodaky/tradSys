@@ -113,4 +113,3 @@ func (s *JWTService) RefreshToken(tokenString string) (string, error) {
 
 	return signedToken, nil
 }
-

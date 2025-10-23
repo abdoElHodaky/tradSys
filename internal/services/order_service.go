@@ -11,14 +11,14 @@ import (
 // OrderServiceImpl implements the OrderService interface
 type OrderServiceImpl struct {
 	// In a real implementation, these would be proper repositories
-	orders map[string]*Order
+	orders      map[string]*Order
 	riskService RiskService
 }
 
 // NewOrderService creates a new order service instance
 func NewOrderService(riskService RiskService) OrderService {
 	return &OrderServiceImpl{
-		orders: make(map[string]*Order),
+		orders:      make(map[string]*Order),
 		riskService: riskService,
 	}
 }
@@ -197,9 +197,9 @@ func (s *OrderServiceImpl) GetOrderStatus(ctx context.Context, id string) (*Orde
 	}
 
 	status := &OrderStatus{
-		ID:              order.ID,
-		Status:          order.Status,
-		LastUpdated:     order.UpdatedAt,
+		ID:          order.ID,
+		Status:      order.Status,
+		LastUpdated: order.UpdatedAt,
 	}
 
 	// Set quantities based on status

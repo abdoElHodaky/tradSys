@@ -56,16 +56,16 @@ func (p *ServiceProxy) getServiceEndpoint(serviceName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	if len(services) == 0 {
 		return "", registry.ErrNotFound
 	}
-	
+
 	service := services[0]
 	if len(service.Nodes) == 0 {
 		return "", registry.ErrNotFound
 	}
-	
+
 	// Use the first available node
 	node := service.Nodes[0]
 	return "http://" + node.Address, nil
@@ -223,12 +223,12 @@ func (p *ServiceProxy) ReverseProxy(serviceName string) gin.HandlerFunc {
 
 		// Create reverse proxy
 		proxy := httputil.NewSingleHostReverseProxy(target)
-		
+
 		// Set custom director to modify the request
 		originalDirector := proxy.Director
 		proxy.Director = func(req *http.Request) {
 			originalDirector(req)
-			
+
 			// Add X-Forwarded headers
 			req.Header.Set("X-Forwarded-For", c.ClientIP())
 			req.Header.Set("X-Forwarded-Proto", c.Request.Proto)

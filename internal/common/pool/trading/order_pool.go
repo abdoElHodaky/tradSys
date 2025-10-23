@@ -123,21 +123,21 @@ func PutOrderRequestToPool(req *OrderRequest) {
 
 // OrderResponse represents a pooled order response
 type OrderResponse struct {
-	ID              string     `json:"id"`
-	Symbol          string     `json:"symbol"`
-	Side            string     `json:"side"`
-	Type            string     `json:"type"`
-	Quantity        float64    `json:"quantity"`
-	Price           float64    `json:"price,omitempty"`
-	StopPrice       float64    `json:"stop_price,omitempty"`
-	Status          string     `json:"status"`
-	FilledQuantity  float64    `json:"filled_quantity"`
-	AveragePrice    float64    `json:"average_price"`
-	Commission      float64    `json:"commission"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
-	ExecutedAt      *time.Time `json:"executed_at,omitempty"`
-	ProcessingTime  int64      `json:"processing_time_ns,omitempty"` // For latency tracking
+	ID             string     `json:"id"`
+	Symbol         string     `json:"symbol"`
+	Side           string     `json:"side"`
+	Type           string     `json:"type"`
+	Quantity       float64    `json:"quantity"`
+	Price          float64    `json:"price,omitempty"`
+	StopPrice      float64    `json:"stop_price,omitempty"`
+	Status         string     `json:"status"`
+	FilledQuantity float64    `json:"filled_quantity"`
+	AveragePrice   float64    `json:"average_price"`
+	Commission     float64    `json:"commission"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	ExecutedAt     *time.Time `json:"executed_at,omitempty"`
+	ProcessingTime int64      `json:"processing_time_ns,omitempty"` // For latency tracking
 }
 
 // Reset resets the OrderResponse to zero values

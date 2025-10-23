@@ -34,9 +34,9 @@ func NewIncrementalStatistics() *IncrementalStatistics {
 func (s *IncrementalStatistics) Add(value float64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	s.count++
-	
+
 	// Initialize min and max on first value
 	if !s.initialized {
 		s.min = value
@@ -45,7 +45,7 @@ func (s *IncrementalStatistics) Add(value float64) {
 		s.initialized = true
 		return
 	}
-	
+
 	// Update min and max
 	if value < s.min {
 		s.min = value
@@ -53,7 +53,7 @@ func (s *IncrementalStatistics) Add(value float64) {
 	if value > s.max {
 		s.max = value
 	}
-	
+
 	// Update mean and variance using Welford's algorithm
 	delta := value - s.mean
 	s.mean += delta / float64(s.count)
@@ -67,7 +67,7 @@ func (s *IncrementalStatistics) Add(value float64) {
 func (s *IncrementalStatistics) Remove(value float64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	if s.count <= 1 {
 		// Reset statistics if this is the last value
 		s.count = 0
@@ -76,13 +76,13 @@ func (s *IncrementalStatistics) Remove(value float64) {
 		s.initialized = false
 		return
 	}
-	
+
 	// Update mean and variance
 	oldMean := s.mean
 	s.mean = (float64(s.count)*s.mean - value) / float64(s.count-1)
 	s.m2 -= (value - oldMean) * (value - s.mean)
 	s.count--
-	
+
 	// Note: min and max cannot be accurately updated when removing a value
 	// without keeping the full dataset. For HFT, this is usually acceptable
 	// as we're typically using a sliding window and the min/max will eventually
@@ -94,12 +94,12 @@ func (s *IncrementalStatistics) Remove(value float64) {
 func (s *IncrementalStatistics) Update(oldValue, newValue float64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	if !s.initialized {
 		s.Add(newValue)
 		return
 	}
-	
+
 	// Update min and max for the new value
 	if newValue < s.min {
 		s.min = newValue
@@ -107,13 +107,13 @@ func (s *IncrementalStatistics) Update(oldValue, newValue float64) {
 	if newValue > s.max {
 		s.max = newValue
 	}
-	
+
 	// Update mean directly
-	s.mean = s.mean + (newValue - oldValue) / float64(s.count)
-	
+	s.mean = s.mean + (newValue-oldValue)/float64(s.count)
+
 	// Update variance
-	s.m2 = s.m2 + (newValue - oldValue) * (newValue - s.mean + oldValue - s.mean)
-	
+	s.m2 = s.m2 + (newValue-oldValue)*(newValue-s.mean+oldValue-s.mean)
+
 	// Note: As with Remove(), min and max may not be 100% accurate
 	// if oldValue was the min or max. For HFT, this approximation
 	// is usually acceptable.
@@ -137,11 +137,11 @@ func (s *IncrementalStatistics) Mean() float64 {
 func (s *IncrementalStatistics) Variance() float64 {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	if s.count < 2 {
 		return 0
 	}
-	
+
 	return s.m2 / float64(s.count-1)
 }
 
@@ -168,12 +168,12 @@ func (s *IncrementalStatistics) Max() float64 {
 func (s *IncrementalStatistics) ZScore(value float64) float64 {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	stdDev := math.Sqrt(s.Variance())
 	if stdDev == 0 {
 		return 0
 	}
-	
+
 	return (value - s.mean) / stdDev
 }
 
@@ -181,7 +181,7 @@ func (s *IncrementalStatistics) ZScore(value float64) float64 {
 func (s *IncrementalStatistics) Reset() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	s.count = 0
 	s.mean = 0
 	s.m2 = 0
@@ -219,21 +219,21 @@ func NewIncrementalCorrelation() *IncrementalCorrelation {
 func (c *IncrementalCorrelation) Add(x, y float64) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	c.count++
-	
+
 	if !c.initialized {
 		c.meanX = x
 		c.meanY = y
 		c.initialized = true
 		return
 	}
-	
+
 	// Update means
 	dx := x - c.meanX
 	c.meanX += dx / float64(c.count)
 	c.meanY += (y - c.meanY) / float64(c.count)
-	
+
 	// Update covariance and variances
 	dy := y - c.meanY
 	c.c += dx * dy
@@ -245,40 +245,40 @@ func (c *IncrementalCorrelation) Add(x, y float64) {
 func (c *IncrementalCorrelation) Update(oldX, oldY, newX, newY float64) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	if !c.initialized {
 		c.Add(newX, newY)
 		return
 	}
-	
+
 	// This is an approximation for sliding window correlation
 	// For critical applications, consider rebuilding periodically
-	
+
 	// Adjust means
-	c.meanX = c.meanX + (newX - oldX) / float64(c.count)
-	c.meanY = c.meanY + (newY - oldY) / float64(c.count)
-	
+	c.meanX = c.meanX + (newX-oldX)/float64(c.count)
+	c.meanY = c.meanY + (newY-oldY)/float64(c.count)
+
 	// Adjust covariance and variances
 	// This is a simplified approximation
-	c.c = c.c + (newX - c.meanX) * (newY - c.meanY) - (oldX - c.meanX) * (oldY - c.meanY)
-	c.varX = c.varX + (newX - c.meanX) * (newX - c.meanX) - (oldX - c.meanX) * (oldX - c.meanX)
-	c.varY = c.varY + (newY - c.meanY) * (newY - c.meanY) - (oldY - c.meanY) * (oldY - c.meanY)
+	c.c = c.c + (newX-c.meanX)*(newY-c.meanY) - (oldX-c.meanX)*(oldY-c.meanY)
+	c.varX = c.varX + (newX-c.meanX)*(newX-c.meanX) - (oldX-c.meanX)*(oldX-c.meanX)
+	c.varY = c.varY + (newY-c.meanY)*(newY-c.meanY) - (oldY-c.meanY)*(oldY-c.meanY)
 }
 
 // Correlation returns the Pearson correlation coefficient
 func (c *IncrementalCorrelation) Correlation() float64 {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	if c.count < 2 {
 		return 0
 	}
-	
+
 	denominator := math.Sqrt(c.varX * c.varY)
 	if denominator == 0 {
 		return 0
 	}
-	
+
 	return c.c / denominator
 }
 
@@ -286,7 +286,7 @@ func (c *IncrementalCorrelation) Correlation() float64 {
 func (c *IncrementalCorrelation) Reset() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	c.count = 0
 	c.meanX = 0
 	c.meanY = 0
@@ -295,4 +295,3 @@ func (c *IncrementalCorrelation) Reset() {
 	c.varY = 0
 	c.initialized = false
 }
-

@@ -16,10 +16,10 @@ type EventBusType string
 const (
 	// InMemoryEventBusType represents an in-memory event bus
 	InMemoryEventBusType EventBusType = "in-memory"
-	
+
 	// WatermillEventBusType represents a Watermill event bus
 	WatermillEventBusType EventBusType = "watermill"
-	
+
 	// NatsEventBusType represents a NATS event bus
 	NatsEventBusType EventBusType = "nats"
 )
@@ -30,16 +30,16 @@ type EventRoutingStrategy int
 const (
 	// SingleBusStrategy routes all events to a single bus
 	SingleBusStrategy EventRoutingStrategy = iota
-	
+
 	// TypeBasedStrategy routes events based on their type
 	TypeBasedStrategy
-	
+
 	// AggregateBasedStrategy routes events based on their aggregate type
 	AggregateBasedStrategy
-	
+
 	// PriorityBasedStrategy tries buses in order until one succeeds
 	PriorityBasedStrategy
-	
+
 	// BroadcastStrategy sends events to all buses
 	BroadcastStrategy
 )
@@ -48,22 +48,22 @@ const (
 type EventBusRouter struct {
 	logger   *zap.Logger
 	strategy EventRoutingStrategy
-	
+
 	// Event buses
-	buses    map[EventBusType]eventbus.EventBus
-	
+	buses map[EventBusType]eventbus.EventBus
+
 	// Default bus
 	defaultBus EventBusType
-	
+
 	// Type routing
 	typeRoutes map[string]EventBusType
-	
+
 	// Aggregate routing
 	aggregateRoutes map[string]EventBusType
-	
+
 	// Priority order
 	priorityOrder []EventBusType
-	
+
 	// Synchronization
 	mu sync.RWMutex
 }
@@ -97,7 +97,7 @@ func NewEventBusRouter(
 func (r *EventBusRouter) RegisterEventBus(busType EventBusType, bus eventbus.EventBus) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	r.buses[busType] = bus
 	r.logger.Info("Registered event bus", zap.String("type", string(busType)))
 }
@@ -106,14 +106,14 @@ func (r *EventBusRouter) RegisterEventBus(busType EventBusType, bus eventbus.Eve
 func (r *EventBusRouter) SetDefaultBus(busType EventBusType) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	if _, ok := r.buses[busType]; !ok {
 		return fmt.Errorf("event bus %s not registered", busType)
 	}
-	
+
 	r.defaultBus = busType
 	r.logger.Info("Set default event bus", zap.String("type", string(busType)))
-	
+
 	return nil
 }
 
@@ -121,21 +121,21 @@ func (r *EventBusRouter) SetDefaultBus(busType EventBusType) error {
 func (r *EventBusRouter) SetTypeRoute(eventType string, busType EventBusType) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	if _, ok := r.buses[busType]; !ok {
 		return fmt.Errorf("event bus %s not registered", busType)
 	}
-	
+
 	if r.typeRoutes == nil {
 		r.typeRoutes = make(map[string]EventBusType)
 	}
-	
+
 	r.typeRoutes[eventType] = busType
 	r.logger.Info("Set event type route",
 		zap.String("event_type", eventType),
 		zap.String("bus_type", string(busType)),
 	)
-	
+
 	return nil
 }
 
@@ -143,21 +143,21 @@ func (r *EventBusRouter) SetTypeRoute(eventType string, busType EventBusType) er
 func (r *EventBusRouter) SetAggregateRoute(aggregateType string, busType EventBusType) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	if _, ok := r.buses[busType]; !ok {
 		return fmt.Errorf("event bus %s not registered", busType)
 	}
-	
+
 	if r.aggregateRoutes == nil {
 		r.aggregateRoutes = make(map[string]EventBusType)
 	}
-	
+
 	r.aggregateRoutes[aggregateType] = busType
 	r.logger.Info("Set aggregate type route",
 		zap.String("aggregate_type", aggregateType),
 		zap.String("bus_type", string(busType)),
 	)
-	
+
 	return nil
 }
 
@@ -165,16 +165,16 @@ func (r *EventBusRouter) SetAggregateRoute(aggregateType string, busType EventBu
 func (r *EventBusRouter) SetPriorityOrder(order []EventBusType) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	for _, busType := range order {
 		if _, ok := r.buses[busType]; !ok {
 			return fmt.Errorf("event bus %s not registered", busType)
 		}
 	}
-	
+
 	r.priorityOrder = order
 	r.logger.Info("Set priority order", zap.Any("order", order))
-	
+
 	return nil
 }
 
@@ -182,14 +182,14 @@ func (r *EventBusRouter) SetPriorityOrder(order []EventBusType) error {
 func (r *EventBusRouter) getEventBus(event *eventsourcing.Event) (eventbus.EventBus, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	switch r.strategy {
 	case SingleBusStrategy:
 		// Use the default bus
 		if bus, ok := r.buses[r.defaultBus]; ok {
 			return bus, nil
 		}
-		
+
 	case TypeBasedStrategy:
 		// Check if there's a route for this event type
 		if busType, ok := r.typeRoutes[event.EventType]; ok {
@@ -197,12 +197,12 @@ func (r *EventBusRouter) getEventBus(event *eventsourcing.Event) (eventbus.Event
 				return bus, nil
 			}
 		}
-		
+
 		// Fall back to the default bus
 		if bus, ok := r.buses[r.defaultBus]; ok {
 			return bus, nil
 		}
-		
+
 	case AggregateBasedStrategy:
 		// Check if there's a route for this aggregate type
 		if busType, ok := r.aggregateRoutes[event.AggregateType]; ok {
@@ -210,12 +210,12 @@ func (r *EventBusRouter) getEventBus(event *eventsourcing.Event) (eventbus.Event
 				return bus, nil
 			}
 		}
-		
+
 		// Fall back to the default bus
 		if bus, ok := r.buses[r.defaultBus]; ok {
 			return bus, nil
 		}
-		
+
 	case PriorityBasedStrategy:
 		// Try buses in priority order
 		for _, busType := range r.priorityOrder {
@@ -223,13 +223,13 @@ func (r *EventBusRouter) getEventBus(event *eventsourcing.Event) (eventbus.Event
 				return bus, nil
 			}
 		}
-		
+
 		// Fall back to the default bus if not in priority order
 		if bus, ok := r.buses[r.defaultBus]; ok {
 			return bus, nil
 		}
 	}
-	
+
 	return nil, fmt.Errorf("no suitable event bus found for event %s", event.EventType)
 }
 
@@ -237,12 +237,12 @@ func (r *EventBusRouter) getEventBus(event *eventsourcing.Event) (eventbus.Event
 func (r *EventBusRouter) getAllEventBuses() []eventbus.EventBus {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	buses := make([]eventbus.EventBus, 0, len(r.buses))
 	for _, bus := range r.buses {
 		buses = append(buses, bus)
 	}
-	
+
 	return buses
 }
 
@@ -261,16 +261,16 @@ func (r *EventBusRouter) PublishEvent(ctx context.Context, event *eventsourcing.
 				lastErr = err
 			}
 		}
-		
+
 		return lastErr
 	}
-	
+
 	// Get the appropriate bus
 	bus, err := r.getEventBus(event)
 	if err != nil {
 		return err
 	}
-	
+
 	// Publish the event
 	return bus.PublishEvent(ctx, event)
 }
@@ -280,7 +280,7 @@ func (r *EventBusRouter) PublishEvents(ctx context.Context, events []*eventsourc
 	if len(events) == 0 {
 		return nil
 	}
-	
+
 	if r.strategy == BroadcastStrategy {
 		// Send to all buses
 		var lastErr error
@@ -291,22 +291,22 @@ func (r *EventBusRouter) PublishEvents(ctx context.Context, events []*eventsourc
 				lastErr = err
 			}
 		}
-		
+
 		return lastErr
 	}
-	
+
 	// Group events by bus
 	eventsByBus := make(map[eventbus.EventBus][]*eventsourcing.Event)
-	
+
 	for _, event := range events {
 		bus, err := r.getEventBus(event)
 		if err != nil {
 			return err
 		}
-		
+
 		eventsByBus[bus] = append(eventsByBus[bus], event)
 	}
-	
+
 	// Publish events to each bus
 	var lastErr error
 	for bus, busEvents := range eventsByBus {
@@ -316,7 +316,7 @@ func (r *EventBusRouter) PublishEvents(ctx context.Context, events []*eventsourc
 			lastErr = err
 		}
 	}
-	
+
 	return lastErr
 }
 
@@ -331,14 +331,14 @@ func (r *EventBusRouter) Subscribe(handler eventsourcing.EventHandler) error {
 			lastErr = err
 		}
 	}
-	
+
 	return lastErr
 }
 
 // SubscribeToType subscribes to events of a specific type
 func (r *EventBusRouter) SubscribeToType(eventType string, handler eventsourcing.EventHandler) error {
 	r.mu.RLock()
-	
+
 	// Check if there's a specific bus for this event type
 	if r.strategy == TypeBasedStrategy {
 		if busType, ok := r.typeRoutes[eventType]; ok {
@@ -348,9 +348,9 @@ func (r *EventBusRouter) SubscribeToType(eventType string, handler eventsourcing
 			}
 		}
 	}
-	
+
 	r.mu.RUnlock()
-	
+
 	// Subscribe to all buses
 	var lastErr error
 	for _, bus := range r.getAllEventBuses() {
@@ -363,14 +363,14 @@ func (r *EventBusRouter) SubscribeToType(eventType string, handler eventsourcing
 			lastErr = err
 		}
 	}
-	
+
 	return lastErr
 }
 
 // SubscribeToAggregate subscribes to events of a specific aggregate type
 func (r *EventBusRouter) SubscribeToAggregate(aggregateType string, handler eventsourcing.EventHandler) error {
 	r.mu.RLock()
-	
+
 	// Check if there's a specific bus for this aggregate type
 	if r.strategy == AggregateBasedStrategy {
 		if busType, ok := r.aggregateRoutes[aggregateType]; ok {
@@ -380,9 +380,9 @@ func (r *EventBusRouter) SubscribeToAggregate(aggregateType string, handler even
 			}
 		}
 	}
-	
+
 	r.mu.RUnlock()
-	
+
 	// Subscribe to all buses
 	var lastErr error
 	for _, bus := range r.getAllEventBuses() {
@@ -395,7 +395,6 @@ func (r *EventBusRouter) SubscribeToAggregate(aggregateType string, handler even
 			lastErr = err
 		}
 	}
-	
+
 	return lastErr
 }
-

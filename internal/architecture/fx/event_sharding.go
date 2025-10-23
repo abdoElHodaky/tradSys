@@ -13,7 +13,7 @@ import (
 var ShardingModule = fx.Options(
 	// Provide the event sharding manager
 	fx.Provide(NewEventShardingManager),
-	
+
 	// Register lifecycle hooks
 	fx.Invoke(registerShardingHooks),
 )
@@ -22,7 +22,7 @@ var ShardingModule = fx.Options(
 type ShardingConfig struct {
 	// Strategy determines the sharding strategy
 	Strategy string
-	
+
 	// ShardCount is the number of shards
 	ShardCount int
 }
@@ -43,7 +43,7 @@ func NewEventShardingManager(
 ) *integration.EventShardingManager {
 	// Create the sharding configuration
 	config := integration.DefaultShardingConfig()
-	
+
 	// Create the event sharding manager
 	return integration.NewEventShardingManager(logger, config, conn, js)
 }
@@ -65,4 +65,3 @@ func registerShardingHooks(
 		},
 	})
 }
-

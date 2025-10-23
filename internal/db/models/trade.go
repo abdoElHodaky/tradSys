@@ -1,16 +1,16 @@
 package models
 
 import (
-	"time"
 	"gorm.io/gorm"
+	"time"
 )
 
 // Trade represents a trade in the database
 type Trade struct {
 	gorm.Model
-	ID                  string    `gorm:"primaryKey;type:uuid"`
-	OrderID             string    `gorm:"index"`
-	Symbol              string    `gorm:"index"`
+	ID                  string `gorm:"primaryKey;type:uuid"`
+	OrderID             string `gorm:"index"`
+	Symbol              string `gorm:"index"`
 	Side                string
 	Price               float64
 	Quantity            float64

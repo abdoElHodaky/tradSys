@@ -1,15 +1,15 @@
 package models
 
 import (
-	"time"
 	"gorm.io/gorm"
+	"time"
 )
 
 // Position represents a position in the database
 type Position struct {
 	gorm.Model
-	UserID            string    `gorm:"index"`
-	Symbol            string    `gorm:"index"`
+	UserID            string `gorm:"index"`
+	Symbol            string `gorm:"index"`
 	Quantity          float64
 	AverageEntryPrice float64
 	UnrealizedPnL     float64
