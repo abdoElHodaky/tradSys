@@ -62,14 +62,15 @@ func (s *PeerServer) HandleConnection(w http.ResponseWriter, r *http.Request) {
 
 	// Register peer
 	s.mu.Lock()
-	if existingPeer, ok := s.peers[peerID]; ok {
+	if existingPeerValue, ok := s.peers.Load(peerID); ok {
+		existingPeer := existingPeerValue.(*Peer)
 		// Close existing connection
 		existingPeer.mu.Lock()
 		existingPeer.Connected = false
 		existingPeer.mu.Unlock()
 		existingPeer.Conn.Close()
 	}
-	s.peers[peerID] = peer
+	s.peers.Store(peerID, peer)
 	s.mu.Unlock()
 
 	s.logger.Info("Peer connected", zap.String("peer_id", peerID))
@@ -93,8 +94,8 @@ func (s *PeerServer) handleMessages(peer *Peer) {
 	defer func() {
 		// Unregister peer
 		s.mu.Lock()
-		if p, ok := s.peers[peer.ID]; ok && p == peer {
-			delete(s.peers, peer.ID)
+		if pValue, ok := s.peers.Load(peer.ID); ok && pValue.(*Peer) == peer {
+			s.peers.Delete(peer.ID)
 		}
 		s.mu.Unlock()
 
@@ -149,10 +150,21 @@ func (s *PeerServer) handleMessages(peer *Peer) {
 			}
 
 			s.mu.RLock()
-			dstPeer, ok := s.peers[msg.Dst]
+			dstPeerValue, ok := s.peers.Load(msg.Dst)
 			s.mu.RUnlock()
 
-			if !ok || !dstPeer.Connected {
+			if !ok {
+				// Destination peer not found
+				errorMsg := Message{
+					Type:    "ERROR",
+					Payload: "Peer not found",
+				}
+				peer.Conn.WriteJSON(errorMsg)
+				continue
+			}
+
+			dstPeer := dstPeerValue.(*Peer)
+			if !dstPeer.Connected {
 				// Destination peer not found or not connected
 				errorMsg := Message{
 					Type:    "ERROR",
@@ -182,16 +194,19 @@ func (s *PeerServer) handleMessages(peer *Peer) {
 			}
 
 			s.mu.RLock()
-			dstPeer, ok := s.peers[msg.Dst]
+			dstPeerValue, ok := s.peers.Load(msg.Dst)
 			s.mu.RUnlock()
 
-			if ok && dstPeer.Connected {
-				// Forward leave message
-				leaveMsg := Message{
-					Type: "LEAVE",
-					Src:  peer.ID,
+			if ok {
+				dstPeer := dstPeerValue.(*Peer)
+				if dstPeer.Connected {
+					// Forward leave message
+					leaveMsg := Message{
+						Type: "LEAVE",
+						Src:  peer.ID,
+					}
+					dstPeer.Conn.WriteJSON(leaveMsg)
 				}
-				dstPeer.Conn.WriteJSON(leaveMsg)
 			}
 
 		default:
@@ -206,7 +221,12 @@ func (s *PeerServer) CleanupInactivePeers(timeout time.Duration) {
 	defer s.mu.Unlock()
 
 	now := time.Now()
-	for id, peer := range s.peers {
+	var inactivePeers []string
+	
+	s.peers.Range(func(key, value interface{}) bool {
+		id := key.(string)
+		peer := value.(*Peer)
+		
 		peer.mu.RLock()
 		lastSeen := peer.LastSeen
 		connected := peer.Connected
@@ -219,11 +239,15 @@ func (s *PeerServer) CleanupInactivePeers(timeout time.Duration) {
 			peer.mu.Unlock()
 			peer.Conn.Close()
 
-			// Remove from peers map
-			delete(s.peers, id)
-
+			inactivePeers = append(inactivePeers, id)
 			s.logger.Info("Removed inactive peer", zap.String("peer_id", id))
 		}
+		return true
+	})
+	
+	// Remove inactive peers from the map
+	for _, id := range inactivePeers {
+		s.peers.Delete(id)
 	}
 }
 
@@ -241,5 +265,11 @@ func (s *PeerServer) StartCleanupTask(interval, timeout time.Duration) {
 func (s *PeerServer) GetPeerCount() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return len(s.peers)
+	
+	count := 0
+	s.peers.Range(func(key, value interface{}) bool {
+		count++
+		return true
+	})
+	return count
 }

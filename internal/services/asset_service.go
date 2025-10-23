@@ -285,3 +285,13 @@ func (s *AssetService) ListAssets(ctx context.Context, offset, limit int, assetT
 
 	return assets, total, nil
 }
+
+// GetAssetBySymbol retrieves asset metadata by symbol (alias for GetAssetMetadata)
+func (s *AssetService) GetAssetBySymbol(ctx context.Context, symbol string) (*models.AssetMetadata, error) {
+	return s.GetAssetMetadata(ctx, symbol)
+}
+
+// GetCurrentPricing retrieves current pricing for an asset (alias for GetAssetPricing)
+func (s *AssetService) GetCurrentPricing(ctx context.Context, symbol string) (*models.AssetPricing, error) {
+	return s.GetAssetPricing(ctx, symbol)
+}
