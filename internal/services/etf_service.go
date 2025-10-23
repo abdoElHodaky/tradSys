@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math"
 	"time"
@@ -127,7 +126,7 @@ func (s *ETFService) CreateETF(symbol, benchmarkIndex string, creationUnitSize i
 	s.logger.Info("Creating new ETF", zap.String("symbol", symbol))
 
 	// Create asset metadata
-	attributes := map[string]interface{}{
+	assetAttributes := models.AssetAttributes{
 		"benchmark_index":     benchmarkIndex,
 		"creation_unit_size":  creationUnitSize,
 		"expense_ratio":       expenseRatio,
@@ -136,17 +135,6 @@ func (s *ETFService) CreateETF(symbol, benchmarkIndex string, creationUnitSize i
 		"fund_family":        "",
 		"investment_style":   "",
 		"geographic_focus":   "",
-	}
-
-	attributesJSON, err := json.Marshal(attributes)
-	if err != nil {
-		return fmt.Errorf("failed to marshal ETF attributes: %w", err)
-	}
-
-	// Convert JSON bytes to AssetAttributes map
-	var assetAttributes models.AssetAttributes
-	if err := json.Unmarshal(attributesJSON, &assetAttributes); err != nil {
-		return fmt.Errorf("failed to parse ETF attributes: %w", err)
 	}
 
 	asset := &models.AssetMetadata{
@@ -195,7 +183,7 @@ func (s *ETFService) GetETFMetrics(symbol string) (*ETFMetrics, error) {
 	}
 
 	// Parse attributes
-	attributes := map[string]interface{}(asset.Attributes)
+	attributes := asset.Attributes
 
 	// Get current pricing
 	pricing, err := s.assetService.GetCurrentPricing(context.Background(), symbol)
@@ -351,18 +339,7 @@ func (s *ETFService) ProcessCreationRedemption(operation *CreationRedemptionOper
 	}
 
 	// Save updated attributes
-	attributesJSON, err := json.Marshal(attributes)
-	if err != nil {
-		return fmt.Errorf("failed to marshal updated ETF attributes: %w", err)
-	}
-
-	// Convert JSON bytes to AssetAttributes
-	var updatedAttributes models.AssetAttributes
-	if err := json.Unmarshal(attributesJSON, &updatedAttributes); err != nil {
-		return fmt.Errorf("failed to unmarshal updated ETF attributes: %w", err)
-	}
-
-	asset.Attributes = updatedAttributes
+	asset.Attributes = attributes
 	asset.UpdatedAt = time.Now()
 
 	if err := s.db.Save(asset).Error; err != nil {

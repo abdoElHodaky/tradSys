@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math"
 	"time"
@@ -83,7 +82,7 @@ func (s *BondService) CreateBond(symbol, issuer string, faceValue, couponRate fl
 	maturityDate time.Time, creditRating string) error {
 	s.logger.Info("Creating new bond", zap.String("symbol", symbol))
 
-	attributesMap := map[string]interface{}{
+	attributes := models.AssetAttributes{
 		"issuer":         issuer,
 		"face_value":     faceValue,
 		"coupon_rate":    couponRate,
@@ -94,18 +93,6 @@ func (s *BondService) CreateBond(symbol, issuer string, faceValue, couponRate fl
 		"currency":       "USD",
 		"payment_frequency": 2, // Semi-annual
 	}
-
-	attributesJSON, err := json.Marshal(attributesMap)
-	if err != nil {
-		return fmt.Errorf("failed to marshal bond attributes: %w", err)
-	}
-
-	// Convert JSON bytes to AssetAttributes map
-	var attributes models.AssetAttributes
-	if err := json.Unmarshal(attributesJSON, &attributes); err != nil {
-		return fmt.Errorf("failed to parse bond attributes: %w", err)
-	}
-
 	asset := &models.AssetMetadata{
 		Symbol:     symbol,
 		AssetType:  types.AssetTypeBond,
@@ -135,7 +122,7 @@ func (s *BondService) GetBondMetrics(symbol string) (*BondMetrics, error) {
 		return nil, fmt.Errorf("asset %s is not a bond", symbol)
 	}
 
-	attributes := map[string]interface{}(asset.Attributes)
+	attributes := asset.Attributes
 
 	pricing, err := s.assetService.GetCurrentPricing(context.Background(), symbol)
 	if err != nil {
@@ -275,7 +262,7 @@ func (s *BondService) AssessCreditRisk(symbol string) (*CreditRiskAssessment, er
 		return nil, fmt.Errorf("failed to get bond asset: %w", err)
 	}
 
-	attributes := map[string]interface{}(asset.Attributes)
+	attributes := asset.Attributes
 
 	currentRating := s.getStringAttribute(attributes, "credit_rating")
 	
