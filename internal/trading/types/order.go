@@ -54,6 +54,8 @@ type Order struct {
 	ID string
 	// Symbol is the trading symbol
 	Symbol string
+	// AssetType is the type of asset being traded
+	AssetType AssetType
 	// Side is the side of the order (buy or sell)
 	Side OrderSide
 	// Type is the type of the order
@@ -110,6 +112,7 @@ type Order struct {
 func (o *Order) Reset() {
 	o.ID = ""
 	o.Symbol = ""
+	o.AssetType = ""
 	o.Side = ""
 	o.Type = ""
 	o.Price = 0
