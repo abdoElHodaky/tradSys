@@ -1,0 +1,419 @@
+syntax = "proto3";
+
+package compliance;
+
+option go_package = "github.com/abdoElHodaky/tradSys/proto/compliance";
+
+// ComplianceService provides compliance validation functionality
+service ComplianceService {
+  // ValidateOrder validates an order against compliance rules
+  rpc ValidateOrder(ValidateOrderRequest) returns (ValidateOrderResponse);
+  
+  // ValidateTransaction validates a transaction against compliance rules
+  rpc ValidateTransaction(ValidateTransactionRequest) returns (ValidateTransactionResponse);
+  
+  // CheckRegulation checks compliance against specific regulations
+  rpc CheckRegulation(CheckRegulationRequest) returns (CheckRegulationResponse);
+  
+  // ValidateUser validates user compliance status
+  rpc ValidateUser(ValidateUserRequest) returns (ValidateUserResponse);
+  
+  // AuditTransaction audits a transaction for compliance
+  rpc AuditTransaction(AuditTransactionRequest) returns (AuditTransactionResponse);
+  
+  // GenerateReport generates compliance reports
+  rpc GenerateReport(GenerateReportRequest) returns (GenerateReportResponse);
+  
+  // GetComplianceRules gets active compliance rules
+  rpc GetComplianceRules(GetComplianceRulesRequest) returns (GetComplianceRulesResponse);
+  
+  // CheckShariaCompliance checks Islamic finance compliance
+  rpc CheckShariaCompliance(CheckShariaComplianceRequest) returns (CheckShariaComplianceResponse);
+  
+  // StreamComplianceEvents streams real-time compliance events
+  rpc StreamComplianceEvents(StreamComplianceEventsRequest) returns (stream ComplianceEvent);
+}
+
+// ValidateOrderRequest represents an order validation request
+message ValidateOrderRequest {
+  string user_id = 1;
+  Order order = 2;
+  repeated string regulations = 3; // Specific regulations to check
+  map<string, string> context = 4; // Additional context
+}
+
+// ValidateOrderResponse represents an order validation response
+message ValidateOrderResponse {
+  bool is_compliant = 1;
+  repeated ComplianceViolation violations = 2;
+  repeated ComplianceWarning warnings = 3;
+  double compliance_score = 4; // 0.0 to 1.0
+  string message = 5;
+  map<string, string> metadata = 6;
+}
+
+// ValidateTransactionRequest represents a transaction validation request
+message ValidateTransactionRequest {
+  string user_id = 1;
+  Transaction transaction = 2;
+  repeated string regulations = 3;
+  map<string, string> context = 4;
+}
+
+// ValidateTransactionResponse represents a transaction validation response
+message ValidateTransactionResponse {
+  bool is_compliant = 1;
+  repeated ComplianceViolation violations = 2;
+  repeated ComplianceWarning warnings = 3;
+  double compliance_score = 4;
+  string message = 5;
+  map<string, string> metadata = 6;
+}
+
+// CheckRegulationRequest represents a regulation check request
+message CheckRegulationRequest {
+  string regulation_type = 1; // "MiFID", "GDPR", "KYC", "AML", etc.
+  string jurisdiction = 2; // "EU", "US", "UAE", "EG", etc.
+  oneof subject {
+    Order order = 3;
+    Transaction transaction = 4;
+    User user = 5;
+    Asset asset = 6;
+  }
+  map<string, string> parameters = 7;
+}
+
+// CheckRegulationResponse represents a regulation check response
+message CheckRegulationResponse {
+  bool is_compliant = 1;
+  string regulation = 2;
+  string jurisdiction = 3;
+  repeated ComplianceViolation violations = 4;
+  repeated ComplianceWarning warnings = 5;
+  string message = 6;
+  map<string, string> details = 7;
+}
+
+// ValidateUserRequest represents a user validation request
+message ValidateUserRequest {
+  string user_id = 1;
+  repeated string regulations = 2;
+  map<string, string> context = 3;
+}
+
+// ValidateUserResponse represents a user validation response
+message ValidateUserResponse {
+  bool is_compliant = 1;
+  repeated ComplianceViolation violations = 2;
+  repeated ComplianceWarning warnings = 3;
+  UserComplianceStatus status = 4;
+  string message = 5;
+}
+
+// AuditTransactionRequest represents a transaction audit request
+message AuditTransactionRequest {
+  string transaction_id = 1;
+  Transaction transaction = 2;
+  string audit_type = 3; // "pre_trade", "post_trade", "periodic"
+  repeated string regulations = 4;
+}
+
+// AuditTransactionResponse represents a transaction audit response
+message AuditTransactionResponse {
+  bool success = 1;
+  string audit_id = 2;
+  AuditResult result = 3;
+  string message = 4;
+}
+
+// GenerateReportRequest represents a report generation request
+message GenerateReportRequest {
+  string report_type = 1; // "compliance_summary", "violations", "audit_trail"
+  int64 start_date = 2; // Unix timestamp
+  int64 end_date = 3; // Unix timestamp
+  repeated string user_ids = 4; // Filter by users
+  repeated string regulations = 5; // Filter by regulations
+  string format = 6; // "json", "pdf", "csv"
+  map<string, string> filters = 7;
+}
+
+// GenerateReportResponse represents a report generation response
+message GenerateReportResponse {
+  bool success = 1;
+  string report_id = 2;
+  ComplianceReport report = 3;
+  string download_url = 4;
+  string message = 5;
+}
+
+// GetComplianceRulesRequest represents a get compliance rules request
+message GetComplianceRulesRequest {
+  repeated string rule_types = 1; // Filter by rule types
+  repeated string jurisdictions = 2; // Filter by jurisdictions
+  bool active_only = 3; // Only active rules
+}
+
+// GetComplianceRulesResponse represents a get compliance rules response
+message GetComplianceRulesResponse {
+  bool success = 1;
+  repeated ComplianceRule rules = 2;
+  string message = 3;
+}
+
+// CheckShariaComplianceRequest represents a Sharia compliance check request
+message CheckShariaComplianceRequest {
+  oneof subject {
+    Asset asset = 1;
+    Order order = 2;
+    Transaction transaction = 3;
+  }
+  repeated string sharia_boards = 4; // Specific Sharia boards to consult
+  map<string, string> parameters = 5;
+}
+
+// CheckShariaComplianceResponse represents a Sharia compliance check response
+message CheckShariaComplianceResponse {
+  bool is_sharia_compliant = 1;
+  repeated ShariaViolation violations = 2;
+  repeated ShariaGuidance guidance = 3;
+  repeated string approving_boards = 4;
+  string fatwa_reference = 5;
+  string message = 6;
+  map<string, string> details = 7;
+}
+
+// StreamComplianceEventsRequest represents a stream compliance events request
+message StreamComplianceEventsRequest {
+  repeated string event_types = 1; // Filter by event types
+  repeated string user_ids = 2; // Filter by users
+  repeated string regulations = 3; // Filter by regulations
+}
+
+// ComplianceEvent represents a compliance event
+message ComplianceEvent {
+  string event_id = 1;
+  string event_type = 2; // "violation", "warning", "audit", "rule_change"
+  string user_id = 3;
+  string regulation = 4;
+  string severity = 5; // "low", "medium", "high", "critical"
+  string description = 6;
+  int64 timestamp = 7; // Unix timestamp
+  map<string, string> metadata = 8;
+}
+
+// Supporting Types
+
+// Order represents a trading order (simplified for compliance)
+message Order {
+  string id = 1;
+  string user_id = 2;
+  string symbol = 3;
+  string asset_type = 4;
+  string exchange = 5;
+  string order_type = 6;
+  string side = 7; // "BUY" or "SELL"
+  double quantity = 8;
+  double price = 9;
+  string status = 10;
+  int64 created_at = 11;
+  map<string, string> metadata = 12;
+}
+
+// Transaction represents a financial transaction (simplified for compliance)
+message Transaction {
+  string id = 1;
+  string user_id = 2;
+  string order_id = 3;
+  string type = 4; // "BUY", "SELL", "DEPOSIT", "WITHDRAWAL"
+  string symbol = 5;
+  string asset_type = 6;
+  string exchange = 7;
+  double quantity = 8;
+  double price = 9;
+  double amount = 10;
+  string currency = 11;
+  string status = 12;
+  int64 created_at = 13;
+  map<string, string> metadata = 14;
+}
+
+// User represents a user (simplified for compliance)
+message User {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+  string country = 4;
+  string jurisdiction = 5;
+  repeated string roles = 6;
+  string kyc_status = 7;
+  string aml_status = 8;
+  bool is_pep = 9; // Politically Exposed Person
+  int64 created_at = 10;
+  map<string, string> metadata = 11;
+}
+
+// Asset represents an asset (simplified for compliance)
+message Asset {
+  string id = 1;
+  string symbol = 2;
+  string name = 3;
+  string asset_type = 4;
+  string exchange = 5;
+  string region = 6;
+  string sector = 7;
+  bool islamic_compliant = 8;
+  repeated string certifications = 9;
+  map<string, string> metadata = 10;
+}
+
+// ComplianceViolation represents a compliance violation
+message ComplianceViolation {
+  string violation_id = 1;
+  string rule_id = 2;
+  string rule_name = 3;
+  string violation_type = 4;
+  string severity = 5; // "low", "medium", "high", "critical"
+  string description = 6;
+  string regulation = 7;
+  string jurisdiction = 8;
+  repeated string remediation_steps = 9;
+  map<string, string> details = 10;
+}
+
+// ComplianceWarning represents a compliance warning
+message ComplianceWarning {
+  string warning_id = 1;
+  string rule_id = 2;
+  string rule_name = 3;
+  string warning_type = 4;
+  string description = 5;
+  string regulation = 6;
+  repeated string recommendations = 7;
+  map<string, string> details = 8;
+}
+
+// UserComplianceStatus represents user compliance status
+message UserComplianceStatus {
+  string user_id = 1;
+  string overall_status = 2; // "compliant", "non_compliant", "pending"
+  string kyc_status = 3;
+  string aml_status = 4;
+  bool is_verified = 5;
+  repeated string active_restrictions = 6;
+  int64 last_reviewed = 7; // Unix timestamp
+  map<string, string> details = 8;
+}
+
+// AuditResult represents an audit result
+message AuditResult {
+  string audit_id = 1;
+  string audit_type = 2;
+  string status = 3; // "passed", "failed", "warning"
+  repeated ComplianceViolation violations = 4;
+  repeated ComplianceWarning warnings = 5;
+  string auditor = 6;
+  int64 audit_date = 7; // Unix timestamp
+  map<string, string> findings = 8;
+}
+
+// ComplianceReport represents a compliance report
+message ComplianceReport {
+  string report_id = 1;
+  string report_type = 2;
+  string title = 3;
+  int64 generated_at = 4; // Unix timestamp
+  int64 period_start = 5; // Unix timestamp
+  int64 period_end = 6; // Unix timestamp
+  ReportSummary summary = 7;
+  repeated ReportSection sections = 8;
+  map<string, string> metadata = 9;
+}
+
+// ReportSummary represents a report summary
+message ReportSummary {
+  int32 total_transactions = 1;
+  int32 compliant_transactions = 2;
+  int32 violations_count = 3;
+  int32 warnings_count = 4;
+  double compliance_rate = 5; // Percentage
+  repeated string top_violations = 6;
+  map<string, int32> violation_by_type = 7;
+}
+
+// ReportSection represents a section of a report
+message ReportSection {
+  string section_id = 1;
+  string title = 2;
+  string content = 3;
+  repeated ReportChart charts = 4;
+  repeated ReportTable tables = 5;
+  map<string, string> metadata = 6;
+}
+
+// ReportChart represents a chart in a report
+message ReportChart {
+  string chart_id = 1;
+  string title = 2;
+  string chart_type = 3; // "bar", "line", "pie", etc.
+  repeated ChartDataPoint data_points = 4;
+}
+
+// ChartDataPoint represents a data point in a chart
+message ChartDataPoint {
+  string label = 1;
+  double value = 2;
+  string category = 3;
+}
+
+// ReportTable represents a table in a report
+message ReportTable {
+  string table_id = 1;
+  string title = 2;
+  repeated string headers = 3;
+  repeated ReportTableRow rows = 4;
+}
+
+// ReportTableRow represents a row in a report table
+message ReportTableRow {
+  repeated string cells = 1;
+}
+
+// ComplianceRule represents a compliance rule
+message ComplianceRule {
+  string rule_id = 1;
+  string name = 2;
+  string description = 3;
+  string rule_type = 4;
+  string regulation = 5;
+  string jurisdiction = 6;
+  string severity = 7;
+  bool is_active = 8;
+  repeated string asset_types = 9;
+  repeated string exchanges = 10;
+  map<string, string> parameters = 11;
+  int64 created_at = 12;
+  int64 updated_at = 13;
+}
+
+// ShariaViolation represents a Sharia compliance violation
+message ShariaViolation {
+  string violation_id = 1;
+  string violation_type = 2;
+  string description = 3;
+  string severity = 4;
+  string sharia_principle = 5;
+  repeated string remediation_steps = 6;
+  string fatwa_reference = 7;
+  map<string, string> details = 8;
+}
+
+// ShariaGuidance represents Sharia compliance guidance
+message ShariaGuidance {
+  string guidance_id = 1;
+  string guidance_type = 2;
+  string description = 3;
+  string sharia_principle = 4;
+  repeated string recommendations = 5;
+  string fatwa_reference = 6;
+  map<string, string> details = 7;
+}
