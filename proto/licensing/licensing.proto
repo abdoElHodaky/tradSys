@@ -1,0 +1,183 @@
+syntax = "proto3";
+
+package licensing;
+
+option go_package = "github.com/abdoElHodaky/tradSys/proto/licensing";
+
+// LicensingService provides enterprise licensing functionality
+service LicensingService {
+  // GetLicense gets license information
+  rpc GetLicense(GetLicenseRequest) returns (GetLicenseResponse);
+  
+  // ValidateLicense validates a license
+  rpc ValidateLicense(ValidateLicenseRequest) returns (ValidateLicenseResponse);
+  
+  // GetUsage gets usage metrics
+  rpc GetUsage(GetUsageRequest) returns (GetUsageResponse);
+  
+  // RecordUsage records usage event
+  rpc RecordUsage(RecordUsageRequest) returns (RecordUsageResponse);
+  
+  // GetBilling gets billing information
+  rpc GetBilling(GetBillingRequest) returns (GetBillingResponse);
+}
+
+// GetLicenseRequest represents a get license request
+message GetLicenseRequest {
+  string license_key = 1;
+  string organization_id = 2;
+}
+
+// GetLicenseResponse represents a get license response
+message GetLicenseResponse {
+  bool success = 1;
+  License license = 2;
+  string message = 3;
+}
+
+// ValidateLicenseRequest represents a validate license request
+message ValidateLicenseRequest {
+  string license_key = 1;
+  string feature = 2;
+  string user_id = 3;
+}
+
+// ValidateLicenseResponse represents a validate license response
+message ValidateLicenseResponse {
+  bool valid = 1;
+  bool feature_enabled = 2;
+  LicenseStatus status = 3;
+  string message = 4;
+}
+
+// GetUsageRequest represents a get usage request
+message GetUsageRequest {
+  string license_key = 1;
+  string organization_id = 2;
+  int64 start_date = 3;
+  int64 end_date = 4;
+}
+
+// GetUsageResponse represents a get usage response
+message GetUsageResponse {
+  bool success = 1;
+  Usage usage = 2;
+  string message = 3;
+}
+
+// RecordUsageRequest represents a record usage request
+message RecordUsageRequest {
+  string license_key = 1;
+  string organization_id = 2;
+  string user_id = 3;
+  string feature = 4;
+  string action = 5;
+  int32 quantity = 6;
+  map<string, string> metadata = 7;
+}
+
+// RecordUsageResponse represents a record usage response
+message RecordUsageResponse {
+  bool success = 1;
+  string usage_id = 2;
+  string message = 3;
+}
+
+// GetBillingRequest represents a get billing request
+message GetBillingRequest {
+  string license_key = 1;
+  string organization_id = 2;
+  int64 billing_period_start = 3;
+  int64 billing_period_end = 4;
+}
+
+// GetBillingResponse represents a get billing response
+message GetBillingResponse {
+  bool success = 1;
+  BillingInfo billing = 2;
+  string message = 3;
+}
+
+// Supporting Types
+
+// License represents a license
+message License {
+  string key = 1;
+  string organization_id = 2;
+  string tier = 3; // "starter", "professional", "enterprise", "custom"
+  string status = 4; // "active", "expired", "suspended", "cancelled"
+  repeated string features = 5;
+  LicenseLimits limits = 6;
+  int64 issued_at = 7;
+  int64 expires_at = 8;
+  map<string, string> metadata = 9;
+}
+
+// LicenseLimits represents license limits
+message LicenseLimits {
+  int32 max_users = 1;
+  int32 max_api_calls_per_month = 2;
+  int32 max_orders_per_day = 3;
+  int32 max_portfolios = 4;
+  int32 max_watchlists = 5;
+  bool unlimited_history = 6;
+  bool priority_support = 7;
+  map<string, int32> custom_limits = 8;
+}
+
+// LicenseStatus represents license status
+message LicenseStatus {
+  bool is_valid = 1;
+  bool is_expired = 2;
+  bool is_suspended = 3;
+  int64 expires_at = 4;
+  Usage current_usage = 5;
+  repeated string violations = 6;
+}
+
+// Usage represents usage metrics
+message Usage {
+  string license_key = 1;
+  string organization_id = 2;
+  int32 active_users = 3;
+  int32 api_calls = 4;
+  int32 orders_placed = 5;
+  int32 portfolios_created = 6;
+  int32 watchlists_created = 7;
+  repeated UsageMetric metrics = 8;
+  int64 period_start = 9;
+  int64 period_end = 10;
+}
+
+// UsageMetric represents a usage metric
+message UsageMetric {
+  string feature = 1;
+  string metric_type = 2; // "count", "duration", "volume"
+  int64 value = 3;
+  string unit = 4;
+  int64 timestamp = 5;
+}
+
+// BillingInfo represents billing information
+message BillingInfo {
+  string license_key = 1;
+  string organization_id = 2;
+  string billing_period = 3;
+  double base_cost = 4;
+  double usage_cost = 5;
+  double total_cost = 6;
+  string currency = 7;
+  repeated BillingItem items = 8;
+  int64 billing_date = 9;
+  int64 due_date = 10;
+}
+
+// BillingItem represents a billing item
+message BillingItem {
+  string description = 1;
+  string feature = 2;
+  int64 quantity = 3;
+  double unit_price = 4;
+  double total_price = 5;
+  string billing_model = 6; // "fixed", "per_user", "per_api_call", "tiered"
+}

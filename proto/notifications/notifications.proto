@@ -1,0 +1,121 @@
+syntax = "proto3";
+
+package notifications;
+
+option go_package = "github.com/abdoElHodaky/tradSys/proto/notifications";
+
+// NotificationService provides notification functionality
+service NotificationService {
+  // SendNotification sends a notification
+  rpc SendNotification(SendNotificationRequest) returns (SendNotificationResponse);
+  
+  // GetNotifications gets user notifications
+  rpc GetNotifications(GetNotificationsRequest) returns (GetNotificationsResponse);
+  
+  // MarkAsRead marks notifications as read
+  rpc MarkAsRead(MarkAsReadRequest) returns (MarkAsReadResponse);
+  
+  // CreatePriceAlert creates a price alert
+  rpc CreatePriceAlert(CreatePriceAlertRequest) returns (CreatePriceAlertResponse);
+  
+  // StreamNotifications streams real-time notifications
+  rpc StreamNotifications(StreamNotificationsRequest) returns (stream NotificationEvent);
+}
+
+// SendNotificationRequest represents a send notification request
+message SendNotificationRequest {
+  string user_id = 1;
+  string type = 2; // "order", "price_alert", "system", "news"
+  string title = 3;
+  string message = 4;
+  repeated string channels = 5; // "email", "sms", "push", "in_app"
+  map<string, string> data = 6;
+}
+
+// SendNotificationResponse represents a send notification response
+message SendNotificationResponse {
+  bool success = 1;
+  string notification_id = 2;
+  string message = 3;
+}
+
+// GetNotificationsRequest represents a get notifications request
+message GetNotificationsRequest {
+  string user_id = 1;
+  repeated string types = 2; // Filter by types
+  bool unread_only = 3;
+  int32 limit = 4;
+  int32 offset = 5;
+}
+
+// GetNotificationsResponse represents a get notifications response
+message GetNotificationsResponse {
+  bool success = 1;
+  repeated Notification notifications = 2;
+  int32 total_count = 3;
+  int32 unread_count = 4;
+  string message = 5;
+}
+
+// MarkAsReadRequest represents a mark as read request
+message MarkAsReadRequest {
+  string user_id = 1;
+  repeated string notification_ids = 2;
+}
+
+// MarkAsReadResponse represents a mark as read response
+message MarkAsReadResponse {
+  bool success = 1;
+  int32 marked_count = 2;
+  string message = 3;
+}
+
+// CreatePriceAlertRequest represents a create price alert request
+message CreatePriceAlertRequest {
+  string user_id = 1;
+  string symbol = 2;
+  string condition = 3; // "above", "below", "change"
+  double target_price = 4;
+  double change_percentage = 5;
+  bool enabled = 6;
+}
+
+// CreatePriceAlertResponse represents a create price alert response
+message CreatePriceAlertResponse {
+  bool success = 1;
+  string alert_id = 2;
+  string message = 3;
+}
+
+// StreamNotificationsRequest represents a stream notifications request
+message StreamNotificationsRequest {
+  string user_id = 1;
+  repeated string types = 2; // Filter by types
+}
+
+// NotificationEvent represents a notification event
+message NotificationEvent {
+  string notification_id = 1;
+  string user_id = 2;
+  string type = 3;
+  string title = 4;
+  string message = 5;
+  map<string, string> data = 6;
+  int64 timestamp = 7;
+}
+
+// Supporting Types
+
+// Notification represents a notification
+message Notification {
+  string id = 1;
+  string user_id = 2;
+  string type = 3;
+  string title = 4;
+  string message = 5;
+  bool is_read = 6;
+  repeated string channels = 7;
+  map<string, string> data = 8;
+  int64 created_at = 9;
+  int64 read_at = 10;
+}
