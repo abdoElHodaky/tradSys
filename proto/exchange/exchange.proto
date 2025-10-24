@@ -1,0 +1,410 @@
+syntax = "proto3";
+
+package exchange;
+
+option go_package = "github.com/abdoElHodaky/tradSys/proto/exchange";
+
+// ExchangeService provides generic exchange operations
+service ExchangeService {
+  // GetExchangeInfo gets exchange information
+  rpc GetExchangeInfo(GetExchangeInfoRequest) returns (GetExchangeInfoResponse);
+  
+  // GetTradingStatus gets current trading status
+  rpc GetTradingStatus(GetTradingStatusRequest) returns (GetTradingStatusResponse);
+  
+  // GetTradingSchedule gets trading schedule
+  rpc GetTradingSchedule(GetTradingScheduleRequest) returns (GetTradingScheduleResponse);
+  
+  // SubmitOrder submits an order to the exchange
+  rpc SubmitOrder(SubmitOrderRequest) returns (SubmitOrderResponse);
+  
+  // CancelOrder cancels an order on the exchange
+  rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse);
+  
+  // GetOrderStatus gets order status from exchange
+  rpc GetOrderStatus(GetOrderStatusRequest) returns (GetOrderStatusResponse);
+  
+  // GetMarketData gets market data from exchange
+  rpc GetMarketData(GetMarketDataRequest) returns (GetMarketDataResponse);
+  
+  // StreamMarketData streams real-time market data
+  rpc StreamMarketData(StreamMarketDataRequest) returns (stream MarketDataUpdate);
+  
+  // GetSupportedAssets gets assets supported by exchange
+  rpc GetSupportedAssets(GetSupportedAssetsRequest) returns (GetSupportedAssetsResponse);
+  
+  // ValidateSymbol validates if symbol is tradeable
+  rpc ValidateSymbol(ValidateSymbolRequest) returns (ValidateSymbolResponse);
+}
+
+// GetExchangeInfoRequest represents a get exchange info request
+message GetExchangeInfoRequest {
+  string exchange_id = 1;
+}
+
+// GetExchangeInfoResponse represents a get exchange info response
+message GetExchangeInfoResponse {
+  bool success = 1;
+  ExchangeInfo exchange_info = 2;
+  string message = 3;
+}
+
+// GetTradingStatusRequest represents a get trading status request
+message GetTradingStatusRequest {
+  string exchange_id = 1;
+  repeated string symbols = 2; // Optional symbol filter
+}
+
+// GetTradingStatusResponse represents a get trading status response
+message GetTradingStatusResponse {
+  bool success = 1;
+  TradingStatus trading_status = 2;
+  repeated SymbolTradingStatus symbol_statuses = 3;
+  string message = 4;
+}
+
+// GetTradingScheduleRequest represents a get trading schedule request
+message GetTradingScheduleRequest {
+  string exchange_id = 1;
+  int64 date = 2; // Unix timestamp for specific date
+}
+
+// GetTradingScheduleResponse represents a get trading schedule response
+message GetTradingScheduleResponse {
+  bool success = 1;
+  TradingSchedule schedule = 2;
+  string message = 3;
+}
+
+// SubmitOrderRequest represents a submit order request
+message SubmitOrderRequest {
+  string exchange_id = 1;
+  Order order = 2;
+  map<string, string> exchange_params = 3; // Exchange-specific parameters
+}
+
+// SubmitOrderResponse represents a submit order response
+message SubmitOrderResponse {
+  bool success = 1;
+  string exchange_order_id = 2;
+  string internal_order_id = 3;
+  string status = 4;
+  string message = 5;
+  int64 timestamp = 6; // Unix timestamp
+  map<string, string> metadata = 7;
+}
+
+// CancelOrderRequest represents a cancel order request
+message CancelOrderRequest {
+  string exchange_id = 1;
+  string exchange_order_id = 2;
+  string internal_order_id = 3;
+  string symbol = 4;
+}
+
+// CancelOrderResponse represents a cancel order response
+message CancelOrderResponse {
+  bool success = 1;
+  string exchange_order_id = 2;
+  string internal_order_id = 3;
+  string status = 4;
+  string message = 5;
+  int64 timestamp = 6; // Unix timestamp
+}
+
+// GetOrderStatusRequest represents a get order status request
+message GetOrderStatusRequest {
+  string exchange_id = 1;
+  string exchange_order_id = 2;
+  string internal_order_id = 3;
+}
+
+// GetOrderStatusResponse represents a get order status response
+message GetOrderStatusResponse {
+  bool success = 1;
+  OrderStatus order_status = 2;
+  string message = 3;
+}
+
+// GetMarketDataRequest represents a get market data request
+message GetMarketDataRequest {
+  string exchange_id = 1;
+  string symbol = 2;
+  repeated string data_types = 3; // "quote", "trade", "depth", etc.
+}
+
+// GetMarketDataResponse represents a get market data response
+message GetMarketDataResponse {
+  bool success = 1;
+  MarketData market_data = 2;
+  string message = 3;
+}
+
+// StreamMarketDataRequest represents a stream market data request
+message StreamMarketDataRequest {
+  string exchange_id = 1;
+  repeated string symbols = 2;
+  repeated string data_types = 3; // "quote", "trade", "depth", etc.
+}
+
+// MarketDataUpdate represents a market data update
+message MarketDataUpdate {
+  string exchange_id = 1;
+  string symbol = 2;
+  string data_type = 3;
+  MarketData data = 4;
+  int64 timestamp = 5; // Unix timestamp
+  int64 sequence = 6; // Sequence number
+}
+
+// GetSupportedAssetsRequest represents a get supported assets request
+message GetSupportedAssetsRequest {
+  string exchange_id = 1;
+  repeated string asset_types = 2; // Filter by asset types
+}
+
+// GetSupportedAssetsResponse represents a get supported assets response
+message GetSupportedAssetsResponse {
+  bool success = 1;
+  repeated SupportedAsset assets = 2;
+  string message = 3;
+}
+
+// ValidateSymbolRequest represents a validate symbol request
+message ValidateSymbolRequest {
+  string exchange_id = 1;
+  string symbol = 2;
+  string asset_type = 3;
+}
+
+// ValidateSymbolResponse represents a validate symbol response
+message ValidateSymbolResponse {
+  bool valid = 1;
+  bool tradeable = 2;
+  SymbolInfo symbol_info = 3;
+  string message = 4;
+}
+
+// Supporting Types
+
+// ExchangeInfo represents exchange information
+message ExchangeInfo {
+  string id = 1;
+  string name = 2;
+  string full_name = 3;
+  string country = 4;
+  string region = 5;
+  string timezone = 6;
+  string currency = 7;
+  string website = 8;
+  repeated string supported_asset_types = 9;
+  TradingSchedule trading_schedule = 10;
+  ExchangeFeatures features = 11;
+  ExchangeLimits limits = 12;
+  map<string, string> metadata = 13;
+  bool is_active = 14;
+  int64 created_at = 15;
+  int64 updated_at = 16;
+}
+
+// ExchangeFeatures represents exchange features
+message ExchangeFeatures {
+  bool supports_market_orders = 1;
+  bool supports_limit_orders = 2;
+  bool supports_stop_orders = 3;
+  bool supports_streaming = 4;
+  bool supports_historical_data = 5;
+  bool supports_order_book = 6;
+  bool supports_islamic_trading = 7;
+  repeated string order_types = 8;
+  repeated string time_in_force = 9;
+  map<string, bool> advanced_features = 10;
+}
+
+// ExchangeLimits represents exchange limits
+message ExchangeLimits {
+  double min_order_size = 1;
+  double max_order_size = 2;
+  double min_price_increment = 3;
+  int32 max_orders_per_second = 4;
+  int32 max_orders_per_day = 5;
+  double max_position_size = 6;
+  map<string, double> asset_limits = 7;
+}
+
+// TradingStatus represents trading status
+message TradingStatus {
+  string exchange_id = 1;
+  bool is_open = 2;
+  string status = 3; // "open", "closed", "pre_market", "post_market", "halted"
+  string session = 4; // Current trading session
+  int64 current_time = 5; // Unix timestamp
+  int64 next_open = 6; // Unix timestamp
+  int64 next_close = 7; // Unix timestamp
+  string message = 8;
+  map<string, string> details = 9;
+}
+
+// SymbolTradingStatus represents symbol-specific trading status
+message SymbolTradingStatus {
+  string symbol = 1;
+  bool is_tradeable = 2;
+  string status = 3; // "active", "halted", "suspended", "delisted"
+  string halt_reason = 4;
+  int64 halt_start = 5; // Unix timestamp
+  int64 halt_end = 6; // Unix timestamp
+  map<string, string> details = 7;
+}
+
+// TradingSchedule represents trading schedule
+message TradingSchedule {
+  string exchange_id = 1;
+  int64 date = 2; // Unix timestamp
+  bool is_trading_day = 3;
+  repeated TradingSession sessions = 4;
+  repeated Holiday holidays = 5;
+  string timezone = 6;
+}
+
+// TradingSession represents a trading session
+message TradingSession {
+  string name = 1; // "pre_market", "regular", "post_market"
+  int64 start_time = 2; // Unix timestamp
+  int64 end_time = 3; // Unix timestamp
+  repeated string asset_types = 4; // Asset types traded in this session
+  bool is_active = 5;
+}
+
+// Holiday represents a trading holiday
+message Holiday {
+  string name = 1;
+  int64 date = 2; // Unix timestamp
+  string type = 3; // "full_day", "half_day", "early_close"
+  int64 close_time = 4; // Unix timestamp for early close
+}
+
+// Order represents a trading order
+message Order {
+  string id = 1;
+  string user_id = 2;
+  string symbol = 3;
+  string asset_type = 4;
+  string order_type = 5; // "MARKET", "LIMIT", "STOP", etc.
+  string side = 6; // "BUY", "SELL"
+  double quantity = 7;
+  double price = 8;
+  double stop_price = 9;
+  string time_in_force = 10; // "GTC", "IOC", "FOK", "DAY"
+  map<string, string> exchange_params = 11;
+  int64 created_at = 12;
+  int64 expires_at = 13;
+}
+
+// OrderStatus represents order status
+message OrderStatus {
+  string exchange_order_id = 1;
+  string internal_order_id = 2;
+  string symbol = 3;
+  string status = 4; // "NEW", "PARTIALLY_FILLED", "FILLED", "CANCELLED", etc.
+  double filled_quantity = 5;
+  double remaining_quantity = 6;
+  double average_price = 7;
+  double commission = 8;
+  repeated Fill fills = 9;
+  int64 created_at = 10;
+  int64 updated_at = 11;
+  string message = 12;
+}
+
+// Fill represents an order fill
+message Fill {
+  string fill_id = 1;
+  double quantity = 2;
+  double price = 3;
+  double commission = 4;
+  int64 timestamp = 5;
+  string liquidity = 6; // "maker", "taker"
+}
+
+// MarketData represents market data
+message MarketData {
+  string symbol = 1;
+  string exchange_id = 2;
+  double last_price = 3;
+  double bid_price = 4;
+  double ask_price = 5;
+  double bid_size = 6;
+  double ask_size = 7;
+  double volume = 8;
+  double high = 9;
+  double low = 10;
+  double open = 11;
+  double close = 12;
+  double change = 13;
+  double change_percent = 14;
+  int64 timestamp = 15;
+  OrderBook order_book = 16;
+  repeated Trade recent_trades = 17;
+}
+
+// OrderBook represents order book data
+message OrderBook {
+  repeated OrderBookLevel bids = 1;
+  repeated OrderBookLevel asks = 2;
+  int64 timestamp = 3;
+  int64 sequence = 4;
+}
+
+// OrderBookLevel represents an order book level
+message OrderBookLevel {
+  double price = 1;
+  double size = 2;
+  int32 orders = 3;
+}
+
+// Trade represents a trade
+message Trade {
+  string trade_id = 1;
+  double price = 2;
+  double size = 3;
+  string side = 4; // "buy", "sell"
+  int64 timestamp = 5;
+}
+
+// SupportedAsset represents a supported asset
+message SupportedAsset {
+  string symbol = 1;
+  string name = 2;
+  string asset_type = 3;
+  string base_currency = 4;
+  string quote_currency = 5;
+  double min_order_size = 6;
+  double max_order_size = 7;
+  double price_increment = 8;
+  double size_increment = 9;
+  bool is_active = 10;
+  bool islamic_compliant = 11;
+  map<string, string> metadata = 12;
+}
+
+// SymbolInfo represents symbol information
+message SymbolInfo {
+  string symbol = 1;
+  string name = 2;
+  string asset_type = 3;
+  string exchange_id = 4;
+  bool is_active = 5;
+  bool is_tradeable = 6;
+  TradingLimits limits = 7;
+  map<string, string> properties = 8;
+}
+
+// TradingLimits represents trading limits for a symbol
+message TradingLimits {
+  double min_order_size = 1;
+  double max_order_size = 2;
+  double min_price = 3;
+  double max_price = 4;
+  double price_increment = 5;
+  double size_increment = 6;
+}

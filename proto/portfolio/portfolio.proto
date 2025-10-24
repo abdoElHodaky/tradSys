@@ -1,0 +1,491 @@
+syntax = "proto3";
+
+package portfolio;
+
+option go_package = "github.com/abdoElHodaky/tradSys/proto/portfolio";
+
+// PortfolioService provides portfolio management functionality
+service PortfolioService {
+  // CreatePortfolio creates a new portfolio
+  rpc CreatePortfolio(CreatePortfolioRequest) returns (CreatePortfolioResponse);
+  
+  // GetPortfolio gets a portfolio by ID
+  rpc GetPortfolio(GetPortfolioRequest) returns (GetPortfolioResponse);
+  
+  // UpdatePortfolio updates portfolio information
+  rpc UpdatePortfolio(UpdatePortfolioRequest) returns (UpdatePortfolioResponse);
+  
+  // DeletePortfolio deletes a portfolio
+  rpc DeletePortfolio(DeletePortfolioRequest) returns (DeletePortfolioResponse);
+  
+  // ListPortfolios lists user portfolios
+  rpc ListPortfolios(ListPortfoliosRequest) returns (ListPortfoliosResponse);
+  
+  // GetPortfolioSummary gets portfolio summary
+  rpc GetPortfolioSummary(GetPortfolioSummaryRequest) returns (GetPortfolioSummaryResponse);
+  
+  // GetPositions gets portfolio positions
+  rpc GetPositions(GetPositionsRequest) returns (GetPositionsResponse);
+  
+  // GetPosition gets a specific position
+  rpc GetPosition(GetPositionRequest) returns (GetPositionResponse);
+  
+  // UpdatePosition updates a position
+  rpc UpdatePosition(UpdatePositionRequest) returns (UpdatePositionResponse);
+  
+  // GetPerformance gets portfolio performance metrics
+  rpc GetPerformance(GetPerformanceRequest) returns (GetPerformanceResponse);
+  
+  // GetRiskMetrics gets portfolio risk metrics
+  rpc GetRiskMetrics(GetRiskMetricsRequest) returns (GetRiskMetricsResponse);
+  
+  // GetAllocation gets portfolio allocation
+  rpc GetAllocation(GetAllocationRequest) returns (GetAllocationResponse);
+  
+  // RebalancePortfolio rebalances portfolio
+  rpc RebalancePortfolio(RebalancePortfolioRequest) returns (RebalancePortfolioResponse);
+  
+  // StreamPortfolioUpdates streams real-time portfolio updates
+  rpc StreamPortfolioUpdates(StreamPortfolioUpdatesRequest) returns (stream PortfolioUpdate);
+}
+
+// CreatePortfolioRequest represents a create portfolio request
+message CreatePortfolioRequest {
+  string user_id = 1;
+  string name = 2;
+  string description = 3;
+  string currency = 4;
+  string portfolio_type = 5; // "individual", "joint", "corporate", "islamic"
+  double initial_cash = 6;
+  PortfolioSettings settings = 7;
+  map<string, string> metadata = 8;
+}
+
+// CreatePortfolioResponse represents a create portfolio response
+message CreatePortfolioResponse {
+  bool success = 1;
+  string portfolio_id = 2;
+  Portfolio portfolio = 3;
+  string message = 4;
+}
+
+// GetPortfolioRequest represents a get portfolio request
+message GetPortfolioRequest {
+  string portfolio_id = 1;
+  string user_id = 2; // For authorization
+  bool include_positions = 3;
+  bool include_performance = 4;
+}
+
+// GetPortfolioResponse represents a get portfolio response
+message GetPortfolioResponse {
+  bool success = 1;
+  Portfolio portfolio = 2;
+  string message = 3;
+}
+
+// UpdatePortfolioRequest represents an update portfolio request
+message UpdatePortfolioRequest {
+  string portfolio_id = 1;
+  string user_id = 2; // For authorization
+  string name = 3;
+  string description = 4;
+  PortfolioSettings settings = 5;
+  map<string, string> metadata = 6;
+}
+
+// UpdatePortfolioResponse represents an update portfolio response
+message UpdatePortfolioResponse {
+  bool success = 1;
+  Portfolio portfolio = 2;
+  string message = 3;
+}
+
+// DeletePortfolioRequest represents a delete portfolio request
+message DeletePortfolioRequest {
+  string portfolio_id = 1;
+  string user_id = 2; // For authorization
+  bool force = 3; // Force delete even with positions
+}
+
+// DeletePortfolioResponse represents a delete portfolio response
+message DeletePortfolioResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// ListPortfoliosRequest represents a list portfolios request
+message ListPortfoliosRequest {
+  string user_id = 1;
+  repeated string portfolio_types = 2; // Filter by types
+  bool active_only = 3;
+  int32 limit = 4;
+  int32 offset = 5;
+  string sort_by = 6; // "name", "created_at", "value"
+  string sort_order = 7; // "asc", "desc"
+}
+
+// ListPortfoliosResponse represents a list portfolios response
+message ListPortfoliosResponse {
+  bool success = 1;
+  repeated Portfolio portfolios = 2;
+  int32 total_count = 3;
+  string message = 4;
+}
+
+// GetPortfolioSummaryRequest represents a get portfolio summary request
+message GetPortfolioSummaryRequest {
+  string portfolio_id = 1;
+  string user_id = 2; // For authorization
+  bool include_performance = 3;
+  bool include_allocation = 4;
+}
+
+// GetPortfolioSummaryResponse represents a get portfolio summary response
+message GetPortfolioSummaryResponse {
+  bool success = 1;
+  PortfolioSummary summary = 2;
+  string message = 3;
+}
+
+// GetPositionsRequest represents a get positions request
+message GetPositionsRequest {
+  string portfolio_id = 1;
+  string user_id = 2; // For authorization
+  repeated string symbols = 3; // Filter by symbols
+  repeated string asset_types = 4; // Filter by asset types
+  bool active_only = 5;
+  int32 limit = 6;
+  int32 offset = 7;
+}
+
+// GetPositionsResponse represents a get positions response
+message GetPositionsResponse {
+  bool success = 1;
+  repeated Position positions = 2;
+  int32 total_count = 3;
+  string message = 4;
+}
+
+// GetPositionRequest represents a get position request
+message GetPositionRequest {
+  string portfolio_id = 1;
+  string position_id = 2;
+  string user_id = 3; // For authorization
+}
+
+// GetPositionResponse represents a get position response
+message GetPositionResponse {
+  bool success = 1;
+  Position position = 2;
+  string message = 3;
+}
+
+// UpdatePositionRequest represents an update position request
+message UpdatePositionRequest {
+  string portfolio_id = 1;
+  string position_id = 2;
+  string user_id = 3; // For authorization
+  double quantity = 4;
+  double average_cost = 5;
+  map<string, string> metadata = 6;
+}
+
+// UpdatePositionResponse represents an update position response
+message UpdatePositionResponse {
+  bool success = 1;
+  Position position = 2;
+  string message = 3;
+}
+
+// GetPerformanceRequest represents a get performance request
+message GetPerformanceRequest {
+  string portfolio_id = 1;
+  string user_id = 2; // For authorization
+  int64 start_date = 3; // Unix timestamp
+  int64 end_date = 4; // Unix timestamp
+  string period = 5; // "1d", "1w", "1m", "3m", "6m", "1y", "ytd", "all"
+  repeated string metrics = 6; // Specific metrics to calculate
+}
+
+// GetPerformanceResponse represents a get performance response
+message GetPerformanceResponse {
+  bool success = 1;
+  PerformanceMetrics performance = 2;
+  string message = 3;
+}
+
+// GetRiskMetricsRequest represents a get risk metrics request
+message GetRiskMetricsRequest {
+  string portfolio_id = 1;
+  string user_id = 2; // For authorization
+  string risk_model = 3; // "var", "cvar", "monte_carlo"
+  double confidence_level = 4; // 0.95, 0.99, etc.
+  int32 time_horizon = 5; // Days
+}
+
+// GetRiskMetricsResponse represents a get risk metrics response
+message GetRiskMetricsResponse {
+  bool success = 1;
+  RiskMetrics risk_metrics = 2;
+  string message = 3;
+}
+
+// GetAllocationRequest represents a get allocation request
+message GetAllocationRequest {
+  string portfolio_id = 1;
+  string user_id = 2; // For authorization
+  string allocation_type = 3; // "asset_type", "sector", "region", "exchange"
+}
+
+// GetAllocationResponse represents a get allocation response
+message GetAllocationResponse {
+  bool success = 1;
+  repeated AllocationItem allocations = 2;
+  string message = 3;
+}
+
+// RebalancePortfolioRequest represents a rebalance portfolio request
+message RebalancePortfolioRequest {
+  string portfolio_id = 1;
+  string user_id = 2; // For authorization
+  repeated TargetAllocation target_allocations = 3;
+  string rebalance_method = 4; // "threshold", "calendar", "manual"
+  double threshold = 5; // Rebalance threshold percentage
+  bool dry_run = 6; // Preview rebalancing without executing
+}
+
+// RebalancePortfolioResponse represents a rebalance portfolio response
+message RebalancePortfolioResponse {
+  bool success = 1;
+  RebalanceResult result = 2;
+  string message = 3;
+}
+
+// StreamPortfolioUpdatesRequest represents a stream portfolio updates request
+message StreamPortfolioUpdatesRequest {
+  repeated string portfolio_ids = 1;
+  string user_id = 2; // For authorization
+  repeated string update_types = 3; // "position", "value", "performance"
+}
+
+// PortfolioUpdate represents a portfolio update event
+message PortfolioUpdate {
+  string portfolio_id = 1;
+  string update_type = 2; // "position_change", "value_change", "performance_update"
+  Portfolio portfolio = 3;
+  Position position = 4; // For position updates
+  int64 timestamp = 5; // Unix timestamp
+  map<string, string> metadata = 6;
+}
+
+// Supporting Types
+
+// Portfolio represents a portfolio
+message Portfolio {
+  string id = 1;
+  string user_id = 2;
+  string name = 3;
+  string description = 4;
+  string currency = 5;
+  string portfolio_type = 6;
+  double total_value = 7;
+  double cash_balance = 8;
+  double invested_amount = 9;
+  double unrealized_pnl = 10;
+  double realized_pnl = 11;
+  double day_change = 12;
+  double day_change_percent = 13;
+  repeated Position positions = 14;
+  PortfolioSettings settings = 15;
+  PerformanceMetrics performance = 16;
+  map<string, string> metadata = 17;
+  bool is_active = 18;
+  int64 created_at = 19;
+  int64 updated_at = 20;
+}
+
+// PortfolioSettings represents portfolio settings
+message PortfolioSettings {
+  bool auto_rebalance = 1;
+  double rebalance_threshold = 2; // Percentage
+  string rebalance_frequency = 3; // "daily", "weekly", "monthly", "quarterly"
+  bool dividend_reinvestment = 4;
+  bool islamic_compliant = 5;
+  repeated string allowed_asset_types = 6;
+  repeated string allowed_exchanges = 7;
+  RiskLimits risk_limits = 8;
+  map<string, string> custom_settings = 9;
+}
+
+// RiskLimits represents risk limits
+message RiskLimits {
+  double max_position_size = 1; // Percentage of portfolio
+  double max_sector_allocation = 2; // Percentage
+  double max_single_asset = 3; // Percentage
+  double max_leverage = 4;
+  double stop_loss_threshold = 5; // Percentage
+  double var_limit = 6; // Value at Risk limit
+}
+
+// Position represents a portfolio position
+message Position {
+  string id = 1;
+  string portfolio_id = 2;
+  string symbol = 3;
+  string asset_type = 4;
+  string exchange = 5;
+  double quantity = 6;
+  double average_cost = 7;
+  double current_price = 8;
+  double market_value = 9;
+  double unrealized_pnl = 10;
+  double unrealized_pnl_percent = 11;
+  double realized_pnl = 12;
+  double day_change = 13;
+  double day_change_percent = 14;
+  double weight = 15; // Percentage of portfolio
+  string currency = 16;
+  AssetInfo asset_info = 17;
+  map<string, string> metadata = 18;
+  int64 opened_at = 19;
+  int64 updated_at = 20;
+}
+
+// AssetInfo represents asset information
+message AssetInfo {
+  string symbol = 1;
+  string name = 2;
+  string asset_type = 3;
+  string sector = 4;
+  string industry = 5;
+  string region = 6;
+  bool islamic_compliant = 7;
+  double market_cap = 8;
+  double pe_ratio = 9;
+  double dividend_yield = 10;
+  map<string, string> metadata = 11;
+}
+
+// PortfolioSummary represents a portfolio summary
+message PortfolioSummary {
+  string portfolio_id = 1;
+  string name = 2;
+  double total_value = 3;
+  double cash_balance = 4;
+  double invested_amount = 5;
+  double unrealized_pnl = 6;
+  double realized_pnl = 7;
+  double total_return = 8;
+  double total_return_percent = 9;
+  double day_change = 10;
+  double day_change_percent = 11;
+  int32 positions_count = 12;
+  repeated AllocationItem top_holdings = 13;
+  PerformanceMetrics performance = 14;
+  RiskMetrics risk_metrics = 15;
+  int64 last_updated = 16;
+}
+
+// PerformanceMetrics represents performance metrics
+message PerformanceMetrics {
+  double total_return = 1;
+  double total_return_percent = 2;
+  double annualized_return = 3;
+  double volatility = 4;
+  double sharpe_ratio = 5;
+  double sortino_ratio = 6;
+  double max_drawdown = 7;
+  double max_drawdown_percent = 8;
+  double beta = 9;
+  double alpha = 10;
+  double information_ratio = 11;
+  double calmar_ratio = 12;
+  repeated PerformanceDataPoint historical_returns = 13;
+  int64 start_date = 14;
+  int64 end_date = 15;
+}
+
+// PerformanceDataPoint represents a performance data point
+message PerformanceDataPoint {
+  int64 date = 1; // Unix timestamp
+  double value = 2;
+  double return_pct = 3;
+  double cumulative_return = 4;
+}
+
+// RiskMetrics represents risk metrics
+message RiskMetrics {
+  double var_95 = 1; // Value at Risk 95%
+  double var_99 = 2; // Value at Risk 99%
+  double cvar_95 = 3; // Conditional VaR 95%
+  double cvar_99 = 4; // Conditional VaR 99%
+  double portfolio_beta = 5;
+  double tracking_error = 6;
+  double concentration_risk = 7;
+  double liquidity_risk = 8;
+  repeated RiskContribution risk_contributions = 9;
+  int64 calculated_at = 10;
+}
+
+// RiskContribution represents risk contribution by position
+message RiskContribution {
+  string symbol = 1;
+  double weight = 2;
+  double risk_contribution = 3;
+  double marginal_var = 4;
+  double component_var = 5;
+}
+
+// AllocationItem represents an allocation item
+message AllocationItem {
+  string category = 1; // Asset type, sector, region, etc.
+  string name = 2;
+  double value = 3;
+  double weight = 4; // Percentage
+  double target_weight = 5; // Target percentage
+  double deviation = 6; // Deviation from target
+  int32 positions_count = 7;
+}
+
+// TargetAllocation represents target allocation for rebalancing
+message TargetAllocation {
+  string category = 1; // "symbol", "asset_type", "sector"
+  string identifier = 2; // Symbol, asset type, or sector name
+  double target_weight = 3; // Target percentage
+  double min_weight = 4; // Minimum percentage
+  double max_weight = 5; // Maximum percentage
+}
+
+// RebalanceResult represents rebalancing result
+message RebalanceResult {
+  bool executed = 1;
+  repeated RebalanceAction actions = 2;
+  double total_trades_value = 3;
+  double estimated_cost = 4;
+  double estimated_tax_impact = 5;
+  RebalanceSummary before = 6;
+  RebalanceSummary after = 7;
+  int64 executed_at = 8;
+}
+
+// RebalanceAction represents a rebalancing action
+message RebalanceAction {
+  string action_type = 1; // "buy", "sell"
+  string symbol = 2;
+  double quantity = 3;
+  double estimated_price = 4;
+  double estimated_value = 5;
+  string reason = 6;
+  double current_weight = 7;
+  double target_weight = 8;
+}
+
+// RebalanceSummary represents rebalancing summary
+message RebalanceSummary {
+  double total_value = 1;
+  double cash_balance = 2;
+  repeated AllocationItem allocations = 3;
+  double largest_deviation = 4;
+  double average_deviation = 5;
+}
