@@ -534,62 +534,128 @@ func (ts *TrafficSplitter) SplitTraffic(
 }
 ```
 
-### **2. Real-Time WebSocket Routing**
+### **2. Real-Time WebSocket Routing Integration**
 
 ```go
-// WebSocket Routing Manager
+// WebSocket Routing Manager with Enhanced Integration
 type WebSocketRoutingManager struct {
-    connections     map[string]*WebSocketConnection
-    routingEngine   *IntelligentRouter
-    loadBalancer    *WebSocketLoadBalancer
-    sessionManager  *SessionManager
+    connections       map[string]*WebSocketConnection
+    routingEngine     *IntelligentRouter
+    loadBalancer      *WebSocketLoadBalancer
+    sessionManager    *SessionManager
+    serviceDiscovery  *WebSocketServiceDiscovery
+    complianceFilter  *IslamicFinanceWebSocketFilter
+    licensingManager  *LicensingAwareSubscriptionManager
 }
 
-type WebSocketConnection struct {
-    ID              string
-    UserID          string
-    Exchange        string
-    Subscriptions   []string
-    LastActivity    time.Time
-    Connection      *websocket.Conn
+type EnhancedWebSocketConnection struct {
+    ID                string
+    UserID            string
+    Exchange          string
+    AssetTypes        []AssetType
+    Subscriptions     map[string]*Subscription
+    LastActivity      time.Time
+    Connection        *websocket.Conn
+    LicenseTier       LicenseTier
+    IslamicCompliant  bool
+    RegionalEndpoint  string
+    QoSLevel          QoSLevel
 }
 
 func (wsrm *WebSocketRoutingManager) RouteWebSocketConnection(
     ctx *RoutingContext,
     conn *websocket.Conn,
 ) error {
-    // Create WebSocket connection context
-    wsContext := &WebSocketRoutingContext{
-        RoutingContext: ctx,
-        ConnectionType: "realtime",
-        Subscriptions:  ctx.Subscriptions,
+    // Create enhanced WebSocket connection context
+    wsContext := &WebSocketConnectionContext{
+        ConnectionID:       generateConnectionID(),
+        UserID:            ctx.UserID,
+        Exchange:          ctx.Exchange,
+        AssetTypes:        ctx.AssetTypes,
+        LicenseTier:       ctx.LicenseTier,
+        IslamicCompliant:  ctx.IslamicCompliant,
+        LatencyRequirement: ctx.LatencyRequirement,
+        Priority:          ctx.Priority,
     }
     
-    // Route to appropriate WebSocket service
-    decision, err := wsrm.routingEngine.Route(wsContext, &Request{
+    // Discover available WebSocket services
+    services, err := wsrm.serviceDiscovery.DiscoverWebSocketServices(wsContext)
+    if err != nil {
+        return fmt.Errorf("websocket service discovery failed: %w", err)
+    }
+    
+    // Route to appropriate WebSocket service using intelligent routing
+    decision, err := wsrm.routingEngine.Route(ctx, &Request{
         Type:      "websocket",
         Operation: "connect",
+        Services:  services,
     })
     if err != nil {
         return fmt.Errorf("websocket routing failed: %w", err)
     }
     
-    // Establish connection to selected service
-    wsConn := &WebSocketConnection{
-        ID:           generateConnectionID(),
-        UserID:       ctx.UserID,
-        Exchange:     ctx.Exchange,
-        Connection:   conn,
-        LastActivity: time.Now(),
+    // Create enhanced WebSocket connection
+    wsConn := &EnhancedWebSocketConnection{
+        ID:               wsContext.ConnectionID,
+        UserID:           ctx.UserID,
+        Exchange:         ctx.Exchange,
+        AssetTypes:       ctx.AssetTypes,
+        Subscriptions:    make(map[string]*Subscription),
+        Connection:       conn,
+        LastActivity:     time.Now(),
+        LicenseTier:      ctx.LicenseTier,
+        IslamicCompliant: ctx.IslamicCompliant,
+        RegionalEndpoint: decision.ServiceEndpoint.URL,
+        QoSLevel:         ctx.QoSLevel,
     }
     
-    // Register connection
+    // Register connection with routing manager
     wsrm.connections[wsConn.ID] = wsConn
     
-    // Start message routing
-    go wsrm.routeMessages(wsConn, decision.ServiceEndpoint)
+    // Start intelligent message routing with compliance filtering
+    go wsrm.routeMessagesWithCompliance(wsConn, decision.ServiceEndpoint)
     
     return nil
+}
+
+func (wsrm *WebSocketRoutingManager) routeMessagesWithCompliance(
+    conn *EnhancedWebSocketConnection,
+    endpoint *ServiceEndpoint,
+) {
+    for {
+        // Read message from WebSocket connection
+        message, err := wsrm.readMessage(conn.Connection)
+        if err != nil {
+            wsrm.handleConnectionError(conn, err)
+            break
+        }
+        
+        // Apply Islamic finance compliance filtering if required
+        if conn.IslamicCompliant {
+            filteredMessage, err := wsrm.complianceFilter.FilterMessage(
+                &WebSocketConnectionContext{
+                    ConnectionID:     conn.ID,
+                    UserID:          conn.UserID,
+                    IslamicCompliant: conn.IslamicCompliant,
+                },
+                message,
+            )
+            if err != nil {
+                wsrm.handleComplianceError(conn, err)
+                continue
+            }
+            message = filteredMessage
+        }
+        
+        // Route message to appropriate service endpoint
+        err = wsrm.forwardMessage(endpoint, message)
+        if err != nil {
+            wsrm.handleRoutingError(conn, err)
+        }
+        
+        // Update connection activity
+        conn.LastActivity = time.Now()
+    }
 }
 ```
 

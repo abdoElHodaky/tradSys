@@ -204,10 +204,10 @@ func (las *LicenseAwareService) ExecuteWithLicenseCheck(
 }
 ```
 
-### **2. Islamic Finance Validation Services**
+### **2. Islamic Finance Validation Services with WebSocket Support**
 
 ```go
-// Islamic Finance Service Interface
+// Islamic Finance Service Interface with Real-Time WebSocket Integration
 type IslamicFinanceService interface {
     UnifiedService
     
@@ -224,6 +224,11 @@ type IslamicFinanceService interface {
     PerformHalalScreening(ctx context.Context, assets []Asset) (*ScreeningResult, error)
     GetRestrictedSectors() []string
     ValidateFinancialRatios(ctx context.Context, company *Company) (*RatioValidation, error)
+    
+    // Real-Time WebSocket Compliance
+    ValidateWebSocketMessage(ctx context.Context, message *WebSocketMessage, board string) (*ComplianceResult, error)
+    StreamComplianceUpdates() (<-chan *ComplianceUpdate, error)
+    FilterWebSocketData(ctx context.Context, data interface{}, complianceLevel ComplianceLevel) (interface{}, error)
 }
 
 // Sharia Compliance Middleware
@@ -256,6 +261,195 @@ func (scm *ShariaComplianceMiddleware) ValidateOrder(
     order.Metadata["compliance_board"] = compliance.Board
     
     return next(ctx, order)
+}
+```
+
+---
+
+## 🌐 **Real-Time WebSocket Service Architecture**
+
+### **1. WebSocket Service Mesh Integration**
+
+```go
+// WebSocket Service Interface
+type WebSocketService interface {
+    UnifiedService
+    
+    // Connection Management
+    HandleConnection(ctx context.Context, conn *websocket.Conn, context *WebSocketConnectionContext) error
+    CloseConnection(connectionID string) error
+    GetActiveConnections() map[string]*WebSocketConnection
+    
+    // Message Routing
+    RouteMessage(ctx context.Context, message *WebSocketMessage) error
+    BroadcastMessage(ctx context.Context, channel string, message *WebSocketMessage) error
+    
+    // Subscription Management
+    Subscribe(ctx context.Context, connectionID string, subscription *Subscription) error
+    Unsubscribe(ctx context.Context, connectionID string, subscriptionID string) error
+    GetSubscriptions(connectionID string) []*Subscription
+    
+    // Compliance Integration
+    FilterMessage(ctx context.Context, message *WebSocketMessage, context *WebSocketConnectionContext) (*WebSocketMessage, error)
+    ValidateSubscription(ctx context.Context, subscription *Subscription, context *WebSocketConnectionContext) error
+}
+
+// WebSocket Service Implementation
+type WebSocketServiceImpl struct {
+    BaseUnifiedService
+    
+    connectionManager     *ConnectionManager
+    subscriptionManager   *LicensingAwareSubscriptionManager
+    complianceFilter     *IslamicFinanceWebSocketFilter
+    routingEngine        *IntelligentRouter
+    serviceDiscovery     *WebSocketServiceDiscovery
+    analytics           *WebSocketAnalyticsEngine
+}
+
+func (wss *WebSocketServiceImpl) HandleConnection(
+    ctx context.Context,
+    conn *websocket.Conn,
+    wsContext *WebSocketConnectionContext,
+) error {
+    // Validate connection context
+    if err := wss.validateConnectionContext(wsContext); err != nil {
+        return fmt.Errorf("invalid connection context: %w", err)
+    }
+    
+    // Create WebSocket connection
+    wsConn := &WebSocketConnection{
+        ID:               wsContext.ConnectionID,
+        UserID:           wsContext.UserID,
+        Exchange:         wsContext.Exchange,
+        Connection:       conn,
+        Context:          wsContext,
+        CreatedAt:        time.Now(),
+        LastActivity:     time.Now(),
+        Subscriptions:    make(map[string]*Subscription),
+    }
+    
+    // Register connection
+    wss.connectionManager.RegisterConnection(wsConn)
+    
+    // Start message handling
+    go wss.handleMessages(wsConn)
+    
+    // Record connection metrics
+    wss.analytics.RecordConnection(wsConn)
+    
+    return nil
+}
+
+func (wss *WebSocketServiceImpl) handleMessages(conn *WebSocketConnection) {
+    defer wss.connectionManager.UnregisterConnection(conn.ID)
+    
+    for {
+        // Read message from WebSocket
+        message, err := wss.readMessage(conn.Connection)
+        if err != nil {
+            wss.handleConnectionError(conn, err)
+            break
+        }
+        
+        // Apply compliance filtering if required
+        if conn.Context.IslamicCompliant {
+            filteredMessage, err := wss.complianceFilter.FilterMessage(conn.Context, message)
+            if err != nil {
+                wss.handleComplianceError(conn, err)
+                continue
+            }
+            message = filteredMessage
+        }
+        
+        // Route message
+        if err := wss.RouteMessage(context.Background(), message); err != nil {
+            wss.handleRoutingError(conn, err)
+        }
+        
+        // Update activity
+        conn.LastActivity = time.Now()
+        
+        // Record message metrics
+        wss.analytics.RecordMessage(conn, message)
+    }
+}
+```
+
+### **2. Exchange-Specific WebSocket Services**
+
+```go
+// EGX WebSocket Service
+type EGXWebSocketService struct {
+    WebSocketServiceImpl
+    
+    egxConnector      *EGXConnector
+    regionOptimizer   *RegionOptimizer
+    tradingHours      *TradingHoursManager
+    compliance        *EgyptianComplianceValidator
+}
+
+func (ews *EGXWebSocketService) HandleConnection(
+    ctx context.Context,
+    conn *websocket.Conn,
+    wsContext *WebSocketConnectionContext,
+) error {
+    // Validate EGX-specific requirements
+    if wsContext.Exchange != "EGX" {
+        return fmt.Errorf("invalid exchange for EGX WebSocket service: %s", wsContext.Exchange)
+    }
+    
+    // Check EGX trading hours
+    if !ews.tradingHours.IsEGXOpen() {
+        return ews.handleOffHoursConnection(ctx, conn, wsContext)
+    }
+    
+    // Optimize for Cairo region
+    endpoint := ews.regionOptimizer.GetOptimalEGXEndpoint(wsContext.ClientIP)
+    wsContext.RegionalEndpoint = endpoint
+    
+    // Call base implementation
+    return ews.WebSocketServiceImpl.HandleConnection(ctx, conn, wsContext)
+}
+
+// ADX WebSocket Service
+type ADXWebSocketService struct {
+    WebSocketServiceImpl
+    
+    adxConnector      *ADXConnector
+    regionOptimizer   *RegionOptimizer
+    tradingHours      *TradingHoursManager
+    compliance        *UAEComplianceValidator
+    islamicValidator  *IslamicFinanceValidator
+}
+
+func (aws *ADXWebSocketService) HandleConnection(
+    ctx context.Context,
+    conn *websocket.Conn,
+    wsContext *WebSocketConnectionContext,
+) error {
+    // Validate ADX-specific requirements
+    if wsContext.Exchange != "ADX" {
+        return fmt.Errorf("invalid exchange for ADX WebSocket service: %s", wsContext.Exchange)
+    }
+    
+    // Check ADX trading hours
+    if !aws.tradingHours.IsADXOpen() {
+        return aws.handleOffHoursConnection(ctx, conn, wsContext)
+    }
+    
+    // Islamic finance validation for ADX
+    if wsContext.IslamicCompliant {
+        if err := aws.islamicValidator.ValidateConnection(wsContext); err != nil {
+            return fmt.Errorf("islamic compliance validation failed: %w", err)
+        }
+    }
+    
+    // Optimize for UAE region
+    endpoint := aws.regionOptimizer.GetOptimalADXEndpoint(wsContext.ClientIP)
+    wsContext.RegionalEndpoint = endpoint
+    
+    // Call base implementation
+    return aws.WebSocketServiceImpl.HandleConnection(ctx, conn, wsContext)
 }
 ```
 
