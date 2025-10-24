@@ -1,250 +1,378 @@
-# 📊 TradSys Multi-Asset System Diagrams
+# 📊 TradSys v3 - Intelligent Multi-Exchange Trading Platform Diagrams
 
-This document contains comprehensive system diagrams for the TradSys Multi-Asset Trading System, illustrating the architecture, data flows, and component relationships.
+**Version:** 2.0  
+**Date:** October 24, 2024  
+**Status:** COMPREHENSIVE - All 6 Strategic Plans Integrated  
+
+This document contains comprehensive system diagrams for **TradSys v3**, illustrating the intelligent multi-exchange trading platform architecture with real-time WebSocket communication, Islamic finance support, and enterprise licensing across all 6 strategic plans.
 
 ---
 
-## 🏗️ **System Architecture Diagrams**
+## 🏗️ **TradSys v3 Strategic Architecture Diagrams**
 
-### **1. High-Level Multi-Asset Architecture**
+### **1. TradSys v3 - Complete System Architecture Overview**
 
 ```mermaid
 graph TB
-    subgraph "Client Applications"
-        WEB[Web Dashboard<br/>React/TypeScript]
-        MOBILE[Mobile Apps<br/>React Native]
-        API_CLIENTS[API Clients<br/>REST/GraphQL]
-        WS_CLIENTS[WebSocket Clients<br/>Real-time Data]
+    subgraph "Frontend Layer - Plan 3: Dashboard Modernization"
+        WEB[React/TypeScript Dashboard<br/>🌍 EGX/ADX Trading<br/>🕌 Islamic Finance UI<br/>📊 Real-time Updates]
+        MOBILE[Mobile PWA<br/>📱 Offline Support<br/>🌐 Arabic/RTL UI<br/>🔔 Push Notifications]
+        WS_CLIENTS[WebSocket Clients<br/>⚡ Live Subscriptions<br/>🔐 License Validation<br/>🕌 Compliance Filtering]
     end
     
-    subgraph "API Gateway & Security"
-        GATEWAY[API Gateway<br/>Kong/Nginx]
-        AUTH[Authentication<br/>JWT/OAuth2]
-        RATE_LIMIT[Rate Limiting<br/>Redis-based]
-        LOAD_BAL[Load Balancer<br/>HAProxy]
+    subgraph "WebSocket Gateway - Plan 6: Real-Time WebSocket System"
+        WS_GATEWAY[Intelligent WebSocket Gateway<br/>🧠 Multi-dimensional Routing<br/>🌍 Exchange-specific Channels<br/>🔐 License-aware Subscriptions<br/>🕌 Islamic Finance Filtering]
+        WS_CONN_MGR[Connection Manager<br/>📊 100K+ Concurrent Connections<br/>⚡ <10ms Connection Latency<br/>🔄 Auto-scaling]
+        WS_SUB_MGR[Subscription Manager<br/>🎯 Real-time Validation<br/>📈 Usage Tracking<br/>🔐 Feature Access Control]
     end
     
-    subgraph "Multi-Asset Services Layer"
-        ASSET_CORE[Core Asset Service<br/>Asset Management]
-        REIT_SVC[REIT Service<br/>FFO/AFFO Analysis]
-        MF_SVC[Mutual Fund Service<br/>NAV Operations]
-        ETF_SVC[ETF Service<br/>Creation/Redemption]
-        BOND_SVC[Bond Service<br/>Yield Calculations]
-        CRYPTO_SVC[Crypto Service<br/>24/7 Trading]
+    subgraph "Intelligent Routing Layer - Plan 5: Intelligent Routing"
+        ROUTER[Multi-Dimensional Router<br/>🧠 Context-aware Decisions<br/>🌍 Exchange-specific Routing<br/>🔐 Licensing Validation<br/>🕌 Islamic Finance Compliance]
+        LOAD_BAL[Intelligent Load Balancer<br/>⚖️ Latency-aware Distribution<br/>🏥 Health Checking<br/>📍 Regional Optimization]
+        CIRCUIT_BREAKER[Circuit Breaker<br/>🔄 Fault Tolerance<br/>🚨 Auto-recovery<br/>📊 Error Monitoring]
     end
     
-    subgraph "Core Trading Infrastructure"
-        TRADING_ENGINE[Trading Engine<br/>Order Matching]
-        RISK_ENGINE[Risk Engine<br/>Real-time Monitoring]
-        ORDER_MGMT[Order Management<br/>Lifecycle Tracking]
-        PORTFOLIO[Portfolio Analytics<br/>Cross-Asset Analysis]
+    subgraph "Service Mesh Layer - Plan 4: Services Architecture"
+        SERVICE_MESH[Unified Service Mesh<br/>🔒 mTLS Security<br/>🔍 Service Discovery<br/>📊 Distributed Tracing<br/>⚡ Performance Monitoring]
+        
+        subgraph "Core Services"
+            LICENSING_SVC[Enterprise Licensing Service<br/>🔐 Multi-tier Validation<br/>💰 Usage-based Billing<br/>📊 Real-time Quotas<br/>📋 Audit Trails]
+            ISLAMIC_SVC[Islamic Finance Service<br/>🕌 Sharia Compliance<br/>✅ Halal Screening<br/>📊 Multiple Boards<br/>💰 Zakat Calculation]
+            WEBSOCKET_SVC[WebSocket Service<br/>🌐 Connection Management<br/>📡 Message Routing<br/>🔐 Subscription Validation<br/>🕌 Compliance Filtering]
+        end
+        
+        subgraph "Exchange Services"
+            EGX_SVC[EGX Service<br/>🇪🇬 Egyptian Exchange<br/>🏛️ Cairo Optimization<br/>📊 Multi-asset Support<br/>🕌 Islamic Instruments]
+            ADX_SVC[ADX Service<br/>🇦🇪 Abu Dhabi Exchange<br/>🏛️ UAE Optimization<br/>📊 Multi-asset Support<br/>🕌 Sharia Focus]
+        end
+        
+        subgraph "Asset Services"
+            ASSET_CORE[Core Asset Service<br/>📊 8 Asset Classes<br/>🔄 Type-safe Operations<br/>📈 Performance Analytics]
+            SUKUK_SVC[Sukuk Service<br/>🕌 Islamic Bonds<br/>✅ Sharia Compliance<br/>📊 Yield Calculations]
+            ISLAMIC_FUND_SVC[Islamic Fund Service<br/>🕌 Halal Investments<br/>📊 NAV Operations<br/>✅ Screening]
+        end
     end
     
-    subgraph "Market Data & Streaming"
-        MARKET_DATA[Market Data Service<br/>Multi-Source Aggregation]
-        PRICING_ENGINE[Pricing Engine<br/>Real-time Calculations]
-        STREAM_PROC[Stream Processor<br/>WebSocket Distribution]
-        DATA_NORM[Data Normalizer<br/>Format Standardization]
+    subgraph "Exchange Integration Layer - Plan 1: Middle East Exchanges"
+        EGX_CONNECTOR[EGX Connector<br/>🇪🇬 Egyptian Exchange Integration<br/>🏛️ Cairo Region Optimization<br/>📊 Egyptian Compliance<br/>🌐 Arabic Language Support]
+        ADX_CONNECTOR[ADX Connector<br/>🇦🇪 Abu Dhabi Exchange Integration<br/>🏛️ UAE Region Optimization<br/>📊 UAE Compliance<br/>🕌 Islamic Finance Focus]
+        PLUGIN_SYSTEM[Plugin System<br/>🔌 Extensible Architecture<br/>➕ Easy Exchange Addition<br/>🔧 Custom Protocols<br/>📊 Market Adapters]
     end
     
-    subgraph "Data Storage Layer"
-        POSTGRES[(PostgreSQL<br/>Transactional Data)]
-        TIMESCALE[(TimescaleDB<br/>Time-Series Data)]
-        REDIS[(Redis<br/>Caching & Sessions)]
-        ELASTIC[(Elasticsearch<br/>Search & Analytics)]
+    subgraph "Data & Storage Layer"
+        MARKET_DATA[(Market Data Store<br/>📊 Real-time Data<br/>📈 Historical Data<br/>📋 Order Books<br/>💼 Trade Records)]
+        ANALYTICS[(Analytics Engine<br/>📊 Performance Analytics<br/>⚠️ Risk Calculations<br/>📈 Portfolio Optimization<br/>📋 Regulatory Reporting)]
+        SEARCH[(Search Engine<br/>🔍 Asset Search<br/>✅ Compliance Search<br/>🕌 Islamic Screening<br/>🌐 Multi-language)]
     end
     
-    subgraph "External Data Sources"
-        BLOOMBERG[Bloomberg Terminal<br/>Professional Data]
-        REUTERS[Reuters Eikon<br/>News & Analytics]
-        FED_DATA[Federal Reserve<br/>Economic Data]
-        RATING_AGENCIES[Credit Rating Agencies<br/>S&P, Moody's, Fitch]
-        CRYPTO_EXCHANGES[Crypto Exchanges<br/>Binance, Coinbase]
-    end
+    %% Frontend to WebSocket Gateway
+    WEB --> WS_GATEWAY
+    MOBILE --> WS_GATEWAY
+    WS_CLIENTS --> WS_GATEWAY
     
-    WEB --> GATEWAY
-    MOBILE --> GATEWAY
-    API_CLIENTS --> GATEWAY
-    WS_CLIENTS --> GATEWAY
+    %% WebSocket Gateway Internal
+    WS_GATEWAY --> WS_CONN_MGR
+    WS_GATEWAY --> WS_SUB_MGR
     
-    GATEWAY --> AUTH
-    GATEWAY --> RATE_LIMIT
-    GATEWAY --> LOAD_BAL
+    %% WebSocket to Routing
+    WS_GATEWAY --> ROUTER
+    WS_CONN_MGR --> LOAD_BAL
+    WS_SUB_MGR --> CIRCUIT_BREAKER
     
-    LOAD_BAL --> ASSET_CORE
-    LOAD_BAL --> REIT_SVC
-    LOAD_BAL --> MF_SVC
-    LOAD_BAL --> ETF_SVC
-    LOAD_BAL --> BOND_SVC
-    LOAD_BAL --> CRYPTO_SVC
+    %% Routing to Service Mesh
+    ROUTER --> SERVICE_MESH
+    LOAD_BAL --> LICENSING_SVC
+    LOAD_BAL --> ISLAMIC_SVC
+    LOAD_BAL --> WEBSOCKET_SVC
+    CIRCUIT_BREAKER --> EGX_SVC
+    CIRCUIT_BREAKER --> ADX_SVC
     
-    ASSET_CORE --> TRADING_ENGINE
-    REIT_SVC --> TRADING_ENGINE
-    MF_SVC --> TRADING_ENGINE
-    ETF_SVC --> TRADING_ENGINE
-    BOND_SVC --> TRADING_ENGINE
-    CRYPTO_SVC --> TRADING_ENGINE
+    %% Service Mesh Internal
+    SERVICE_MESH --> LICENSING_SVC
+    SERVICE_MESH --> ISLAMIC_SVC
+    SERVICE_MESH --> WEBSOCKET_SVC
+    SERVICE_MESH --> EGX_SVC
+    SERVICE_MESH --> ADX_SVC
+    SERVICE_MESH --> ASSET_CORE
+    SERVICE_MESH --> SUKUK_SVC
+    SERVICE_MESH --> ISLAMIC_FUND_SVC
     
-    TRADING_ENGINE --> RISK_ENGINE
-    TRADING_ENGINE --> ORDER_MGMT
-    TRADING_ENGINE --> PORTFOLIO
+    %% Services to Exchange Integration
+    EGX_SVC --> EGX_CONNECTOR
+    ADX_SVC --> ADX_CONNECTOR
+    ASSET_CORE --> PLUGIN_SYSTEM
     
-    MARKET_DATA --> PRICING_ENGINE
-    PRICING_ENGINE --> STREAM_PROC
-    STREAM_PROC --> WS_CLIENTS
-    DATA_NORM --> MARKET_DATA
+    %% Services to Data Layer
+    LICENSING_SVC --> ANALYTICS
+    ISLAMIC_SVC --> SEARCH
+    WEBSOCKET_SVC --> MARKET_DATA
+    EGX_SVC --> MARKET_DATA
+    ADX_SVC --> MARKET_DATA
+    ASSET_CORE --> ANALYTICS
+    SUKUK_SVC --> SEARCH
+    ISLAMIC_FUND_SVC --> SEARCH
     
-    ASSET_CORE --> POSTGRES
-    REIT_SVC --> POSTGRES
-    MF_SVC --> POSTGRES
-    ETF_SVC --> POSTGRES
-    BOND_SVC --> POSTGRES
-    CRYPTO_SVC --> POSTGRES
-    
-    TRADING_ENGINE --> REDIS
-    RISK_ENGINE --> REDIS
-    PRICING_ENGINE --> TIMESCALE
-    PORTFOLIO --> ELASTIC
-    
-    MARKET_DATA --> BLOOMBERG
-    MARKET_DATA --> REUTERS
-    MARKET_DATA --> FED_DATA
-    MARKET_DATA --> RATING_AGENCIES
-    MARKET_DATA --> CRYPTO_EXCHANGES
-    
-    style ASSET_CORE fill:#FF6B6B,color:#fff
-    style REIT_SVC fill:#4ECDC4,color:#fff
-    style MF_SVC fill:#45B7D1,color:#fff
-    style ETF_SVC fill:#96CEB4,color:#fff
-    style BOND_SVC fill:#FECA57,color:#fff
-    style CRYPTO_SVC fill:#FF9FF3,color:#fff
+    %% Styling
+    style WEB fill:#4ECDC4,color:#fff
+    style WS_GATEWAY fill:#FF6B6B,color:#fff
+    style ROUTER fill:#45B7D1,color:#fff
+    style SERVICE_MESH fill:#96CEB4,color:#fff
+    style LICENSING_SVC fill:#FECA57,color:#fff
+    style ISLAMIC_SVC fill:#FF9FF3,color:#fff
+    style EGX_SVC fill:#FF6B6B,color:#fff
+    style ADX_SVC fill:#4ECDC4,color:#fff
+    style EGX_CONNECTOR fill:#FF6B6B,color:#fff
+    style ADX_CONNECTOR fill:#4ECDC4,color:#fff
 ```
 
-### **2. Asset Service Architecture**
+### **2. WebSocket System Architecture - Plan 6**
 
 ```mermaid
-graph LR
-    subgraph "Asset Types"
-        STOCK[STOCK<br/>Equity Trading]
-        REIT[REIT<br/>Real Estate]
-        MF[MUTUAL_FUND<br/>Fund Operations]
-        ETF[ETF<br/>Exchange Traded]
-        BOND[BOND<br/>Fixed Income]
-        CRYPTO[CRYPTO<br/>Digital Assets]
-        FOREX[FOREX<br/>Currency Pairs]
-        COMMODITY[COMMODITY<br/>Physical Assets]
+graph TB
+    subgraph "Client Connections"
+        DASHBOARD[Dashboard Client<br/>🌐 React/TypeScript<br/>📊 Real-time Trading<br/>🕌 Islamic Finance UI]
+        MOBILE[Mobile Client<br/>📱 PWA Application<br/>🌐 Arabic/RTL Support<br/>🔔 Push Notifications]
+        API[API Client<br/>🔌 REST/GraphQL<br/>📊 Programmatic Access<br/>🔐 Authentication]
     end
     
-    subgraph "Core Asset Service"
-        ASSET_SVC[Asset Service<br/>Central Coordinator]
-        METADATA[Metadata Manager<br/>Asset Information]
-        CONFIG[Configuration Manager<br/>Trading Rules]
-        PRICING[Pricing Manager<br/>Market Data]
-        DIVIDENDS[Dividend Manager<br/>Distribution Tracking]
+    subgraph "WebSocket Gateway Layer"
+        WS_GATEWAY[WebSocket Gateway<br/>🌐 Intelligent Routing<br/>⚡ <10ms Connection Latency<br/>📊 100K+ Concurrent Connections]
+        CONN_MGR[Connection Manager<br/>🔗 Connection Lifecycle<br/>💓 Heartbeat Monitoring<br/>🔄 Auto-reconnection]
+        SUB_MGR[Subscription Manager<br/>🎯 Real-time Subscriptions<br/>🔐 License Validation<br/>📊 Usage Tracking]
     end
     
-    subgraph "Specialized Services"
-        REIT_ANALYZER[REIT Analyzer<br/>FFO/AFFO Calculations]
-        MF_PROCESSOR[MF Processor<br/>NAV Operations]
-        ETF_MANAGER[ETF Manager<br/>Creation/Redemption]
-        BOND_CALCULATOR[Bond Calculator<br/>Yield/Duration]
+    subgraph "Exchange-Specific Channels"
+        EGX_CHANNEL[EGX WebSocket Channel<br/>🇪🇬 Egyptian Exchange<br/>📊 Market Data Stream<br/>📋 Order Book Updates<br/>💼 Trade Execution]
+        ADX_CHANNEL[ADX WebSocket Channel<br/>🇦🇪 Abu Dhabi Exchange<br/>🕌 Islamic Data Stream<br/>💰 Sukuk Prices<br/>✅ Halal Stock Updates]
+        UNIFIED_CHANNEL[Unified Channel<br/>🔄 Cross-exchange Data<br/>📊 Portfolio Updates<br/>⚠️ Risk Alerts<br/>📈 Analytics Stream]
     end
     
-    subgraph "Database Tables"
-        ASSET_META[(asset_metadata<br/>Core Asset Data)]
-        ASSET_CONFIG[(asset_configurations<br/>Trading Parameters)]
-        ASSET_PRICING[(asset_pricing<br/>Price History)]
-        ASSET_DIVIDENDS[(asset_dividends<br/>Distribution Data)]
+    subgraph "Compliance & Licensing Layer"
+        LICENSE_VALIDATOR[License Validator<br/>🔐 Real-time Validation<br/>📊 Quota Management<br/>🎯 Feature Access Control<br/>📋 Audit Logging]
+        ISLAMIC_FILTER[Islamic Finance Filter<br/>🕌 Sharia Compliance<br/>✅ Halal Screening<br/>📊 Multiple Boards<br/>🚫 Haram Filtering]
+        COMPLIANCE_ENGINE[Compliance Engine<br/>📋 Regulatory Compliance<br/>🇪🇬 Egyptian Rules<br/>🇦🇪 UAE Regulations<br/>📊 Reporting]
     end
     
-    STOCK --> ASSET_SVC
-    REIT --> ASSET_SVC
-    MF --> ASSET_SVC
-    ETF --> ASSET_SVC
-    BOND --> ASSET_SVC
-    CRYPTO --> ASSET_SVC
-    FOREX --> ASSET_SVC
-    COMMODITY --> ASSET_SVC
+    subgraph "Service Integration Layer"
+        SERVICE_DISCOVERY[Service Discovery<br/>🔍 Dynamic Service Location<br/>⚖️ Load Balancing<br/>🏥 Health Checking<br/>📊 Performance Monitoring]
+        MESSAGE_ROUTER[Message Router<br/>🧠 Intelligent Routing<br/>🎯 Context-aware Decisions<br/>📊 Performance Optimization<br/>🔄 Failover Handling]
+        ANALYTICS_ENGINE[Analytics Engine<br/>📊 Real-time Analytics<br/>📈 Performance Metrics<br/>👥 User Behavior<br/>💰 Revenue Tracking]
+    end
     
-    ASSET_SVC --> METADATA
-    ASSET_SVC --> CONFIG
-    ASSET_SVC --> PRICING
-    ASSET_SVC --> DIVIDENDS
+    subgraph "Data Sources"
+        MARKET_DATA_SVC[Market Data Service<br/>📊 Real-time Prices<br/>📈 Historical Data<br/>📋 Order Books<br/>💼 Trade History]
+        LICENSING_SVC[Licensing Service<br/>🔐 License Management<br/>💰 Billing Integration<br/>📊 Usage Analytics<br/>📋 Compliance Tracking]
+        ISLAMIC_SVC[Islamic Finance Service<br/>🕌 Sharia Validation<br/>✅ Compliance Checking<br/>📊 Screening Results<br/>💰 Zakat Calculations]
+    end
     
-    REIT --> REIT_ANALYZER
-    MF --> MF_PROCESSOR
-    ETF --> ETF_MANAGER
-    BOND --> BOND_CALCULATOR
+    %% Client to Gateway
+    DASHBOARD --> WS_GATEWAY
+    MOBILE --> WS_GATEWAY
+    API --> WS_GATEWAY
     
-    METADATA --> ASSET_META
-    CONFIG --> ASSET_CONFIG
-    PRICING --> ASSET_PRICING
-    DIVIDENDS --> ASSET_DIVIDENDS
+    %% Gateway Internal
+    WS_GATEWAY --> CONN_MGR
+    WS_GATEWAY --> SUB_MGR
     
-    REIT_ANALYZER --> ASSET_META
-    MF_PROCESSOR --> ASSET_META
-    ETF_MANAGER --> ASSET_META
-    BOND_CALCULATOR --> ASSET_META
+    %% Gateway to Channels
+    CONN_MGR --> EGX_CHANNEL
+    CONN_MGR --> ADX_CHANNEL
+    CONN_MGR --> UNIFIED_CHANNEL
     
-    style ASSET_SVC fill:#FF6B6B,color:#fff
-    style REIT_ANALYZER fill:#4ECDC4,color:#fff
-    style MF_PROCESSOR fill:#45B7D1,color:#fff
-    style ETF_MANAGER fill:#96CEB4,color:#fff
-    style BOND_CALCULATOR fill:#FECA57,color:#fff
+    %% Subscription Management
+    SUB_MGR --> LICENSE_VALIDATOR
+    SUB_MGR --> ISLAMIC_FILTER
+    SUB_MGR --> COMPLIANCE_ENGINE
+    
+    %% Compliance to Channels
+    LICENSE_VALIDATOR --> EGX_CHANNEL
+    ISLAMIC_FILTER --> ADX_CHANNEL
+    COMPLIANCE_ENGINE --> UNIFIED_CHANNEL
+    
+    %% Service Integration
+    EGX_CHANNEL --> SERVICE_DISCOVERY
+    ADX_CHANNEL --> MESSAGE_ROUTER
+    UNIFIED_CHANNEL --> ANALYTICS_ENGINE
+    
+    %% Data Sources
+    SERVICE_DISCOVERY --> MARKET_DATA_SVC
+    MESSAGE_ROUTER --> LICENSING_SVC
+    ANALYTICS_ENGINE --> ISLAMIC_SVC
+    
+    %% Styling
+    style WS_GATEWAY fill:#FF6B6B,color:#fff
+    style EGX_CHANNEL fill:#FF6B6B,color:#fff
+    style ADX_CHANNEL fill:#4ECDC4,color:#fff
+    style LICENSE_VALIDATOR fill:#FECA57,color:#fff
+    style ISLAMIC_FILTER fill:#FF9FF3,color:#fff
+    style SERVICE_DISCOVERY fill:#96CEB4,color:#fff
+    style MESSAGE_ROUTER fill:#45B7D1,color:#fff
+```
+
+### **3. Intelligent Routing System Architecture - Plan 5**
+
+```mermaid
+graph TB
+    subgraph "Routing Context Layer"
+        CONTEXT_ANALYZER[Context Analyzer<br/>🧠 Multi-dimensional Analysis<br/>👤 User Context<br/>📊 Market Context<br/>🔐 License Context]
+        DECISION_ENGINE[Decision Engine<br/>⚡ <0.1ms Routing Decisions<br/>🎯 Strategy Pattern<br/>📊 Performance Optimization<br/>🔄 A/B Testing]
+        ROUTING_CACHE[Routing Cache<br/>⚡ Sub-millisecond Lookup<br/>🔄 Dynamic Updates<br/>📊 Hit Rate Optimization<br/>💾 Memory Efficient]
+    end
+    
+    subgraph "Exchange-Specific Routing"
+        EGX_ROUTER[EGX Router<br/>🇪🇬 Egyptian Exchange Routing<br/>🏛️ Cairo Region Optimization<br/>📊 EGX-specific Rules<br/>🕌 Islamic Compliance]
+        ADX_ROUTER[ADX Router<br/>🇦🇪 Abu Dhabi Exchange Routing<br/>🏛️ UAE Region Optimization<br/>📊 ADX-specific Rules<br/>🕌 Sharia Focus]
+        UNIFIED_ROUTER[Unified Router<br/>🔄 Cross-exchange Routing<br/>📊 Arbitrage Detection<br/>⚖️ Load Distribution<br/>🎯 Best Execution]
+    end
+    
+    subgraph "Licensing-Aware Routing"
+        LICENSE_ROUTER[License Router<br/>🔐 Real-time License Validation<br/>📊 Quota Management<br/>🎯 Feature-based Routing<br/>💰 Usage Tracking]
+        TIER_VALIDATOR[Tier Validator<br/>🏆 Basic/Pro/Enterprise/Islamic<br/>✅ Feature Access Control<br/>📊 Performance Limits<br/>📋 Audit Logging]
+        BILLING_INTEGRATOR[Billing Integrator<br/>💰 Usage-based Billing<br/>📊 Real-time Metering<br/>💳 Payment Processing<br/>📋 Invoice Generation]
+    end
+    
+    subgraph "Islamic Finance Routing"
+        SHARIA_ROUTER[Sharia Router<br/>🕌 Islamic Compliance Routing<br/>✅ Halal Asset Filtering<br/>📊 Multiple Boards<br/>🚫 Haram Blocking]
+        COMPLIANCE_VALIDATOR[Compliance Validator<br/>📋 Real-time Validation<br/>🕌 Sharia Board Rules<br/>✅ Screening Results<br/>📊 Compliance Scoring]
+        ISLAMIC_FILTER[Islamic Filter<br/>🚫 Content Filtering<br/>✅ Halal Screening<br/>📊 Financial Ratios<br/>💰 Zakat Calculations]
+    end
+    
+    subgraph "Load Balancing & Circuit Breakers"
+        LOAD_BALANCER[Intelligent Load Balancer<br/>⚖️ Latency-aware Distribution<br/>🏥 Health Checking<br/>📊 Performance Monitoring<br/>🔄 Auto-scaling]
+        CIRCUIT_BREAKER[Circuit Breaker<br/>🔄 Fault Tolerance<br/>🚨 Auto-recovery<br/>📊 Error Rate Monitoring<br/>⏰ Timeout Management]
+        FAILOVER_MGR[Failover Manager<br/>🔄 Automatic Failover<br/>🏥 Health Monitoring<br/>📊 Performance Degradation<br/>🚨 Alert Management]
+    end
+    
+    subgraph "Performance & Analytics"
+        PERF_MONITOR[Performance Monitor<br/>📊 Real-time Metrics<br/>⚡ Latency Tracking<br/>📈 Throughput Analysis<br/>🎯 SLA Monitoring]
+        ANALYTICS_ENGINE[Analytics Engine<br/>📊 Routing Analytics<br/>🎯 Optimization Insights<br/>📈 Performance Trends<br/>💡 ML Recommendations]
+        METRICS_COLLECTOR[Metrics Collector<br/>📊 Data Collection<br/>📈 Time-series Storage<br/>📋 Custom Metrics<br/>🔍 Query Interface]
+    end
+    
+    %% Context to Decision
+    CONTEXT_ANALYZER --> DECISION_ENGINE
+    DECISION_ENGINE --> ROUTING_CACHE
+    
+    %% Decision to Exchange Routing
+    DECISION_ENGINE --> EGX_ROUTER
+    DECISION_ENGINE --> ADX_ROUTER
+    DECISION_ENGINE --> UNIFIED_ROUTER
+    
+    %% Licensing Integration
+    EGX_ROUTER --> LICENSE_ROUTER
+    ADX_ROUTER --> TIER_VALIDATOR
+    UNIFIED_ROUTER --> BILLING_INTEGRATOR
+    
+    %% Islamic Finance Integration
+    LICENSE_ROUTER --> SHARIA_ROUTER
+    TIER_VALIDATOR --> COMPLIANCE_VALIDATOR
+    BILLING_INTEGRATOR --> ISLAMIC_FILTER
+    
+    %% Load Balancing
+    SHARIA_ROUTER --> LOAD_BALANCER
+    COMPLIANCE_VALIDATOR --> CIRCUIT_BREAKER
+    ISLAMIC_FILTER --> FAILOVER_MGR
+    
+    %% Performance Monitoring
+    LOAD_BALANCER --> PERF_MONITOR
+    CIRCUIT_BREAKER --> ANALYTICS_ENGINE
+    FAILOVER_MGR --> METRICS_COLLECTOR
+    
+    %% Feedback Loops
+    PERF_MONITOR --> CONTEXT_ANALYZER
+    ANALYTICS_ENGINE --> DECISION_ENGINE
+    METRICS_COLLECTOR --> ROUTING_CACHE
+    
+    %% Styling
+    style DECISION_ENGINE fill:#FF6B6B,color:#fff
+    style EGX_ROUTER fill:#FF6B6B,color:#fff
+    style ADX_ROUTER fill:#4ECDC4,color:#fff
+    style LICENSE_ROUTER fill:#FECA57,color:#fff
+    style SHARIA_ROUTER fill:#FF9FF3,color:#fff
+    style LOAD_BALANCER fill:#96CEB4,color:#fff
+    style PERF_MONITOR fill:#45B7D1,color:#fff
 ```
 
 ---
 
 ## 🔄 **Data Flow Diagrams**
 
-### **3. Multi-Asset Order Processing Flow**
+### **4. Multi-Exchange Order Processing Flow**
 
 ```mermaid
 sequenceDiagram
-    participant Client
-    participant Gateway
-    participant AssetService
-    participant SpecializedService
-    participant TradingEngine
-    participant RiskEngine
-    participant Database
+    participant Client as 📱 Client (Dashboard/Mobile)
+    participant WSGateway as 🌐 WebSocket Gateway
+    participant Router as 🧠 Intelligent Router
+    participant LicenseService as 🔐 License Service
+    participant IslamicService as 🕌 Islamic Finance Service
+    participant ExchangeService as 🏛️ Exchange Service (EGX/ADX)
+    participant TradingEngine as ⚡ Trading Engine
+    participant Database as 💾 Database
     
-    Client->>Gateway: Submit Order Request
-    Gateway->>Gateway: Authenticate & Rate Limit
-    Gateway->>AssetService: Validate Asset Type
-    AssetService->>Database: Get Asset Configuration
-    Database-->>AssetService: Trading Rules & Limits
+    Note over Client,Database: TradSys v3 - Multi-Exchange Order Processing
     
-    alt REIT Order
-        AssetService->>SpecializedService: REIT Service Validation
-        SpecializedService->>SpecializedService: Check FFO/AFFO Ratios
-        SpecializedService-->>AssetService: REIT Validation Result
-    else ETF Order
-        AssetService->>SpecializedService: ETF Service Validation
-        SpecializedService->>SpecializedService: Check NAV Premium/Discount
-        SpecializedService-->>AssetService: ETF Validation Result
-    else Bond Order
-        AssetService->>SpecializedService: Bond Service Validation
-        SpecializedService->>SpecializedService: Check Credit Rating & Duration
-        SpecializedService-->>AssetService: Bond Validation Result
+    Client->>WSGateway: 📡 Submit Order via WebSocket
+    WSGateway->>WSGateway: 🔗 Validate Connection & Subscription
+    WSGateway->>Router: 🧠 Route Order Request
+    
+    Router->>Router: 🎯 Analyze Context (User, Market, License)
+    Router->>LicenseService: 🔐 Validate License & Quotas
+    LicenseService->>Database: 📊 Check License Status & Usage
+    Database-->>LicenseService: ✅ License Valid, Quota Available
+    LicenseService-->>Router: ✅ License Validation Passed
+    
+    alt Islamic Finance Order
+        Router->>IslamicService: 🕌 Validate Sharia Compliance
+        IslamicService->>IslamicService: ✅ Check Halal Screening
+        IslamicService->>Database: 📋 Get Compliance Rules
+        Database-->>IslamicService: 📊 Sharia Board Rules
+        IslamicService-->>Router: ✅ Sharia Compliant
+    else Conventional Order
+        Router->>Router: ⏭️ Skip Islamic Validation
     end
     
-    AssetService->>TradingEngine: Submit Validated Order
-    TradingEngine->>RiskEngine: Risk Assessment
-    RiskEngine->>Database: Get Portfolio Positions
-    Database-->>RiskEngine: Current Holdings
-    RiskEngine->>RiskEngine: Calculate Risk Metrics
-    RiskEngine-->>TradingEngine: Risk Approval/Rejection
+    Router->>ExchangeService: 🏛️ Route to Exchange (EGX/ADX)
+    
+    alt EGX Order
+        ExchangeService->>ExchangeService: 🇪🇬 Apply EGX Rules & Validation
+        ExchangeService->>Database: 📊 Get EGX Market Data
+        Database-->>ExchangeService: 📈 Current EGX Prices & Limits
+    else ADX Order
+        ExchangeService->>ExchangeService: 🇦🇪 Apply ADX Rules & Validation
+        ExchangeService->>Database: 📊 Get ADX Market Data
+        Database-->>ExchangeService: 📈 Current ADX Prices & Limits
+    end
+    
+    ExchangeService->>TradingEngine: ⚡ Submit Validated Order
+    TradingEngine->>TradingEngine: ⚠️ Risk Assessment
+    TradingEngine->>Database: 📊 Get Portfolio Positions
+    Database-->>TradingEngine: 💼 Current Holdings
     
     alt Risk Approved
-        TradingEngine->>TradingEngine: Execute Order
-        TradingEngine->>Database: Update Order Status
-        TradingEngine-->>Gateway: Order Confirmation
+        TradingEngine->>TradingEngine: ✅ Execute Order
+        TradingEngine->>Database: 💾 Update Order Status
+        TradingEngine->>ExchangeService: ✅ Order Executed
+        ExchangeService->>Router: ✅ Execution Confirmation
+        Router->>WSGateway: 📡 Route Confirmation
+        WSGateway->>Client: 🎉 Real-time Order Confirmation
+        
+        Note over WSGateway,Client: 📊 Real-time Updates via WebSocket
+        WSGateway->>Client: 📈 Portfolio Update
+        WSGateway->>Client: 💰 Balance Update
+        WSGateway->>Client: 📊 Market Data Update
+        
     else Risk Rejected
-        TradingEngine-->>Gateway: Order Rejection
+        TradingEngine->>ExchangeService: ❌ Risk Rejection
+        ExchangeService->>Router: ❌ Order Rejected
+        Router->>WSGateway: 📡 Route Rejection
+        WSGateway->>Client: ⚠️ Real-time Order Rejection
     end
     
-    Gateway-->>Client: Order Response
+    Note over Client,Database: 📊 Usage Tracking & Billing
+    LicenseService->>Database: 📊 Update Usage Metrics
+    IslamicService->>Database: 📋 Log Compliance Check
+    ExchangeService->>Database: 📈 Record Exchange Activity
 ```
 
 ### **4. Real-Time Market Data Flow**
