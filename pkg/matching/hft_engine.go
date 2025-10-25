@@ -10,6 +10,7 @@ import (
 	"unsafe"
 
 	"github.com/abdoElHodaky/tradSys/internal/common/pool"
+	"github.com/abdoElHodaky/tradSys/internal/trading/types"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -68,7 +69,7 @@ type HFTOrderBook struct {
 	sellOrders unsafe.Pointer // *OrderLevel
 
 	// Fast lookup maps for order management
-	orderMap sync.Map // map[string]*Order
+	orderMap sync.Map // map[string]*HFTOrder
 
 	// Performance counters
 	totalOrders   uint64
@@ -89,75 +90,31 @@ type HFTOrderBook struct {
 type OrderLevel struct {
 	Price    uint64 // Fixed-point price representation
 	Quantity uint64
-	Orders   unsafe.Pointer // *Order (linked list)
+	Orders   unsafe.Pointer // *HFTOrder (linked list)
 	Next     unsafe.Pointer // *OrderLevel
 }
 
-// Order represents a trading order optimized for HFT
-type Order struct {
-	ID        string
-	Symbol    string
-	Side      OrderSide
-	Type      OrderType
-	Price     uint64 // Fixed-point representation
-	Quantity  uint64
-	Filled    uint64
-	Status    OrderStatus
-	Timestamp time.Time
-	UserID    string
+// HFTOrder represents a trading order optimized for HFT
+// This extends the base Order type with HFT-specific fields
+type HFTOrder struct {
+	*types.Order
+	
+	// Fixed-point representation for performance
+	PriceFixed    uint64 // Fixed-point price representation
+	QuantityFixed uint64 // Fixed-point quantity representation
+	FilledFixed   uint64 // Fixed-point filled representation
 
 	// Linked list pointers for order book
-	Next *Order
-	Prev *Order
+	Next *HFTOrder
+	Prev *HFTOrder
 
 	// Performance tracking
 	LatencyNs uint64
 }
 
-// OrderSide represents the side of an order
-type OrderSide uint8
+// Note: Type aliases and constants are defined in engine.go
 
-const (
-	OrderSideBuy OrderSide = iota
-	OrderSideSell
-)
-
-// OrderType represents the type of order
-type OrderType uint8
-
-const (
-	OrderTypeLimit OrderType = iota
-	OrderTypeMarket
-	OrderTypeStopLimit
-	OrderTypeStopMarket
-)
-
-// OrderStatus represents the status of an order
-type OrderStatus uint8
-
-const (
-	OrderStatusNew OrderStatus = iota
-	OrderStatusPending
-	OrderStatusPartiallyFilled
-	OrderStatusFilled
-	OrderStatusCancelled
-	OrderStatusRejected
-	OrderStatusExpired
-)
-
-// Trade represents a completed trade
-type Trade struct {
-	ID           string
-	Symbol       string
-	BuyOrderID   string
-	SellOrderID  string
-	Price        uint64
-	Quantity     uint64
-	Timestamp    time.Time
-	BuyUserID    string
-	SellUserID   string
-	LatencyNs    uint64
-}
+// Note: Trade struct is defined in engine.go
 
 // NewHFTEngine creates a new high-frequency trading engine
 func NewHFTEngine(logger *zap.Logger, workerCount int) *HFTEngine {
@@ -210,7 +167,7 @@ func (e *HFTEngine) Stop() error {
 }
 
 // AddOrder adds an order to the matching engine
-func (e *HFTEngine) AddOrder(order *Order) error {
+func (e *HFTEngine) AddOrder(order *HFTOrder) error {
 	startTime := time.Now()
 	
 	// Get or create order book
@@ -247,7 +204,7 @@ func (e *HFTEngine) CancelOrder(orderID string, symbol string) error {
 	
 	// Find and cancel order
 	if orderInterface, ok := orderBook.orderMap.Load(orderID); ok {
-		order := orderInterface.(*Order)
+		order := orderInterface.(*HFTOrder)
 		order.Status = OrderStatusCancelled
 		orderBook.orderMap.Delete(orderID)
 		
@@ -320,7 +277,7 @@ func (e *HFTEngine) getOrderBook(symbol string) *HFTOrderBook {
 }
 
 // processOrder processes an order and returns resulting trades
-func (e *HFTEngine) processOrder(orderBook *HFTOrderBook, order *Order) []*Trade {
+func (e *HFTEngine) processOrder(orderBook *HFTOrderBook, order *HFTOrder) []*Trade {
 	var trades []*Trade
 	
 	switch order.Type {
@@ -337,7 +294,7 @@ func (e *HFTEngine) processOrder(orderBook *HFTOrderBook, order *Order) []*Trade
 }
 
 // processMarketOrder processes a market order
-func (e *HFTEngine) processMarketOrder(orderBook *HFTOrderBook, order *Order) []*Trade {
+func (e *HFTEngine) processMarketOrder(orderBook *HFTOrderBook, order *HFTOrder) []*Trade {
 	var trades []*Trade
 	remainingQty := order.Quantity
 	
@@ -378,7 +335,7 @@ func (e *HFTEngine) processMarketOrder(orderBook *HFTOrderBook, order *Order) []
 }
 
 // processLimitOrder processes a limit order
-func (e *HFTEngine) processLimitOrder(orderBook *HFTOrderBook, order *Order) []*Trade {
+func (e *HFTEngine) processLimitOrder(orderBook *HFTOrderBook, order *HFTOrder) []*Trade {
 	var trades []*Trade
 	remainingQty := order.Quantity
 	
@@ -418,26 +375,26 @@ func (e *HFTEngine) processLimitOrder(orderBook *HFTOrderBook, order *Order) []*
 }
 
 // processStopOrder processes a stop order (simplified implementation)
-func (e *HFTEngine) processStopOrder(orderBook *HFTOrderBook, order *Order) []*Trade {
+func (e *HFTEngine) processStopOrder(orderBook *HFTOrderBook, order *HFTOrder) []*Trade {
 	// For now, treat as limit order
 	// In production, would implement proper stop logic
 	return e.processLimitOrder(orderBook, order)
 }
 
 // executeTrade executes a trade between two orders
-func (e *HFTEngine) executeTrade(orderBook *HFTOrderBook, incomingOrder *Order, level *OrderLevel, remainingQty *uint64) *Trade {
+func (e *HFTEngine) executeTrade(orderBook *HFTOrderBook, incomingOrder *HFTOrder, level *OrderLevel, remainingQty *uint64) *Trade {
 	if level == nil {
 		return nil
 	}
 	
 	// Get first order from level
-	levelOrder := (*Order)(atomic.LoadPointer(&level.Orders))
+	levelOrder := (*HFTOrder)(atomic.LoadPointer(&level.Orders))
 	if levelOrder == nil {
 		return nil
 	}
 	
 	// Calculate trade quantity
-	tradeQty := min(*remainingQty, levelOrder.Quantity-levelOrder.Filled)
+	tradeQty := minUint64(*remainingQty, levelOrder.Quantity-levelOrder.Filled)
 	if tradeQty == 0 {
 		return nil
 	}
@@ -485,7 +442,7 @@ func (e *HFTEngine) executeTrade(orderBook *HFTOrderBook, incomingOrder *Order, 
 }
 
 // addOrderToBook adds an order to the order book
-func (e *HFTEngine) addOrderToBook(orderBook *HFTOrderBook, order *Order) {
+func (e *HFTEngine) addOrderToBook(orderBook *HFTOrderBook, order *HFTOrder) {
 	// Store order in map for fast lookup
 	orderBook.orderMap.Store(order.ID, order)
 	
@@ -498,7 +455,7 @@ func (e *HFTEngine) addOrderToBook(orderBook *HFTOrderBook, order *Order) {
 }
 
 // addOrderToSide adds an order to a specific side of the order book
-func (e *HFTEngine) addOrderToSide(sidePtr *unsafe.Pointer, order *Order, isBuy bool) {
+func (e *HFTEngine) addOrderToSide(sidePtr *unsafe.Pointer, order *HFTOrder, isBuy bool) {
 	// Simplified implementation - in production would use more sophisticated data structures
 	// This is a basic linked list insertion
 	
@@ -541,9 +498,9 @@ func (e *HFTEngine) addOrderToSide(sidePtr *unsafe.Pointer, order *Order, isBuy 
 }
 
 // addOrderToLevel adds an order to an existing price level
-func (e *HFTEngine) addOrderToLevel(level *OrderLevel, order *Order) {
+func (e *HFTEngine) addOrderToLevel(level *OrderLevel, order *HFTOrder) {
 	// Add order to end of level's order list
-	currentOrder := (*Order)(atomic.LoadPointer(&level.Orders))
+	currentOrder := (*HFTOrder)(atomic.LoadPointer(&level.Orders))
 	if currentOrder == nil {
 		atomic.StorePointer(&level.Orders, unsafe.Pointer(order))
 		return
@@ -560,7 +517,7 @@ func (e *HFTEngine) addOrderToLevel(level *OrderLevel, order *Order) {
 }
 
 // removeOrderFromBook removes an order from the order book
-func (e *HFTEngine) removeOrderFromBook(orderBook *HFTOrderBook, order *Order) {
+func (e *HFTEngine) removeOrderFromBook(orderBook *HFTOrderBook, order *HFTOrder) {
 	orderBook.orderMap.Delete(order.ID)
 	
 	// Remove from appropriate side
@@ -572,7 +529,7 @@ func (e *HFTEngine) removeOrderFromBook(orderBook *HFTOrderBook, order *Order) {
 }
 
 // removeOrderFromSide removes an order from a specific side of the order book
-func (e *HFTEngine) removeOrderFromSide(sidePtr *unsafe.Pointer, order *Order) {
+func (e *HFTEngine) removeOrderFromSide(sidePtr *unsafe.Pointer, order *HFTOrder) {
 	currentLevel := (*OrderLevel)(atomic.LoadPointer(sidePtr))
 	var prevLevel *OrderLevel
 	
@@ -581,7 +538,7 @@ func (e *HFTEngine) removeOrderFromSide(sidePtr *unsafe.Pointer, order *Order) {
 			e.removeOrderFromLevel(currentLevel, order)
 			
 			// If level is empty, remove it
-			if (*Order)(atomic.LoadPointer(&currentLevel.Orders)) == nil {
+			if (*HFTOrder)(atomic.LoadPointer(&currentLevel.Orders)) == nil {
 				if prevLevel == nil {
 					atomic.StorePointer(sidePtr, atomic.LoadPointer(&currentLevel.Next))
 				} else {
@@ -596,8 +553,8 @@ func (e *HFTEngine) removeOrderFromSide(sidePtr *unsafe.Pointer, order *Order) {
 }
 
 // removeOrderFromLevel removes an order from a price level
-func (e *HFTEngine) removeOrderFromLevel(level *OrderLevel, order *Order) {
-	currentOrder := (*Order)(atomic.LoadPointer(&level.Orders))
+func (e *HFTEngine) removeOrderFromLevel(level *OrderLevel, order *HFTOrder) {
+	currentOrder := (*HFTOrder)(atomic.LoadPointer(&level.Orders))
 	
 	if currentOrder == order {
 		atomic.StorePointer(&level.Orders, unsafe.Pointer(order.Next))
@@ -693,7 +650,7 @@ func (e *HFTEngine) tradeProcessor() {
 }
 
 // Helper function
-func min(a, b uint64) uint64 {
+func minUint64(a, b uint64) uint64 {
 	if a < b {
 		return a
 	}

@@ -15,7 +15,7 @@ import (
 type UnifiedComplianceEngine struct {
 	config          *ComplianceConfig
 	logger          *zap.Logger
-	ruleEngine      *RuleEngine
+	ruleEngine      *ComplianceRuleEngine
 	reportGenerator *ReportGenerator
 	auditTrail      *AuditTrail
 	alertManager    *AlertManager
@@ -49,8 +49,8 @@ type ComplianceMetrics struct {
 	LastUpdateTime     time.Time     `json:"last_update_time"`
 }
 
-// RuleEngine manages compliance rules and checks
-type RuleEngine struct {
+// ComplianceRuleEngine manages compliance rules and checks for unified compliance
+type ComplianceRuleEngine struct {
 	rules      map[string]ComplianceRule
 	violations []ComplianceViolation
 	logger     *zap.Logger
@@ -87,7 +87,7 @@ type ComplianceRule struct {
 	Name        string                 `json:"name"`
 	Description string                 `json:"description"`
 	Regulation  string                 `json:"regulation"`
-	RuleType    ComplianceRuleType     `json:"rule_type"`
+	RuleType    RuleType               `json:"rule_type"`
 	Parameters  map[string]interface{} `json:"parameters"`
 	Enabled     bool                   `json:"enabled"`
 	Severity    ViolationSeverity      `json:"severity"`
@@ -95,17 +95,12 @@ type ComplianceRule struct {
 	UpdatedAt   time.Time              `json:"updated_at"`
 }
 
-// ComplianceRuleType defines types of compliance rules
-type ComplianceRuleType string
-
+// Use RuleType from validator.go instead of ComplianceRuleType
+// Additional rule types specific to unified compliance
 const (
-	RuleTypePositionLimit      ComplianceRuleType = "position_limit"
-	RuleTypeOrderSize          ComplianceRuleType = "order_size"
-	RuleTypeTradingHours       ComplianceRuleType = "trading_hours"
-	RuleTypeMarketManipulation ComplianceRuleType = "market_manipulation"
-	RuleTypeInsiderTrading     ComplianceRuleType = "insider_trading"
-	RuleTypeRiskLimit          ComplianceRuleType = "risk_limit"
-	RuleTypeReporting          ComplianceRuleType = "reporting"
+	RuleTypeOrderSize    RuleType = "order_size"
+	RuleTypeTradingHours RuleType = "trading_hours"
+	RuleTypeReporting    RuleType = "reporting"
 )
 
 // ComplianceViolation represents a compliance violation
@@ -123,15 +118,7 @@ type ComplianceViolation struct {
 	ResolvedAt  *time.Time             `json:"resolved_at,omitempty"`
 }
 
-// ViolationSeverity defines severity levels for violations
-type ViolationSeverity string
-
-const (
-	SeverityLow      ViolationSeverity = "low"
-	SeverityMedium   ViolationSeverity = "medium"
-	SeverityHigh     ViolationSeverity = "high"
-	SeverityCritical ViolationSeverity = "critical"
-)
+// Note: ViolationSeverity and its constants are defined in validator.go
 
 // ViolationStatus defines status of violations
 type ViolationStatus string
@@ -271,7 +258,7 @@ func NewUnifiedComplianceEngine(config *ComplianceConfig, logger *zap.Logger) *U
 	}
 
 	// Initialize rule engine
-	engine.ruleEngine = &RuleEngine{
+	engine.ruleEngine = &ComplianceRuleEngine{
 		rules:  make(map[string]ComplianceRule),
 		logger: logger.Named("rules"),
 	}
@@ -537,14 +524,14 @@ func (c *UnifiedComplianceEngine) GetMetrics() *ComplianceMetrics {
 }
 
 // AddRule adds a compliance rule
-func (r *RuleEngine) AddRule(rule ComplianceRule) {
+func (r *ComplianceRuleEngine) AddRule(rule ComplianceRule) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.rules[rule.ID] = rule
 }
 
 // CheckRules checks all enabled rules against an order
-func (r *RuleEngine) CheckRules(order *types.Order, userID string) []ComplianceViolation {
+func (r *ComplianceRuleEngine) CheckRules(order *types.Order, userID string) []ComplianceViolation {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -564,7 +551,7 @@ func (r *RuleEngine) CheckRules(order *types.Order, userID string) []ComplianceV
 }
 
 // checkRule checks a specific rule against an order
-func (r *RuleEngine) checkRule(rule ComplianceRule, order *types.Order, userID string) *ComplianceViolation {
+func (r *ComplianceRuleEngine) checkRule(rule ComplianceRule, order *types.Order, userID string) *ComplianceViolation {
 	switch rule.RuleType {
 	case RuleTypeOrderSize:
 		maxSize, ok := rule.Parameters["max_order_size"].(float64)
