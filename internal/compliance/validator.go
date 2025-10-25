@@ -33,19 +33,17 @@ type Rule struct {
 	UpdatedAt   time.Time              `json:"updated_at"`
 }
 
-// RuleType defines types of compliance rules
-type RuleType string
+// Use RuleType from unified_compliance.go as ComplianceRuleType
+type RuleType = ComplianceRuleType
 
 const (
 	RuleTypeOrderValidation     RuleType = "order_validation"
-	RuleTypePositionLimit       RuleType = "position_limit"
-	RuleTypeRiskLimit           RuleType = "risk_limit"
-	RuleTypeMarketManipulation  RuleType = "market_manipulation"
-	RuleTypeInsiderTrading      RuleType = "insider_trading"
 	RuleTypeAMLCheck            RuleType = "aml_check"
 	RuleTypeKYCVerification     RuleType = "kyc_verification"
 	RuleTypeShariaCompliance    RuleType = "sharia_compliance"
 	RuleTypeReportingRequirement RuleType = "reporting_requirement"
+	// Use constants from unified_compliance.go for overlapping types
+	// RuleTypePositionLimit, RuleTypeRiskLimit, RuleTypeMarketManipulation, RuleTypeInsiderTrading
 )
 
 // RegulationType defines regulatory frameworks
@@ -62,15 +60,8 @@ const (
 	RegulationEMIR    RegulationType = "emir"    // European Market Infrastructure Regulation
 )
 
-// ViolationSeverity defines severity levels for violations
-type ViolationSeverity string
-
-const (
-	SeverityLow      ViolationSeverity = "low"
-	SeverityMedium   ViolationSeverity = "medium"
-	SeverityHigh     ViolationSeverity = "high"
-	SeverityCritical ViolationSeverity = "critical"
-)
+// Use ViolationSeverity from unified_compliance.go
+// type ViolationSeverity and constants are already defined in unified_compliance.go
 
 // ValidationRequest represents a compliance validation request
 type ValidationRequest struct {
@@ -508,17 +499,8 @@ const (
 	RegulationAMLGeneral RegulationType = "aml_general"
 )
 
-// RuleEngine manages compliance rule execution
-type RuleEngine struct {
-	logger *zap.Logger
-}
-
-// NewRuleEngine creates a new rule engine
-func NewRuleEngine(logger *zap.Logger) *RuleEngine {
-	return &RuleEngine{
-		logger: logger,
-	}
-}
+// Use RuleEngine from unified_compliance.go
+// RuleEngine is already defined in unified_compliance.go with more comprehensive structure
 
 // Error definitions
 var (
