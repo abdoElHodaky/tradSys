@@ -8,6 +8,7 @@ import (
 	"github.com/abdoElHodaky/tradSys/pkg/interfaces"
 	"github.com/abdoElHodaky/tradSys/pkg/types"
 	"github.com/abdoElHodaky/tradSys/services/exchange/egx"
+	"github.com/abdoElHodaky/tradSys/services/exchange/adx"
 )
 
 // Factory manages exchange client instances
@@ -97,9 +98,19 @@ func (f *Factory) CreateEGXClient(config *egx.Config) error {
 }
 
 // CreateADXClient creates and registers an ADX client
-func (f *Factory) CreateADXClient(config interface{}) error {
-	// TODO: Implement ADX client creation when ADX package is ready
-	return fmt.Errorf("ADX client not yet implemented")
+func (f *Factory) CreateADXClient(config *adx.Config) error {
+	if config == nil {
+		config = adx.GetDefaultConfig()
+	}
+	
+	client := adx.NewClient(config)
+	f.RegisterExchange(types.ADX, client)
+	
+	f.mu.Lock()
+	f.configs[types.ADX] = config
+	f.mu.Unlock()
+	
+	return nil
 }
 
 // GetExchangeConfig retrieves configuration for an exchange
@@ -228,10 +239,10 @@ func InitializeDefaultExchanges() error {
 		return fmt.Errorf("failed to initialize EGX client: %w", err)
 	}
 	
-	// TODO: Initialize ADX when ready
-	// if err := DefaultFactory.CreateADXClient(nil); err != nil {
-	//     return fmt.Errorf("failed to initialize ADX client: %w", err)
-	// }
+	// Initialize ADX with default config
+	if err := DefaultFactory.CreateADXClient(nil); err != nil {
+		return fmt.Errorf("failed to initialize ADX client: %w", err)
+	}
 	
 	return nil
 }
