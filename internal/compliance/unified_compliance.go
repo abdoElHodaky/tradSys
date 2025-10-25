@@ -57,6 +57,15 @@ type RuleEngine struct {
 	mu         sync.RWMutex
 }
 
+// NewRuleEngine creates a new rule engine
+func NewRuleEngine(logger *zap.Logger) *RuleEngine {
+	return &RuleEngine{
+		rules:      make(map[string]ComplianceRule),
+		violations: make([]ComplianceViolation, 0),
+		logger:     logger,
+	}
+}
+
 // ReportGenerator generates regulatory reports
 type ReportGenerator struct {
 	templates map[string]ReportTemplate

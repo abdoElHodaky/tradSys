@@ -99,14 +99,14 @@ func (h OrderHeap) Less(i, j int) bool {
 		// For buy orders, higher prices have higher priority
 		if h.Orders[i].Price == h.Orders[j].Price {
 			// If prices are equal, earlier orders have higher priority
-			return h.Orders[i].Timestamp.Before(h.Orders[j].Timestamp)
+			return h.Orders[i].CreatedAt.Before(h.Orders[j].CreatedAt)
 		}
 		return h.Orders[i].Price > h.Orders[j].Price
 	} else {
 		// For sell orders, lower prices have higher priority
 		if h.Orders[i].Price == h.Orders[j].Price {
 			// If prices are equal, earlier orders have higher priority
-			return h.Orders[i].Timestamp.Before(h.Orders[j].Timestamp)
+			return h.Orders[i].CreatedAt.Before(h.Orders[j].CreatedAt)
 		}
 		return h.Orders[i].Price < h.Orders[j].Price
 	}
@@ -518,6 +518,9 @@ type MatchingEngine struct {
 	mu sync.RWMutex
 }
 
+// Engine is an alias for MatchingEngine for compatibility
+type Engine = MatchingEngine
+
 // NewMatchingEngine creates a new matching engine
 func NewMatchingEngine(logger *zap.Logger) *MatchingEngine {
 	return &MatchingEngine{
@@ -525,6 +528,11 @@ func NewMatchingEngine(logger *zap.Logger) *MatchingEngine {
 		TradeChannel: make(chan *Trade, 1000),
 		logger:       logger,
 	}
+}
+
+// NewEngine creates a new matching engine (alias for NewMatchingEngine)
+func NewEngine(logger *zap.Logger) *Engine {
+	return NewMatchingEngine(logger)
 }
 
 // AddOrder adds an order to the matching engine

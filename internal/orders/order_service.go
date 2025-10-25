@@ -94,7 +94,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, req *OrderRequest) (*Ord
 		UpdatedAt:       time.Now(),
 		ExpiresAt:       req.ExpiresAt,
 		Trades:          make([]*Trade, 0),
-		Metadata:        req.Metadata,
+		Metadata:        make(map[string]interface{}),
 	}
 
 	// Store order
@@ -236,9 +236,7 @@ func (s *OrderService) UpdateOrder(ctx context.Context, req *OrderUpdateRequest)
 	if !req.ExpiresAt.IsZero() {
 		order.ExpiresAt = req.ExpiresAt
 	}
-	if req.Metadata != nil {
-		order.Metadata = req.Metadata
-	}
+
 
 	order.UpdatedAt = time.Now()
 
@@ -376,7 +374,7 @@ func (s *OrderService) convertToMatchingOrder(order *Order) *matching.Order {
 		Type:      matching.OrderType(order.Type),
 		Price:     order.Price,
 		Quantity:  order.Quantity,
-		Timestamp: order.CreatedAt,
+		CreatedAt: order.CreatedAt,
 		UserID:    order.UserID,
 	}
 }

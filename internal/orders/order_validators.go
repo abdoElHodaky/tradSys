@@ -209,7 +209,7 @@ func (v *OrderValidator) validateBusinessRules(ctx context.Context, req *OrderRe
 func (v *OrderValidator) validateUpdateFields(req *OrderUpdateRequest) error {
 	// At least one field must be updated
 	if req.Price <= 0 && req.Quantity <= 0 && req.StopPrice <= 0 && 
-		req.TimeInForce == "" && req.ExpiresAt.IsZero() && req.Metadata == nil {
+		req.TimeInForce == "" && req.ExpiresAt.IsZero() {
 		return ErrNoFieldsToUpdate
 	}
 
