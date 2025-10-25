@@ -33,19 +33,15 @@ type Rule struct {
 	UpdatedAt   time.Time              `json:"updated_at"`
 }
 
-// RuleType defines types of compliance rules
-type RuleType string
+// Use types from unified_compliance.go
+type RuleType = ComplianceRuleType
 
 const (
-	RuleTypeOrderValidation     RuleType = "order_validation"
-	RuleTypePositionLimit       RuleType = "position_limit"
-	RuleTypeRiskLimit           RuleType = "risk_limit"
-	RuleTypeMarketManipulation  RuleType = "market_manipulation"
-	RuleTypeInsiderTrading      RuleType = "insider_trading"
-	RuleTypeAMLCheck            RuleType = "aml_check"
-	RuleTypeKYCVerification     RuleType = "kyc_verification"
-	RuleTypeShariaCompliance    RuleType = "sharia_compliance"
-	RuleTypeReportingRequirement RuleType = "reporting_requirement"
+	RuleTypeOrderValidation     = "order_validation"
+	RuleTypeAMLCheck            = "aml_check"
+	RuleTypeKYCVerification     = "kyc_verification"
+	RuleTypeShariaCompliance    = "sharia_compliance"
+	RuleTypeReportingRequirement = "reporting_requirement"
 )
 
 // RegulationType defines regulatory frameworks
@@ -62,15 +58,7 @@ const (
 	RegulationEMIR    RegulationType = "emir"    // European Market Infrastructure Regulation
 )
 
-// ViolationSeverity defines severity levels for violations
-type ViolationSeverity string
-
-const (
-	SeverityLow      ViolationSeverity = "low"
-	SeverityMedium   ViolationSeverity = "medium"
-	SeverityHigh     ViolationSeverity = "high"
-	SeverityCritical ViolationSeverity = "critical"
-)
+// Use ViolationSeverity from unified_compliance.go
 
 // ValidationRequest represents a compliance validation request
 type ValidationRequest struct {
@@ -508,17 +496,7 @@ const (
 	RegulationAMLGeneral RegulationType = "aml_general"
 )
 
-// RuleEngine manages compliance rule execution
-type RuleEngine struct {
-	logger *zap.Logger
-}
-
-// NewRuleEngine creates a new rule engine
-func NewRuleEngine(logger *zap.Logger) *RuleEngine {
-	return &RuleEngine{
-		logger: logger,
-	}
-}
+// Use RuleEngine from unified_compliance.go
 
 // Error definitions
 var (

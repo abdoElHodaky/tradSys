@@ -13,8 +13,8 @@ import (
 // UnifiedMonitor provides comprehensive system monitoring and metrics collection
 type UnifiedMonitor struct {
 	// Core components
-	metricsCollector *MetricsCollector
-	alertManager     *AlertManager
+	metricsCollector *UnifiedMetricsCollector
+	alertManager     *UnifiedAlertManager
 	healthChecker    *HealthChecker
 	performanceTracker *PerformanceTracker
 	
@@ -78,8 +78,8 @@ type SystemMetrics struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-// HealthStatus represents system health status
-type HealthStatus struct {
+// UnifiedHealthStatus represents system health status
+type UnifiedHealthStatus struct {
 	Overall    HealthState            `json:"overall"`
 	Components map[string]HealthState `json:"components"`
 	Timestamp  time.Time              `json:"timestamp"`
@@ -97,8 +97,8 @@ const (
 	HealthStateUnknown   HealthState = "unknown"
 )
 
-// Alert represents a system alert
-type Alert struct {
+// UnifiedAlert represents a system alert
+type UnifiedAlert struct {
 	ID          string                 `json:"id"`
 	Type        AlertType              `json:"type"`
 	Severity    AlertSeverity          `json:"severity"`
@@ -149,8 +149,8 @@ func NewUnifiedMonitor(config *MonitorConfig, logger *zap.Logger) *UnifiedMonito
 	}
 	
 	// Initialize components
-	monitor.metricsCollector = NewMetricsCollector(config, logger)
-	monitor.alertManager = NewAlertManager(config, logger)
+	monitor.metricsCollector = NewUnifiedMetricsCollector(config, logger)
+	monitor.alertManager = NewUnifiedAlertManager(config, logger)
 	monitor.healthChecker = NewHealthChecker(config, logger)
 	monitor.performanceTracker = NewPerformanceTracker(config, logger)
 	
@@ -232,12 +232,12 @@ func (m *UnifiedMonitor) GetMetrics() (*SystemMetrics, error) {
 }
 
 // GetHealth returns current system health
-func (m *UnifiedMonitor) GetHealth() (*HealthStatus, error) {
+func (m *UnifiedMonitor) GetHealth() (*UnifiedHealthStatus, error) {
 	return m.healthChecker.GetCurrentHealth()
 }
 
 // GetAlerts returns active alerts
-func (m *UnifiedMonitor) GetAlerts() ([]*Alert, error) {
+func (m *UnifiedMonitor) GetAlerts() ([]*UnifiedAlert, error) {
 	return m.alertManager.GetActiveAlerts()
 }
 
@@ -247,7 +247,7 @@ func (m *UnifiedMonitor) RecordMetric(name string, value float64, labels map[str
 }
 
 // TriggerAlert triggers a custom alert
-func (m *UnifiedMonitor) TriggerAlert(alert *Alert) {
+func (m *UnifiedMonitor) TriggerAlert(alert *UnifiedAlert) {
 	m.alertManager.TriggerAlert(alert)
 }
 
@@ -334,17 +334,17 @@ func (m *UnifiedMonitor) GetPrometheusRegistry() *prometheus.Registry {
 
 // Component interfaces and types
 
-// MetricsCollector collects system metrics
-type MetricsCollector struct {
+// UnifiedMetricsCollector collects system metrics
+type UnifiedMetricsCollector struct {
 	config  *MonitorConfig
 	logger  *zap.Logger
 	metrics *SystemMetrics
 	mu      sync.RWMutex
 }
 
-// NewMetricsCollector creates a new metrics collector
-func NewMetricsCollector(config *MonitorConfig, logger *zap.Logger) *MetricsCollector {
-	return &MetricsCollector{
+// NewUnifiedMetricsCollector creates a new metrics collector
+func NewUnifiedMetricsCollector(config *MonitorConfig, logger *zap.Logger) *UnifiedMetricsCollector {
+	return &UnifiedMetricsCollector{
 		config:  config,
 		logger:  logger,
 		metrics: &SystemMetrics{},
@@ -352,19 +352,19 @@ func NewMetricsCollector(config *MonitorConfig, logger *zap.Logger) *MetricsColl
 }
 
 // Start starts the metrics collector
-func (mc *MetricsCollector) Start() error {
+func (mc *UnifiedMetricsCollector) Start() error {
 	mc.logger.Info("Starting metrics collector")
 	return nil
 }
 
 // Stop stops the metrics collector
-func (mc *MetricsCollector) Stop() error {
+func (mc *UnifiedMetricsCollector) Stop() error {
 	mc.logger.Info("Stopping metrics collector")
 	return nil
 }
 
 // CollectMetrics collects current system metrics
-func (mc *MetricsCollector) CollectMetrics() error {
+func (mc *UnifiedMetricsCollector) CollectMetrics() error {
 	mc.mu.Lock()
 	defer mc.mu.Unlock()
 	
@@ -384,7 +384,7 @@ func (mc *MetricsCollector) CollectMetrics() error {
 }
 
 // GetCurrentMetrics returns current metrics
-func (mc *MetricsCollector) GetCurrentMetrics() (*SystemMetrics, error) {
+func (mc *UnifiedMetricsCollector) GetCurrentMetrics() (*SystemMetrics, error) {
 	mc.mu.RLock()
 	defer mc.mu.RUnlock()
 	
@@ -394,58 +394,58 @@ func (mc *MetricsCollector) GetCurrentMetrics() (*SystemMetrics, error) {
 }
 
 // RecordMetric records a custom metric
-func (mc *MetricsCollector) RecordMetric(name string, value float64, labels map[string]string) {
+func (mc *UnifiedMetricsCollector) RecordMetric(name string, value float64, labels map[string]string) {
 	mc.logger.Debug("Recording custom metric",
 		zap.String("name", name),
 		zap.Float64("value", value))
 }
 
 // Metric collection methods (simplified implementations)
-func (mc *MetricsCollector) getOrdersPerSecond() float64 { return 1250.5 }
-func (mc *MetricsCollector) getTradesPerSecond() float64 { return 850.2 }
-func (mc *MetricsCollector) getMatchingLatency() float64 { return 2.5 }
-func (mc *MetricsCollector) getCPUUsage() float64        { return 45.2 }
-func (mc *MetricsCollector) getMemoryUsage() float64     { return 68.7 }
-func (mc *MetricsCollector) getErrorRate() float64       { return 0.1 }
-func (mc *MetricsCollector) getResponseTime() float64    { return 15.3 }
+func (mc *UnifiedMetricsCollector) getOrdersPerSecond() float64 { return 1250.5 }
+func (mc *UnifiedMetricsCollector) getTradesPerSecond() float64 { return 850.2 }
+func (mc *UnifiedMetricsCollector) getMatchingLatency() float64 { return 2.5 }
+func (mc *UnifiedMetricsCollector) getCPUUsage() float64        { return 45.2 }
+func (mc *UnifiedMetricsCollector) getMemoryUsage() float64     { return 68.7 }
+func (mc *UnifiedMetricsCollector) getErrorRate() float64       { return 0.1 }
+func (mc *UnifiedMetricsCollector) getResponseTime() float64    { return 15.3 }
 
-// AlertManager manages system alerts
-type AlertManager struct {
+// UnifiedAlertManager manages system alerts
+type UnifiedAlertManager struct {
 	config *MonitorConfig
 	logger *zap.Logger
-	alerts []*Alert
+	alerts []*UnifiedAlert
 	mu     sync.RWMutex
 }
 
-// NewAlertManager creates a new alert manager
-func NewAlertManager(config *MonitorConfig, logger *zap.Logger) *AlertManager {
-	return &AlertManager{
+// NewUnifiedAlertManager creates a new alert manager
+func NewUnifiedAlertManager(config *MonitorConfig, logger *zap.Logger) *UnifiedAlertManager {
+	return &UnifiedAlertManager{
 		config: config,
 		logger: logger,
-		alerts: make([]*Alert, 0),
+		alerts: make([]*UnifiedAlert, 0),
 	}
 }
 
 // Start starts the alert manager
-func (am *AlertManager) Start() error {
+func (am *UnifiedAlertManager) Start() error {
 	am.logger.Info("Starting alert manager")
 	return nil
 }
 
 // Stop stops the alert manager
-func (am *AlertManager) Stop() error {
+func (am *UnifiedAlertManager) Stop() error {
 	am.logger.Info("Stopping alert manager")
 	return nil
 }
 
 // CheckAlerts checks for alert conditions
-func (am *AlertManager) CheckAlerts() error {
+func (am *UnifiedAlertManager) CheckAlerts() error {
 	// Implementation would check various conditions and trigger alerts
 	return nil
 }
 
 // TriggerAlert triggers an alert
-func (am *AlertManager) TriggerAlert(alert *Alert) {
+func (am *UnifiedAlertManager) TriggerAlert(alert *UnifiedAlert) {
 	am.mu.Lock()
 	defer am.mu.Unlock()
 	
@@ -460,11 +460,11 @@ func (am *AlertManager) TriggerAlert(alert *Alert) {
 }
 
 // GetActiveAlerts returns active alerts
-func (am *AlertManager) GetActiveAlerts() ([]*Alert, error) {
+func (am *UnifiedAlertManager) GetActiveAlerts() ([]*UnifiedAlert, error) {
 	am.mu.RLock()
 	defer am.mu.RUnlock()
 	
-	activeAlerts := make([]*Alert, 0)
+	activeAlerts := make([]*UnifiedAlert, 0)
 	for _, alert := range am.alerts {
 		if !alert.Resolved {
 			activeAlerts = append(activeAlerts, alert)
@@ -479,7 +479,7 @@ type HealthChecker struct {
 	config  *MonitorConfig
 	logger  *zap.Logger
 	checks  map[string]HealthCheckFunc
-	status  *HealthStatus
+	status  *UnifiedHealthStatus
 	mu      sync.RWMutex
 }
 
@@ -492,7 +492,7 @@ func NewHealthChecker(config *MonitorConfig, logger *zap.Logger) *HealthChecker 
 		config: config,
 		logger: logger,
 		checks: make(map[string]HealthCheckFunc),
-		status: &HealthStatus{
+		status: &UnifiedHealthStatus{
 			Overall:    HealthStateHealthy,
 			Components: make(map[string]HealthState),
 			Timestamp:  time.Now(),
@@ -541,7 +541,7 @@ func (hc *HealthChecker) RunHealthChecks() error {
 		}
 	}
 	
-	hc.status = &HealthStatus{
+	hc.status = &UnifiedHealthStatus{
 		Overall:    overall,
 		Components: components,
 		Timestamp:  time.Now(),
@@ -551,7 +551,7 @@ func (hc *HealthChecker) RunHealthChecks() error {
 }
 
 // GetCurrentHealth returns current health status
-func (hc *HealthChecker) GetCurrentHealth() (*HealthStatus, error) {
+func (hc *HealthChecker) GetCurrentHealth() (*UnifiedHealthStatus, error) {
 	hc.mu.RLock()
 	defer hc.mu.RUnlock()
 	
