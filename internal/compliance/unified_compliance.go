@@ -261,6 +261,14 @@ type AlertHandler interface {
 	HandleAlert(alert *ComplianceAlert) error
 }
 
+// NewRuleEngine creates a new rule engine
+func NewRuleEngine(logger *zap.Logger) *RuleEngine {
+	return &RuleEngine{
+		rules:  make(map[string]ComplianceRule),
+		logger: logger.Named("rules"),
+	}
+}
+
 // NewUnifiedComplianceEngine creates a new unified compliance engine
 func NewUnifiedComplianceEngine(config *ComplianceConfig, logger *zap.Logger) *UnifiedComplianceEngine {
 	engine := &UnifiedComplianceEngine{

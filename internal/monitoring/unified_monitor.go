@@ -78,14 +78,7 @@ type SystemMetrics struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-// HealthStatus represents system health status
-type HealthStatus struct {
-	Overall    HealthState            `json:"overall"`
-	Components map[string]HealthState `json:"components"`
-	Timestamp  time.Time              `json:"timestamp"`
-	Uptime     time.Duration          `json:"uptime"`
-	Details    map[string]interface{} `json:"details,omitempty"`
-}
+// HealthStatus is defined in production.go to avoid redeclaration
 
 // HealthState represents health state
 type HealthState string
@@ -97,22 +90,7 @@ const (
 	HealthStateUnknown   HealthState = "unknown"
 )
 
-// Alert represents a system alert
-type Alert struct {
-	ID          string                 `json:"id"`
-	Type        AlertType              `json:"type"`
-	Severity    AlertSeverity          `json:"severity"`
-	Title       string                 `json:"title"`
-	Description string                 `json:"description"`
-	Component   string                 `json:"component"`
-	Metric      string                 `json:"metric,omitempty"`
-	Value       float64                `json:"value,omitempty"`
-	Threshold   float64                `json:"threshold,omitempty"`
-	Timestamp   time.Time              `json:"timestamp"`
-	Resolved    bool                   `json:"resolved"`
-	ResolvedAt  *time.Time             `json:"resolved_at,omitempty"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
-}
+// Alert is defined in alerts.go to avoid redeclaration
 
 // AlertType defines types of alerts
 type AlertType string
@@ -149,8 +127,8 @@ func NewUnifiedMonitor(config *MonitorConfig, logger *zap.Logger) *UnifiedMonito
 	}
 	
 	// Initialize components
-	monitor.metricsCollector = NewMetricsCollector(config, logger)
-	monitor.alertManager = NewAlertManager(config, logger)
+	monitor.metricsCollector = NewMetricsCollector(logger)
+	monitor.alertManager = NewAlertManager(logger)
 	monitor.healthChecker = NewHealthChecker(config, logger)
 	monitor.performanceTracker = NewPerformanceTracker(config, logger)
 	
@@ -238,7 +216,8 @@ func (m *UnifiedMonitor) GetHealth() (*HealthStatus, error) {
 
 // GetAlerts returns active alerts
 func (m *UnifiedMonitor) GetAlerts() ([]*Alert, error) {
-	return m.alertManager.GetActiveAlerts()
+	alerts := m.alertManager.GetActiveAlerts()
+	return alerts, nil
 }
 
 // RecordMetric records a custom metric
@@ -334,145 +313,9 @@ func (m *UnifiedMonitor) GetPrometheusRegistry() *prometheus.Registry {
 
 // Component interfaces and types
 
-// MetricsCollector collects system metrics
-type MetricsCollector struct {
-	config  *MonitorConfig
-	logger  *zap.Logger
-	metrics *SystemMetrics
-	mu      sync.RWMutex
-}
+// MetricsCollector and NewMetricsCollector are defined in metrics.go to avoid redeclaration
 
-// NewMetricsCollector creates a new metrics collector
-func NewMetricsCollector(config *MonitorConfig, logger *zap.Logger) *MetricsCollector {
-	return &MetricsCollector{
-		config:  config,
-		logger:  logger,
-		metrics: &SystemMetrics{},
-	}
-}
-
-// Start starts the metrics collector
-func (mc *MetricsCollector) Start() error {
-	mc.logger.Info("Starting metrics collector")
-	return nil
-}
-
-// Stop stops the metrics collector
-func (mc *MetricsCollector) Stop() error {
-	mc.logger.Info("Stopping metrics collector")
-	return nil
-}
-
-// CollectMetrics collects current system metrics
-func (mc *MetricsCollector) CollectMetrics() error {
-	mc.mu.Lock()
-	defer mc.mu.Unlock()
-	
-	// Collect metrics from various sources
-	mc.metrics = &SystemMetrics{
-		OrdersPerSecond:   mc.getOrdersPerSecond(),
-		TradesPerSecond:   mc.getTradesPerSecond(),
-		MatchingLatency:   mc.getMatchingLatency(),
-		CPUUsage:         mc.getCPUUsage(),
-		MemoryUsage:      mc.getMemoryUsage(),
-		ErrorRate:        mc.getErrorRate(),
-		ResponseTime:     mc.getResponseTime(),
-		Timestamp:        time.Now(),
-	}
-	
-	return nil
-}
-
-// GetCurrentMetrics returns current metrics
-func (mc *MetricsCollector) GetCurrentMetrics() (*SystemMetrics, error) {
-	mc.mu.RLock()
-	defer mc.mu.RUnlock()
-	
-	// Return a copy
-	metrics := *mc.metrics
-	return &metrics, nil
-}
-
-// RecordMetric records a custom metric
-func (mc *MetricsCollector) RecordMetric(name string, value float64, labels map[string]string) {
-	mc.logger.Debug("Recording custom metric",
-		zap.String("name", name),
-		zap.Float64("value", value))
-}
-
-// Metric collection methods (simplified implementations)
-func (mc *MetricsCollector) getOrdersPerSecond() float64 { return 1250.5 }
-func (mc *MetricsCollector) getTradesPerSecond() float64 { return 850.2 }
-func (mc *MetricsCollector) getMatchingLatency() float64 { return 2.5 }
-func (mc *MetricsCollector) getCPUUsage() float64        { return 45.2 }
-func (mc *MetricsCollector) getMemoryUsage() float64     { return 68.7 }
-func (mc *MetricsCollector) getErrorRate() float64       { return 0.1 }
-func (mc *MetricsCollector) getResponseTime() float64    { return 15.3 }
-
-// AlertManager manages system alerts
-type AlertManager struct {
-	config *MonitorConfig
-	logger *zap.Logger
-	alerts []*Alert
-	mu     sync.RWMutex
-}
-
-// NewAlertManager creates a new alert manager
-func NewAlertManager(config *MonitorConfig, logger *zap.Logger) *AlertManager {
-	return &AlertManager{
-		config: config,
-		logger: logger,
-		alerts: make([]*Alert, 0),
-	}
-}
-
-// Start starts the alert manager
-func (am *AlertManager) Start() error {
-	am.logger.Info("Starting alert manager")
-	return nil
-}
-
-// Stop stops the alert manager
-func (am *AlertManager) Stop() error {
-	am.logger.Info("Stopping alert manager")
-	return nil
-}
-
-// CheckAlerts checks for alert conditions
-func (am *AlertManager) CheckAlerts() error {
-	// Implementation would check various conditions and trigger alerts
-	return nil
-}
-
-// TriggerAlert triggers an alert
-func (am *AlertManager) TriggerAlert(alert *Alert) {
-	am.mu.Lock()
-	defer am.mu.Unlock()
-	
-	alert.Timestamp = time.Now()
-	am.alerts = append(am.alerts, alert)
-	
-	am.logger.Warn("Alert triggered",
-		zap.String("id", alert.ID),
-		zap.String("type", string(alert.Type)),
-		zap.String("severity", string(alert.Severity)),
-		zap.String("title", alert.Title))
-}
-
-// GetActiveAlerts returns active alerts
-func (am *AlertManager) GetActiveAlerts() ([]*Alert, error) {
-	am.mu.RLock()
-	defer am.mu.RUnlock()
-	
-	activeAlerts := make([]*Alert, 0)
-	for _, alert := range am.alerts {
-		if !alert.Resolved {
-			activeAlerts = append(activeAlerts, alert)
-		}
-	}
-	
-	return activeAlerts, nil
-}
+// AlertManager and NewAlertManager are defined in alerts.go to avoid redeclaration
 
 // HealthChecker performs health checks
 type HealthChecker struct {

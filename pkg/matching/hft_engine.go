@@ -115,31 +115,7 @@ type HFTOrder struct {
 	LatencyNs uint64
 }
 
-// Use type aliases for compatibility with shared types
-type OrderSide = types.OrderSide
-type OrderType = types.OrderType  
-type OrderStatus = types.OrderStatus
-
-// Constants from types package
-const (
-	OrderSideBuy    = types.OrderSideBuy
-	OrderSideSell   = types.OrderSideSell
-	OrderTypeLimit  = types.OrderTypeLimit
-	OrderTypeMarket = types.OrderTypeMarket
-	OrderTypeStopLimit = types.OrderTypeStopLimit
-	OrderTypeStopMarket = types.OrderTypeStopMarket
-)
-
-// OrderStatus constants from types package
-const (
-	OrderStatusNew             = types.OrderStatusNew
-	OrderStatusPartiallyFilled = types.OrderStatusPartiallyFilled
-	OrderStatusFilled          = types.OrderStatusFilled
-	OrderStatusCanceled        = types.OrderStatusCanceled
-	OrderStatusCancelled       = types.OrderStatusCancelled
-	OrderStatusRejected        = types.OrderStatusRejected
-	OrderStatusExpired         = types.OrderStatusExpired
-)
+// Type aliases and constants are defined in engine.go to avoid redeclaration
 
 // Trade represents a completed trade
 type Trade struct {
