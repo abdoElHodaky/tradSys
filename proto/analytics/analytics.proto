@@ -1,0 +1,132 @@
+syntax = "proto3";
+
+package analytics;
+
+option go_package = "github.com/abdoElHodaky/tradSys/proto/analytics";
+
+// AnalyticsService provides trading analytics functionality
+service AnalyticsService {
+  // GetTradingAnalytics gets trading analytics
+  rpc GetTradingAnalytics(GetTradingAnalyticsRequest) returns (GetTradingAnalyticsResponse);
+  
+  // GetMarketAnalytics gets market analytics
+  rpc GetMarketAnalytics(GetMarketAnalyticsRequest) returns (GetMarketAnalyticsResponse);
+  
+  // GetUserAnalytics gets user analytics
+  rpc GetUserAnalytics(GetUserAnalyticsRequest) returns (GetUserAnalyticsResponse);
+  
+  // GenerateReport generates analytics report
+  rpc GenerateReport(GenerateReportRequest) returns (GenerateReportResponse);
+}
+
+// GetTradingAnalyticsRequest represents a get trading analytics request
+message GetTradingAnalyticsRequest {
+  string user_id = 1;
+  int64 start_date = 2;
+  int64 end_date = 3;
+  repeated string metrics = 4; // "pnl", "volume", "win_rate", etc.
+}
+
+// GetTradingAnalyticsResponse represents a get trading analytics response
+message GetTradingAnalyticsResponse {
+  bool success = 1;
+  TradingAnalytics analytics = 2;
+  string message = 3;
+}
+
+// GetMarketAnalyticsRequest represents a get market analytics request
+message GetMarketAnalyticsRequest {
+  repeated string symbols = 1;
+  repeated string exchanges = 2;
+  int64 start_date = 3;
+  int64 end_date = 4;
+}
+
+// GetMarketAnalyticsResponse represents a get market analytics response
+message GetMarketAnalyticsResponse {
+  bool success = 1;
+  MarketAnalytics analytics = 2;
+  string message = 3;
+}
+
+// GetUserAnalyticsRequest represents a get user analytics request
+message GetUserAnalyticsRequest {
+  string user_id = 1;
+  string period = 2; // "1d", "1w", "1m", "3m", "6m", "1y"
+}
+
+// GetUserAnalyticsResponse represents a get user analytics response
+message GetUserAnalyticsResponse {
+  bool success = 1;
+  UserAnalytics analytics = 2;
+  string message = 3;
+}
+
+// GenerateReportRequest represents a generate report request
+message GenerateReportRequest {
+  string report_type = 1; // "trading", "market", "user", "compliance"
+  string user_id = 2;
+  int64 start_date = 3;
+  int64 end_date = 4;
+  string format = 5; // "json", "pdf", "csv"
+}
+
+// GenerateReportResponse represents a generate report response
+message GenerateReportResponse {
+  bool success = 1;
+  string report_id = 2;
+  string download_url = 3;
+  string message = 4;
+}
+
+// Supporting Types
+
+// TradingAnalytics represents trading analytics
+message TradingAnalytics {
+  double total_pnl = 1;
+  double total_volume = 2;
+  int32 total_trades = 3;
+  int32 winning_trades = 4;
+  int32 losing_trades = 5;
+  double win_rate = 6;
+  double average_win = 7;
+  double average_loss = 8;
+  double profit_factor = 9;
+  double sharpe_ratio = 10;
+  double max_drawdown = 11;
+  repeated DataPoint pnl_history = 12;
+}
+
+// MarketAnalytics represents market analytics
+message MarketAnalytics {
+  double total_volume = 1;
+  int32 total_trades = 2;
+  double price_change = 3;
+  double volatility = 4;
+  repeated SymbolAnalytics symbol_analytics = 5;
+}
+
+// UserAnalytics represents user analytics
+message UserAnalytics {
+  int32 active_days = 1;
+  int32 total_logins = 2;
+  double portfolio_value = 3;
+  double portfolio_change = 4;
+  int32 notifications_sent = 5;
+  repeated string most_traded_symbols = 6;
+}
+
+// SymbolAnalytics represents symbol analytics
+message SymbolAnalytics {
+  string symbol = 1;
+  double volume = 2;
+  int32 trades = 3;
+  double price_change = 4;
+  double volatility = 5;
+}
+
+// DataPoint represents a data point
+message DataPoint {
+  int64 timestamp = 1;
+  double value = 2;
+}

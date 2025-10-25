@@ -1,0 +1,316 @@
+syntax = "proto3";
+
+package users;
+
+option go_package = "github.com/abdoElHodaky/tradSys/proto/users";
+
+// UserService provides user management functionality
+service UserService {
+  // CreateUser creates a new user
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+  
+  // GetUser gets a user by ID
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  
+  // UpdateUser updates user information
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+  
+  // DeleteUser deletes a user
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
+  
+  // ListUsers lists users with pagination
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+  
+  // GetUserProfile gets user profile
+  rpc GetUserProfile(GetUserProfileRequest) returns (GetUserProfileResponse);
+  
+  // UpdateUserProfile updates user profile
+  rpc UpdateUserProfile(UpdateUserProfileRequest) returns (UpdateUserProfileResponse);
+  
+  // ChangePassword changes user password
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
+  
+  // GetUserPreferences gets user preferences
+  rpc GetUserPreferences(GetUserPreferencesRequest) returns (GetUserPreferencesResponse);
+  
+  // UpdateUserPreferences updates user preferences
+  rpc UpdateUserPreferences(UpdateUserPreferencesRequest) returns (UpdateUserPreferencesResponse);
+}
+
+// CreateUserRequest represents a create user request
+message CreateUserRequest {
+  string username = 1;
+  string email = 2;
+  string password = 3;
+  string first_name = 4;
+  string last_name = 5;
+  repeated string roles = 6;
+  UserProfile profile = 7;
+  map<string, string> metadata = 8;
+}
+
+// CreateUserResponse represents a create user response
+message CreateUserResponse {
+  bool success = 1;
+  string user_id = 2;
+  User user = 3;
+  string message = 4;
+}
+
+// GetUserRequest represents a get user request
+message GetUserRequest {
+  string user_id = 1;
+  bool include_profile = 2;
+  bool include_preferences = 3;
+}
+
+// GetUserResponse represents a get user response
+message GetUserResponse {
+  bool success = 1;
+  User user = 2;
+  string message = 3;
+}
+
+// UpdateUserRequest represents an update user request
+message UpdateUserRequest {
+  string user_id = 1;
+  string username = 2;
+  string email = 3;
+  string first_name = 4;
+  string last_name = 5;
+  repeated string roles = 6;
+  string status = 7;
+  map<string, string> metadata = 8;
+}
+
+// UpdateUserResponse represents an update user response
+message UpdateUserResponse {
+  bool success = 1;
+  User user = 2;
+  string message = 3;
+}
+
+// DeleteUserRequest represents a delete user request
+message DeleteUserRequest {
+  string user_id = 1;
+  bool soft_delete = 2;
+}
+
+// DeleteUserResponse represents a delete user response
+message DeleteUserResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// ListUsersRequest represents a list users request
+message ListUsersRequest {
+  repeated string roles = 1; // Filter by roles
+  string status = 2; // Filter by status
+  string search_query = 3; // Search in username, email, name
+  int32 limit = 4;
+  int32 offset = 5;
+  string sort_by = 6; // "username", "email", "created_at"
+  string sort_order = 7; // "asc", "desc"
+}
+
+// ListUsersResponse represents a list users response
+message ListUsersResponse {
+  bool success = 1;
+  repeated User users = 2;
+  int32 total_count = 3;
+  string message = 4;
+}
+
+// GetUserProfileRequest represents a get user profile request
+message GetUserProfileRequest {
+  string user_id = 1;
+}
+
+// GetUserProfileResponse represents a get user profile response
+message GetUserProfileResponse {
+  bool success = 1;
+  UserProfile profile = 2;
+  string message = 3;
+}
+
+// UpdateUserProfileRequest represents an update user profile request
+message UpdateUserProfileRequest {
+  string user_id = 1;
+  UserProfile profile = 2;
+}
+
+// UpdateUserProfileResponse represents an update user profile response
+message UpdateUserProfileResponse {
+  bool success = 1;
+  UserProfile profile = 2;
+  string message = 3;
+}
+
+// ChangePasswordRequest represents a change password request
+message ChangePasswordRequest {
+  string user_id = 1;
+  string current_password = 2;
+  string new_password = 3;
+}
+
+// ChangePasswordResponse represents a change password response
+message ChangePasswordResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// GetUserPreferencesRequest represents a get user preferences request
+message GetUserPreferencesRequest {
+  string user_id = 1;
+}
+
+// GetUserPreferencesResponse represents a get user preferences response
+message GetUserPreferencesResponse {
+  bool success = 1;
+  UserPreferences preferences = 2;
+  string message = 3;
+}
+
+// UpdateUserPreferencesRequest represents an update user preferences request
+message UpdateUserPreferencesRequest {
+  string user_id = 1;
+  UserPreferences preferences = 2;
+}
+
+// UpdateUserPreferencesResponse represents an update user preferences response
+message UpdateUserPreferencesResponse {
+  bool success = 1;
+  UserPreferences preferences = 2;
+  string message = 3;
+}
+
+// Supporting Types
+
+// User represents a user
+message User {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+  string first_name = 4;
+  string last_name = 5;
+  repeated string roles = 6;
+  string status = 7; // "active", "inactive", "suspended", "pending"
+  UserProfile profile = 8;
+  UserPreferences preferences = 9;
+  map<string, string> metadata = 10;
+  int64 created_at = 11;
+  int64 updated_at = 12;
+  int64 last_login = 13;
+}
+
+// UserProfile represents user profile information
+message UserProfile {
+  string phone = 1;
+  string country = 2;
+  string city = 3;
+  string address = 4;
+  string postal_code = 5;
+  string date_of_birth = 6; // YYYY-MM-DD format
+  string gender = 7; // "male", "female", "other"
+  string occupation = 8;
+  string company = 9;
+  string tax_id = 10;
+  string national_id = 11;
+  KYCInfo kyc_info = 12;
+  map<string, string> custom_fields = 13;
+}
+
+// KYCInfo represents KYC information
+message KYCInfo {
+  string status = 1; // "pending", "approved", "rejected", "expired"
+  string level = 2; // "basic", "intermediate", "advanced"
+  repeated Document documents = 3;
+  string verification_method = 4;
+  int64 verified_at = 5;
+  int64 expires_at = 6;
+  string verifier = 7;
+  map<string, string> details = 8;
+}
+
+// Document represents a KYC document
+message Document {
+  string id = 1;
+  string type = 2; // "passport", "national_id", "driver_license", "utility_bill"
+  string status = 3; // "pending", "approved", "rejected"
+  string file_url = 4;
+  string file_hash = 5;
+  int64 uploaded_at = 6;
+  int64 verified_at = 7;
+  string rejection_reason = 8;
+}
+
+// UserPreferences represents user preferences
+message UserPreferences {
+  string language = 1; // "en", "ar", "fr"
+  string timezone = 2;
+  string currency = 3;
+  string date_format = 4;
+  string time_format = 5;
+  NotificationPreferences notifications = 6;
+  TradingPreferences trading = 7;
+  UIPreferences ui = 8;
+  PrivacyPreferences privacy = 9;
+  map<string, string> custom_preferences = 10;
+}
+
+// NotificationPreferences represents notification preferences
+message NotificationPreferences {
+  bool email_enabled = 1;
+  bool sms_enabled = 2;
+  bool push_enabled = 3;
+  bool order_notifications = 4;
+  bool price_alerts = 5;
+  bool news_updates = 6;
+  bool system_notifications = 7;
+  bool marketing_emails = 8;
+  repeated string notification_types = 9;
+}
+
+// TradingPreferences represents trading preferences
+message TradingPreferences {
+  bool islamic_compliant_only = 1;
+  repeated string preferred_exchanges = 2;
+  repeated string preferred_asset_types = 3;
+  string default_order_type = 4;
+  string default_time_in_force = 5;
+  bool confirmation_required = 6;
+  double default_stop_loss = 7;
+  double default_take_profit = 8;
+  RiskPreferences risk_preferences = 9;
+}
+
+// RiskPreferences represents risk preferences
+message RiskPreferences {
+  string risk_tolerance = 1; // "conservative", "moderate", "aggressive"
+  double max_position_size = 2; // Percentage
+  double max_daily_loss = 3; // Amount or percentage
+  bool auto_stop_loss = 4;
+  double stop_loss_percentage = 5;
+  bool diversification_alerts = 6;
+}
+
+// UIPreferences represents UI preferences
+message UIPreferences {
+  string theme = 1; // "light", "dark", "auto"
+  string layout = 2; // "compact", "comfortable", "spacious"
+  bool show_advanced_features = 3;
+  repeated string dashboard_widgets = 4;
+  string chart_type = 5; // "candlestick", "line", "bar"
+  string chart_interval = 6; // "1m", "5m", "1h", "1d"
+  map<string, string> custom_ui_settings = 7;
+}
+
+// PrivacyPreferences represents privacy preferences
+message PrivacyPreferences {
+  bool profile_public = 1;
+  bool show_portfolio = 2;
+  bool show_trading_activity = 3;
+  bool allow_data_sharing = 4;
+  bool allow_analytics = 5;
+  repeated string data_sharing_partners = 6;
+}

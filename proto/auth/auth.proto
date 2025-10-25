@@ -1,0 +1,115 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "github.com/abdoElHodaky/tradSys/proto/auth";
+
+// AuthenticationService provides authentication functionality
+service AuthenticationService {
+  // Authenticate authenticates a user with credentials
+  rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse);
+  
+  // ValidateToken validates an authentication token
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+  
+  // RefreshToken refreshes an authentication token
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+  
+  // Logout logs out a user
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+  
+  // GetUserInfo gets user information from token
+  rpc GetUserInfo(GetUserInfoRequest) returns (GetUserInfoResponse);
+}
+
+// AuthenticateRequest represents an authentication request
+message AuthenticateRequest {
+  string username = 1;
+  string password = 2;
+  string method = 3; // "password", "oauth", "api_key", etc.
+  map<string, string> extra = 4; // Additional authentication parameters
+}
+
+// AuthenticateResponse represents an authentication response
+message AuthenticateResponse {
+  bool success = 1;
+  string token = 2;
+  string refresh_token = 3;
+  int64 expires_at = 4; // Unix timestamp
+  User user = 5;
+  string message = 6;
+}
+
+// ValidateTokenRequest represents a token validation request
+message ValidateTokenRequest {
+  string token = 1;
+}
+
+// ValidateTokenResponse represents a token validation response
+message ValidateTokenResponse {
+  bool valid = 1;
+  TokenClaims claims = 2;
+  string message = 3;
+}
+
+// RefreshTokenRequest represents a token refresh request
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+// RefreshTokenResponse represents a token refresh response
+message RefreshTokenResponse {
+  bool success = 1;
+  string token = 2;
+  string refresh_token = 3;
+  int64 expires_at = 4; // Unix timestamp
+  string message = 5;
+}
+
+// LogoutRequest represents a logout request
+message LogoutRequest {
+  string token = 1;
+}
+
+// LogoutResponse represents a logout response
+message LogoutResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// GetUserInfoRequest represents a user info request
+message GetUserInfoRequest {
+  string token = 1;
+}
+
+// GetUserInfoResponse represents a user info response
+message GetUserInfoResponse {
+  bool success = 1;
+  User user = 2;
+  string message = 3;
+}
+
+// User represents a user
+message User {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+  string first_name = 4;
+  string last_name = 5;
+  repeated string roles = 6;
+  string status = 7; // "active", "inactive", "suspended"
+  map<string, string> metadata = 8;
+  int64 created_at = 9; // Unix timestamp
+  int64 updated_at = 10; // Unix timestamp
+}
+
+// TokenClaims represents token claims
+message TokenClaims {
+  string user_id = 1;
+  string username = 2;
+  repeated string roles = 3;
+  int64 expires_at = 4; // Unix timestamp
+  int64 issued_at = 5; // Unix timestamp
+  string issuer = 6;
+  map<string, string> custom_claims = 7;
+}

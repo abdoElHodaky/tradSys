@@ -1,0 +1,203 @@
+syntax = "proto3";
+
+package assets;
+
+option go_package = "github.com/abdoElHodaky/tradSys/proto/assets";
+
+// AssetService provides asset management functionality
+service AssetService {
+  // GetAsset gets an asset by ID or symbol
+  rpc GetAsset(GetAssetRequest) returns (GetAssetResponse);
+  
+  // SearchAssets searches for assets based on criteria
+  rpc SearchAssets(SearchAssetsRequest) returns (SearchAssetsResponse);
+  
+  // ListAssets lists assets with pagination
+  rpc ListAssets(ListAssetsRequest) returns (ListAssetsResponse);
+  
+  // RegisterAsset registers a new asset
+  rpc RegisterAsset(RegisterAssetRequest) returns (RegisterAssetResponse);
+  
+  // UpdateAsset updates an existing asset
+  rpc UpdateAsset(UpdateAssetRequest) returns (UpdateAssetResponse);
+  
+  // ValidateAsset validates asset information
+  rpc ValidateAsset(ValidateAssetRequest) returns (ValidateAssetResponse);
+  
+  // GetAssetTypes gets supported asset types
+  rpc GetAssetTypes(GetAssetTypesRequest) returns (GetAssetTypesResponse);
+  
+  // StreamAssetUpdates streams real-time asset updates
+  rpc StreamAssetUpdates(StreamAssetUpdatesRequest) returns (stream AssetUpdateEvent);
+}
+
+// GetAssetRequest represents a get asset request
+message GetAssetRequest {
+  oneof identifier {
+    string id = 1;
+    string symbol = 2;
+    string isin = 3;
+  }
+  string exchange = 4; // Optional exchange filter
+}
+
+// GetAssetResponse represents a get asset response
+message GetAssetResponse {
+  bool success = 1;
+  Asset asset = 2;
+  string message = 3;
+}
+
+// SearchAssetsRequest represents a search assets request
+message SearchAssetsRequest {
+  string query = 1; // Search query
+  repeated string asset_types = 2; // Filter by asset types
+  repeated string exchanges = 3; // Filter by exchanges
+  repeated string regions = 4; // Filter by regions
+  string sector = 5; // Filter by sector
+  string industry = 6; // Filter by industry
+  bool is_active = 7; // Filter by active status
+  bool islamic_compliant = 8; // Filter by Islamic compliance
+  int32 limit = 9; // Maximum results to return
+  int32 offset = 10; // Offset for pagination
+}
+
+// SearchAssetsResponse represents a search assets response
+message SearchAssetsResponse {
+  bool success = 1;
+  repeated Asset assets = 2;
+  int32 total_count = 3;
+  string message = 4;
+}
+
+// ListAssetsRequest represents a list assets request
+message ListAssetsRequest {
+  repeated string asset_types = 1; // Filter by asset types
+  repeated string exchanges = 2; // Filter by exchanges
+  bool is_active = 3; // Filter by active status
+  int32 limit = 4; // Maximum results to return
+  int32 offset = 5; // Offset for pagination
+  string sort_by = 6; // Sort field
+  string sort_order = 7; // "asc" or "desc"
+}
+
+// ListAssetsResponse represents a list assets response
+message ListAssetsResponse {
+  bool success = 1;
+  repeated Asset assets = 2;
+  int32 total_count = 3;
+  string message = 4;
+}
+
+// RegisterAssetRequest represents a register asset request
+message RegisterAssetRequest {
+  Asset asset = 1;
+}
+
+// RegisterAssetResponse represents a register asset response
+message RegisterAssetResponse {
+  bool success = 1;
+  string asset_id = 2;
+  string message = 3;
+}
+
+// UpdateAssetRequest represents an update asset request
+message UpdateAssetRequest {
+  string asset_id = 1;
+  Asset asset = 2;
+}
+
+// UpdateAssetResponse represents an update asset response
+message UpdateAssetResponse {
+  bool success = 1;
+  Asset asset = 2;
+  string message = 3;
+}
+
+// ValidateAssetRequest represents a validate asset request
+message ValidateAssetRequest {
+  Asset asset = 1;
+}
+
+// ValidateAssetResponse represents a validate asset response
+message ValidateAssetResponse {
+  bool valid = 1;
+  repeated string violations = 2;
+  repeated string warnings = 3;
+  string message = 4;
+}
+
+// GetAssetTypesRequest represents a get asset types request
+message GetAssetTypesRequest {
+  // Empty request
+}
+
+// GetAssetTypesResponse represents a get asset types response
+message GetAssetTypesResponse {
+  bool success = 1;
+  repeated AssetType asset_types = 2;
+  string message = 3;
+}
+
+// StreamAssetUpdatesRequest represents a stream asset updates request
+message StreamAssetUpdatesRequest {
+  repeated string asset_ids = 1; // Filter by asset IDs
+  repeated string symbols = 2; // Filter by symbols
+  repeated string asset_types = 3; // Filter by asset types
+  repeated string exchanges = 4; // Filter by exchanges
+}
+
+// AssetUpdateEvent represents an asset update event
+message AssetUpdateEvent {
+  string event_type = 1; // "created", "updated", "deleted", "status_changed"
+  Asset asset = 2;
+  int64 timestamp = 3; // Unix timestamp
+  map<string, string> metadata = 4;
+}
+
+// Asset represents a tradeable asset
+message Asset {
+  string id = 1;
+  string symbol = 2;
+  string name = 3;
+  string asset_type = 4; // "STOCK", "BOND", "ETF", etc.
+  string exchange = 5;
+  string region = 6;
+  string currency = 7;
+  string isin = 8;
+  string sector = 9;
+  string industry = 10;
+  double market_cap = 11;
+  bool is_active = 12;
+  bool islamic_compliant = 13;
+  AssetDetails details = 14;
+  map<string, string> metadata = 15;
+  int64 created_at = 16; // Unix timestamp
+  int64 updated_at = 17; // Unix timestamp
+}
+
+// AssetDetails represents detailed asset information
+message AssetDetails {
+  string description = 1;
+  string website = 2;
+  string ceo = 3;
+  int64 employees = 4;
+  string headquarters = 5;
+  double dividend_yield = 6;
+  double pe_ratio = 7;
+  double beta = 8;
+  double eps = 9;
+  string fiscal_year_end = 10;
+  repeated string tags = 11;
+  map<string, string> custom_fields = 12;
+}
+
+// AssetType represents an asset type definition
+message AssetType {
+  string code = 1; // "STOCK", "BOND", etc.
+  string name = 2; // "Stock", "Bond", etc.
+  string description = 3;
+  bool is_active = 4;
+  repeated string supported_exchanges = 5;
+  map<string, string> properties = 6;
+}
