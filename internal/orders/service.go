@@ -210,6 +210,8 @@ type OrderUpdateRequest struct {
 	TimeInForce TimeInForce
 	// ExpiresAt is the time the order expires
 	ExpiresAt time.Time
+	// Metadata is additional metadata for the order
+	Metadata map[string]interface{}
 }
 
 // Service represents an order management service
@@ -1077,7 +1079,6 @@ func (s *Service) Stop() {
 
 // Errors
 var (
-	ErrOrderNotFound          = errors.New("order not found")
 	ErrInvalidOrderStatus     = errors.New("invalid order status")
 	ErrInvalidRequest         = errors.New("invalid request")
 	ErrUnauthorized           = errors.New("unauthorized")

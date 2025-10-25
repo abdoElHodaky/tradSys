@@ -376,7 +376,7 @@ func (s *OrderService) convertToMatchingOrder(order *Order) *matching.Order {
 		Type:      matching.OrderType(order.Type),
 		Price:     order.Price,
 		Quantity:  order.Quantity,
-		Timestamp: order.CreatedAt,
+		CreatedAt: order.CreatedAt,
 		UserID:    order.UserID,
 	}
 }
