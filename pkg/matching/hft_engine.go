@@ -3,14 +3,12 @@ package matching
 import (
 	"context"
 	"errors"
-	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
 
 	"github.com/abdoElHodaky/tradSys/internal/common/pool"
-	"github.com/abdoElHodaky/tradSys/internal/trading/types"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -117,19 +115,7 @@ type HFTOrder struct {
 
 // Type aliases and constants are defined in engine.go to avoid redeclaration
 
-// Trade represents a completed trade
-type Trade struct {
-	ID           string
-	Symbol       string
-	BuyOrderID   string
-	SellOrderID  string
-	Price        uint64
-	Quantity     uint64
-	Timestamp    time.Time
-	BuyUserID    string
-	SellUserID   string
-	LatencyNs    uint64
-}
+// Trade is defined in engine.go to avoid redeclaration
 
 // NewHFTEngine creates a new high-frequency trading engine
 func NewHFTEngine(logger *zap.Logger, workerCount int) *HFTEngine {
@@ -138,7 +124,7 @@ func NewHFTEngine(logger *zap.Logger, workerCount int) *HFTEngine {
 	engine := &HFTEngine{
 		orderBooks:    unsafe.Pointer(&map[string]*HFTOrderBook{}),
 		TradeChannel:  make(chan *Trade, 10000), // High-capacity buffer
-		fastOrderPool: pool.NewFastOrderPool(1000),
+		fastOrderPool: pool.NewFastOrderPool(),
 		tradePool:     pool.NewTradePool(1000),
 		logger:        logger,
 		ctx:           ctx,
@@ -379,7 +365,7 @@ func (e *HFTEngine) processLimitOrder(orderBook *HFTOrderBook, order *HFTOrder) 
 	if remainingQty > 0 {
 		order.Quantity = remainingQty
 		e.addOrderToBook(orderBook, order)
-		order.Status = OrderStatusPending
+		order.Status = OrderStatusNew
 		atomic.AddUint64(&e.stats.ActiveOrders, 1)
 	} else {
 		order.Status = OrderStatusFilled
@@ -409,30 +395,30 @@ func (e *HFTEngine) executeTrade(orderBook *HFTOrderBook, incomingOrder *HFTOrde
 	}
 	
 	// Calculate trade quantity
-	tradeQty := min(*remainingQty, levelOrder.Quantity-levelOrder.Filled)
+	tradeQty := minUint64(*remainingQty, levelOrder.Quantity-levelOrder.Filled)
 	if tradeQty == 0 {
 		return nil
 	}
 	
 	// Create trade
-	trade := e.tradePool.Get()
-	trade.ID = uuid.New().String()
-	trade.Symbol = orderBook.Symbol
-	trade.Price = level.Price
-	trade.Quantity = tradeQty
-	trade.Timestamp = time.Now()
-	trade.LatencyNs = uint64(time.Since(time.Unix(0, int64(incomingOrder.Timestamp.UnixNano()))).Nanoseconds())
+	trade := &Trade{
+		ID:        uuid.New().String(),
+		Symbol:    orderBook.Symbol,
+		Price:     float64(level.Price),
+		Quantity:  float64(tradeQty),
+		Timestamp: time.Now(),
+	}
 	
 	if incomingOrder.Side == OrderSideBuy {
 		trade.BuyOrderID = incomingOrder.ID
 		trade.SellOrderID = levelOrder.ID
-		trade.BuyUserID = incomingOrder.UserID
-		trade.SellUserID = levelOrder.UserID
+		trade.TakerSide = OrderSideBuy
+		trade.MakerSide = OrderSideSell
 	} else {
 		trade.BuyOrderID = levelOrder.ID
 		trade.SellOrderID = incomingOrder.ID
-		trade.BuyUserID = levelOrder.UserID
-		trade.SellUserID = incomingOrder.UserID
+		trade.TakerSide = OrderSideSell
+		trade.MakerSide = OrderSideBuy
 	}
 	
 	// Update orders
@@ -654,18 +640,16 @@ func (e *HFTEngine) tradeProcessor() {
 			e.logger.Debug("Trade executed",
 				zap.String("trade_id", trade.ID),
 				zap.String("symbol", trade.Symbol),
-				zap.Uint64("price", trade.Price),
-				zap.Uint64("quantity", trade.Quantity),
-				zap.Uint64("latency_ns", trade.LatencyNs))
+				zap.Float64("price", trade.Price),
+				zap.Float64("quantity", trade.Quantity))
 			
-			// Return trade to pool
-			e.tradePool.Put(trade)
+
 		}
 	}
 }
 
-// Helper function
-func min(a, b uint64) uint64 {
+// Helper function for uint64 values
+func minUint64(a, b uint64) uint64 {
 	if a < b {
 		return a
 	}
