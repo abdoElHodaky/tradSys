@@ -1,0 +1,395 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+      force_deploy:
+        description: 'Force deployment (skip safety checks)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  GO_VERSION: '1.24'
+
+jobs:
+  # Security and Quality Gates
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Run Gosec Security Scanner
+        uses: securecodewarrior/github-action-gosec@master
+        with:
+          args: '-fmt sarif -out gosec.sarif ./...'
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: gosec.sarif
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # Build and Test
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    needs: security-scan
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      image-tag: ${{ steps.meta.outputs.tags }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+      - name: Generate Protocol Buffers
+        run: ./scripts/generate_proto.sh
+
+      - name: Run comprehensive tests
+        run: |
+          make ci-test
+          
+      - name: Check test coverage
+        run: |
+          COVERAGE=$(go tool cover -func=coverage/combined.out | tail -1 | awk '{print $3}' | sed 's/%//')
+          echo "Coverage: ${COVERAGE}%"
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "❌ Coverage ${COVERAGE}% is below 80% threshold"
+            exit 1
+          fi
+          echo "✅ Coverage ${COVERAGE}% meets threshold"
+
+      - name: Build application
+        run: make build-all
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./deployments/docker/Dockerfile.production
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+  # Deploy to Staging
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
+    environment:
+      name: staging
+      url: https://staging.tradsys.example.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Configure kubectl for staging
+        run: |
+          echo "${{ secrets.STAGING_KUBECONFIG }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+          kubectl config current-context
+
+      - name: Deploy to staging
+        run: |
+          export KUBECONFIG=kubeconfig
+          export IMAGE_TAG="${{ needs.build-and-test.outputs.image-tag }}"
+          
+          # Update image tags in deployment files
+          sed -i "s|IMAGE_TAG_PLACEHOLDER|${IMAGE_TAG}|g" deployments/kubernetes/staging/*.yaml
+          
+          # Apply staging configuration
+          kubectl apply -f deployments/kubernetes/staging/
+          
+          # Wait for rollout to complete
+          kubectl rollout status deployment/tradsys-api -n tradsys-staging --timeout=600s
+          kubectl rollout status deployment/tradsys-matching -n tradsys-staging --timeout=600s
+          kubectl rollout status deployment/tradsys-risk -n tradsys-staging --timeout=600s
+
+      - name: Run smoke tests
+        run: |
+          export KUBECONFIG=kubeconfig
+          
+          # Wait for services to be ready
+          kubectl wait --for=condition=ready pod -l app=tradsys-api -n tradsys-staging --timeout=300s
+          
+          # Get service endpoint
+          STAGING_URL=$(kubectl get service tradsys-api-service -n tradsys-staging -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          
+          # Run smoke tests
+          curl -f "http://${STAGING_URL}/health" || exit 1
+          curl -f "http://${STAGING_URL}/metrics" || exit 1
+          
+          echo "✅ Staging deployment successful"
+
+  # Deploy to Production
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build-and-test, deploy-staging]
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    environment:
+      name: production
+      url: https://api.tradsys.example.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Production deployment safety checks
+        if: github.event.inputs.force_deploy != 'true'
+        run: |
+          echo "🔍 Running production safety checks..."
+          
+          # Check if this is a tagged release
+          if [[ ! "${{ github.ref }}" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]] && [[ "${{ github.event_name }}" != "workflow_dispatch" ]]; then
+            echo "❌ Production deployments require semantic version tags (v1.0.0)"
+            exit 1
+          fi
+          
+          # Check test results
+          if [[ "${{ needs.build-and-test.result }}" != "success" ]]; then
+            echo "❌ Build and test job must pass before production deployment"
+            exit 1
+          fi
+          
+          # Check staging deployment
+          if [[ "${{ needs.deploy-staging.result }}" != "success" ]]; then
+            echo "❌ Staging deployment must succeed before production deployment"
+            exit 1
+          fi
+          
+          echo "✅ All safety checks passed"
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Configure kubectl for production
+        run: |
+          echo "${{ secrets.PRODUCTION_KUBECONFIG }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+          kubectl config current-context
+
+      - name: Blue-Green Deployment to Production
+        run: |
+          export KUBECONFIG=kubeconfig
+          export IMAGE_TAG="${{ needs.build-and-test.outputs.image-tag }}"
+          
+          echo "🚀 Starting blue-green deployment..."
+          
+          # Create green environment
+          sed -i "s|IMAGE_TAG_PLACEHOLDER|${IMAGE_TAG}|g" deployments/kubernetes/production/*.yaml
+          sed -i "s|tradsys-|tradsys-green-|g" deployments/kubernetes/production/*.yaml
+          
+          # Deploy green environment
+          kubectl apply -f deployments/kubernetes/production/
+          
+          # Wait for green deployment to be ready
+          kubectl rollout status deployment/tradsys-green-api -n tradsys-prod --timeout=600s
+          kubectl rollout status deployment/tradsys-green-matching -n tradsys-prod --timeout=600s
+          kubectl rollout status deployment/tradsys-green-risk -n tradsys-prod --timeout=600s
+          
+          # Health check green environment
+          kubectl wait --for=condition=ready pod -l app=tradsys-green-api -n tradsys-prod --timeout=300s
+          
+          # Get green service endpoint for testing
+          GREEN_IP=$(kubectl get service tradsys-green-api-service -n tradsys-prod -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          
+          # Comprehensive health checks
+          echo "🔍 Running production health checks..."
+          curl -f "http://${GREEN_IP}/health" || exit 1
+          curl -f "http://${GREEN_IP}/metrics" || exit 1
+          curl -f "http://${GREEN_IP}/ready" || exit 1
+          
+          # Switch traffic to green (blue-green cutover)
+          echo "🔄 Switching traffic to green environment..."
+          kubectl patch service tradsys-api-service -n tradsys-prod -p '{"spec":{"selector":{"app":"tradsys-green-api"}}}'
+          kubectl patch service tradsys-matching-service -n tradsys-prod -p '{"spec":{"selector":{"app":"tradsys-green-matching"}}}'
+          kubectl patch service tradsys-risk-service -n tradsys-prod -p '{"spec":{"selector":{"app":"tradsys-green-risk"}}}'
+          
+          # Wait and verify traffic switch
+          sleep 30
+          PROD_IP=$(kubectl get service tradsys-api-service -n tradsys-prod -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          curl -f "http://${PROD_IP}/health" || exit 1
+          
+          echo "✅ Blue-green deployment completed successfully"
+
+      - name: Cleanup old blue environment
+        run: |
+          export KUBECONFIG=kubeconfig
+          
+          # Wait 5 minutes before cleanup to ensure stability
+          echo "⏳ Waiting 5 minutes before cleaning up blue environment..."
+          sleep 300
+          
+          # Remove old blue deployments
+          kubectl delete deployment tradsys-api -n tradsys-prod --ignore-not-found=true
+          kubectl delete deployment tradsys-matching -n tradsys-prod --ignore-not-found=true
+          kubectl delete deployment tradsys-risk -n tradsys-prod --ignore-not-found=true
+          
+          # Rename green to blue for next deployment
+          kubectl patch deployment tradsys-green-api -n tradsys-prod -p '{"metadata":{"name":"tradsys-api"}}'
+          kubectl patch deployment tradsys-green-matching -n tradsys-prod -p '{"metadata":{"name":"tradsys-matching"}}'
+          kubectl patch deployment tradsys-green-risk -n tradsys-prod -p '{"metadata":{"name":"tradsys-risk"}}'
+          
+          echo "🧹 Cleanup completed"
+
+      - name: Post-deployment verification
+        run: |
+          export KUBECONFIG=kubeconfig
+          
+          echo "🔍 Running post-deployment verification..."
+          
+          # Get production endpoint
+          PROD_IP=$(kubectl get service tradsys-api-service -n tradsys-prod -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          
+          # Comprehensive verification
+          curl -f "http://${PROD_IP}/health" || exit 1
+          curl -f "http://${PROD_IP}/metrics" || exit 1
+          curl -f "http://${PROD_IP}/version" || exit 1
+          
+          # Check all pods are running
+          kubectl get pods -n tradsys-prod -l app=tradsys-api
+          kubectl get pods -n tradsys-prod -l app=tradsys-matching  
+          kubectl get pods -n tradsys-prod -l app=tradsys-risk
+          
+          echo "✅ Production deployment verified successfully"
+
+  # Rollback capability
+  rollback-production:
+    name: Rollback Production
+    runs-on: ubuntu-latest
+    if: failure() && needs.deploy-production.result == 'failure'
+    needs: [deploy-production]
+    environment:
+      name: production
+    steps:
+      - name: Emergency rollback
+        run: |
+          echo "🚨 EMERGENCY ROLLBACK INITIATED"
+          
+          # Configure kubectl
+          echo "${{ secrets.PRODUCTION_KUBECONFIG }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+          
+          # Rollback to previous version
+          kubectl rollout undo deployment/tradsys-api -n tradsys-prod
+          kubectl rollout undo deployment/tradsys-matching -n tradsys-prod
+          kubectl rollout undo deployment/tradsys-risk -n tradsys-prod
+          
+          # Wait for rollback to complete
+          kubectl rollout status deployment/tradsys-api -n tradsys-prod --timeout=300s
+          kubectl rollout status deployment/tradsys-matching -n tradsys-prod --timeout=300s
+          kubectl rollout status deployment/tradsys-risk -n tradsys-prod --timeout=300s
+          
+          echo "🔄 Rollback completed"
+
+  # Notification
+  notify:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, deploy-production]
+    if: always()
+    steps:
+      - name: Notify deployment status
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          text: |
+            🚀 TradSys Deployment Status:
+            
+            **Staging**: ${{ needs.deploy-staging.result }}
+            **Production**: ${{ needs.deploy-production.result }}
+            
+            **Commit**: ${{ github.sha }}
+            **Branch**: ${{ github.ref_name }}
+            **Actor**: ${{ github.actor }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

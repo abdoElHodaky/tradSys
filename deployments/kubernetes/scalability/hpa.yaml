@@ -1,0 +1,266 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: tradsys-api-hpa
+  namespace: tradsys-prod
+  labels:
+    app: tradsys
+    component: api
+    tier: scalability
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: tradsys-api
+  minReplicas: 3
+  maxReplicas: 50
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Pods
+    pods:
+      metric:
+        name: orders_per_second
+      target:
+        type: AverageValue
+        averageValue: "10000"
+  - type: Object
+    object:
+      metric:
+        name: queue_depth
+      describedObject:
+        apiVersion: v1
+        kind: Service
+        name: redis-service
+      target:
+        type: Value
+        value: "1000"
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+      selectPolicy: Min
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 30
+      - type: Pods
+        value: 5
+        periodSeconds: 30
+      selectPolicy: Max
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: tradsys-matching-hpa
+  namespace: tradsys-prod
+  labels:
+    app: tradsys
+    component: matching-engine
+    tier: scalability
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: tradsys-matching
+  minReplicas: 5
+  maxReplicas: 100
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 60
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 75
+  - type: Pods
+    pods:
+      metric:
+        name: matching_latency_p99
+      target:
+        type: AverageValue
+        averageValue: "100000" # 100μs in nanoseconds
+  - type: Pods
+    pods:
+      metric:
+        name: orders_matched_per_second
+      target:
+        type: AverageValue
+        averageValue: "50000"
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 600 # More conservative for matching engine
+      policies:
+      - type: Percent
+        value: 5
+        periodSeconds: 120
+      - type: Pods
+        value: 1
+        periodSeconds: 120
+      selectPolicy: Min
+    scaleUp:
+      stabilizationWindowSeconds: 30 # Fast scale-up for matching engine
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+      - type: Pods
+        value: 10
+        periodSeconds: 15
+      selectPolicy: Max
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: tradsys-risk-hpa
+  namespace: tradsys-prod
+  labels:
+    app: tradsys
+    component: risk-engine
+    tier: scalability
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: tradsys-risk
+  minReplicas: 2
+  maxReplicas: 20
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 75
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 85
+  - type: Pods
+    pods:
+      metric:
+        name: risk_calculations_per_second
+      target:
+        type: AverageValue
+        averageValue: "5000"
+  - type: Pods
+    pods:
+      metric:
+        name: risk_check_latency_p95
+      target:
+        type: AverageValue
+        averageValue: "5000000" # 5ms in nanoseconds
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 15
+        periodSeconds: 90
+      - type: Pods
+        value: 1
+        periodSeconds: 90
+      selectPolicy: Min
+    scaleUp:
+      stabilizationWindowSeconds: 45
+      policies:
+      - type: Percent
+        value: 75
+        periodSeconds: 30
+      - type: Pods
+        value: 3
+        periodSeconds: 30
+      selectPolicy: Max
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: tradsys-websocket-hpa
+  namespace: tradsys-prod
+  labels:
+    app: tradsys
+    component: websocket
+    tier: scalability
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: tradsys-websocket
+  minReplicas: 2
+  maxReplicas: 30
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 65
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Pods
+    pods:
+      metric:
+        name: websocket_connections
+      target:
+        type: AverageValue
+        averageValue: "5000"
+  - type: Pods
+    pods:
+      metric:
+        name: messages_per_second
+      target:
+        type: AverageValue
+        averageValue: "25000"
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 180
+      policies:
+      - type: Percent
+        value: 20
+        periodSeconds: 60
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+      selectPolicy: Min
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 20
+      - type: Pods
+        value: 5
+        periodSeconds: 20
+      selectPolicy: Max

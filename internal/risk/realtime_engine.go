@@ -58,7 +58,7 @@ type RiskMetrics struct {
 
 // PositionManager manages real-time positions
 type PositionManager struct {
-	positions     sync.Map // map[string]*Position
+	positions     sync.Map // map[string]*RealtimePosition
 	totalPnL      float64
 	dailyPnL      float64
 	unrealizedPnL float64
@@ -66,8 +66,8 @@ type PositionManager struct {
 	mu            sync.RWMutex
 }
 
-// Position represents a trading position
-type Position struct {
+// RealtimePosition represents a trading position for real-time risk monitoring
+type RealtimePosition struct {
 	Symbol         string    `json:"symbol"`
 	Quantity       float64   `json:"quantity"`
 	AveragePrice   float64   `json:"average_price"`
@@ -117,7 +117,7 @@ type RiskEvent struct {
 	Type      RiskEventType `json:"type"`
 	Symbol    string        `json:"symbol"`
 	Order     *types.Order  `json:"order,omitempty"`
-	Position  *Position     `json:"position,omitempty"`
+	Position  *RealtimePosition     `json:"position,omitempty"`
 	RiskCheck *RiskCheck    `json:"risk_check,omitempty"`
 	Timestamp time.Time     `json:"timestamp"`
 	Severity  RiskSeverity  `json:"severity"`
@@ -426,13 +426,13 @@ func (e *RealTimeRiskEngine) checkPostTradeLimits(order *types.Order) error {
 }
 
 // getPosition gets the current position for a symbol
-func (e *RealTimeRiskEngine) getPosition(symbol string) *Position {
+func (e *RealTimeRiskEngine) getPosition(symbol string) *RealtimePosition {
 	if pos, exists := e.positionManager.positions.Load(symbol); exists {
-		return pos.(*Position)
+		return pos.(*RealtimePosition)
 	}
 
 	// Return empty position if not found
-	return &Position{
+	return &RealtimePosition{
 		Symbol:         symbol,
 		Quantity:       0,
 		AveragePrice:   0,
@@ -581,7 +581,7 @@ func (e *RealTimeRiskEngine) GetMetrics() *RiskMetrics {
 }
 
 // GetPosition returns the current position for a symbol
-func (e *RealTimeRiskEngine) GetPosition(symbol string) *Position {
+func (e *RealTimeRiskEngine) GetPosition(symbol string) *RealtimePosition {
 	return e.getPosition(symbol)
 }
 
