@@ -99,14 +99,14 @@ func (h OrderHeap) Less(i, j int) bool {
 		// For buy orders, higher prices have higher priority
 		if h.Orders[i].Price == h.Orders[j].Price {
 			// If prices are equal, earlier orders have higher priority
-			return h.Orders[i].Timestamp.Before(h.Orders[j].Timestamp)
+			return h.Orders[i].CreatedAt.Before(h.Orders[j].CreatedAt)
 		}
 		return h.Orders[i].Price > h.Orders[j].Price
 	} else {
 		// For sell orders, lower prices have higher priority
 		if h.Orders[i].Price == h.Orders[j].Price {
 			// If prices are equal, earlier orders have higher priority
-			return h.Orders[i].Timestamp.Before(h.Orders[j].Timestamp)
+			return h.Orders[i].CreatedAt.Before(h.Orders[j].CreatedAt)
 		}
 		return h.Orders[i].Price < h.Orders[j].Price
 	}

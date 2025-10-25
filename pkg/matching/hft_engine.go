@@ -3,7 +3,6 @@ package matching
 import (
 	"context"
 	"errors"
-	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -123,7 +122,7 @@ func NewHFTEngine(logger *zap.Logger, workerCount int) *HFTEngine {
 	engine := &HFTEngine{
 		orderBooks:    unsafe.Pointer(&map[string]*HFTOrderBook{}),
 		TradeChannel:  make(chan *Trade, 10000), // High-capacity buffer
-		fastOrderPool: pool.NewFastOrderPool(1000),
+		fastOrderPool: pool.NewFastOrderPool(),
 		tradePool:     pool.NewTradePool(1000),
 		logger:        logger,
 		ctx:           ctx,
@@ -296,7 +295,7 @@ func (e *HFTEngine) processOrder(orderBook *HFTOrderBook, order *HFTOrder) []*Tr
 // processMarketOrder processes a market order
 func (e *HFTEngine) processMarketOrder(orderBook *HFTOrderBook, order *HFTOrder) []*Trade {
 	var trades []*Trade
-	remainingQty := order.Quantity
+	remainingQty := order.QuantityFixed
 	
 	if order.Side == OrderSideBuy {
 		// Match against sell orders (asks)
@@ -323,26 +322,26 @@ func (e *HFTEngine) processMarketOrder(orderBook *HFTOrderBook, order *HFTOrder)
 	// Update order status
 	if remainingQty == 0 {
 		order.Status = OrderStatusFilled
-	} else if remainingQty < order.Quantity {
+	} else if remainingQty < order.QuantityFixed {
 		order.Status = OrderStatusPartiallyFilled
 	} else {
 		order.Status = OrderStatusRejected
 		atomic.AddUint64(&e.stats.RejectedOrders, 1)
 	}
 	
-	order.Filled = order.Quantity - remainingQty
+	order.FilledFixed = order.QuantityFixed - remainingQty
 	return trades
 }
 
 // processLimitOrder processes a limit order
 func (e *HFTEngine) processLimitOrder(orderBook *HFTOrderBook, order *HFTOrder) []*Trade {
 	var trades []*Trade
-	remainingQty := order.Quantity
+	remainingQty := order.QuantityFixed
 	
 	// First try to match against existing orders
 	if order.Side == OrderSideBuy {
 		sellOrders := (*OrderLevel)(atomic.LoadPointer(&orderBook.sellOrders))
-		for sellOrders != nil && remainingQty > 0 && sellOrders.Price <= order.Price {
+		for sellOrders != nil && remainingQty > 0 && sellOrders.Price <= order.PriceFixed {
 			trade := e.executeTrade(orderBook, order, sellOrders, &remainingQty)
 			if trade != nil {
 				trades = append(trades, trade)
@@ -351,7 +350,7 @@ func (e *HFTEngine) processLimitOrder(orderBook *HFTOrderBook, order *HFTOrder) 
 		}
 	} else {
 		buyOrders := (*OrderLevel)(atomic.LoadPointer(&orderBook.buyOrders))
-		for buyOrders != nil && remainingQty > 0 && buyOrders.Price >= order.Price {
+		for buyOrders != nil && remainingQty > 0 && buyOrders.Price >= order.PriceFixed {
 			trade := e.executeTrade(orderBook, order, buyOrders, &remainingQty)
 			if trade != nil {
 				trades = append(trades, trade)
@@ -362,15 +361,16 @@ func (e *HFTEngine) processLimitOrder(orderBook *HFTOrderBook, order *HFTOrder) 
 	
 	// If there's remaining quantity, add to order book
 	if remainingQty > 0 {
-		order.Quantity = remainingQty
+		// Update the float64 quantity field to match the remaining fixed quantity
+		order.Quantity = float64(remainingQty) / 1e8 // Convert from fixed-point back to float64
 		e.addOrderToBook(orderBook, order)
-		order.Status = OrderStatusPending
+		order.Status = OrderStatusNew
 		atomic.AddUint64(&e.stats.ActiveOrders, 1)
 	} else {
 		order.Status = OrderStatusFilled
 	}
 	
-	order.Filled = order.Quantity - remainingQty
+	order.FilledFixed = order.QuantityFixed - remainingQty
 	return trades
 }
 
@@ -394,34 +394,36 @@ func (e *HFTEngine) executeTrade(orderBook *HFTOrderBook, incomingOrder *HFTOrde
 	}
 	
 	// Calculate trade quantity
-	tradeQty := minUint64(*remainingQty, levelOrder.Quantity-levelOrder.Filled)
+	tradeQty := minUint64(*remainingQty, levelOrder.QuantityFixed-levelOrder.FilledFixed)
 	if tradeQty == 0 {
 		return nil
 	}
 	
 	// Create trade
-	trade := e.tradePool.Get()
-	trade.ID = uuid.New().String()
-	trade.Symbol = orderBook.Symbol
-	trade.Price = level.Price
-	trade.Quantity = tradeQty
-	trade.Timestamp = time.Now()
-	trade.LatencyNs = uint64(time.Since(time.Unix(0, int64(incomingOrder.Timestamp.UnixNano()))).Nanoseconds())
-	
+	trade := &Trade{
+		ID:        uuid.New().String(),
+		Symbol:    orderBook.Symbol,
+		Price:     float64(level.Price) / 1e8, // Convert from fixed-point to float64
+		Quantity:  float64(tradeQty) / 1e8,    // Convert from fixed-point to float64
+		Timestamp: time.Now(),
+		TakerFee:  0.001 * float64(tradeQty) / 1e8 * float64(level.Price) / 1e8,  // 0.1% fee
+		MakerFee:  0.0005 * float64(tradeQty) / 1e8 * float64(level.Price) / 1e8, // 0.05% fee
+	}
+	// Set order IDs and taker/maker sides
 	if incomingOrder.Side == OrderSideBuy {
 		trade.BuyOrderID = incomingOrder.ID
 		trade.SellOrderID = levelOrder.ID
-		trade.BuyUserID = incomingOrder.UserID
-		trade.SellUserID = levelOrder.UserID
+		trade.TakerSide = OrderSideBuy
+		trade.MakerSide = OrderSideSell
 	} else {
 		trade.BuyOrderID = levelOrder.ID
 		trade.SellOrderID = incomingOrder.ID
-		trade.BuyUserID = levelOrder.UserID
-		trade.SellUserID = incomingOrder.UserID
+		trade.TakerSide = OrderSideSell
+		trade.MakerSide = OrderSideBuy
 	}
 	
 	// Update orders
-	levelOrder.Filled += tradeQty
+	levelOrder.FilledFixed += tradeQty
 	*remainingQty -= tradeQty
 	
 	// Update statistics
@@ -432,7 +434,7 @@ func (e *HFTEngine) executeTrade(orderBook *HFTOrderBook, incomingOrder *HFTOrde
 	e.updateSpread(orderBook)
 	
 	// If level order is fully filled, remove it
-	if levelOrder.Filled >= levelOrder.Quantity {
+	if levelOrder.FilledFixed >= levelOrder.QuantityFixed {
 		levelOrder.Status = OrderStatusFilled
 		e.removeOrderFromLevel(level, levelOrder)
 		atomic.AddUint64(&e.stats.ActiveOrders, ^uint64(0)) // Decrement
@@ -460,8 +462,8 @@ func (e *HFTEngine) addOrderToSide(sidePtr *unsafe.Pointer, order *HFTOrder, isB
 	// This is a basic linked list insertion
 	
 	newLevel := &OrderLevel{
-		Price:    order.Price,
-		Quantity: order.Quantity,
+		Price:    order.PriceFixed,
+		Quantity: order.QuantityFixed,
 		Orders:   unsafe.Pointer(order),
 	}
 	
@@ -513,7 +515,7 @@ func (e *HFTEngine) addOrderToLevel(level *OrderLevel, order *HFTOrder) {
 	
 	currentOrder.Next = order
 	order.Prev = currentOrder
-	level.Quantity += order.Quantity
+	level.Quantity += order.QuantityFixed
 }
 
 // removeOrderFromBook removes an order from the order book
@@ -534,7 +536,7 @@ func (e *HFTEngine) removeOrderFromSide(sidePtr *unsafe.Pointer, order *HFTOrder
 	var prevLevel *OrderLevel
 	
 	for currentLevel != nil {
-		if currentLevel.Price == order.Price {
+		if currentLevel.Price == order.PriceFixed {
 			e.removeOrderFromLevel(currentLevel, order)
 			
 			// If level is empty, remove it
@@ -561,7 +563,7 @@ func (e *HFTEngine) removeOrderFromLevel(level *OrderLevel, order *HFTOrder) {
 		if order.Next != nil {
 			order.Next.Prev = nil
 		}
-		level.Quantity -= order.Quantity
+		level.Quantity -= order.QuantityFixed
 		return
 	}
 	
@@ -573,7 +575,7 @@ func (e *HFTEngine) removeOrderFromLevel(level *OrderLevel, order *HFTOrder) {
 			if order.Next != nil {
 				order.Next.Prev = order.Prev
 			}
-			level.Quantity -= order.Quantity
+			level.Quantity -= order.QuantityFixed
 			return
 		}
 		currentOrder = currentOrder.Next
@@ -639,12 +641,18 @@ func (e *HFTEngine) tradeProcessor() {
 			e.logger.Debug("Trade executed",
 				zap.String("trade_id", trade.ID),
 				zap.String("symbol", trade.Symbol),
-				zap.Uint64("price", trade.Price),
-				zap.Uint64("quantity", trade.Quantity),
-				zap.Uint64("latency_ns", trade.LatencyNs))
+				zap.Float64("price", trade.Price),
+				zap.Float64("quantity", trade.Quantity),
+				zap.String("taker_side", string(trade.TakerSide)),
+				zap.String("maker_side", string(trade.MakerSide)))
 			
-			// Return trade to pool
-			e.tradePool.Put(trade)
+			// Send trade to channel for downstream processing
+			select {
+			case e.TradeChannel <- trade:
+			default:
+				// Channel is full, log warning
+				e.logger.Warn("Trade channel full, dropping trade", zap.String("trade_id", trade.ID))
+			}
 		}
 	}
 }

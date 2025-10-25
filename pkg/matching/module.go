@@ -8,15 +8,15 @@ import (
 
 // OrderMatchingModule provides the order matching module for the fx application
 var OrderMatchingModule = fx.Options(
-	fx.Provide(NewEngine),
+	fx.Provide(NewMatchingEngine),
 )
 
 // NewFxEngine creates a new order matching engine for the fx application
 func NewFxEngine(
 	lifecycle fx.Lifecycle,
 	logger *zap.Logger,
-) *Engine {
-	engine := NewEngine(logger)
+) *MatchingEngine {
+	engine := NewMatchingEngine(logger)
 
 	lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
