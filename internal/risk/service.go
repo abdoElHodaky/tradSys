@@ -14,21 +14,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// RiskLimitType represents the type of risk limit
-type RiskLimitType string
 
-const (
-	// RiskLimitTypePosition represents a position limit
-	RiskLimitTypePosition RiskLimitType = "position"
-	// RiskLimitTypeOrderSize represents an order size limit
-	RiskLimitTypeOrderSize RiskLimitType = "order_size"
-	// RiskLimitTypeExposure represents an exposure limit
-	RiskLimitTypeExposure RiskLimitType = "exposure"
-	// RiskLimitTypeDrawdown represents a drawdown limit
-	RiskLimitTypeDrawdown RiskLimitType = "drawdown"
-	// RiskLimitTypeTradeFrequency represents a trade frequency limit
-	RiskLimitTypeTradeFrequency RiskLimitType = "trade_frequency"
-)
 
 // RiskLimit represents a risk limit
 type RiskLimit struct {
