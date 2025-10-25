@@ -2,7 +2,64 @@
 
 ## 🎯 Overview
 
-TradSys v3 is a comprehensive microservices-based trading platform with 13 core services, supporting multi-asset trading across EGX/ADX exchanges with Islamic finance compliance.
+TradSys v3 is a microservices-based trading platform with 13 core services, supporting multi-asset trading across EGX/ADX exchanges with Islamic finance compliance.
+
+## 🔧 System Diagram
+
+```mermaid
+graph TB
+    subgraph "Client Layer"
+        WEB[Web Dashboard]
+        MOBILE[Mobile App]
+        API[REST API]
+    end
+    
+    subgraph "Gateway Layer"
+        GW[API Gateway]
+        WS[WebSocket Gateway]
+    end
+    
+    subgraph "Core Services"
+        AUTH[Authentication]
+        ASSET[Asset Management]
+        ORDER[Order Management]
+        PORTFOLIO[Portfolio]
+        RISK[Risk Management]
+    end
+    
+    subgraph "Exchange Integration"
+        EGX[EGX Service]
+        ADX[ADX Service]
+        MARKET[Market Data]
+    end
+    
+    subgraph "Platform Services"
+        COMPLIANCE[Compliance]
+        ANALYTICS[Analytics]
+        LICENSING[Licensing]
+        NOTIFY[Notifications]
+        USER[User Management]
+    end
+    
+    WEB --> GW
+    MOBILE --> GW
+    API --> GW
+    
+    GW --> AUTH
+    GW --> ASSET
+    GW --> ORDER
+    GW --> PORTFOLIO
+    
+    ORDER --> RISK
+    ASSET --> COMPLIANCE
+    PORTFOLIO --> ANALYTICS
+    
+    MARKET --> EGX
+    MARKET --> ADX
+    
+    AUTH --> LICENSING
+    COMPLIANCE --> NOTIFY
+```
 
 ## 📊 Service Architecture
 
