@@ -278,3 +278,48 @@ func (p *OrderUpdateMessagePool) Put(msg *OrderUpdateMessage) {
 	msg.Reset()
 	p.pool.Put(msg)
 }
+
+// FastOrderPool provides a pool for fast orders
+type FastOrderPool struct {
+	pool sync.Pool
+}
+
+// NewFastOrderPool creates a new fast order pool
+func NewFastOrderPool() *FastOrderPool {
+	return &FastOrderPool{
+		pool: sync.Pool{
+			New: func() interface{} {
+				return &FastOrder{
+					Order: &Order{},
+				}
+			},
+		},
+	}
+}
+
+// Get retrieves a fast order from the pool
+func (p *FastOrderPool) Get() *FastOrder {
+	return p.pool.Get().(*FastOrder)
+}
+
+// Put returns a fast order to the pool
+func (p *FastOrderPool) Put(order *FastOrder) {
+	order.Reset()
+	p.pool.Put(order)
+}
+
+// MatchResult represents the result of a matching operation
+type MatchResult struct {
+	Trades    []*Trade
+	Timestamp int64
+	Success   bool
+	Error     error
+}
+
+// Reset resets the match result fields
+func (m *MatchResult) Reset() {
+	m.Trades = m.Trades[:0] // Keep underlying array, reset length
+	m.Timestamp = 0
+	m.Success = false
+	m.Error = nil
+}

@@ -160,7 +160,13 @@ func (e *HFTEngine) PlaceOrderFast(order *Order) ([]*Trade, error) {
 	fastOrder := e.fastOrderPool.Get()
 	defer e.fastOrderPool.Put(fastOrder) // Return to pool when done
 
-	fastOrder.Order = *order
+	// Copy order data to fast order
+	fastOrder.Order.ID = order.ID
+	fastOrder.Order.Symbol = order.Symbol
+	fastOrder.Order.Side = order.Side
+	fastOrder.Order.Price = order.Price
+	fastOrder.Order.Quantity = order.Quantity
+	fastOrder.Order.Type = order.Type
 	fastOrder.PriceInt64 = int64(order.Price * 100000000) // 8 decimal places precision
 	fastOrder.QuantityInt64 = int64(order.Quantity * 100000000)
 	fastOrder.CreatedAtNano = startTime.UnixNano()
