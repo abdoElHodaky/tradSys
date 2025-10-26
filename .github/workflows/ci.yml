@@ -2,9 +2,9 @@ name: Enhanced CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop, v3-optimized ]
+    branches: [ main, develop, v3]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop ,v3 ]
 
 env:
   GO_VERSION: '1.21'
