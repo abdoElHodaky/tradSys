@@ -5,7 +5,7 @@ import (
 
 	"github.com/abdoElHodaky/tradSys/internal/architecture/discovery"
 	"github.com/abdoElHodaky/tradSys/internal/architecture/gateway"
-	"github.com/abdoElHodaky/tradSys/internal/common"
+	"github.com/abdoElHodaky/tradSys/pkg/common"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
 	"go.uber.org/zap"

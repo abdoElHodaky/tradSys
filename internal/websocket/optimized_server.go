@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/common/pool/performance"
+	"github.com/abdoElHodaky/tradSys/pkg/common/pool/performance"
 	"github.com/abdoElHodaky/tradSys/internal/performance/latency"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"

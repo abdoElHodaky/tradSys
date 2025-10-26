@@ -394,7 +394,7 @@ func runWebSocketService() {
 	defer logger.Sync()
 
 	// Create WebSocket server
-	wsServer := ws.NewServer(ws.ServerParams{
+	wsServer := websocket.NewServer(websocket.ServerParams{
 		Logger: logger,
 		Config: cfg,
 	})
