@@ -127,7 +127,7 @@ func NewHFTEngine(logger *zap.Logger) *HFTEngine {
 	engine := &HFTEngine{
 		TradeChannel:  make(chan *Trade, 10000), // Large buffer for high throughput
 		fastOrderPool: pool.NewFastOrderPool(),  // Fast order pool for zero-allocation processing
-		tradePool:     pool.NewTradePool(1000),  // Pre-allocate 1000 trades
+		tradePool:     pool.NewTradePool(),
 		logger:        logger,
 		ctx:           ctx,
 		cancel:        cancel,

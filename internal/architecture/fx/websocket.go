@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/ws"
+	"github.com/abdoElHodaky/tradSys/internal/websocket"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
