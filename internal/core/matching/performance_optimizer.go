@@ -1,7 +1,6 @@
 package order_matching
 
 import (
-	"context"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -229,12 +228,7 @@ func (po *PerformanceOptimizer) PutTrade(trade *Trade) {
 func (po *PerformanceOptimizer) GetMatchResult() *pool.MatchResult {
 	result := po.matchPool.Get().(*pool.MatchResult)
 	// Reset match result
-	result.Trades = result.Trades[:0]
-	result.RemainingOrder = nil
-	result.FullyMatched = false
-	result.PartiallyMatched = false
-	result.TotalQuantity = 0
-	result.WeightedPrice = 0
+	result.Reset()
 	return result
 }
 
