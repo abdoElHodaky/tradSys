@@ -163,10 +163,10 @@ func (e *HFTEngine) PlaceOrderFast(order *Order) ([]*Trade, error) {
 	// Copy order data to fast order
 	fastOrder.Order.ID = order.ID
 	fastOrder.Order.Symbol = order.Symbol
-	fastOrder.Order.Side = order.Side
+	fastOrder.Order.Side = string(order.Side)
 	fastOrder.Order.Price = order.Price
 	fastOrder.Order.Quantity = order.Quantity
-	fastOrder.Order.Type = order.Type
+	fastOrder.Order.Type = string(order.Type)
 	fastOrder.PriceInt64 = int64(order.Price * 100000000) // 8 decimal places precision
 	fastOrder.QuantityInt64 = int64(order.Quantity * 100000000)
 	fastOrder.CreatedAtNano = startTime.UnixNano()
@@ -241,14 +241,14 @@ func (ob *HFTOrderBook) processOrderFast(order *FastOrder) ([]*Trade, error) {
 	trades := make([]*Trade, 0, 4) // Pre-allocate for common case
 
 	// Handle market orders with optimized matching
-	if order.Type == OrderTypeMarket {
-		if order.Side == OrderSideBuy {
+	if order.Order.Type == OrderTypeMarket {
+		if order.Order.Side == OrderSideBuy {
 			trades = ob.matchMarketBuyOrder(order, trades)
 		} else {
 			trades = ob.matchMarketSellOrder(order, trades)
 		}
-	} else if order.Type == OrderTypeLimit {
-		if order.Side == OrderSideBuy {
+	} else if order.Order.Type == OrderTypeLimit {
+		if order.Order.Side == OrderSideBuy {
 			trades = ob.matchLimitBuyOrder(order, trades)
 		} else {
 			trades = ob.matchLimitSellOrder(order, trades)
@@ -271,7 +271,7 @@ func (ob *HFTOrderBook) matchMarketBuyOrder(order *FastOrder, trades []*Trade) [
 	defer asksTree.mu.Unlock()
 
 	// Find best ask prices and match
-	for order.FilledQuantity < order.Quantity && asksTree.root != nil {
+	for order.Order.FilledQuantity < order.Order.Quantity && asksTree.root != nil {
 		bestAsk := asksTree.findBestPrice()
 		if bestAsk == nil {
 			break
@@ -311,7 +311,7 @@ func (ob *HFTOrderBook) matchMarketSellOrder(order *FastOrder, trades []*Trade) 
 	defer bidsTree.mu.Unlock()
 
 	// Find best bid prices and match
-	for order.FilledQuantity < order.Quantity && bidsTree.root != nil {
+	for order.Order.FilledQuantity < order.Order.Quantity && bidsTree.root != nil {
 		bestBid := bidsTree.findBestPrice()
 		if bestBid == nil {
 			break
@@ -351,7 +351,7 @@ func (ob *HFTOrderBook) matchLimitBuyOrder(order *FastOrder, trades []*Trade) []
 	defer asksTree.mu.Unlock()
 
 	// Match against asks at or below the limit price
-	for order.FilledQuantity < order.Quantity {
+	for order.Order.FilledQuantity < order.Order.Quantity {
 		bestAsk := asksTree.findBestPrice()
 		if bestAsk == nil || bestAsk.price > order.Price {
 			break
@@ -380,7 +380,7 @@ func (ob *HFTOrderBook) matchLimitBuyOrder(order *FastOrder, trades []*Trade) []
 	}
 
 	// Add remaining quantity to order book if not fully filled
-	if order.FilledQuantity < order.Quantity {
+	if order.Order.FilledQuantity < order.Order.Quantity {
 		bidsPtr := atomic.LoadPointer(&ob.bids)
 		bidsTree := (*PriceLevelTree)(bidsPtr)
 		bidsTree.addOrder(&order.Order)
@@ -398,7 +398,7 @@ func (ob *HFTOrderBook) matchLimitSellOrder(order *FastOrder, trades []*Trade) [
 	defer bidsTree.mu.Unlock()
 
 	// Match against bids at or above the limit price
-	for order.FilledQuantity < order.Quantity {
+	for order.Order.FilledQuantity < order.Order.Quantity {
 		bestBid := bidsTree.findBestPrice()
 		if bestBid == nil || bestBid.price < order.Price {
 			break
@@ -427,7 +427,7 @@ func (ob *HFTOrderBook) matchLimitSellOrder(order *FastOrder, trades []*Trade) [
 	}
 
 	// Add remaining quantity to order book if not fully filled
-	if order.FilledQuantity < order.Quantity {
+	if order.Order.FilledQuantity < order.Order.Quantity {
 		asksPtr := atomic.LoadPointer(&ob.asks)
 		asksTree := (*PriceLevelTree)(asksPtr)
 		asksTree.addOrder(&order.Order)

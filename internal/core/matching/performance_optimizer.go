@@ -8,6 +8,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/abdoElHodaky/tradSys/internal/common/pool"
 	"go.uber.org/zap"
 )
 
@@ -187,8 +188,8 @@ func (po *PerformanceOptimizer) initializePools() {
 	// Match result pool
 	po.matchPool = sync.Pool{
 		New: func() interface{} {
-			return &MatchResult{
-				Trades: make([]*Trade, 0, 10),
+			return &pool.MatchResult{
+				Trades: make([]*pool.Trade, 0, 10),
 			}
 		},
 	}
@@ -225,8 +226,8 @@ func (po *PerformanceOptimizer) PutTrade(trade *Trade) {
 }
 
 // GetMatchResult gets a match result from the pool
-func (po *PerformanceOptimizer) GetMatchResult() *MatchResult {
-	result := po.matchPool.Get().(*MatchResult)
+func (po *PerformanceOptimizer) GetMatchResult() *pool.MatchResult {
+	result := po.matchPool.Get().(*pool.MatchResult)
 	// Reset match result
 	result.Trades = result.Trades[:0]
 	result.RemainingOrder = nil
@@ -238,7 +239,7 @@ func (po *PerformanceOptimizer) GetMatchResult() *MatchResult {
 }
 
 // PutMatchResult returns a match result to the pool
-func (po *PerformanceOptimizer) PutMatchResult(result *MatchResult) {
+func (po *PerformanceOptimizer) PutMatchResult(result *pool.MatchResult) {
 	if result != nil {
 		po.matchPool.Put(result)
 	}

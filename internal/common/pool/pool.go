@@ -88,12 +88,13 @@ func (p *TradePool) Put(trade *Trade) {
 
 // Order represents a trading order
 type Order struct {
-	ID       string
-	Symbol   string
-	Side     string
-	Price    float64
-	Quantity float64
-	Type     string
+	ID             string
+	Symbol         string
+	Side           string
+	Price          float64
+	Quantity       float64
+	FilledQuantity float64
+	Type           string
 }
 
 // Reset resets the order fields
@@ -103,6 +104,7 @@ func (o *Order) Reset() {
 	o.Side = ""
 	o.Price = 0
 	o.Quantity = 0
+	o.FilledQuantity = 0
 	o.Type = ""
 }
 
