@@ -37,7 +37,7 @@ type Gateway struct {
 	logger *zap.Logger
 	
 	// Connection tracking
-	connections map[string]*Connection
+	connections map[string]*TradingConnection
 	mu          sync.RWMutex
 	
 	// Lifecycle management
@@ -136,7 +136,7 @@ func NewGateway(config *GatewayConfig, logger *zap.Logger) *Gateway {
 	gateway := &Gateway{
 		config:      config,
 		logger:      logger,
-		connections: make(map[string]*Connection),
+		connections: make(map[string]*TradingConnection),
 		ctx:         ctx,
 		cancel:      cancel,
 		metrics:     &GatewayMetrics{LastUpdated: time.Now()},
@@ -181,7 +181,7 @@ func (g *Gateway) Stop() error {
 }
 
 // HandleConnection handles a new WebSocket connection
-func (g *Gateway) HandleConnection(conn *websocket.Conn, userID, exchange string) (*Connection, error) {
+func (g *Gateway) HandleConnection(conn *websocket.Conn, userID, exchange string) (*TradingConnection, error) {
 	// Check connection limits
 	if err := g.checkConnectionLimits(); err != nil {
 		return nil, err
@@ -325,10 +325,10 @@ func (g *Gateway) GetMetrics() *GatewayMetrics {
 }
 
 // createConnection creates a new connection instance
-func (g *Gateway) createConnection(conn *websocket.Conn, userID, exchange string) *Connection {
+func (g *Gateway) createConnection(conn *websocket.Conn, userID, exchange string) *TradingConnection {
 	ctx, cancel := context.WithCancel(g.ctx)
 	
-	connection := &Connection{
+	connection := &TradingConnection{
 		ID:            generateConnectionID(),
 		UserID:        userID,
 		Exchange:      exchange,
