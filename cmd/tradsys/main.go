@@ -27,7 +27,7 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/orders"
 	"github.com/abdoElHodaky/tradSys/internal/risk"
 	"github.com/abdoElHodaky/tradSys/internal/strategies"
-	"github.com/abdoElHodaky/tradSys/internal/ws"
+	"github.com/abdoElHodaky/tradSys/internal/websocket"
 	orders_proto "github.com/abdoElHodaky/tradSys/proto/orders"
 	riskpb "github.com/abdoElHodaky/tradSys/proto/risk"
 )
@@ -35,7 +35,7 @@ import (
 const (
 	// Application metadata
 	AppName    = "TradSys - High-Frequency Trading System"
-	AppVersion = "2.0.0"
+	AppVersion = "3.0.0"
 	AppAuthor  = "TradSys Team"
 )
 
@@ -131,6 +131,30 @@ func runServer() {
 	api := router.Group("/api/v1")
 	handlers.SetupRoutes(api, tradingSystem)
 
+	// Swagger documentation endpoint
+	router.Static("/docs", "./docs")
+	router.GET("/swagger", func(c *gin.Context) {
+		c.Redirect(http.StatusMovedPermanently, "/docs/api/swagger.yaml")
+	})
+
+	// API documentation endpoint
+	router.GET("/api-docs", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"title":       "TradSys v3 API Documentation",
+			"version":     AppVersion,
+			"description": "High-Frequency Trading System API",
+			"swagger_url": "/docs/api/swagger.yaml",
+			"endpoints": gin.H{
+				"health":     "/health",
+				"ready":      "/ready", 
+				"metrics":    "/metrics",
+				"api_v1":     "/api/v1",
+				"swagger":    "/swagger",
+				"docs":       "/docs",
+			},
+		})
+	})
+
 	// Health check endpoint
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
@@ -150,14 +174,21 @@ func runServer() {
 				"connectivity": "ready",
 				"compliance":   "ready",
 				"strategies":   "ready",
+				"websocket":    "ready",
+				"risk":         "ready",
 			},
 		})
 	})
 
 	// Metrics endpoint
 	router.GET("/metrics", func(c *gin.Context) {
-		// Prometheus metrics would be served here
-		c.String(http.StatusOK, "# TradSys Metrics\n")
+		metrics := tradingSystem.GetPerformanceMetrics()
+		c.JSON(http.StatusOK, gin.H{
+			"service":   AppName,
+			"version":   AppVersion,
+			"timestamp": time.Now().Unix(),
+			"metrics":   metrics,
+		})
 	})
 
 	// Create HTTP server

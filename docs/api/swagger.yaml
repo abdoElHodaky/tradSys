@@ -1,0 +1,1021 @@
+openapi: 3.0.3
+info:
+  title: TradSys v3 - High-Frequency Trading System API
+  description: |
+    Comprehensive API documentation for TradSys v3, a high-performance trading system
+    supporting multiple asset classes including bonds, ETFs, and traditional securities.
+    
+    ## Features
+    - High-frequency order matching
+    - Real-time WebSocket connections
+    - Risk management and compliance
+    - Multi-exchange connectivity
+    - Advanced trading strategies
+    
+    ## Architecture
+    - Microservices-based architecture
+    - Event-driven design with CQRS
+    - Real-time data processing
+    - Scalable WebSocket gateway
+    
+    ## Authentication
+    All endpoints require proper authentication via JWT tokens or API keys.
+  version: "3.0.0"
+  contact:
+    name: TradSys Team
+    email: support@tradsys.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Development server
+  - url: https://api.tradsys.com/v1
+    description: Production server
+
+security:
+  - BearerAuth: []
+  - ApiKeyAuth: []
+
+paths:
+  # Health and System Endpoints
+  /health:
+    get:
+      tags:
+        - System
+      summary: Health Check
+      description: Get system health status and basic metrics
+      operationId: getHealth
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: System is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /metrics:
+    get:
+      tags:
+        - System
+      summary: System Metrics
+      description: Get comprehensive system performance metrics
+      operationId: getMetrics
+      responses:
+        '200':
+          description: System metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricsResponse'
+
+  # Order Management Endpoints
+  /orders:
+    post:
+      tags:
+        - Orders
+      summary: Create Order
+      description: Create a new trading order
+      operationId: createOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateOrderResponse'
+        '400':
+          description: Invalid order parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Order validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags:
+        - Orders
+      summary: List Orders
+      description: Get list of orders with optional filtering
+      operationId: listOrders
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of orders to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+        - name: symbol
+          in: query
+          description: Filter by trading symbol
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Filter by order status
+          schema:
+            type: string
+            enum: [pending, filled, cancelled, rejected]
+      responses:
+        '200':
+          description: Orders retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderListResponse'
+
+  /orders/{orderId}:
+    get:
+      tags:
+        - Orders
+      summary: Get Order
+      description: Get specific order by ID
+      operationId: getOrder
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          description: Order ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Orders
+      summary: Cancel Order
+      description: Cancel an existing order
+      operationId: cancelOrder
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          description: Order ID to cancel
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order cancelled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelOrderResponse'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Order cannot be cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Trading Endpoints
+  /trades:
+    get:
+      tags:
+        - Trades
+      summary: List Trades
+      description: Get list of executed trades
+      operationId: listTrades
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of trades to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+        - name: symbol
+          in: query
+          description: Filter by trading symbol
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Trades retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeListResponse'
+
+  /trades/{symbol}:
+    get:
+      tags:
+        - Trades
+      summary: Get Trades by Symbol
+      description: Get trades for a specific trading symbol
+      operationId: getTradesBySymbol
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          description: Trading symbol
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Symbol trades retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeListResponse'
+
+  # Position Management
+  /positions:
+    get:
+      tags:
+        - Positions
+      summary: List Positions
+      description: Get current trading positions
+      operationId: listPositions
+      responses:
+        '200':
+          description: Positions retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PositionListResponse'
+
+  /positions/{symbol}:
+    get:
+      tags:
+        - Positions
+      summary: Get Position by Symbol
+      description: Get position for a specific trading symbol
+      operationId: getPositionBySymbol
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          description: Trading symbol
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Position retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Position'
+        '404':
+          description: Position not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Market Data Endpoints
+  /market/orderbook/{symbol}:
+    get:
+      tags:
+        - Market Data
+      summary: Get Order Book
+      description: Get current order book for a trading symbol
+      operationId: getOrderBook
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          description: Trading symbol
+          schema:
+            type: string
+        - name: depth
+          in: query
+          description: Order book depth (number of levels)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Order book retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderBook'
+
+  /market/ticker/{symbol}:
+    get:
+      tags:
+        - Market Data
+      summary: Get Ticker
+      description: Get ticker data for a trading symbol
+      operationId: getTicker
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          description: Trading symbol
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ticker data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticker'
+
+  /market/symbols:
+    get:
+      tags:
+        - Market Data
+      summary: List Trading Symbols
+      description: Get list of available trading symbols
+      operationId: listSymbols
+      responses:
+        '200':
+          description: Symbols retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SymbolListResponse'
+
+  # Bond-specific Endpoints
+  /bonds:
+    post:
+      tags:
+        - Bonds
+      summary: Create Bond
+      description: Create a new bond with initial metadata
+      operationId: createBond
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBondRequest'
+      responses:
+        '201':
+          description: Bond created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bond'
+
+  /bonds/{symbol}/metrics:
+    get:
+      tags:
+        - Bonds
+      summary: Get Bond Metrics
+      description: Get comprehensive metrics for a bond
+      operationId: getBondMetrics
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          description: Bond symbol
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Bond metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BondMetrics'
+
+  # ETF-specific Endpoints
+  /etfs:
+    post:
+      tags:
+        - ETFs
+      summary: Create ETF
+      description: Create a new ETF with initial metadata
+      operationId: createETF
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateETFRequest'
+      responses:
+        '201':
+          description: ETF created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ETF'
+
+  /etfs/{symbol}/metrics:
+    get:
+      tags:
+        - ETFs
+      summary: Get ETF Metrics
+      description: Get comprehensive metrics for an ETF
+      operationId: getETFMetrics
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          description: ETF symbol
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ETF metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ETFMetrics'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  schemas:
+    # Common Schemas
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        code:
+          type: string
+          description: Error code
+        timestamp:
+          type: integer
+          format: int64
+          description: Unix timestamp
+      required:
+        - error
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        message:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+        metrics:
+          type: object
+          additionalProperties: true
+      required:
+        - status
+        - timestamp
+
+    MetricsResponse:
+      type: object
+      properties:
+        metrics:
+          type: object
+          additionalProperties: true
+        timestamp:
+          type: integer
+          format: int64
+      required:
+        - metrics
+        - timestamp
+
+    # Order Schemas
+    CreateOrderRequest:
+      type: object
+      properties:
+        symbol:
+          type: string
+          description: Trading symbol
+          example: "BTC-USD"
+        side:
+          type: string
+          enum: [buy, sell]
+          description: Order side
+        type:
+          type: string
+          enum: [market, limit, stop]
+          description: Order type
+        quantity:
+          type: number
+          format: double
+          minimum: 0
+          description: Order quantity
+        price:
+          type: number
+          format: double
+          minimum: 0
+          description: Order price (required for limit orders)
+        stop_price:
+          type: number
+          format: double
+          minimum: 0
+          description: Stop price (required for stop orders)
+      required:
+        - symbol
+        - side
+        - type
+        - quantity
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Order ID
+        symbol:
+          type: string
+          description: Trading symbol
+        side:
+          type: string
+          enum: [buy, sell]
+        type:
+          type: string
+          enum: [market, limit, stop]
+        quantity:
+          type: number
+          format: double
+        price:
+          type: number
+          format: double
+        stop_price:
+          type: number
+          format: double
+        status:
+          type: string
+          enum: [pending, filled, cancelled, rejected]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - symbol
+        - side
+        - type
+        - quantity
+        - status
+        - created_at
+
+    CreateOrderResponse:
+      type: object
+      properties:
+        order:
+          $ref: '#/components/schemas/Order'
+        trades:
+          type: array
+          items:
+            $ref: '#/components/schemas/Trade'
+      required:
+        - order
+
+    OrderListResponse:
+      type: object
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+        limit:
+          type: integer
+        total:
+          type: integer
+      required:
+        - orders
+
+    CancelOrderResponse:
+      type: object
+      properties:
+        order_id:
+          type: string
+        status:
+          type: string
+          enum: [cancelled]
+        message:
+          type: string
+      required:
+        - order_id
+        - status
+
+    # Trade Schemas
+    Trade:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Trade ID
+        symbol:
+          type: string
+          description: Trading symbol
+        side:
+          type: string
+          enum: [buy, sell]
+        quantity:
+          type: number
+          format: double
+        price:
+          type: number
+          format: double
+        timestamp:
+          type: string
+          format: date-time
+        order_id:
+          type: string
+          description: Associated order ID
+      required:
+        - id
+        - symbol
+        - side
+        - quantity
+        - price
+        - timestamp
+
+    TradeListResponse:
+      type: object
+      properties:
+        trades:
+          type: array
+          items:
+            $ref: '#/components/schemas/Trade'
+        symbol:
+          type: string
+        total:
+          type: integer
+      required:
+        - trades
+
+    # Position Schemas
+    Position:
+      type: object
+      properties:
+        symbol:
+          type: string
+          description: Trading symbol
+        quantity:
+          type: number
+          format: double
+          description: Position quantity (positive for long, negative for short)
+        average_price:
+          type: number
+          format: double
+          description: Average entry price
+        market_value:
+          type: number
+          format: double
+          description: Current market value
+        unrealized_pnl:
+          type: number
+          format: double
+          description: Unrealized profit/loss
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - symbol
+        - quantity
+        - average_price
+        - market_value
+        - unrealized_pnl
+        - updated_at
+
+    PositionListResponse:
+      type: object
+      properties:
+        positions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Position'
+        total_value:
+          type: number
+          format: double
+        total_pnl:
+          type: number
+          format: double
+      required:
+        - positions
+
+    # Market Data Schemas
+    OrderBook:
+      type: object
+      properties:
+        symbol:
+          type: string
+        bids:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderBookLevel'
+        asks:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderBookLevel'
+        timestamp:
+          type: integer
+          format: int64
+      required:
+        - symbol
+        - bids
+        - asks
+        - timestamp
+
+    OrderBookLevel:
+      type: object
+      properties:
+        price:
+          type: number
+          format: double
+        quantity:
+          type: number
+          format: double
+        orders:
+          type: integer
+          description: Number of orders at this level
+      required:
+        - price
+        - quantity
+
+    Ticker:
+      type: object
+      properties:
+        symbol:
+          type: string
+        last_price:
+          type: number
+          format: double
+        volume:
+          type: number
+          format: double
+        high_24h:
+          type: number
+          format: double
+        low_24h:
+          type: number
+          format: double
+        change_24h:
+          type: number
+          format: double
+        change_percent_24h:
+          type: number
+          format: double
+        timestamp:
+          type: integer
+          format: int64
+      required:
+        - symbol
+        - last_price
+        - volume
+        - timestamp
+
+    SymbolListResponse:
+      type: object
+      properties:
+        symbols:
+          type: array
+          items:
+            type: string
+        count:
+          type: integer
+      required:
+        - symbols
+        - count
+
+    # Bond Schemas
+    CreateBondRequest:
+      type: object
+      properties:
+        symbol:
+          type: string
+          description: Bond symbol
+        issuer:
+          type: string
+          description: Bond issuer
+        coupon_rate:
+          type: number
+          format: double
+          description: Annual coupon rate
+        maturity_date:
+          type: string
+          format: date
+          description: Bond maturity date
+        face_value:
+          type: number
+          format: double
+          description: Face value of the bond
+      required:
+        - symbol
+        - issuer
+        - coupon_rate
+        - maturity_date
+        - face_value
+
+    Bond:
+      type: object
+      properties:
+        symbol:
+          type: string
+        issuer:
+          type: string
+        coupon_rate:
+          type: number
+          format: double
+        maturity_date:
+          type: string
+          format: date
+        face_value:
+          type: number
+          format: double
+        current_price:
+          type: number
+          format: double
+        yield_to_maturity:
+          type: number
+          format: double
+        duration:
+          type: number
+          format: double
+        credit_rating:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - symbol
+        - issuer
+        - coupon_rate
+        - maturity_date
+        - face_value
+
+    BondMetrics:
+      type: object
+      properties:
+        symbol:
+          type: string
+        yield_to_maturity:
+          type: number
+          format: double
+        duration:
+          type: number
+          format: double
+        convexity:
+          type: number
+          format: double
+        credit_spread:
+          type: number
+          format: double
+        price_volatility:
+          type: number
+          format: double
+        accrued_interest:
+          type: number
+          format: double
+      required:
+        - symbol
+
+    # ETF Schemas
+    CreateETFRequest:
+      type: object
+      properties:
+        symbol:
+          type: string
+          description: ETF symbol
+        name:
+          type: string
+          description: ETF name
+        benchmark:
+          type: string
+          description: Benchmark index
+        expense_ratio:
+          type: number
+          format: double
+          description: Annual expense ratio
+        inception_date:
+          type: string
+          format: date
+          description: ETF inception date
+      required:
+        - symbol
+        - name
+        - benchmark
+        - expense_ratio
+        - inception_date
+
+    ETF:
+      type: object
+      properties:
+        symbol:
+          type: string
+        name:
+          type: string
+        benchmark:
+          type: string
+        expense_ratio:
+          type: number
+          format: double
+        inception_date:
+          type: string
+          format: date
+        net_asset_value:
+          type: number
+          format: double
+        total_assets:
+          type: number
+          format: double
+        shares_outstanding:
+          type: number
+          format: double
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - symbol
+        - name
+        - benchmark
+        - expense_ratio
+        - inception_date
+
+    ETFMetrics:
+      type: object
+      properties:
+        symbol:
+          type: string
+        tracking_error:
+          type: number
+          format: double
+        premium_discount:
+          type: number
+          format: double
+        liquidity_score:
+          type: number
+          format: double
+        average_spread:
+          type: number
+          format: double
+        volume_weighted_spread:
+          type: number
+          format: double
+        creation_redemption_activity:
+          type: object
+          properties:
+            creations:
+              type: integer
+            redemptions:
+              type: integer
+            net_flow:
+              type: number
+              format: double
+      required:
+        - symbol
+
+tags:
+  - name: System
+    description: System health and monitoring endpoints
+  - name: Orders
+    description: Order management operations
+  - name: Trades
+    description: Trade execution and history
+  - name: Positions
+    description: Position management and tracking
+  - name: Market Data
+    description: Real-time market data and order books
+  - name: Bonds
+    description: Bond-specific trading operations
+  - name: ETFs
+    description: ETF-specific trading operations

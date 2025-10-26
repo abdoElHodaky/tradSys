@@ -1,12 +1,22 @@
-# TradSys API Reference & Integration Guide
+# TradSys v3 API Reference & Integration Guide
 
 ## 🔌 API Overview
 
-TradSys provides a comprehensive REST API and WebSocket interface for trading operations, market data, and system management.
+TradSys v3 provides a comprehensive REST API and WebSocket interface for high-frequency trading operations, supporting multiple asset classes including bonds, ETFs, and traditional securities.
 
+**Version**: 3.0.0  
+**Architecture Phase**: 16-17 Complete (90% optimization)  
 **Base URL**: `http://localhost:8080/api/v1`  
 **WebSocket URL**: `ws://localhost:8080/ws`  
-**Authentication**: JWT Bearer Token  
+**Authentication**: JWT Bearer Token / API Key
+
+## 📚 Documentation Access
+
+- **Swagger YAML**: `/swagger` or `/docs/api/swagger.yaml`
+- **API Documentation**: `/api-docs` 
+- **Full Documentation**: `/docs`
+- **Architecture Docs**: `/docs/architecture/`
+- **Deployment Guide**: `/docs/deployment/`  
 
 ## 🔐 Authentication
 
