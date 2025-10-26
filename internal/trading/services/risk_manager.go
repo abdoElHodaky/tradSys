@@ -1,5 +1,5 @@
-// Package trading provides risk management for TradSys v3
-package trading
+// Package services provides risk management for TradSys v3
+package services
 
 import (
 	"context"

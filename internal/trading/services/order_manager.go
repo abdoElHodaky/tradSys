@@ -1,5 +1,5 @@
-// Package trading provides unified trading services for TradSys v3
-package trading
+// Package services provides unified trading services for TradSys v3
+package services
 
 import (
 	"context"
