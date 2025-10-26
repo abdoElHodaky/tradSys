@@ -1,0 +1,228 @@
+name: Optimized CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop, v3 ]
+  pull_request:
+    branches: [ main, develop, v3 ]
+
+env:
+  GO_VERSION: '1.21'
+
+jobs:
+  # Setup and Cache (runs once, used by all jobs)
+  setup:
+    name: Setup Dependencies
+    runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.cache.outputs.cache-hit }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Cache Go modules
+      id: cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Download dependencies
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: go mod download
+
+  # Code Quality (parallel with tests)
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Restore Go modules cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+
+    - name: Install linting tools
+      run: |
+        go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+        go install golang.org/x/vuln/cmd/govulncheck@latest
+
+    - name: Run quality checks
+      run: |
+        # Format check
+        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+          echo "Code not formatted. Run: gofmt -s -w ."
+          gofmt -s -l .
+          exit 1
+        fi
+        
+        # Vet check
+        go vet ./...
+        
+        # Lint check
+        golangci-lint run --timeout=5m ./...
+        
+        # Security check
+        govulncheck ./...
+
+  # Unit Tests (parallel with quality)
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Restore Go modules cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+
+    - name: Run unit tests
+      run: |
+        go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+        go tool cover -html=coverage.out -o coverage.html
+
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.out
+        flags: unittests
+
+    - name: Upload coverage artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-reports
+        path: |
+          coverage.out
+          coverage.html
+
+  # Integration Tests (after quality checks pass)
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [quality, test]
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_USER: testuser
+          POSTGRES_DB: tradingsys_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Restore Go modules cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+
+    - name: Wait for services
+      run: |
+        timeout 30 bash -c 'until nc -z localhost 5432; do sleep 1; done'
+        timeout 30 bash -c 'until nc -z localhost 6379; do sleep 1; done'
+
+    - name: Run integration tests
+      env:
+        DATABASE_URL: postgres://testuser:testpass@localhost:5432/tradingsys_test?sslmode=disable
+        REDIS_URL: redis://localhost:6379
+        TEST_ENV: integration
+      run: go test -v -tags=integration ./tests/integration/...
+
+  # Build (only after all tests pass)
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: [quality, test, integration]
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Restore Go modules cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+
+    - name: Build applications
+      run: |
+        mkdir -p bin
+        CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o bin/tradingsys ./cmd/server
+        CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o bin/migrate ./cmd/migrate
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: binaries
+        path: bin/
+
+# Key Optimizations Made:
+# 1. Added setup job to handle caching once
+# 2. Made quality and test jobs run in parallel
+# 3. Consolidated quality checks into single job
+# 4. Reduced cache setup duplication
+# 5. Optimized job dependencies for faster execution
+# 6. Estimated runtime reduction: 15-20min → 10-12min
