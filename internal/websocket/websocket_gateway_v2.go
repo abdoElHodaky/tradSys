@@ -62,8 +62,8 @@ type GatewayConfig struct {
 	RateLimitPerSecond int           `json:"rate_limit_per_second"`
 }
 
-// Connection represents a WebSocket connection optimized for trading
-type Connection struct {
+// TradingConnection represents a WebSocket connection optimized for trading
+type TradingConnection struct {
 	ID       string
 	UserID   string
 	Exchange string
@@ -359,7 +359,7 @@ func (g *Gateway) checkConnectionLimits() error {
 }
 
 // handleConnectionRead handles reading messages from a connection
-func (g *Gateway) handleConnectionRead(conn *Connection) {
+func (g *Gateway) handleConnectionRead(conn *TradingConnection) {
 	defer func() {
 		conn.Close()
 		g.removeConnection(conn.ID)
@@ -405,7 +405,7 @@ func (g *Gateway) handleConnectionRead(conn *Connection) {
 }
 
 // handleConnectionWrite handles writing messages to a connection
-func (g *Gateway) handleConnectionWrite(conn *Connection) {
+func (g *Gateway) handleConnectionWrite(conn *TradingConnection) {
 	ticker := time.NewTicker(g.config.PingInterval)
 	defer func() {
 		ticker.Stop()
@@ -446,7 +446,7 @@ func (g *Gateway) handleConnectionWrite(conn *Connection) {
 }
 
 // handleConnectionPing handles ping/pong for connection health
-func (g *Gateway) handleConnectionPing(conn *Connection) {
+func (g *Gateway) handleConnectionPing(conn *TradingConnection) {
 	ticker := time.NewTicker(g.config.PingInterval)
 	defer ticker.Stop()
 	
@@ -552,10 +552,10 @@ func (g *Gateway) cleanInactiveConnections() {
 	}
 }
 
-// Connection methods
+// TradingConnection methods
 
 // Subscribe adds a subscription to the connection
-func (c *Connection) Subscribe(channel, symbol string, subType SubscriptionType, filters map[string]interface{}) error {
+func (c *TradingConnection) Subscribe(channel, symbol string, subType SubscriptionType, filters map[string]interface{}) error {
 	c.subMu.Lock()
 	defer c.subMu.Unlock()
 	
@@ -579,7 +579,7 @@ func (c *Connection) Subscribe(channel, symbol string, subType SubscriptionType,
 }
 
 // Unsubscribe removes a subscription from the connection
-func (c *Connection) Unsubscribe(subscriptionID string) error {
+func (c *TradingConnection) Unsubscribe(subscriptionID string) error {
 	c.subMu.Lock()
 	defer c.subMu.Unlock()
 	
@@ -588,7 +588,7 @@ func (c *Connection) Unsubscribe(subscriptionID string) error {
 }
 
 // IsSubscribedToChannel checks if connection is subscribed to a channel
-func (c *Connection) IsSubscribedToChannel(channel string) bool {
+func (c *TradingConnection) IsSubscribedToChannel(channel string) bool {
 	c.subMu.RLock()
 	defer c.subMu.RUnlock()
 	
@@ -602,7 +602,7 @@ func (c *Connection) IsSubscribedToChannel(channel string) bool {
 }
 
 // Close closes the connection
-func (c *Connection) Close() {
+func (c *TradingConnection) Close() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	
