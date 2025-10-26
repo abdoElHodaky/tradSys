@@ -145,12 +145,12 @@ func runServer() {
 			"description": "High-Frequency Trading System API",
 			"swagger_url": "/docs/api/swagger.yaml",
 			"endpoints": gin.H{
-				"health":     "/health",
-				"ready":      "/ready", 
-				"metrics":    "/metrics",
-				"api_v1":     "/api/v1",
-				"swagger":    "/swagger",
-				"docs":       "/docs",
+				"health":  "/health",
+				"ready":   "/ready",
+				"metrics": "/metrics",
+				"api_v1":  "/api/v1",
+				"swagger": "/swagger",
+				"docs":    "/docs",
 			},
 		})
 	})
