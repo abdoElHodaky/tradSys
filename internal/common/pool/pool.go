@@ -104,6 +104,26 @@ func (o *Order) Reset() {
 	o.Type = ""
 }
 
+// FastOrder represents a high-performance order with additional fields
+type FastOrder struct {
+	Order           *Order
+	PriceInt64      int64
+	QuantityInt64   int64
+	CreatedAtNano   int64
+	UpdatedAtNano   int64
+}
+
+// Reset resets the fast order fields
+func (f *FastOrder) Reset() {
+	if f.Order != nil {
+		f.Order.Reset()
+	}
+	f.PriceInt64 = 0
+	f.QuantityInt64 = 0
+	f.CreatedAtNano = 0
+	f.UpdatedAtNano = 0
+}
+
 // Trade represents a trade execution
 type Trade struct {
 	ID           string
@@ -124,4 +144,137 @@ func (t *Trade) Reset() {
 	t.BuyOrderID = ""
 	t.SellOrderID = ""
 	t.Timestamp = 0
+}
+
+// WebSocketMessage represents a websocket message
+type WebSocketMessage struct {
+	Type    string      `json:"type"`
+	Data    interface{} `json:"data"`
+	Symbol  string      `json:"symbol,omitempty"`
+	Channel string      `json:"channel,omitempty"`
+}
+
+// Reset resets the websocket message fields
+func (w *WebSocketMessage) Reset() {
+	w.Type = ""
+	w.Data = nil
+	w.Symbol = ""
+	w.Channel = ""
+}
+
+// WebSocketMessagePool provides a pool for websocket messages
+type WebSocketMessagePool struct {
+	pool sync.Pool
+}
+
+// NewWebSocketMessagePool creates a new websocket message pool
+func NewWebSocketMessagePool() *WebSocketMessagePool {
+	return &WebSocketMessagePool{
+		pool: sync.Pool{
+			New: func() interface{} {
+				return &WebSocketMessage{}
+			},
+		},
+	}
+}
+
+// Get retrieves a websocket message from the pool
+func (p *WebSocketMessagePool) Get() *WebSocketMessage {
+	return p.pool.Get().(*WebSocketMessage)
+}
+
+// Put returns a websocket message to the pool
+func (p *WebSocketMessagePool) Put(msg *WebSocketMessage) {
+	msg.Reset()
+	p.pool.Put(msg)
+}
+
+// PriceMessage represents a price update message
+type PriceMessage struct {
+	Symbol    string  `json:"symbol"`
+	Price     float64 `json:"price"`
+	Volume    float64 `json:"volume"`
+	Timestamp int64   `json:"timestamp"`
+}
+
+// Reset resets the price message fields
+func (p *PriceMessage) Reset() {
+	p.Symbol = ""
+	p.Price = 0
+	p.Volume = 0
+	p.Timestamp = 0
+}
+
+// PriceMessagePool provides a pool for price messages
+type PriceMessagePool struct {
+	pool sync.Pool
+}
+
+// NewPriceMessagePool creates a new price message pool
+func NewPriceMessagePool() *PriceMessagePool {
+	return &PriceMessagePool{
+		pool: sync.Pool{
+			New: func() interface{} {
+				return &PriceMessage{}
+			},
+		},
+	}
+}
+
+// Get retrieves a price message from the pool
+func (p *PriceMessagePool) Get() *PriceMessage {
+	return p.pool.Get().(*PriceMessage)
+}
+
+// Put returns a price message to the pool
+func (p *PriceMessagePool) Put(msg *PriceMessage) {
+	msg.Reset()
+	p.pool.Put(msg)
+}
+
+// OrderUpdateMessage represents an order update message
+type OrderUpdateMessage struct {
+	OrderID   string  `json:"order_id"`
+	Symbol    string  `json:"symbol"`
+	Status    string  `json:"status"`
+	Price     float64 `json:"price"`
+	Quantity  float64 `json:"quantity"`
+	Timestamp int64   `json:"timestamp"`
+}
+
+// Reset resets the order update message fields
+func (o *OrderUpdateMessage) Reset() {
+	o.OrderID = ""
+	o.Symbol = ""
+	o.Status = ""
+	o.Price = 0
+	o.Quantity = 0
+	o.Timestamp = 0
+}
+
+// OrderUpdateMessagePool provides a pool for order update messages
+type OrderUpdateMessagePool struct {
+	pool sync.Pool
+}
+
+// NewOrderUpdateMessagePool creates a new order update message pool
+func NewOrderUpdateMessagePool() *OrderUpdateMessagePool {
+	return &OrderUpdateMessagePool{
+		pool: sync.Pool{
+			New: func() interface{} {
+				return &OrderUpdateMessage{}
+			},
+		},
+	}
+}
+
+// Get retrieves an order update message from the pool
+func (p *OrderUpdateMessagePool) Get() *OrderUpdateMessage {
+	return p.pool.Get().(*OrderUpdateMessage)
+}
+
+// Put returns an order update message to the pool
+func (p *OrderUpdateMessagePool) Put(msg *OrderUpdateMessage) {
+	msg.Reset()
+	p.pool.Put(msg)
 }
