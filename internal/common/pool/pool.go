@@ -28,7 +28,7 @@ func (p *ObjectPool) Put(obj interface{}) {
 	p.pool.Put(obj)
 }
 
-// FastOrderPool provides a pool for order objects to reduce allocations
+// FastOrderPool provides a pool for fast order objects to reduce allocations
 type FastOrderPool struct {
 	pool sync.Pool
 }
@@ -38,19 +38,21 @@ func NewFastOrderPool() *FastOrderPool {
 	return &FastOrderPool{
 		pool: sync.Pool{
 			New: func() interface{} {
-				return &Order{}
+				return &FastOrder{
+					Order: &Order{},
+				}
 			},
 		},
 	}
 }
 
-// Get retrieves an order from the pool
-func (p *FastOrderPool) Get() *Order {
-	return p.pool.Get().(*Order)
+// Get retrieves a fast order from the pool
+func (p *FastOrderPool) Get() *FastOrder {
+	return p.pool.Get().(*FastOrder)
 }
 
-// Put returns an order to the pool
-func (p *FastOrderPool) Put(order *Order) {
+// Put returns a fast order to the pool
+func (p *FastOrderPool) Put(order *FastOrder) {
 	// Reset the order before putting it back
 	order.Reset()
 	p.pool.Put(order)
@@ -279,34 +281,7 @@ func (p *OrderUpdateMessagePool) Put(msg *OrderUpdateMessage) {
 	p.pool.Put(msg)
 }
 
-// FastOrderPool provides a pool for fast orders
-type FastOrderPool struct {
-	pool sync.Pool
-}
 
-// NewFastOrderPool creates a new fast order pool
-func NewFastOrderPool() *FastOrderPool {
-	return &FastOrderPool{
-		pool: sync.Pool{
-			New: func() interface{} {
-				return &FastOrder{
-					Order: &Order{},
-				}
-			},
-		},
-	}
-}
-
-// Get retrieves a fast order from the pool
-func (p *FastOrderPool) Get() *FastOrder {
-	return p.pool.Get().(*FastOrder)
-}
-
-// Put returns a fast order to the pool
-func (p *FastOrderPool) Put(order *FastOrder) {
-	order.Reset()
-	p.pool.Put(order)
-}
 
 // MatchResult represents the result of a matching operation
 type MatchResult struct {
