@@ -1,0 +1,272 @@
+run:
+  timeout: 5m
+  issues-exit-code: 1
+  tests: true
+  skip-dirs:
+    - vendor
+    - github.com
+    - proto
+  skip-files:
+    - ".*\\.pb\\.go$"
+    - ".*_gen\\.go$"
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+    exclude-functions:
+      - (*os.File).Close
+      - (*database/sql.Rows).Close
+      - (*database/sql.Stmt).Close
+
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment # Can be too noisy for existing code
+
+  gocyclo:
+    min-complexity: 15
+
+  dupl:
+    threshold: 100
+
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+    ignore-tests: true
+
+  misspell:
+    locale: US
+
+  lll:
+    line-length: 120
+    tab-width: 4
+
+  unused:
+    check-exported: false
+
+  unparam:
+    check-exported: false
+
+  nakedret:
+    max-func-lines: 30
+
+  prealloc:
+    simple: true
+    range-loops: true
+    for-loops: false
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - dupImport
+      - ifElseChain
+      - octalLiteral
+      - whyNoLint
+      - wrapperFunc
+      - importShadow
+      - unnamedResult
+      - unnecessaryBlock
+
+  funlen:
+    lines: 100
+    statements: 50
+
+  goimports:
+    local-prefixes: github.com/abdoElHodaky/tradSys
+
+  gomnd:
+    settings:
+      mnd:
+        checks:
+          - argument
+          - case
+          - condition
+          - operation
+          - return
+          - assign
+        ignored-numbers: 0,1,2,3,4,5,10,100,1000
+        ignored-functions:
+          - time.Duration
+          - math.Pow
+          - strconv.FormatFloat
+          - strconv.ParseFloat
+
+  godot:
+    scope: declarations
+    exclude:
+      - "^fixme:"
+      - "^todo:"
+    period: true
+    capital: false
+
+  testpackage:
+    skip-regexp: (export|internal)_test\.go
+
+  thelper:
+    test:
+      first: true
+      name: true
+      begin: true
+    benchmark:
+      first: true
+      name: true
+      begin: true
+
+  varnamelen:
+    min-name-length: 2
+    ignore-type-assert-ok: true
+    ignore-map-index-ok: true
+    ignore-chan-recv-ok: true
+    ignore-names:
+      - err
+      - id
+      - ok
+      - db
+      - tx
+      - wg
+      - mu
+      - i
+      - j
+      - k
+
+  wsl:
+    strict-append: true
+    allow-assign-and-call: true
+    allow-multiline-assign: true
+    allow-case-trailing-whitespace: true
+    allow-cuddle-declarations: false
+
+linters:
+  disable-all: true
+  enable:
+    # Error detection
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    - deadcode
+    - varcheck
+    - structcheck
+
+    # Style
+    - gofmt
+    - goimports
+    - misspell
+    - lll
+    - unconvert
+    - unparam
+    - nakedret
+    - prealloc
+    - godot
+
+    # Complexity
+    - gocyclo
+    - funlen
+    - gocognit
+
+    # Performance
+    - bodyclose
+    - gocritic
+    - maligned
+
+    # Bugs
+    - rowserrcheck
+    - sqlclosecheck
+    - nilerr
+
+    # Security
+    - gosec
+
+    # Code quality
+    - dupl
+    - goconst
+    - gomnd
+    - nestif
+    - whitespace
+    - wsl
+
+    # Testing
+    - testpackage
+    - thelper
+
+    # Naming
+    - varnamelen
+
+issues:
+  exclude-rules:
+    # Exclude some linters from running on tests files
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+        - funlen
+        - goconst
+        - gomnd
+        - varnamelen
+        - lll
+
+    # Exclude some linters from running on generated files
+    - path: \.pb\.go
+      linters:
+        - gofmt
+        - goimports
+        - lll
+        - misspell
+
+    # Exclude lll issues for long lines with go:generate
+    - linters:
+        - lll
+      source: "^//go:generate "
+
+    # Exclude specific gosec rules that are too noisy
+    - linters:
+        - gosec
+      text: "G204|G304|G404"
+
+    # Allow complex main functions
+    - path: cmd/
+      linters:
+        - gocyclo
+        - funlen
+
+    # Allow long lines in documentation
+    - path: docs/
+      linters:
+        - lll
+
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+severity:
+  default-severity: error
+  case-sensitive: false
+  rules:
+    - linters:
+        - dupl
+        - goconst
+        - gomnd
+        - gocritic
+      severity: warning
+    - linters:
+        - errcheck
+        - gosec
+        - govet
+        - staticcheck
+      severity: error
