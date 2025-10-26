@@ -413,19 +413,19 @@ func (s *OrderService) matchesFilter(order *Order, filter *OrderFilter) bool {
 	if filter.Symbol != "" && order.Symbol != filter.Symbol {
 		return false
 	}
-	if filter.Side != "" && order.Side != filter.Side {
+	if filter.Side != nil && order.Side != *filter.Side {
 		return false
 	}
-	if filter.Type != "" && order.Type != filter.Type {
+	if filter.Type != nil && order.Type != *filter.Type {
 		return false
 	}
-	if filter.Status != "" && order.Status != filter.Status {
+	if filter.Status != nil && order.Status != *filter.Status {
 		return false
 	}
-	if !filter.StartTime.IsZero() && order.CreatedAt.Before(filter.StartTime) {
+	if filter.StartTime != nil && !filter.StartTime.IsZero() && order.CreatedAt.Before(*filter.StartTime) {
 		return false
 	}
-	if !filter.EndTime.IsZero() && order.CreatedAt.After(filter.EndTime) {
+	if filter.EndTime != nil && !filter.EndTime.IsZero() && order.CreatedAt.After(*filter.EndTime) {
 		return false
 	}
 	return true

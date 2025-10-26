@@ -79,15 +79,20 @@ func (ol *OrderLifecycle) InitializeOrder(ctx context.Context, order *Order) err
 		CurrentStatus:  order.Status,
 		PreviousStatus: "",
 		StateChangedAt: time.Now(),
-		ExpiresAt:      order.ExpiresAt,
+		ExpiresAt:      func() time.Time {
+			if order.ExpiresAt != nil {
+				return *order.ExpiresAt
+			}
+			return time.Time{}
+		}(),
 		Metadata:       make(map[string]interface{}),
 	}
 
 	ol.orderStates[order.ID] = state
 
 	// Schedule expiration if needed
-	if !order.ExpiresAt.IsZero() {
-		ol.scheduleExpiration(order.ID, order.ExpiresAt)
+	if order.ExpiresAt != nil && !order.ExpiresAt.IsZero() {
+		ol.scheduleExpiration(order.ID, *order.ExpiresAt)
 	}
 
 	// Emit state change event
@@ -118,9 +123,9 @@ func (ol *OrderLifecycle) UpdateOrder(ctx context.Context, order *Order) error {
 	}
 
 	// Update expiration if changed
-	if !order.ExpiresAt.IsZero() && !state.ExpiresAt.Equal(order.ExpiresAt) {
-		state.ExpiresAt = order.ExpiresAt
-		ol.scheduleExpiration(order.ID, order.ExpiresAt)
+	if order.ExpiresAt != nil && !order.ExpiresAt.IsZero() && !state.ExpiresAt.Equal(*order.ExpiresAt) {
+		state.ExpiresAt = *order.ExpiresAt
+		ol.scheduleExpiration(order.ID, *order.ExpiresAt)
 	}
 
 	ol.logger.Debug("Order lifecycle updated",

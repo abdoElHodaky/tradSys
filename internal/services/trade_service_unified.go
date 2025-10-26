@@ -54,7 +54,7 @@ func (s *TradeServiceUnified) CreateTrade(ctx context.Context, trade *types.Trad
 	if err := s.validateTrade(trade); err != nil {
 		s.metrics.IncrementCounter("trade_service.validation_failed", map[string]string{
 			"symbol": trade.Symbol,
-			"error":  errors.GetErrorCode(err).String(),
+			"error":  string(errors.GetErrorCode(err)),
 		})
 		return errors.Wrap(err, errors.ErrValidationFailed, "trade validation failed")
 	}
