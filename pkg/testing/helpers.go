@@ -156,6 +156,30 @@ func (m *MockMetricsCollector) RecordTimer(name string, duration time.Duration, 
 	m.timers[key] = append(m.timers[key], duration)
 }
 
+// Counter increments a counter metric (interface compatibility)
+func (m *MockMetricsCollector) Counter(name string, value float64, tags map[string]string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	key := m.buildKey(name, tags)
+	m.counters[key] += value
+}
+
+// Gauge sets a gauge metric (interface compatibility)
+func (m *MockMetricsCollector) Gauge(name string, value float64, tags map[string]string) {
+	m.RecordGauge(name, value, tags)
+}
+
+// Histogram records a histogram metric (interface compatibility)
+func (m *MockMetricsCollector) Histogram(name string, value float64, tags map[string]string) {
+	m.RecordHistogram(name, value, tags)
+}
+
+// Timer records a timing metric (interface compatibility)
+func (m *MockMetricsCollector) Timer(name string, duration time.Duration, tags map[string]string) {
+	m.RecordTimer(name, duration, tags)
+}
+
 // buildKey builds a key from name and tags
 func (m *MockMetricsCollector) buildKey(name string, tags map[string]string) string {
 	if len(tags) == 0 {
@@ -239,30 +263,56 @@ func NewMockEventPublisher() *MockEventPublisher {
 	}
 }
 
+// Publish publishes a generic event (interface compatibility)
+func (m *MockEventPublisher) Publish(ctx context.Context, event interface{}) error {
+	// Handle different event types
+	switch e := event.(type) {
+	case interfaces.OrderEvent:
+		return m.PublishOrderEvent(ctx, e)
+	case interfaces.TradeEvent:
+		return m.PublishTradeEvent(ctx, e)
+	case interfaces.MarketDataEvent:
+		return m.PublishMarketDataEvent(ctx, e)
+	default:
+		// For unknown types, just return success
+		return nil
+	}
+}
+
+// PublishBatch publishes multiple events (interface compatibility)
+func (m *MockEventPublisher) PublishBatch(ctx context.Context, events []interface{}) error {
+	for _, event := range events {
+		if err := m.Publish(ctx, event); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // PublishOrderEvent publishes an order event
-func (m *MockEventPublisher) PublishOrderEvent(ctx context.Context, event *interfaces.OrderEvent) error {
+func (m *MockEventPublisher) PublishOrderEvent(ctx context.Context, event interfaces.OrderEvent) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	
-	m.orderEvents = append(m.orderEvents, *event)
+	m.orderEvents = append(m.orderEvents, event)
 	return nil
 }
 
 // PublishTradeEvent publishes a trade event
-func (m *MockEventPublisher) PublishTradeEvent(ctx context.Context, event *interfaces.TradeEvent) error {
+func (m *MockEventPublisher) PublishTradeEvent(ctx context.Context, event interfaces.TradeEvent) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	
-	m.tradeEvents = append(m.tradeEvents, *event)
+	m.tradeEvents = append(m.tradeEvents, event)
 	return nil
 }
 
 // PublishMarketDataEvent publishes a market data event
-func (m *MockEventPublisher) PublishMarketDataEvent(ctx context.Context, event *interfaces.MarketDataEvent) error {
+func (m *MockEventPublisher) PublishMarketDataEvent(ctx context.Context, event interfaces.MarketDataEvent) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	
-	m.marketDataEvents = append(m.marketDataEvents, *event)
+	m.marketDataEvents = append(m.marketDataEvents, event)
 	return nil
 }
 
