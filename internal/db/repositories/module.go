@@ -6,7 +6,6 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/repositories"
 	"github.com/abdoElHodaky/tradSys/pkg/interfaces"
 	"go.uber.org/fx"
-	"go.uber.org/zap"
 )
 
 // RepositoriesModule provides the repositories module for the fx application

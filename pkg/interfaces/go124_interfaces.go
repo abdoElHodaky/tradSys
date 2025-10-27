@@ -21,19 +21,9 @@ type EventPublisher interface {
 	PublishTradeEvent(ctx context.Context, event TradeEvent) error
 }
 
-// OrderEvent represents an order-related event
-type OrderEvent interface {
-	GetOrderID() string
-	GetEventType() string
-	GetTimestamp() time.Time
-}
 
-// TradeEvent represents a trade-related event
-type TradeEvent interface {
-	GetTradeID() string
-	GetEventType() string
-	GetTimestamp() time.Time
-}
+
+
 
 // MarketDataEvent represents a market data event
 type MarketDataEvent interface {
@@ -42,34 +32,13 @@ type MarketDataEvent interface {
 	GetTimestamp() time.Time
 }
 
-// OrderEventCreated represents an order created event
-type OrderEventCreated interface {
-	OrderEvent
-	GetOrder() interface{}
-}
 
-// OrderEventCanceled represents an order canceled event
-type OrderEventCanceled interface {
-	OrderEvent
-	GetReason() string
-}
 
-// TradeEventExecuted represents a trade executed event
-type TradeEventExecuted interface {
-	TradeEvent
-	GetPrice() float64
-	GetQuantity() float64
-}
 
-// EngineMetrics defines metrics for matching engines
-type EngineMetrics interface {
-	// RecordOrderProcessed records an order processing metric
-	RecordOrderProcessed(duration time.Duration)
-	// RecordTradeExecuted records a trade execution metric
-	RecordTradeExecuted(volume float64)
-	// GetProcessingTime returns average processing time
-	GetProcessingTime() time.Duration
-}
+
+
+
+
 
 // MetricsCollector defines an interface for collecting metrics
 type MetricsCollector interface {
@@ -89,9 +58,9 @@ type MetricsCollector interface {
 	RecordGauge(name string, value float64, tags map[string]string)
 }
 
-// MatchingEngine defines the core interface for order matching engines
+// GenericMatchingEngine defines the core interface for order matching engines
 // Enhanced with Go 1.24 generic patterns for better type safety
-type MatchingEngine[O any, T any] interface {
+type GenericMatchingEngine[O any, T any] interface {
 	// AddOrder adds an order to the matching engine
 	AddOrder(ctx context.Context, order O) (types.Result[T], error)
 	
@@ -118,7 +87,7 @@ type MatchingEngine[O any, T any] interface {
 }
 
 // OrderMatchingEngine is a specialized matching engine for orders and trades
-type OrderMatchingEngine = MatchingEngine[types.Order, types.Trade]
+type OrderMatchingEngine = GenericMatchingEngine[types.Order, types.Trade]
 
 // ServiceManager defines a generic service management interface
 type ServiceManager[T any] interface {

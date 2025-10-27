@@ -331,7 +331,7 @@ func (e *UnifiedMatchingEngine) publishOrderEvent(ctx context.Context, order *ty
 		UserID:    order.UserID,
 	}
 	
-	if err := e.publisher.PublishOrderEvent(ctx, event); err != nil {
+	if err := e.publisher.PublishOrderEvent(ctx, *event); err != nil {
 		e.logger.Error("Failed to publish order event", "error", err, "order_id", order.ID)
 	}
 }
@@ -343,7 +343,7 @@ func (e *UnifiedMatchingEngine) publishTradeEvent(ctx context.Context, trade *ty
 		Timestamp: time.Now(),
 	}
 	
-	if err := e.publisher.PublishTradeEvent(ctx, event); err != nil {
+	if err := e.publisher.PublishTradeEvent(ctx, *event); err != nil {
 		e.logger.Error("Failed to publish trade event", "error", err, "trade_id", trade.ID)
 	}
 }

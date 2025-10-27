@@ -210,7 +210,7 @@ func (h *OrderCommandHandler) HandleCreateOrder(ctx context.Context, cmd *Create
 		UserID:    order.UserID,
 	}
 
-	if err := h.eventBus.PublishOrderEvent(ctx, orderEvent); err != nil {
+	if err := h.eventBus.PublishOrderEvent(ctx, *orderEvent); err != nil {
 		h.logger.Error("Failed to publish order event", "error", err, "order_id", order.ID)
 	}
 
@@ -281,7 +281,7 @@ func (h *OrderCommandHandler) HandleCancelOrder(ctx context.Context, cmd *Cancel
 		UserID:    order.UserID,
 	}
 
-	if err := h.eventBus.PublishOrderEvent(ctx, orderEvent); err != nil {
+	if err := h.eventBus.PublishOrderEvent(ctx, *orderEvent); err != nil {
 		h.logger.Error("Failed to publish order event", "error", err, "order_id", order.ID)
 	}
 
@@ -336,7 +336,7 @@ func (h *OrderCommandHandler) HandleUpdateOrder(ctx context.Context, cmd *Update
 		UserID:    order.UserID,
 	}
 
-	if err := h.eventBus.PublishOrderEvent(ctx, orderEvent); err != nil {
+	if err := h.eventBus.PublishOrderEvent(ctx, *orderEvent); err != nil {
 		h.logger.Error("Failed to publish order event", "error", err, "order_id", order.ID)
 	}
 

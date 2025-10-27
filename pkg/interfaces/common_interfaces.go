@@ -3,6 +3,16 @@ package interfaces
 import (
 	"context"
 	"time"
+
+	"github.com/abdoElHodaky/tradSys/pkg/types"
+)
+
+// Event type constants
+const (
+	OrderEventCreated  = "order.created"
+	OrderEventCanceled = "order.canceled"
+	OrderEventFilled   = "order.filled"
+	TradeEventExecuted = "trade.executed"
 )
 
 // Repository defines a generic repository interface
@@ -311,4 +321,63 @@ type Notification interface {
 	GetBody() string
 	// GetMetadata returns the notification metadata
 	GetMetadata() map[string]interface{}
+}
+
+// MatchingEngine defines the interface for order matching engines
+type MatchingEngine interface {
+	// ProcessOrder processes a new order and returns resulting trades
+	ProcessOrder(ctx context.Context, order *types.Order) ([]*types.Trade, error)
+	
+	// CancelOrder cancels an existing order
+	CancelOrder(ctx context.Context, orderID string) error
+	
+	// GetOrderBook returns the current order book state
+	GetOrderBook(symbol string) (*types.OrderBook, error)
+	
+	// GetMetrics returns engine performance metrics
+	GetMetrics() *EngineMetrics
+	
+	// Start starts the matching engine
+	Start(ctx context.Context) error
+	
+	// Stop stops the matching engine gracefully
+	Stop(ctx context.Context) error
+}
+
+// EngineMetrics represents performance metrics for a matching engine
+type EngineMetrics struct {
+	OrdersProcessed  uint64        `json:"orders_processed"`
+	TradesExecuted   uint64        `json:"trades_executed"`
+	AverageLatency   time.Duration `json:"average_latency"`
+	ThroughputPerSec float64       `json:"throughput_per_sec"`
+	LastProcessedAt  time.Time     `json:"last_processed_at"`
+	ActiveOrders     int           `json:"active_orders"`
+	QueueDepth       int           `json:"queue_depth"`
+}
+
+// OrderEvent represents an order-related event
+type OrderEvent struct {
+	ID        string                 `json:"id"`
+	OrderID   string                 `json:"order_id"`
+	Symbol    string                 `json:"symbol"`
+	Type      string                 `json:"type"`
+	EventType string                 `json:"event_type"`
+	Timestamp time.Time              `json:"timestamp"`
+	Order     *types.Order           `json:"order"`
+	UserID    string                 `json:"user_id"`
+	Data      map[string]interface{} `json:"data"`
+}
+
+// TradeEvent represents a trade-related event
+type TradeEvent struct {
+	ID        string                 `json:"id"`
+	TradeID   string                 `json:"trade_id"`
+	Symbol    string                 `json:"symbol"`
+	Type      string                 `json:"type"`
+	EventType string                 `json:"event_type"`
+	Timestamp time.Time              `json:"timestamp"`
+	Trade     *types.Trade           `json:"trade"`
+	Price     float64                `json:"price"`
+	Quantity  float64                `json:"quantity"`
+	Data      map[string]interface{} `json:"data"`
 }
