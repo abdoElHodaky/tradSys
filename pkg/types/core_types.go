@@ -45,23 +45,28 @@ const (
 )
 
 // Order represents a trading order with all necessary fields
+// Enhanced with Go 1.24 JSON improvements and generic attributes
 type Order struct {
-	ID             string      `json:"id" db:"id"`
-	ClientOrderID  string      `json:"client_order_id" db:"client_order_id"`
-	UserID         string      `json:"user_id" db:"user_id"`
-	Symbol         string      `json:"symbol" db:"symbol"`
-	Side           OrderSide   `json:"side" db:"side"`
-	Type           OrderType   `json:"type" db:"type"`
-	Price          float64     `json:"price" db:"price"`
-	Quantity       float64     `json:"quantity" db:"quantity"`
-	FilledQuantity float64     `json:"filled_quantity" db:"filled_quantity"`
-	RemainingQuantity float64  `json:"remaining_quantity" db:"remaining_quantity"`
-	Status         OrderStatus `json:"status" db:"status"`
-	TimeInForce    TimeInForce `json:"time_in_force" db:"time_in_force"`
-	StopPrice      *float64    `json:"stop_price,omitempty" db:"stop_price"`
-	CreatedAt      time.Time   `json:"created_at" db:"created_at"`
-	UpdatedAt      time.Time   `json:"updated_at" db:"updated_at"`
-	ExpiresAt      *time.Time  `json:"expires_at,omitempty" db:"expires_at"`
+	ID                string           `json:"id" db:"id"`
+	ClientOrderID     string           `json:"client_order_id" db:"client_order_id"`
+	UserID            string           `json:"user_id" db:"user_id"`
+	Symbol            string           `json:"symbol" db:"symbol"`
+	Side              OrderSide        `json:"side" db:"side"`
+	Type              OrderType        `json:"type" db:"type"`
+	Price             float64          `json:"price" db:"price"`
+	Quantity          float64          `json:"quantity" db:"quantity"`
+	FilledQuantity    float64          `json:"filled_quantity" db:"filled_quantity"`
+	RemainingQuantity float64          `json:"remaining_quantity" db:"remaining_quantity"`
+	Status            OrderStatus      `json:"status" db:"status"`
+	TimeInForce       TimeInForce      `json:"time_in_force" db:"time_in_force"`
+	StopPrice         *float64         `json:"stop_price,omitempty" db:"stop_price"`
+	CreatedAt         time.Time        `json:"created_at" db:"created_at"`
+	UpdatedAt         time.Time        `json:"updated_at" db:"updated_at"`
+	ExpiresAt         *time.Time       `json:"expires_at,omitempty" db:"expires_at"`
+	// Enhanced with generic attributes for extensibility
+	Attributes        OrderAttributes  `json:"attributes,omitempty" db:"attributes"`
+	// Metadata for additional order information
+	Metadata          Metadata         `json:"metadata,omitempty" db:"metadata"`
 }
 
 // Trade represents a completed trade between two orders
