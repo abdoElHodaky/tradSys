@@ -46,6 +46,15 @@ var (
 	// ErrUnauthorized is returned when user is not authorized
 	ErrUnauthorized = errors.New("unauthorized")
 	
+	// ErrInvalidOrderStatus is returned when order status is invalid
+	ErrInvalidOrderStatus = errors.New("invalid order status")
+	
+	// ErrInvalidRequest is returned when request is invalid
+	ErrInvalidRequest = errors.New("invalid request")
+	
+	// ErrDuplicateClientOrderID is returned when client order ID is duplicate
+	ErrDuplicateClientOrderID = errors.New("duplicate client order ID")
+	
 	// ErrRateLimitExceeded is returned when rate limit is exceeded
 	ErrRateLimitExceeded = errors.New("rate limit exceeded")
 	
@@ -64,6 +73,27 @@ var (
 	ErrMissingQuantity = errors.New("missing quantity")
 	ErrMissingSide = errors.New("missing order side")
 	ErrMissingType = errors.New("missing order type")
+	ErrMissingOrderType = errors.New("missing order type")
+	ErrMissingPrice = errors.New("missing price for limit order")
+	ErrMissingStopPrice = errors.New("missing stop price for stop order")
+	ErrInvalidQuantity = errors.New("invalid quantity")
+	ErrInvalidOrderSide = errors.New("invalid order side")
+	ErrInvalidOrderType = errors.New("invalid order type")
+	ErrInvalidPricePrecision = errors.New("invalid price precision")
+	ErrInvalidQuantityPrecision = errors.New("invalid quantity precision")
+	ErrOrderSizeExceedsLimit = errors.New("order size exceeds limit")
+	ErrOrderSizeBelowMinimum = errors.New("order size below minimum")
+	ErrOrderValueExceedsLimit = errors.New("order value exceeds limit")
+	ErrPriceBelowMinimum = errors.New("price below minimum")
+	ErrPriceExceedsMaximum = errors.New("price exceeds maximum")
+	ErrExpirationTimeInPast = errors.New("expiration time is in the past")
+	ErrExpirationTimeTooFar = errors.New("expiration time is too far in the future")
+	ErrMarketClosed = errors.New("market is closed")
+	ErrOrderCannotBeUpdated = errors.New("order cannot be updated")
+	ErrOrderCannotBeCancelled = errors.New("order cannot be cancelled")
+	ErrUnauthorizedOrderAccess = errors.New("unauthorized order access")
+	ErrNoFieldsToUpdate = errors.New("no fields to update")
+	ErrQuantityBelowFilled = errors.New("quantity cannot be below filled quantity")
 	
 	// Market data errors
 	ErrMarketDataUnavailable = errors.New("market data unavailable")

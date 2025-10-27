@@ -2,7 +2,6 @@ package orders
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"time"
 
@@ -304,7 +303,7 @@ func (v *OrderValidator) isValidTimeInForce(tif TimeInForce) bool {
 		TimeInForceGTC,
 		TimeInForceIOC,
 		TimeInForceFOK,
-		TimeInForceDay,
+		TimeInForceDAY,
 	}
 
 	for _, validTif := range validTifs {
@@ -457,34 +456,4 @@ func (v *OrderValidator) isMarketOpen(symbol string) bool {
 	return hour >= 9 && hour < 16
 }
 
-// Error definitions for validation
-var (
-	ErrInvalidOrderRequest      = errors.New("invalid order request")
-	ErrMissingUserID           = errors.New("missing user ID")
-	ErrMissingSymbol           = errors.New("missing symbol")
-	ErrMissingSide             = errors.New("missing order side")
-	ErrMissingOrderType        = errors.New("missing order type")
-	ErrMissingPrice            = errors.New("missing price for limit order")
-	ErrMissingStopPrice        = errors.New("missing stop price for stop order")
-	ErrInvalidQuantity         = errors.New("invalid quantity")
-	ErrInvalidOrderSide        = errors.New("invalid order side")
-	ErrInvalidOrderType        = errors.New("invalid order type")
-	ErrInvalidTimeInForce      = errors.New("invalid time in force")
-	ErrInvalidSymbol           = errors.New("invalid symbol format")
-	ErrInvalidPricePrecision   = errors.New("invalid price precision")
-	ErrInvalidQuantityPrecision = errors.New("invalid quantity precision")
-	ErrOrderSizeExceedsLimit   = errors.New("order size exceeds limit")
-	ErrOrderSizeBelowMinimum   = errors.New("order size below minimum")
-	ErrOrderValueExceedsLimit  = errors.New("order value exceeds limit")
-	ErrPriceBelowMinimum       = errors.New("price below minimum")
-	ErrPriceExceedsMaximum     = errors.New("price exceeds maximum")
-	ErrExpirationTimeInPast    = errors.New("expiration time is in the past")
-	ErrExpirationTimeTooFar    = errors.New("expiration time is too far in the future")
-	ErrMarketClosed            = errors.New("market is closed")
-	ErrOrderCannotBeUpdated    = errors.New("order cannot be updated")
-	ErrOrderCannotBeCancelled  = errors.New("order cannot be cancelled")
-	ErrUnauthorizedOrderAccess = errors.New("unauthorized order access")
-	ErrNoFieldsToUpdate        = errors.New("no fields to update")
-	ErrQuantityBelowFilled     = errors.New("quantity cannot be below filled quantity")
-	ErrOrderNotFound           = errors.New("order not found")
-)
+// Note: Error definitions moved to errors.go to avoid duplication

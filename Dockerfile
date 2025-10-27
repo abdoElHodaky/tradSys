@@ -16,12 +16,18 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the unified trading system with optimizations for HFT
-RUN CGO_ENABLED=1 GOOS=linux go build \
-    -ldflags="-w -s -extldflags '-static'" \
+# Build the trading system applications
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags="-w -s" \
     -a -installsuffix cgo \
-    -o tradsys \
-    ./cmd/tradsys
+    -o tradingsys \
+    ./cmd/server
+
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags="-w -s" \
+    -a -installsuffix cgo \
+    -o migrate \
+    ./cmd/migrate
 
 # Production stage
 FROM alpine:3.18
@@ -41,11 +47,9 @@ RUN addgroup -g 1001 -S hft && \
 # Set working directory
 WORKDIR /app
 
-# Copy binary from builder stage
-COPY --from=builder /app/tradsys .
-
-# Copy configuration files
-COPY --from=builder /app/config ./config
+# Copy binaries from builder stage
+COPY --from=builder /app/tradingsys .
+COPY --from=builder /app/migrate .
 
 # Create necessary directories
 RUN mkdir -p /app/data /app/logs /app/reports && \
@@ -68,5 +72,5 @@ ENV TRADSYS_LOG_LEVEL=info
 ENV TRADSYS_METRICS_ENABLED=true
 ENV GIN_MODE=release
 
-# Run the unified trading system
-CMD ["./tradsys"]
+# Run the trading system
+CMD ["./tradingsys"]
