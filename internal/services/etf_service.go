@@ -30,23 +30,23 @@ func NewETFService(db *gorm.DB, assetService *AssetService, logger *zap.Logger) 
 
 // ETFMetrics represents comprehensive ETF performance and operational metrics
 type ETFMetrics struct {
-	Symbol              string    `json:"symbol"`
-	NAV                 float64   `json:"nav"`
-	MarketPrice         float64   `json:"market_price"`
-	Premium             float64   `json:"premium"`
-	TrackingError       float64   `json:"tracking_error"`
-	ExpenseRatio        float64   `json:"expense_ratio"`
-	AUM                 float64   `json:"aum"`
-	DividendYield       float64   `json:"dividend_yield"`
-	BenchmarkIndex      string    `json:"benchmark_index"`
-	CreationUnitSize    int       `json:"creation_unit_size"`
-	LastCreationDate    time.Time `json:"last_creation_date"`
-	LastRedemptionDate  time.Time `json:"last_redemption_date"`
-	Liquidity           LiquidityMetrics `json:"liquidity"`
-	Holdings            []ETFHolding     `json:"holdings"`
-	PerformanceMetrics  ETFPerformance   `json:"performance_metrics"`
-	RiskMetrics         ETFRiskMetrics   `json:"risk_metrics"`
-	TaxEfficiency       TaxEfficiencyMetrics `json:"tax_efficiency"`
+	Symbol             string               `json:"symbol"`
+	NAV                float64              `json:"nav"`
+	MarketPrice        float64              `json:"market_price"`
+	Premium            float64              `json:"premium"`
+	TrackingError      float64              `json:"tracking_error"`
+	ExpenseRatio       float64              `json:"expense_ratio"`
+	AUM                float64              `json:"aum"`
+	DividendYield      float64              `json:"dividend_yield"`
+	BenchmarkIndex     string               `json:"benchmark_index"`
+	CreationUnitSize   int                  `json:"creation_unit_size"`
+	LastCreationDate   time.Time            `json:"last_creation_date"`
+	LastRedemptionDate time.Time            `json:"last_redemption_date"`
+	Liquidity          LiquidityMetrics     `json:"liquidity"`
+	Holdings           []ETFHolding         `json:"holdings"`
+	PerformanceMetrics ETFPerformance       `json:"performance_metrics"`
+	RiskMetrics        ETFRiskMetrics       `json:"risk_metrics"`
+	TaxEfficiency      TaxEfficiencyMetrics `json:"tax_efficiency"`
 }
 
 // LiquidityMetrics represents ETF liquidity characteristics
@@ -72,53 +72,53 @@ type ETFHolding struct {
 
 // ETFPerformance represents ETF performance metrics
 type ETFPerformance struct {
-	OneDay      float64 `json:"one_day"`
-	OneWeek     float64 `json:"one_week"`
-	OneMonth    float64 `json:"one_month"`
-	ThreeMonth  float64 `json:"three_month"`
-	SixMonth    float64 `json:"six_month"`
-	YTD         float64 `json:"ytd"`
-	OneYear     float64 `json:"one_year"`
-	ThreeYear   float64 `json:"three_year"`
-	FiveYear    float64 `json:"five_year"`
-	TenYear     float64 `json:"ten_year"`
+	OneDay         float64 `json:"one_day"`
+	OneWeek        float64 `json:"one_week"`
+	OneMonth       float64 `json:"one_month"`
+	ThreeMonth     float64 `json:"three_month"`
+	SixMonth       float64 `json:"six_month"`
+	YTD            float64 `json:"ytd"`
+	OneYear        float64 `json:"one_year"`
+	ThreeYear      float64 `json:"three_year"`
+	FiveYear       float64 `json:"five_year"`
+	TenYear        float64 `json:"ten_year"`
 	SinceInception float64 `json:"since_inception"`
 }
 
 // ETFRiskMetrics represents ETF risk characteristics
 type ETFRiskMetrics struct {
-	Beta            float64 `json:"beta"`
-	Alpha           float64 `json:"alpha"`
-	Volatility      float64 `json:"volatility"`
-	SharpeRatio     float64 `json:"sharpe_ratio"`
-	MaxDrawdown     float64 `json:"max_drawdown"`
-	VaR95           float64 `json:"var_95"`
-	VaR99           float64 `json:"var_99"`
+	Beta               float64 `json:"beta"`
+	Alpha              float64 `json:"alpha"`
+	Volatility         float64 `json:"volatility"`
+	SharpeRatio        float64 `json:"sharpe_ratio"`
+	MaxDrawdown        float64 `json:"max_drawdown"`
+	VaR95              float64 `json:"var_95"`
+	VaR99              float64 `json:"var_99"`
 	CorrelationToIndex float64 `json:"correlation_to_index"`
 }
 
 // TaxEfficiencyMetrics represents ETF tax characteristics
 type TaxEfficiencyMetrics struct {
-	TaxEfficiencyRatio    float64   `json:"tax_efficiency_ratio"`
-	CapitalGainsDistribution float64 `json:"capital_gains_distribution"`
-	DividendDistribution  float64   `json:"dividend_distribution"`
-	LastDistributionDate  time.Time `json:"last_distribution_date"`
-	TurnoverRatio         float64   `json:"turnover_ratio"`
+	TaxEfficiencyRatio       float64   `json:"tax_efficiency_ratio"`
+	CapitalGainsDistribution float64   `json:"capital_gains_distribution"`
+	DividendDistribution     float64   `json:"dividend_distribution"`
+	LastDistributionDate     time.Time `json:"last_distribution_date"`
+	TurnoverRatio            float64   `json:"turnover_ratio"`
 }
 
 // CreationRedemptionOperation represents ETF creation/redemption activity
 type CreationRedemptionOperation struct {
-	ID              string    `json:"id"`
-	Symbol          string    `json:"symbol"`
-	OperationType   string    `json:"operation_type"` // "creation" or "redemption"
-	Units           int       `json:"units"`
-	SharesPerUnit   int       `json:"shares_per_unit"`
-	TotalShares     int       `json:"total_shares"`
-	NAVPerShare     float64   `json:"nav_per_share"`
-	TotalValue      float64   `json:"total_value"`
-	AuthorizedParticipant string `json:"authorized_participant"`
-	Timestamp       time.Time `json:"timestamp"`
-	Status          string    `json:"status"`
+	ID                    string    `json:"id"`
+	Symbol                string    `json:"symbol"`
+	OperationType         string    `json:"operation_type"` // "creation" or "redemption"
+	Units                 int       `json:"units"`
+	SharesPerUnit         int       `json:"shares_per_unit"`
+	TotalShares           int       `json:"total_shares"`
+	NAVPerShare           float64   `json:"nav_per_share"`
+	TotalValue            float64   `json:"total_value"`
+	AuthorizedParticipant string    `json:"authorized_participant"`
+	Timestamp             time.Time `json:"timestamp"`
+	Status                string    `json:"status"`
 }
 
 // CreateETF creates a new ETF with initial metadata
@@ -127,9 +127,9 @@ func (s *ETFService) CreateETF(symbol, benchmarkIndex string, creationUnitSize i
 
 	// Create asset metadata
 	assetAttributes := models.AssetAttributes{
-		"benchmark_index":     benchmarkIndex,
-		"creation_unit_size":  creationUnitSize,
-		"expense_ratio":       expenseRatio,
+		"benchmark_index":    benchmarkIndex,
+		"creation_unit_size": creationUnitSize,
+		"expense_ratio":      expenseRatio,
 		"etf_type":           "equity", // default
 		"inception_date":     time.Now(),
 		"fund_family":        "",
@@ -151,13 +151,13 @@ func (s *ETFService) CreateETF(symbol, benchmarkIndex string, creationUnitSize i
 
 	// Create default configuration
 	config := &models.AssetConfiguration{
-		AssetType:       types.AssetTypeETF,
-		TradingEnabled:  true,
-		MinOrderSize:    1.0,
-		MaxOrderSize:    1000000.0,
-		RiskMultiplier:  1.0,
-		SettlementDays:  2,
-		TradingHours:    "09:30-16:00",
+		AssetType:      types.AssetTypeETF,
+		TradingEnabled: true,
+		MinOrderSize:   1.0,
+		MaxOrderSize:   1000000.0,
+		RiskMultiplier: 1.0,
+		SettlementDays: 2,
+		TradingHours:   "09:30-16:00",
 	}
 
 	if err := s.db.Create(config).Error; err != nil {
@@ -279,9 +279,9 @@ func (s *ETFService) GetTrackingError(symbol string, days int) (float64, error) 
 
 	// Calculate tracking error
 	trackingError := s.calculateTrackingError(etfPrices, benchmarkPrices)
-	
-	s.logger.Debug("Tracking error calculated", 
-		zap.String("symbol", symbol), 
+
+	s.logger.Debug("Tracking error calculated",
+		zap.String("symbol", symbol),
 		zap.Float64("tracking_error", trackingError))
 
 	return trackingError, nil
@@ -289,7 +289,7 @@ func (s *ETFService) GetTrackingError(symbol string, days int) (float64, error) 
 
 // ProcessCreationRedemption handles ETF creation/redemption operations
 func (s *ETFService) ProcessCreationRedemption(operation *CreationRedemptionOperation) error {
-	s.logger.Info("Processing creation/redemption operation", 
+	s.logger.Info("Processing creation/redemption operation",
 		zap.String("symbol", operation.Symbol),
 		zap.String("type", operation.OperationType),
 		zap.Int("units", operation.Units))
@@ -309,7 +309,7 @@ func (s *ETFService) ProcessCreationRedemption(operation *CreationRedemptionOper
 
 	// Update shares outstanding
 	currentShares := s.getInt64Attribute(attributes, "shares_outstanding")
-	
+
 	if operation.OperationType == "creation" {
 		attributes["shares_outstanding"] = currentShares + int64(operation.TotalShares)
 		attributes["last_creation_date"] = operation.Timestamp
@@ -360,8 +360,8 @@ func (s *ETFService) GetETFHoldings(symbol string) ([]ETFHolding, error) {
 	// Generate sample holdings based on ETF characteristics
 	holdings := s.generateSampleHoldings(symbol, attributes)
 
-	s.logger.Debug("Retrieved ETF holdings", 
-		zap.String("symbol", symbol), 
+	s.logger.Debug("Retrieved ETF holdings",
+		zap.String("symbol", symbol),
 		zap.Int("holdings_count", len(holdings)))
 
 	return holdings, nil
@@ -369,7 +369,7 @@ func (s *ETFService) GetETFHoldings(symbol string) ([]ETFHolding, error) {
 
 // ValidateETFOrder validates an ETF order against ETF-specific rules
 func (s *ETFService) ValidateETFOrder(symbol string, quantity float64, price float64) error {
-	s.logger.Debug("Validating ETF order", 
+	s.logger.Debug("Validating ETF order",
 		zap.String("symbol", symbol),
 		zap.Float64("quantity", quantity),
 		zap.Float64("price", price))
@@ -446,7 +446,7 @@ func (s *ETFService) calculateLiquidityMetrics(metrics *ETFMetrics, symbol strin
 		AverageVolume:       1000000,
 		MedianVolume:        800000,
 		VolumeWeightedPrice: metrics.MarketPrice,
-		LiquidityScore:      8.5, // Out of 10
+		LiquidityScore:      8.5,  // Out of 10
 		MarketImpact:        0.05, // 5 basis points
 	}
 }
@@ -459,11 +459,11 @@ func (s *ETFService) calculatePerformanceMetrics(metrics *ETFMetrics, symbol str
 		OneMonth:       2.34,
 		ThreeMonth:     5.67,
 		SixMonth:       8.91,
-		YTD:           12.45,
-		OneYear:       15.67,
-		ThreeYear:     8.23,
-		FiveYear:      9.87,
-		TenYear:       11.23,
+		YTD:            12.45,
+		OneYear:        15.67,
+		ThreeYear:      8.23,
+		FiveYear:       9.87,
+		TenYear:        11.23,
 		SinceInception: 9.45,
 	}
 }
@@ -476,8 +476,8 @@ func (s *ETFService) calculateRiskMetrics(metrics *ETFMetrics, symbol string) {
 		Volatility:         16.5,
 		SharpeRatio:        0.95,
 		MaxDrawdown:        -18.7,
-		VaR95:             -2.1,
-		VaR99:             -3.8,
+		VaR95:              -2.1,
+		VaR99:              -3.8,
 		CorrelationToIndex: 0.98,
 	}
 }
@@ -489,7 +489,7 @@ func (s *ETFService) calculateTaxEfficiency(metrics *ETFMetrics, symbol string) 
 		CapitalGainsDistribution: 0.15,
 		DividendDistribution:     2.34,
 		LastDistributionDate:     time.Now().AddDate(0, -3, 0),
-		TurnoverRatio:           25.5,
+		TurnoverRatio:            25.5,
 	}
 }
 

@@ -167,54 +167,54 @@ func (os OrderStatus) String() string {
 
 // Asset represents a tradeable asset
 type Asset struct {
-	ID           string                 `json:"id"`
-	Symbol       string                 `json:"symbol"`
-	Name         string                 `json:"name"`
-	AssetType    AssetType              `json:"asset_type"`
-	Exchange     string                 `json:"exchange"`
-	Region       string                 `json:"region"`
-	Currency     string                 `json:"currency"`
-	ISIN         string                 `json:"isin,omitempty"`
-	Sector       string                 `json:"sector,omitempty"`
-	Industry     string                 `json:"industry,omitempty"`
-	MarketCap    float64                `json:"market_cap,omitempty"`
-	IsActive     bool                   `json:"is_active"`
-	Metadata     map[string]interface{} `json:"metadata,omitempty"`
-	CreatedAt    time.Time              `json:"created_at"`
-	UpdatedAt    time.Time              `json:"updated_at"`
+	ID        string                 `json:"id"`
+	Symbol    string                 `json:"symbol"`
+	Name      string                 `json:"name"`
+	AssetType AssetType              `json:"asset_type"`
+	Exchange  string                 `json:"exchange"`
+	Region    string                 `json:"region"`
+	Currency  string                 `json:"currency"`
+	ISIN      string                 `json:"isin,omitempty"`
+	Sector    string                 `json:"sector,omitempty"`
+	Industry  string                 `json:"industry,omitempty"`
+	MarketCap float64                `json:"market_cap,omitempty"`
+	IsActive  bool                   `json:"is_active"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt time.Time              `json:"created_at"`
+	UpdatedAt time.Time              `json:"updated_at"`
 }
 
 // Order represents a trading order
 type Order struct {
-	ID          string                 `json:"id"`
-	UserID      string                 `json:"user_id"`
-	Symbol      string                 `json:"symbol"`
-	AssetType   AssetType              `json:"asset_type"`
-	Exchange    string                 `json:"exchange"`
-	Type        OrderType              `json:"type"`
-	Side        OrderSide              `json:"side"`
-	Quantity    float64                `json:"quantity"`
-	Price       float64                `json:"price,omitempty"`
-	StopPrice   float64                `json:"stop_price,omitempty"`
-	Status      OrderStatus            `json:"status"`
-	FilledQty   float64                `json:"filled_qty"`
-	AvgPrice    float64                `json:"avg_price"`
-	Commission  float64                `json:"commission"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
-	CreatedAt   time.Time              `json:"created_at"`
-	UpdatedAt   time.Time              `json:"updated_at"`
-	ExpiresAt   *time.Time             `json:"expires_at,omitempty"`
+	ID         string                 `json:"id"`
+	UserID     string                 `json:"user_id"`
+	Symbol     string                 `json:"symbol"`
+	AssetType  AssetType              `json:"asset_type"`
+	Exchange   string                 `json:"exchange"`
+	Type       OrderType              `json:"type"`
+	Side       OrderSide              `json:"side"`
+	Quantity   float64                `json:"quantity"`
+	Price      float64                `json:"price,omitempty"`
+	StopPrice  float64                `json:"stop_price,omitempty"`
+	Status     OrderStatus            `json:"status"`
+	FilledQty  float64                `json:"filled_qty"`
+	AvgPrice   float64                `json:"avg_price"`
+	Commission float64                `json:"commission"`
+	Metadata   map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt  time.Time              `json:"created_at"`
+	UpdatedAt  time.Time              `json:"updated_at"`
+	ExpiresAt  *time.Time             `json:"expires_at,omitempty"`
 }
 
 // OrderResponse represents the response to an order submission
 type OrderResponse struct {
-	OrderID     string      `json:"order_id"`
-	Status      OrderStatus `json:"status"`
-	Message     string      `json:"message,omitempty"`
-	FilledQty   float64     `json:"filled_qty"`
-	AvgPrice    float64     `json:"avg_price"`
-	Commission  float64     `json:"commission"`
-	Timestamp   time.Time   `json:"timestamp"`
+	OrderID    string      `json:"order_id"`
+	Status     OrderStatus `json:"status"`
+	Message    string      `json:"message,omitempty"`
+	FilledQty  float64     `json:"filled_qty"`
+	AvgPrice   float64     `json:"avg_price"`
+	Commission float64     `json:"commission"`
+	Timestamp  time.Time   `json:"timestamp"`
 }
 
 // MarketData represents market data for an asset
@@ -268,22 +268,22 @@ type Position struct {
 
 // Transaction represents a financial transaction
 type Transaction struct {
-	ID          string                 `json:"id"`
-	UserID      string                 `json:"user_id"`
-	OrderID     string                 `json:"order_id,omitempty"`
-	Type        string                 `json:"type"`
-	Symbol      string                 `json:"symbol,omitempty"`
-	AssetType   AssetType              `json:"asset_type,omitempty"`
-	Exchange    string                 `json:"exchange,omitempty"`
-	Quantity    float64                `json:"quantity,omitempty"`
-	Price       float64                `json:"price,omitempty"`
-	Amount      float64                `json:"amount"`
-	Currency    string                 `json:"currency"`
-	Commission  float64                `json:"commission"`
-	Status      string                 `json:"status"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
-	CreatedAt   time.Time              `json:"created_at"`
-	SettledAt   *time.Time             `json:"settled_at,omitempty"`
+	ID         string                 `json:"id"`
+	UserID     string                 `json:"user_id"`
+	OrderID    string                 `json:"order_id,omitempty"`
+	Type       string                 `json:"type"`
+	Symbol     string                 `json:"symbol,omitempty"`
+	AssetType  AssetType              `json:"asset_type,omitempty"`
+	Exchange   string                 `json:"exchange,omitempty"`
+	Quantity   float64                `json:"quantity,omitempty"`
+	Price      float64                `json:"price,omitempty"`
+	Amount     float64                `json:"amount"`
+	Currency   string                 `json:"currency"`
+	Commission float64                `json:"commission"`
+	Status     string                 `json:"status"`
+	Metadata   map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt  time.Time              `json:"created_at"`
+	SettledAt  *time.Time             `json:"settled_at,omitempty"`
 }
 
 // TradingSchedule represents trading schedule information
@@ -444,16 +444,16 @@ type TLSConfig struct {
 
 // GRPCConfig represents gRPC server configuration
 type GRPCConfig struct {
-	Host               string        `yaml:"host" json:"host"`
-	Port               int           `yaml:"port" json:"port"`
-	MaxRecvMsgSize     int           `yaml:"max_recv_msg_size" json:"max_recv_msg_size"`
-	MaxSendMsgSize     int           `yaml:"max_send_msg_size" json:"max_send_msg_size"`
-	ConnectionTimeout  time.Duration `yaml:"connection_timeout" json:"connection_timeout"`
-	MaxConnectionIdle  time.Duration `yaml:"max_connection_idle" json:"max_connection_idle"`
-	MaxConnectionAge   time.Duration `yaml:"max_connection_age" json:"max_connection_age"`
-	KeepAliveTime      time.Duration `yaml:"keep_alive_time" json:"keep_alive_time"`
-	KeepAliveTimeout   time.Duration `yaml:"keep_alive_timeout" json:"keep_alive_timeout"`
-	TLS                *TLSConfig    `yaml:"tls" json:"tls"`
+	Host              string        `yaml:"host" json:"host"`
+	Port              int           `yaml:"port" json:"port"`
+	MaxRecvMsgSize    int           `yaml:"max_recv_msg_size" json:"max_recv_msg_size"`
+	MaxSendMsgSize    int           `yaml:"max_send_msg_size" json:"max_send_msg_size"`
+	ConnectionTimeout time.Duration `yaml:"connection_timeout" json:"connection_timeout"`
+	MaxConnectionIdle time.Duration `yaml:"max_connection_idle" json:"max_connection_idle"`
+	MaxConnectionAge  time.Duration `yaml:"max_connection_age" json:"max_connection_age"`
+	KeepAliveTime     time.Duration `yaml:"keep_alive_time" json:"keep_alive_time"`
+	KeepAliveTimeout  time.Duration `yaml:"keep_alive_timeout" json:"keep_alive_timeout"`
+	TLS               *TLSConfig    `yaml:"tls" json:"tls"`
 }
 
 // WebSocketConfig represents WebSocket configuration
@@ -499,7 +499,7 @@ func IsIslamicAsset(assetType AssetType) bool {
 		AssetTypeIslamicFund,
 		AssetTypeIslamicREIT,
 	}
-	
+
 	for _, islamic := range islamicAssets {
 		if islamic == assetType {
 			return true

@@ -40,44 +40,44 @@ const (
 type PropertySector string
 
 const (
-	PropertySectorResidential  PropertySector = "residential"
-	PropertySectorCommercial   PropertySector = "commercial"
-	PropertySectorIndustrial   PropertySector = "industrial"
-	PropertySectorRetail       PropertySector = "retail"
-	PropertySectorOffice       PropertySector = "office"
-	PropertySectorHealthcare   PropertySector = "healthcare"
-	PropertySectorHospitality  PropertySector = "hospitality"
-	PropertySectorDataCenter   PropertySector = "data_center"
-	PropertySectorSelfStorage  PropertySector = "self_storage"
-	PropertySectorTimberland   PropertySector = "timberland"
+	PropertySectorResidential PropertySector = "residential"
+	PropertySectorCommercial  PropertySector = "commercial"
+	PropertySectorIndustrial  PropertySector = "industrial"
+	PropertySectorRetail      PropertySector = "retail"
+	PropertySectorOffice      PropertySector = "office"
+	PropertySectorHealthcare  PropertySector = "healthcare"
+	PropertySectorHospitality PropertySector = "hospitality"
+	PropertySectorDataCenter  PropertySector = "data_center"
+	PropertySectorSelfStorage PropertySector = "self_storage"
+	PropertySectorTimberland  PropertySector = "timberland"
 )
 
 // REITMetrics represents key REIT performance metrics
 type REITMetrics struct {
-	Symbol              string    `json:"symbol"`
-	FFO                 float64   `json:"ffo"`                   // Funds From Operations
-	AFFO                float64   `json:"affo"`                  // Adjusted Funds From Operations
-	NAVPerShare         float64   `json:"nav_per_share"`         // Net Asset Value per share
-	DividendYield       float64   `json:"dividend_yield"`        // Current dividend yield
-	PayoutRatio         float64   `json:"payout_ratio"`          // Dividend payout ratio
-	DebtToEquity        float64   `json:"debt_to_equity"`        // Debt-to-equity ratio
-	OccupancyRate       float64   `json:"occupancy_rate"`        // Property occupancy rate
-	PriceToFFO          float64   `json:"price_to_ffo"`          // Price-to-FFO ratio
-	PriceToNAV          float64   `json:"price_to_nav"`          // Price-to-NAV ratio
-	TotalReturn         float64   `json:"total_return"`          // Total return including dividends
-	CalculationDate     time.Time `json:"calculation_date"`
+	Symbol          string    `json:"symbol"`
+	FFO             float64   `json:"ffo"`            // Funds From Operations
+	AFFO            float64   `json:"affo"`           // Adjusted Funds From Operations
+	NAVPerShare     float64   `json:"nav_per_share"`  // Net Asset Value per share
+	DividendYield   float64   `json:"dividend_yield"` // Current dividend yield
+	PayoutRatio     float64   `json:"payout_ratio"`   // Dividend payout ratio
+	DebtToEquity    float64   `json:"debt_to_equity"` // Debt-to-equity ratio
+	OccupancyRate   float64   `json:"occupancy_rate"` // Property occupancy rate
+	PriceToFFO      float64   `json:"price_to_ffo"`   // Price-to-FFO ratio
+	PriceToNAV      float64   `json:"price_to_nav"`   // Price-to-NAV ratio
+	TotalReturn     float64   `json:"total_return"`   // Total return including dividends
+	CalculationDate time.Time `json:"calculation_date"`
 }
 
 // REITPortfolioInfo represents REIT portfolio composition
 type REITPortfolioInfo struct {
-	Symbol              string                    `json:"symbol"`
-	TotalProperties     int                       `json:"total_properties"`
-	TotalSquareFeet     float64                   `json:"total_square_feet"`
-	GeographicDiversity map[string]float64        `json:"geographic_diversity"` // State/Region -> % allocation
+	Symbol              string                     `json:"symbol"`
+	TotalProperties     int                        `json:"total_properties"`
+	TotalSquareFeet     float64                    `json:"total_square_feet"`
+	GeographicDiversity map[string]float64         `json:"geographic_diversity"` // State/Region -> % allocation
 	PropertyTypes       map[PropertySector]float64 `json:"property_types"`       // Sector -> % allocation
-	TopTenants          []TenantInfo              `json:"top_tenants"`
-	AverageLeaseLength  float64                   `json:"average_lease_length"` // in years
-	UpdatedAt           time.Time                 `json:"updated_at"`
+	TopTenants          []TenantInfo               `json:"top_tenants"`
+	AverageLeaseLength  float64                    `json:"average_lease_length"` // in years
+	UpdatedAt           time.Time                  `json:"updated_at"`
 }
 
 // TenantInfo represents information about major tenants
@@ -242,11 +242,11 @@ func (s *REITService) CalculateDividendYield(ctx context.Context, symbol string)
 // GetREITsByPropertySector retrieves REITs by property sector
 func (s *REITService) GetREITsByPropertySector(ctx context.Context, sector PropertySector) ([]*models.AssetMetadata, error) {
 	var reits []*models.AssetMetadata
-	
+
 	err := s.db.WithContext(ctx).
 		Where("asset_type = ? AND sector = ? AND is_active = ?", types.AssetTypeREIT, string(sector), true).
 		Find(&reits).Error
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get REITs by sector: %w", err)
 	}
@@ -276,7 +276,7 @@ func (s *REITService) ValidateREITOrder(ctx context.Context, symbol string, quan
 	if minInvestment, ok := assetMetadata.Attributes.GetFloatAttribute("min_investment"); ok {
 		orderValue := quantity * price
 		if orderValue < minInvestment {
-			return fmt.Errorf("order value %.2f is below minimum investment %.2f for REIT %s", 
+			return fmt.Errorf("order value %.2f is below minimum investment %.2f for REIT %s",
 				orderValue, minInvestment, symbol)
 		}
 	}
@@ -288,15 +288,15 @@ func (s *REITService) ValidateREITOrder(ctx context.Context, symbol string, quan
 func (s *REITService) GetREITDividendSchedule(ctx context.Context, symbol string) ([]models.AssetDividend, error) {
 	// Get upcoming dividends (next 12 months)
 	var dividends []models.AssetDividend
-	
+
 	oneYearFromNow := time.Now().AddDate(1, 0, 0)
-	
+
 	err := s.db.WithContext(ctx).
-		Where("symbol = ? AND asset_type = ? AND ex_date > ? AND ex_date <= ?", 
+		Where("symbol = ? AND asset_type = ? AND ex_date > ? AND ex_date <= ?",
 			symbol, types.AssetTypeREIT, time.Now(), oneYearFromNow).
 		Order("ex_date ASC").
 		Find(&dividends).Error
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get REIT dividend schedule: %w", err)
 	}
@@ -326,19 +326,19 @@ func (s *REITService) AnalyzeREITPerformance(ctx context.Context, symbol string)
 	}
 
 	analysis := map[string]interface{}{
-		"symbol":           symbol,
-		"current_price":    pricing.Price,
-		"nav_per_share":    metrics.NAVPerShare,
-		"ffo":              metrics.FFO,
-		"affo":             metrics.AFFO,
-		"dividend_yield":   dividendYield,
-		"payout_ratio":     metrics.PayoutRatio,
-		"debt_to_equity":   metrics.DebtToEquity,
-		"occupancy_rate":   metrics.OccupancyRate,
-		"price_to_ffo":     metrics.PriceToFFO,
-		"price_to_nav":     metrics.PriceToNAV,
-		"total_return":     metrics.TotalReturn,
-		"analysis_date":    time.Now(),
+		"symbol":         symbol,
+		"current_price":  pricing.Price,
+		"nav_per_share":  metrics.NAVPerShare,
+		"ffo":            metrics.FFO,
+		"affo":           metrics.AFFO,
+		"dividend_yield": dividendYield,
+		"payout_ratio":   metrics.PayoutRatio,
+		"debt_to_equity": metrics.DebtToEquity,
+		"occupancy_rate": metrics.OccupancyRate,
+		"price_to_ffo":   metrics.PriceToFFO,
+		"price_to_nav":   metrics.PriceToNAV,
+		"total_return":   metrics.TotalReturn,
+		"analysis_date":  time.Now(),
 	}
 
 	// Add performance ratings

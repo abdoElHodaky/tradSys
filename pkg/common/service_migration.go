@@ -2,7 +2,6 @@ package common
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"time"
 
@@ -34,27 +33,27 @@ type MigrationTemplate struct {
 // MigrateService migrates an existing service to BaseService pattern
 func (sm *ServiceMigrator) MigrateService(template *MigrationTemplate) ServiceInterface {
 	baseService := NewBaseService(template.ServiceName, template.ServiceVersion, sm.logger)
-	
+
 	// Set lifecycle hooks
 	if template.StartFunc != nil {
 		baseService.SetStartHook(template.StartFunc)
 	}
-	
+
 	if template.StopFunc != nil {
 		baseService.SetStopHook(template.StopFunc)
 	}
-	
+
 	// Create migrated service wrapper
 	migratedService := &MigratedService{
 		BaseService: baseService,
 		healthFunc:  template.HealthFunc,
 	}
-	
+
 	sm.logger.Info("Service migrated to BaseService pattern",
 		zap.String("service", template.ServiceName),
 		zap.String("version", template.ServiceVersion),
 	)
-	
+
 	return migratedService
 }
 
@@ -211,22 +210,22 @@ func (sm *ServiceMigrator) AnalyzeService(service interface{}) *ServiceAnalysis 
 		Methods:     make([]string, 0),
 		Complexity:  MigrationComplexitySimple,
 	}
-	
+
 	// Use reflection to analyze service structure
 	serviceValue := reflect.ValueOf(service)
 	serviceType := reflect.TypeOf(service)
-	
+
 	// Handle pointer types
 	if serviceType.Kind() == reflect.Ptr {
 		serviceType = serviceType.Elem()
 		serviceValue = serviceValue.Elem()
 	}
-	
+
 	// Analyze methods
 	for i := 0; i < serviceType.NumMethod(); i++ {
 		method := serviceType.Method(i)
 		analysis.Methods = append(analysis.Methods, method.Name)
-		
+
 		// Check for standard service methods
 		switch method.Name {
 		case "Start":
@@ -241,25 +240,25 @@ func (sm *ServiceMigrator) AnalyzeService(service interface{}) *ServiceAnalysis 
 			analysis.HasVersion = true
 		}
 	}
-	
+
 	// Analyze fields
 	if serviceType.Kind() == reflect.Struct {
 		for i := 0; i < serviceType.NumField(); i++ {
 			field := serviceType.Field(i)
 			analysis.Fields = append(analysis.Fields, field.Name)
-			
+
 			// Check for complex state
 			if field.Type.Kind() == reflect.Chan ||
-			   field.Type.Kind() == reflect.Map ||
-			   (field.Type.Kind() == reflect.Slice && field.Type.Elem().Kind() == reflect.Struct) {
+				field.Type.Kind() == reflect.Map ||
+				(field.Type.Kind() == reflect.Slice && field.Type.Elem().Kind() == reflect.Struct) {
 				analysis.Complexity = MigrationComplexityModerate
 			}
 		}
 	}
-	
+
 	// Determine migration strategy
 	analysis.MigrationStrategy = sm.determineMigrationStrategy(analysis)
-	
+
 	return analysis
 }
 
@@ -309,12 +308,12 @@ func (sm *ServiceMigrator) determineMigrationStrategy(analysis *ServiceAnalysis)
 	if analysis.HasStart && analysis.HasStop && analysis.HasHealth && analysis.HasName && analysis.HasVersion {
 		return MigrationStrategyDirect
 	}
-	
+
 	// If service has some methods but not all, wrapper approach
 	if analysis.HasStart || analysis.HasStop {
 		return MigrationStrategyWrapper
 	}
-	
+
 	// Based on complexity
 	switch analysis.Complexity {
 	case MigrationComplexitySimple:
@@ -331,19 +330,19 @@ func (sm *ServiceMigrator) determineMigrationStrategy(analysis *ServiceAnalysis)
 // GenerateMigrationPlan generates a migration plan for a service
 func (sm *ServiceMigrator) GenerateMigrationPlan(analysis *ServiceAnalysis) *MigrationPlan {
 	plan := &MigrationPlan{
-		ServiceType: analysis.ServiceType,
-		Strategy:    analysis.MigrationStrategy,
-		Steps:       make([]MigrationStep, 0),
+		ServiceType:     analysis.ServiceType,
+		Strategy:        analysis.MigrationStrategy,
+		Steps:           make([]MigrationStep, 0),
 		EstimatedEffort: sm.estimateEffort(analysis),
 	}
-	
+
 	switch analysis.MigrationStrategy {
 	case MigrationStrategyDirect:
 		plan.Steps = append(plan.Steps, MigrationStep{
 			Description: "Replace service interface with ServiceInterface",
 			Effort:      "Low",
 		})
-		
+
 	case MigrationStrategyWrapper:
 		plan.Steps = append(plan.Steps,
 			MigrationStep{
@@ -359,7 +358,7 @@ func (sm *ServiceMigrator) GenerateMigrationPlan(analysis *ServiceAnalysis) *Mig
 				Effort:      "Low",
 			},
 		)
-		
+
 	case MigrationStrategyRefactor:
 		plan.Steps = append(plan.Steps,
 			MigrationStep{
@@ -379,7 +378,7 @@ func (sm *ServiceMigrator) GenerateMigrationPlan(analysis *ServiceAnalysis) *Mig
 				Effort:      "Medium",
 			},
 		)
-		
+
 	case MigrationStrategyRewrite:
 		plan.Steps = append(plan.Steps,
 			MigrationStep{
@@ -400,7 +399,7 @@ func (sm *ServiceMigrator) GenerateMigrationPlan(analysis *ServiceAnalysis) *Mig
 			},
 		)
 	}
-	
+
 	return plan
 }
 
@@ -439,29 +438,29 @@ func (sm *ServiceMigrator) BatchMigrationPlan(services []interface{}) *BatchMigr
 		Plans:         make([]*MigrationPlan, 0, len(services)),
 		CreatedAt:     time.Now(),
 	}
-	
+
 	// Analyze each service
 	for _, service := range services {
 		analysis := sm.AnalyzeService(service)
 		plan := sm.GenerateMigrationPlan(analysis)
 		batchPlan.Plans = append(batchPlan.Plans, plan)
 	}
-	
+
 	// Calculate totals
 	batchPlan.calculateTotals()
-	
+
 	return batchPlan
 }
 
 // BatchMigrationPlan contains plans for migrating multiple services
 type BatchMigrationPlan struct {
-	TotalServices   int
-	Plans           []*MigrationPlan
-	SimpleCount     int
-	ModerateCount   int
-	ComplexCount    int
-	EstimatedDays   int
-	CreatedAt       time.Time
+	TotalServices int
+	Plans         []*MigrationPlan
+	SimpleCount   int
+	ModerateCount int
+	ComplexCount  int
+	EstimatedDays int
+	CreatedAt     time.Time
 }
 
 // calculateTotals calculates totals for the batch migration plan

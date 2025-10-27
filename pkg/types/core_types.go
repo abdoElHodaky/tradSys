@@ -16,9 +16,9 @@ const (
 type OrderType string
 
 const (
-	OrderTypeMarket OrderType = "market"
-	OrderTypeLimit  OrderType = "limit"
-	OrderTypeStop   OrderType = "stop"
+	OrderTypeMarket    OrderType = "market"
+	OrderTypeLimit     OrderType = "limit"
+	OrderTypeStop      OrderType = "stop"
 	OrderTypeStopLimit OrderType = "stop_limit"
 )
 
@@ -26,12 +26,12 @@ const (
 type OrderStatus string
 
 const (
-	OrderStatusPending   OrderStatus = "pending"
+	OrderStatusPending         OrderStatus = "pending"
 	OrderStatusPartiallyFilled OrderStatus = "partially_filled"
-	OrderStatusFilled    OrderStatus = "filled"
-	OrderStatusCanceled  OrderStatus = "canceled"
-	OrderStatusRejected  OrderStatus = "rejected"
-	OrderStatusExpired   OrderStatus = "expired"
+	OrderStatusFilled          OrderStatus = "filled"
+	OrderStatusCanceled        OrderStatus = "canceled"
+	OrderStatusRejected        OrderStatus = "rejected"
+	OrderStatusExpired         OrderStatus = "expired"
 )
 
 // TimeInForce represents how long an order remains active
@@ -47,26 +47,26 @@ const (
 // Order represents a trading order with all necessary fields
 // Enhanced with Go 1.24 JSON improvements and generic attributes
 type Order struct {
-	ID                string           `json:"id" db:"id"`
-	ClientOrderID     string           `json:"client_order_id" db:"client_order_id"`
-	UserID            string           `json:"user_id" db:"user_id"`
-	Symbol            string           `json:"symbol" db:"symbol"`
-	Side              OrderSide        `json:"side" db:"side"`
-	Type              OrderType        `json:"type" db:"type"`
-	Price             float64          `json:"price" db:"price"`
-	Quantity          float64          `json:"quantity" db:"quantity"`
-	FilledQuantity    float64          `json:"filled_quantity" db:"filled_quantity"`
-	RemainingQuantity float64          `json:"remaining_quantity" db:"remaining_quantity"`
-	Status            OrderStatus      `json:"status" db:"status"`
-	TimeInForce       TimeInForce      `json:"time_in_force" db:"time_in_force"`
-	StopPrice         *float64         `json:"stop_price,omitempty" db:"stop_price"`
-	CreatedAt         time.Time        `json:"created_at" db:"created_at"`
-	UpdatedAt         time.Time        `json:"updated_at" db:"updated_at"`
-	ExpiresAt         *time.Time       `json:"expires_at,omitempty" db:"expires_at"`
+	ID                string      `json:"id" db:"id"`
+	ClientOrderID     string      `json:"client_order_id" db:"client_order_id"`
+	UserID            string      `json:"user_id" db:"user_id"`
+	Symbol            string      `json:"symbol" db:"symbol"`
+	Side              OrderSide   `json:"side" db:"side"`
+	Type              OrderType   `json:"type" db:"type"`
+	Price             float64     `json:"price" db:"price"`
+	Quantity          float64     `json:"quantity" db:"quantity"`
+	FilledQuantity    float64     `json:"filled_quantity" db:"filled_quantity"`
+	RemainingQuantity float64     `json:"remaining_quantity" db:"remaining_quantity"`
+	Status            OrderStatus `json:"status" db:"status"`
+	TimeInForce       TimeInForce `json:"time_in_force" db:"time_in_force"`
+	StopPrice         *float64    `json:"stop_price,omitempty" db:"stop_price"`
+	CreatedAt         time.Time   `json:"created_at" db:"created_at"`
+	UpdatedAt         time.Time   `json:"updated_at" db:"updated_at"`
+	ExpiresAt         *time.Time  `json:"expires_at,omitempty" db:"expires_at"`
 	// Enhanced with generic attributes for extensibility
-	Attributes        OrderAttributes  `json:"attributes,omitempty" db:"attributes"`
+	Attributes OrderAttributes `json:"attributes,omitempty" db:"attributes"`
 	// Metadata for additional order information
-	Metadata          Metadata         `json:"metadata,omitempty" db:"metadata"`
+	Metadata Metadata `json:"metadata,omitempty" db:"metadata"`
 }
 
 // Trade represents a completed trade between two orders
@@ -88,24 +88,24 @@ type Trade struct {
 
 // Position represents a user's position in a symbol
 type Position struct {
-	ID               string    `json:"id" db:"id"`
-	UserID           string    `json:"user_id" db:"user_id"`
-	Symbol           string    `json:"symbol" db:"symbol"`
-	Quantity         float64   `json:"quantity" db:"quantity"`
-	AveragePrice     float64   `json:"average_price" db:"average_price"`
-	MarketValue      float64   `json:"market_value" db:"market_value"`
-	UnrealizedPnL    float64   `json:"unrealized_pnl" db:"unrealized_pnl"`
-	RealizedPnL      float64   `json:"realized_pnl" db:"realized_pnl"`
-	LastUpdated      time.Time `json:"last_updated" db:"last_updated"`
+	ID            string    `json:"id" db:"id"`
+	UserID        string    `json:"user_id" db:"user_id"`
+	Symbol        string    `json:"symbol" db:"symbol"`
+	Quantity      float64   `json:"quantity" db:"quantity"`
+	AveragePrice  float64   `json:"average_price" db:"average_price"`
+	MarketValue   float64   `json:"market_value" db:"market_value"`
+	UnrealizedPnL float64   `json:"unrealized_pnl" db:"unrealized_pnl"`
+	RealizedPnL   float64   `json:"realized_pnl" db:"realized_pnl"`
+	LastUpdated   time.Time `json:"last_updated" db:"last_updated"`
 }
 
 // OrderBook represents the current state of buy and sell orders for a symbol
 type OrderBook struct {
-	Symbol    string             `json:"symbol"`
-	Bids      []*OrderBookLevel  `json:"bids"`
-	Asks      []*OrderBookLevel  `json:"asks"`
-	Timestamp time.Time          `json:"timestamp"`
-	Sequence  uint64             `json:"sequence"`
+	Symbol    string            `json:"symbol"`
+	Bids      []*OrderBookLevel `json:"bids"`
+	Asks      []*OrderBookLevel `json:"asks"`
+	Timestamp time.Time         `json:"timestamp"`
+	Sequence  uint64            `json:"sequence"`
 }
 
 // OrderBookLevel represents a price level in the order book
@@ -117,16 +117,18 @@ type OrderBookLevel struct {
 
 // MarketData represents market data for a symbol
 type MarketData struct {
-	Symbol      string    `json:"symbol"`
-	LastPrice   float64   `json:"last_price"`
-	BidPrice    float64   `json:"bid_price"`
-	AskPrice    float64   `json:"ask_price"`
-	Volume      float64   `json:"volume"`
-	High24h     float64   `json:"high_24h"`
-	Low24h      float64   `json:"low_24h"`
-	Change24h   float64   `json:"change_24h"`
-	ChangePercent24h float64 `json:"change_percent_24h"`
-	Timestamp   time.Time `json:"timestamp"`
+	Symbol           string    `json:"symbol"`
+	LastPrice        float64   `json:"last_price"`
+	BidPrice         float64   `json:"bid_price"`
+	AskPrice         float64   `json:"ask_price"`
+	BidSize          float64   `json:"bid_size"`
+	AskSize          float64   `json:"ask_size"`
+	Volume           float64   `json:"volume"`
+	High24h          float64   `json:"high_24h"`
+	Low24h           float64   `json:"low_24h"`
+	Change24h        float64   `json:"change_24h"`
+	ChangePercent24h float64   `json:"change_percent_24h"`
+	Timestamp        time.Time `json:"timestamp"`
 }
 
 // OHLCV represents Open, High, Low, Close, Volume data
@@ -153,29 +155,29 @@ type User struct {
 
 // Account represents a user's trading account
 type Account struct {
-	ID            string    `json:"id" db:"id"`
-	UserID        string    `json:"user_id" db:"user_id"`
-	Balance       float64   `json:"balance" db:"balance"`
-	AvailableBalance float64 `json:"available_balance" db:"available_balance"`
-	LockedBalance float64   `json:"locked_balance" db:"locked_balance"`
-	Currency      string    `json:"currency" db:"currency"`
-	CreatedAt     time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at" db:"updated_at"`
+	ID               string    `json:"id" db:"id"`
+	UserID           string    `json:"user_id" db:"user_id"`
+	Balance          float64   `json:"balance" db:"balance"`
+	AvailableBalance float64   `json:"available_balance" db:"available_balance"`
+	LockedBalance    float64   `json:"locked_balance" db:"locked_balance"`
+	Currency         string    `json:"currency" db:"currency"`
+	CreatedAt        time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // Symbol represents a tradable symbol
 type Symbol struct {
-	Symbol          string  `json:"symbol" db:"symbol"`
-	BaseAsset       string  `json:"base_asset" db:"base_asset"`
-	QuoteAsset      string  `json:"quote_asset" db:"quote_asset"`
-	Status          string  `json:"status" db:"status"`
-	MinPrice        float64 `json:"min_price" db:"min_price"`
-	MaxPrice        float64 `json:"max_price" db:"max_price"`
-	TickSize        float64 `json:"tick_size" db:"tick_size"`
-	MinQuantity     float64 `json:"min_quantity" db:"min_quantity"`
-	MaxQuantity     float64 `json:"max_quantity" db:"max_quantity"`
-	StepSize        float64 `json:"step_size" db:"step_size"`
-	MinNotional     float64 `json:"min_notional" db:"min_notional"`
+	Symbol      string  `json:"symbol" db:"symbol"`
+	BaseAsset   string  `json:"base_asset" db:"base_asset"`
+	QuoteAsset  string  `json:"quote_asset" db:"quote_asset"`
+	Status      string  `json:"status" db:"status"`
+	MinPrice    float64 `json:"min_price" db:"min_price"`
+	MaxPrice    float64 `json:"max_price" db:"max_price"`
+	TickSize    float64 `json:"tick_size" db:"tick_size"`
+	MinQuantity float64 `json:"min_quantity" db:"min_quantity"`
+	MaxQuantity float64 `json:"max_quantity" db:"max_quantity"`
+	StepSize    float64 `json:"step_size" db:"step_size"`
+	MinNotional float64 `json:"min_notional" db:"min_notional"`
 }
 
 // IsValid checks if an order is valid
@@ -267,4 +269,23 @@ func (ob *OrderBook) GetMidPrice() float64 {
 		return 0
 	}
 	return (bestBid.Price + bestAsk.Price) / 2
+}
+
+// RiskMetrics represents risk metrics for a user or position
+type RiskMetrics struct {
+	UserID           string    `json:"user_id" db:"user_id"`
+	TotalExposure    float64   `json:"total_exposure" db:"total_exposure"`
+	AvailableMargin  float64   `json:"available_margin" db:"available_margin"`
+	UsedMargin       float64   `json:"used_margin" db:"used_margin"`
+	MarginRatio      float64   `json:"margin_ratio" db:"margin_ratio"`
+	PnL              float64   `json:"pnl" db:"pnl"`
+	UnrealizedPnL    float64   `json:"unrealized_pnl" db:"unrealized_pnl"`
+	RealizedPnL      float64   `json:"realized_pnl" db:"realized_pnl"`
+	RiskScore        float64   `json:"risk_score" db:"risk_score"`
+	VaR              float64   `json:"var" db:"var"` // Value at Risk
+	MaxDrawdown      float64   `json:"max_drawdown" db:"max_drawdown"`
+	Leverage         float64   `json:"leverage" db:"leverage"`
+	LastUpdated      time.Time `json:"last_updated" db:"last_updated"`
+	CreatedAt        time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at" db:"updated_at"`
 }

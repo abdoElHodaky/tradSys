@@ -233,7 +233,7 @@ func (rc *RiskCalculator) CalculatePositionRisk(ctx context.Context, position *r
 	}
 
 	// Calculate VaR (simplified calculation)
-	volatility := rc.estimateVolatility(position.Symbol) // This would come from market data
+	volatility := rc.estimateVolatility(position.Symbol)     // This would come from market data
 	metrics.VaR95 = metrics.MarketValue * volatility * 1.645 // 95% confidence
 	metrics.VaR99 = metrics.MarketValue * volatility * 2.326 // 99% confidence
 
@@ -366,11 +366,11 @@ func (rc *RiskCalculator) estimateVolatility(symbol string) float64 {
 	// Default volatility estimates by asset type
 	// This is a simplified approach - real implementation would use historical data
 	volatilityMap := map[string]float64{
-		"BTC":  0.04, // 4% daily volatility for crypto
-		"ETH":  0.035,
-		"AAPL": 0.02, // 2% daily volatility for stocks
+		"BTC":   0.04, // 4% daily volatility for crypto
+		"ETH":   0.035,
+		"AAPL":  0.02, // 2% daily volatility for stocks
 		"GOOGL": 0.025,
-		"TSLA": 0.035,
+		"TSLA":  0.035,
 	}
 
 	if vol, exists := volatilityMap[symbol]; exists {

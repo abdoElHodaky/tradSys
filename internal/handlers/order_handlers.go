@@ -48,7 +48,7 @@ func (h *OrderHandlers) HandleOrders(w http.ResponseWriter, r *http.Request) {
 			return writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		}
 	})
-	
+
 	if err != nil {
 		h.logger.Error("Request failed", "error", err, "path", r.URL.Path, "method", r.Method)
 	}
@@ -71,7 +71,7 @@ func (h *OrderHandlers) HandleOrderByID(w http.ResponseWriter, r *http.Request) 
 			return writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		}
 	})
-	
+
 	if err != nil {
 		h.logger.Error("Request failed", "error", err, "path", r.URL.Path, "method", r.Method)
 	}
@@ -162,11 +162,11 @@ func (h *OrderHandlers) listOrders(w http.ResponseWriter, r *http.Request) error
 
 	// Parse filters
 	filters := &interfaces.OrderFilters{
-		Symbol:  r.URL.Query().Get("symbol"),
-		Side:    types.OrderSide(r.URL.Query().Get("side")),
-		Status:  types.OrderStatus(r.URL.Query().Get("status")),
-		Limit:   limit,
-		Offset:  offset,
+		Symbol: r.URL.Query().Get("symbol"),
+		Side:   types.OrderSide(r.URL.Query().Get("side")),
+		Status: types.OrderStatus(r.URL.Query().Get("status")),
+		Limit:  limit,
+		Offset: offset,
 	}
 
 	orderService := h.registry.GetOrderService()

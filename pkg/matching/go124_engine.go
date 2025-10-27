@@ -13,19 +13,17 @@ import (
 // Go124MatchingEngine implements the OrderMatchingEngine interface
 // using Go 1.24 features and optimized patterns
 type Go124MatchingEngine struct {
-	mu           sync.RWMutex
-	orderBooks   map[string]*OrderBook
-	orders       types.OrderCache
-	trades       []types.Trade
-	metrics      types.Metadata
-	running      bool
-	ctx          context.Context
-	cancel       context.CancelFunc
-	eventBus     types.OrderEventBus
-	riskManager  interfaces.RiskManager
+	mu          sync.RWMutex
+	orderBooks  map[string]*OrderBook
+	orders      types.OrderCache
+	trades      []types.Trade
+	metrics     types.Metadata
+	running     bool
+	ctx         context.Context
+	cancel      context.CancelFunc
+	eventBus    types.OrderEventBus
+	riskManager interfaces.RiskManager
 }
-
-
 
 // NewGo124MatchingEngine creates a new Go 1.24 optimized matching engine
 func NewGo124MatchingEngine(
@@ -34,7 +32,7 @@ func NewGo124MatchingEngine(
 	riskManager interfaces.RiskManager,
 ) *Go124MatchingEngine {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	return &Go124MatchingEngine{
 		orderBooks:  make(map[string]*OrderBook),
 		orders:      cache,
@@ -65,33 +63,33 @@ func (e *Go124MatchingEngine) AddOrder(ctx context.Context, order types.Order) (
 
 	// Get or create order book for symbol
 	orderBook := e.getOrCreateOrderBook(order.Symbol)
-	
+
 	// Cache the order
 	e.orders.Set(order.ID, order, time.Hour)
-	
+
 	// Try to match the order
 	trade, matched := e.matchOrder(orderBook, order)
-	
+
 	if matched {
 		// Update metrics
 		e.updateMetrics("trades_executed", 1)
 		e.updateMetrics("volume_traded", trade.Value)
-		
+
 		// Publish trade event
 		if e.eventBus != nil {
 			// Note: This would need proper event publishing implementation
 			// e.eventBus.Publish(ctx, "trade.executed", trade)
 		}
-		
+
 		return types.NewResult(trade), nil
 	}
-	
+
 	// Add order to book if not fully matched
 	e.addOrderToBook(orderBook, order)
-	
+
 	// Update metrics
 	e.updateMetrics("orders_added", 1)
-	
+
 	// Return empty trade result
 	var emptyTrade types.Trade
 	return types.NewResult(emptyTrade), nil
@@ -116,7 +114,7 @@ func (e *Go124MatchingEngine) CancelOrder(ctx context.Context, orderID string) e
 
 	// Remove from cache
 	e.orders.Delete(orderID)
-	
+
 	// Update metrics
 	e.updateMetrics("orders_canceled", 1)
 
@@ -165,7 +163,7 @@ func (e *Go124MatchingEngine) GetMetrics(ctx context.Context) types.Metadata {
 	for k, v := range e.metrics {
 		metricsCopy[k] = v
 	}
-	
+
 	// Add runtime metrics
 	metricsCopy["order_books_count"] = len(e.orderBooks)
 	metricsCopy["cached_orders_count"] = e.orders.Size()
@@ -187,7 +185,7 @@ func (e *Go124MatchingEngine) Start(ctx context.Context) error {
 
 	e.running = true
 	e.updateMetrics("engine_started_at", time.Now())
-	
+
 	// Start background processes
 	go e.metricsCollector()
 	go e.orderBookMaintenance()
@@ -218,7 +216,7 @@ func (e *Go124MatchingEngine) Health() types.HealthStatus {
 
 	status := "healthy"
 	message := "Matching engine is operating normally"
-	
+
 	if !e.running {
 		status = "stopped"
 		message = "Matching engine is not running"
@@ -254,7 +252,7 @@ func (e *Go124MatchingEngine) getOrCreateOrderBook(symbol string) *OrderBook {
 func (e *Go124MatchingEngine) matchOrder(orderBook *OrderBook, order types.Order) (types.Trade, bool) {
 	// Simplified matching logic - in a real implementation this would be more sophisticated
 	var trade types.Trade
-	
+
 	// For now, return no match
 	return trade, false
 }

@@ -23,15 +23,15 @@ type ShariaService struct {
 
 // ShariaConfig holds configuration for Islamic finance services
 type ShariaConfig struct {
-	EnableScreening     bool
-	EnableZakat         bool
-	EnableShariaBoard   bool
-	ScreeningRules      []ShariaRule
-	ZakatRate           float64
-	NisabThreshold      float64
-	Currency            string
-	ShariaStandard      string
-	ComplianceLevel     ComplianceLevel
+	EnableScreening   bool
+	EnableZakat       bool
+	EnableShariaBoard bool
+	ScreeningRules    []ShariaRule
+	ZakatRate         float64
+	NisabThreshold    float64
+	Currency          string
+	ShariaStandard    string
+	ComplianceLevel   ComplianceLevel
 }
 
 // ShariaRule represents an Islamic finance compliance rule
@@ -52,25 +52,25 @@ type ShariaRule struct {
 type ComplianceLevel string
 
 const (
-	STRICT     ComplianceLevel = "STRICT"
-	MODERATE   ComplianceLevel = "MODERATE"
-	FLEXIBLE   ComplianceLevel = "FLEXIBLE"
+	STRICT   ComplianceLevel = "STRICT"
+	MODERATE ComplianceLevel = "MODERATE"
+	FLEXIBLE ComplianceLevel = "FLEXIBLE"
 )
 
 // ScreeningEngine performs Sharia compliance screening
 type ScreeningEngine struct {
-	rules       map[string]ShariaRule
-	cache       map[string]*ScreeningResult
-	cacheTTL    time.Duration
-	mu          sync.RWMutex
+	rules    map[string]ShariaRule
+	cache    map[string]*ScreeningResult
+	cacheTTL time.Duration
+	mu       sync.RWMutex
 }
 
 // ZakatCalculator calculates Zakat for Islamic portfolios
 type ZakatCalculator struct {
-	config      *ZakatConfig
-	rateTable   map[types.AssetType]float64
-	exemptions  map[types.AssetType]bool
-	mu          sync.RWMutex
+	config     *ZakatConfig
+	rateTable  map[types.AssetType]float64
+	exemptions map[types.AssetType]bool
+	mu         sync.RWMutex
 }
 
 // ZakatConfig holds Zakat calculation configuration
@@ -102,11 +102,11 @@ func NewShariaService(config *ShariaConfig, db ComplianceDatabase) *ShariaServic
 		}),
 		complianceDB: db,
 	}
-	
+
 	if config.EnableShariaBoard {
 		service.shariaBoard = NewShariaBoard()
 	}
-	
+
 	return service
 }
 
@@ -116,7 +116,7 @@ func (s *ShariaService) IsShariahCompliant(ctx context.Context, symbol string) (
 	if err != nil {
 		return false, err
 	}
-	
+
 	return result.IsCompliant, nil
 }
 
@@ -133,19 +133,19 @@ func (s *ShariaService) GetHalalScreening(ctx context.Context, symbol string) (*
 			LastUpdated:     cached.LastUpdated,
 		}, nil
 	}
-	
+
 	// Perform screening
 	result, err := s.screeningEngine.PerformScreening(ctx, symbol)
 	if err != nil {
 		return nil, fmt.Errorf("screening failed: %w", err)
 	}
-	
+
 	// Save to database
 	if err := s.complianceDB.SaveScreeningResult(ctx, result); err != nil {
 		// Log error but don't fail the screening
 		fmt.Printf("Failed to save screening result: %v\n", err)
 	}
-	
+
 	return &interfaces.HalalScreening{
 		Symbol:          result.Symbol,
 		IsCompliant:     result.IsCompliant,
@@ -161,7 +161,7 @@ func (s *ShariaService) CalculateZakat(ctx context.Context, portfolio *IslamicPo
 	if !s.config.EnableZakat {
 		return nil, fmt.Errorf("Zakat calculation not enabled")
 	}
-	
+
 	return s.zakatCalculator.Calculate(ctx, portfolio)
 }
 
@@ -170,17 +170,17 @@ func (s *ShariaService) ValidateOrder(ctx context.Context, order *interfaces.Ord
 	if !order.AssetType.IsIslamic() {
 		return nil // No validation needed for non-Islamic assets
 	}
-	
+
 	// Check if asset is Sharia-compliant
 	isCompliant, err := s.IsShariahCompliant(ctx, order.Symbol)
 	if err != nil {
 		return fmt.Errorf("compliance check failed: %w", err)
 	}
-	
+
 	if !isCompliant {
 		return fmt.Errorf("asset %s is not Sharia-compliant", order.Symbol)
 	}
-	
+
 	// Additional Islamic finance validations
 	return s.validateIslamicOrder(order)
 }
@@ -205,12 +205,12 @@ func (s *ShariaService) validateSukukOrder(order *interfaces.Order) error {
 	if order.Quantity < 1000 {
 		return fmt.Errorf("minimum Sukuk investment is 1000 units")
 	}
-	
+
 	// Check if it's a trading day (no trading on Fridays for some Sukuk)
 	if time.Now().Weekday() == time.Friday {
 		return fmt.Errorf("Sukuk trading not allowed on Fridays")
 	}
-	
+
 	return nil
 }
 
@@ -220,7 +220,7 @@ func (s *ShariaService) validateIslamicFundOrder(order *interfaces.Order) error 
 	if order.Quantity < 100 {
 		return fmt.Errorf("minimum Islamic fund investment is 100 units")
 	}
-	
+
 	return nil
 }
 
@@ -230,7 +230,7 @@ func (s *ShariaService) validateTakafulOrder(order *interfaces.Order) error {
 	if order.Quantity < 1 {
 		return fmt.Errorf("minimum Takaful investment is 1 unit")
 	}
-	
+
 	return nil
 }
 
@@ -239,7 +239,7 @@ func (s *ShariaService) GetShariaBoard(ctx context.Context) (*ShariaBoard, error
 	if !s.config.EnableShariaBoard || s.shariaBoard == nil {
 		return nil, fmt.Errorf("Sharia board information not available")
 	}
-	
+
 	return s.shariaBoard, nil
 }
 
@@ -250,11 +250,11 @@ func NewScreeningEngine(rules []ShariaRule) *ScreeningEngine {
 		cache:    make(map[string]*ScreeningResult),
 		cacheTTL: 24 * time.Hour, // Cache results for 24 hours
 	}
-	
+
 	for _, rule := range rules {
 		engine.rules[rule.ID] = rule
 	}
-	
+
 	return engine
 }
 
@@ -269,34 +269,34 @@ func (e *ScreeningEngine) PerformScreening(ctx context.Context, symbol string) (
 		LastUpdated:     time.Now(),
 		RulesApplied:    []string{},
 	}
-	
+
 	// Apply all active rules
 	for _, rule := range e.rules {
 		if !rule.IsActive {
 			continue
 		}
-		
+
 		result.RulesApplied = append(result.RulesApplied, rule.ID)
-		
+
 		// This would typically call external APIs or databases
 		// For now, we'll use simplified logic
 		if !e.applyRule(rule, symbol) {
 			result.IsCompliant = false
 			result.ComplianceScore -= 20.0 // Deduct points for violations
 			result.Violations = append(result.Violations, rule.Description)
-			result.Recommendations = append(result.Recommendations, 
+			result.Recommendations = append(result.Recommendations,
 				fmt.Sprintf("Address violation: %s", rule.Name))
 		}
 	}
-	
+
 	// Ensure score doesn't go below 0
 	if result.ComplianceScore < 0 {
 		result.ComplianceScore = 0
 	}
-	
+
 	// Cache the result
 	e.cacheResult(symbol, result)
-	
+
 	return result, nil
 }
 
@@ -304,7 +304,7 @@ func (e *ScreeningEngine) PerformScreening(ctx context.Context, symbol string) (
 func (e *ScreeningEngine) applyRule(rule ShariaRule, symbol string) bool {
 	// This is a simplified implementation
 	// In reality, this would involve complex business logic and external data
-	
+
 	switch rule.Category {
 	case "interest_based":
 		// Check if company is involved in interest-based activities
@@ -340,7 +340,7 @@ func (e *ScreeningEngine) checkDebtRatio(symbol string) bool {
 func (e *ScreeningEngine) getCachedResult(symbol string) *ScreeningResult {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	
+
 	if result, exists := e.cache[symbol]; exists {
 		if time.Since(result.LastUpdated) < e.cacheTTL {
 			return result
@@ -348,7 +348,7 @@ func (e *ScreeningEngine) getCachedResult(symbol string) *ScreeningResult {
 		// Remove expired cache entry
 		delete(e.cache, symbol)
 	}
-	
+
 	return nil
 }
 
@@ -356,7 +356,7 @@ func (e *ScreeningEngine) getCachedResult(symbol string) *ScreeningResult {
 func (e *ScreeningEngine) cacheResult(symbol string, result *ScreeningResult) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	
+
 	e.cache[symbol] = result
 }
 
@@ -367,16 +367,16 @@ func NewZakatCalculator(config *ZakatConfig) *ZakatCalculator {
 		rateTable:  make(map[types.AssetType]float64),
 		exemptions: make(map[types.AssetType]bool),
 	}
-	
+
 	// Set standard rates for different asset types
 	calculator.rateTable[types.STOCK] = 0.025        // 2.5%
 	calculator.rateTable[types.SUKUK] = 0.025        // 2.5%
 	calculator.rateTable[types.ISLAMIC_FUND] = 0.025 // 2.5%
 	calculator.rateTable[types.SHARIA_STOCK] = 0.025 // 2.5%
-	
+
 	// Set exemptions
 	calculator.exemptions[types.TAKAFUL] = true // Takaful is typically exempt
-	
+
 	return calculator
 }
 
@@ -394,10 +394,10 @@ func (z *ZakatCalculator) Calculate(ctx context.Context, portfolio *IslamicPortf
 			ExemptAssets:    z.getExemptAssets(portfolio),
 		}, nil
 	}
-	
+
 	zakatableAmount := z.calculateZakatableAmount(portfolio)
 	zakatDue := zakatableAmount * z.config.StandardRate
-	
+
 	return &ZakatCalculation{
 		PortfolioValue:  portfolio.TotalValue,
 		ZakatableAmount: zakatableAmount,
@@ -413,17 +413,17 @@ func (z *ZakatCalculator) Calculate(ctx context.Context, portfolio *IslamicPortf
 // calculateZakatableAmount calculates the amount subject to Zakat
 func (z *ZakatCalculator) calculateZakatableAmount(portfolio *IslamicPortfolio) float64 {
 	zakatableAmount := 0.0
-	
+
 	for _, asset := range portfolio.Assets {
 		if z.exemptions[asset.AssetType] {
 			continue // Skip exempt assets
 		}
-		
+
 		if asset.IsHalal {
 			zakatableAmount += asset.MarketValue
 		}
 	}
-	
+
 	return zakatableAmount
 }
 
@@ -437,13 +437,13 @@ func (z *ZakatCalculator) getNextZakatDueDate() time.Time {
 // getExemptAssets returns list of exempt assets
 func (z *ZakatCalculator) getExemptAssets(portfolio *IslamicPortfolio) []string {
 	var exemptAssets []string
-	
+
 	for symbol, asset := range portfolio.Assets {
 		if z.exemptions[asset.AssetType] {
 			exemptAssets = append(exemptAssets, symbol)
 		}
 	}
-	
+
 	return exemptAssets
 }
 
@@ -462,25 +462,25 @@ type ScreeningResult struct {
 
 // ZakatRecord represents a Zakat calculation record
 type ZakatRecord struct {
-	ID              string    `json:"id"`
-	UserID          string    `json:"user_id"`
-	Year            int       `json:"year"`
-	PortfolioValue  float64   `json:"portfolio_value"`
-	ZakatableAmount float64   `json:"zakatable_amount"`
-	ZakatDue        float64   `json:"zakat_due"`
-	Currency        string    `json:"currency"`
-	CalculatedAt    time.Time `json:"calculated_at"`
+	ID              string     `json:"id"`
+	UserID          string     `json:"user_id"`
+	Year            int        `json:"year"`
+	PortfolioValue  float64    `json:"portfolio_value"`
+	ZakatableAmount float64    `json:"zakatable_amount"`
+	ZakatDue        float64    `json:"zakat_due"`
+	Currency        string     `json:"currency"`
+	CalculatedAt    time.Time  `json:"calculated_at"`
 	PaidAt          *time.Time `json:"paid_at,omitempty"`
-	Status          string    `json:"status"`
+	Status          string     `json:"status"`
 }
 
 // IslamicPortfolio represents a portfolio of Islamic assets
 type IslamicPortfolio struct {
-	UserID     string                    `json:"user_id"`
-	Assets     map[string]IslamicAsset   `json:"assets"`
-	TotalValue float64                   `json:"total_value"`
-	Currency   string                    `json:"currency"`
-	AsOfDate   time.Time                 `json:"as_of_date"`
+	UserID     string                  `json:"user_id"`
+	Assets     map[string]IslamicAsset `json:"assets"`
+	TotalValue float64                 `json:"total_value"`
+	Currency   string                  `json:"currency"`
+	AsOfDate   time.Time               `json:"as_of_date"`
 }
 
 // IslamicAsset represents an Islamic financial asset
@@ -495,14 +495,14 @@ type IslamicAsset struct {
 
 // ZakatCalculation represents Zakat calculation results
 type ZakatCalculation struct {
-	PortfolioValue    float64   `json:"portfolio_value"`
-	ZakatableAmount   float64   `json:"zakatable_amount"`
-	ZakatRate         float64   `json:"zakat_rate"`
-	ZakatDue          float64   `json:"zakat_due"`
-	Currency          string    `json:"currency"`
-	CalculationDate   time.Time `json:"calculation_date"`
-	NextDueDate       time.Time `json:"next_due_date"`
-	ExemptAssets      []string  `json:"exempt_assets"`
+	PortfolioValue  float64   `json:"portfolio_value"`
+	ZakatableAmount float64   `json:"zakatable_amount"`
+	ZakatRate       float64   `json:"zakat_rate"`
+	ZakatDue        float64   `json:"zakat_due"`
+	Currency        string    `json:"currency"`
+	CalculationDate time.Time `json:"calculation_date"`
+	NextDueDate     time.Time `json:"next_due_date"`
+	ExemptAssets    []string  `json:"exempt_assets"`
 }
 
 // ShariaBoard represents Sharia board information

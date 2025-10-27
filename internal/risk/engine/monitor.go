@@ -10,29 +10,29 @@ import (
 
 // RiskMonitor handles real-time risk monitoring and alerting
 type RiskMonitor struct {
-	logger           *zap.Logger
-	alertThresholds  map[string]float64
-	mu               sync.RWMutex
-	alertChan        chan RiskAlert
-	ctx              context.Context
-	cancel           context.CancelFunc
+	logger          *zap.Logger
+	alertThresholds map[string]float64
+	mu              sync.RWMutex
+	alertChan       chan RiskAlert
+	ctx             context.Context
+	cancel          context.CancelFunc
 }
 
 // RiskAlert represents a risk alert
 type RiskAlert struct {
-	UserID      string
-	Symbol      string
-	AlertType   string
-	Severity    RiskLevel
-	Message     string
-	Timestamp   time.Time
-	Data        map[string]interface{}
+	UserID    string
+	Symbol    string
+	AlertType string
+	Severity  RiskLevel
+	Message   string
+	Timestamp time.Time
+	Data      map[string]interface{}
 }
 
 // NewRiskMonitor creates a new risk monitor
 func NewRiskMonitor(logger *zap.Logger) *RiskMonitor {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	return &RiskMonitor{
 		logger:          logger,
 		alertThresholds: make(map[string]float64),
@@ -64,12 +64,12 @@ func (rm *RiskMonitor) SetAlertThreshold(metric string, threshold float64) {
 // MonitorPosition monitors a position for risk violations
 func (rm *RiskMonitor) MonitorPosition(userID, symbol string, quantity, price float64) {
 	positionValue := quantity * price
-	
+
 	// Check position size threshold
 	rm.mu.RLock()
 	threshold, exists := rm.alertThresholds["position_size"]
 	rm.mu.RUnlock()
-	
+
 	if exists && positionValue > threshold {
 		alert := RiskAlert{
 			UserID:    userID,
@@ -85,7 +85,7 @@ func (rm *RiskMonitor) MonitorPosition(userID, symbol string, quantity, price fl
 				"price":          price,
 			},
 		}
-		
+
 		select {
 		case rm.alertChan <- alert:
 		default:
@@ -101,17 +101,17 @@ func (rm *RiskMonitor) MonitorDrawdown(userID string, currentValue, peakValue fl
 	if peakValue <= 0 {
 		return
 	}
-	
+
 	drawdown := (peakValue - currentValue) / peakValue
 	if drawdown < 0 {
 		drawdown = 0
 	}
-	
+
 	// Check drawdown threshold
 	rm.mu.RLock()
 	threshold, exists := rm.alertThresholds["max_drawdown"]
 	rm.mu.RUnlock()
-	
+
 	if exists && drawdown > threshold {
 		alert := RiskAlert{
 			UserID:    userID,
@@ -126,7 +126,7 @@ func (rm *RiskMonitor) MonitorDrawdown(userID string, currentValue, peakValue fl
 				"peak_value":       peakValue,
 			},
 		}
-		
+
 		select {
 		case rm.alertChan <- alert:
 		default:
@@ -141,14 +141,14 @@ func (rm *RiskMonitor) MonitorConcentration(userID, symbol string, positionValue
 	if totalPortfolioValue <= 0 {
 		return
 	}
-	
+
 	concentration := positionValue / totalPortfolioValue
-	
+
 	// Check concentration threshold
 	rm.mu.RLock()
 	threshold, exists := rm.alertThresholds["max_concentration"]
 	rm.mu.RUnlock()
-	
+
 	if exists && concentration > threshold {
 		alert := RiskAlert{
 			UserID:    userID,
@@ -164,7 +164,7 @@ func (rm *RiskMonitor) MonitorConcentration(userID, symbol string, positionValue
 				"total_portfolio_value": totalPortfolioValue,
 			},
 		}
-		
+
 		select {
 		case rm.alertChan <- alert:
 		default:
@@ -181,7 +181,7 @@ func (rm *RiskMonitor) MonitorVaR(userID string, var_ float64) {
 	rm.mu.RLock()
 	threshold, exists := rm.alertThresholds["max_var"]
 	rm.mu.RUnlock()
-	
+
 	if exists && var_ > threshold {
 		alert := RiskAlert{
 			UserID:    userID,
@@ -194,7 +194,7 @@ func (rm *RiskMonitor) MonitorVaR(userID string, var_ float64) {
 				"threshold": threshold,
 			},
 		}
-		
+
 		select {
 		case rm.alertChan <- alert:
 		default:
@@ -226,7 +226,7 @@ func (rm *RiskMonitor) handleAlert(alert RiskAlert) {
 		zap.String("message", alert.Message),
 		zap.Time("timestamp", alert.Timestamp),
 		zap.Any("data", alert.Data))
-	
+
 	// In a real implementation, this would:
 	// 1. Send notifications to risk managers
 	// 2. Update risk dashboards
@@ -240,13 +240,13 @@ func (rm *RiskMonitor) GetAlertStats() map[string]int {
 	// In a real implementation, this would return actual statistics
 	// For now, return empty stats
 	return map[string]int{
-		"total_alerts":        0,
-		"high_severity":       0,
-		"medium_severity":     0,
-		"low_severity":        0,
+		"total_alerts":         0,
+		"high_severity":        0,
+		"medium_severity":      0,
+		"low_severity":         0,
 		"position_size_alerts": 0,
-		"drawdown_alerts":     0,
+		"drawdown_alerts":      0,
 		"concentration_alerts": 0,
-		"var_alerts":          0,
+		"var_alerts":           0,
 	}
 }

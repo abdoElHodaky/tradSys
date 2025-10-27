@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/pkg/common/pool"
 	"github.com/abdoElHodaky/tradSys/internal/trading/types"
+	"github.com/abdoElHodaky/tradSys/pkg/common/pool"
 	"go.uber.org/zap"
 )
 
@@ -22,7 +22,7 @@ type EventProcessor struct {
 	stopChannel  chan struct{}
 	isRunning    int32
 	mu           sync.RWMutex
-	
+
 	// Event processing metrics
 	eventsProcessed int64
 	processingTime  int64 // nanoseconds
@@ -31,22 +31,22 @@ type EventProcessor struct {
 
 // RiskEvent represents a risk event that needs processing
 type RiskEvent struct {
-	Type        RiskEventType   `json:"type"`
-	OrderID     string          `json:"order_id"`
-	UserID      string          `json:"user_id"`
-	Symbol      string          `json:"symbol"`
-	Side        types.OrderSide `json:"side"`
-	Quantity    float64         `json:"quantity"`
-	Price       float64         `json:"price"`
-	Timestamp   time.Time       `json:"timestamp"`
-	Metadata    map[string]interface{} `json:"metadata"`
-	ResultChan  chan *RiskCheckResult  `json:"-"`
-	
+	Type       RiskEventType          `json:"type"`
+	OrderID    string                 `json:"order_id"`
+	UserID     string                 `json:"user_id"`
+	Symbol     string                 `json:"symbol"`
+	Side       types.OrderSide        `json:"side"`
+	Quantity   float64                `json:"quantity"`
+	Price      float64                `json:"price"`
+	Timestamp  time.Time              `json:"timestamp"`
+	Metadata   map[string]interface{} `json:"metadata"`
+	ResultChan chan *RiskCheckResult  `json:"-"`
+
 	// Additional fields for compatibility
-	Order       interface{}     `json:"order,omitempty"`
-	Data        interface{}     `json:"data,omitempty"`
-	Severity    string          `json:"severity,omitempty"`
-	Message     string          `json:"message,omitempty"`
+	Order    interface{} `json:"order,omitempty"`
+	Data     interface{} `json:"data,omitempty"`
+	Severity string      `json:"severity,omitempty"`
+	Message  string      `json:"message,omitempty"`
 }
 
 // RiskEventType defines the type of risk event
@@ -87,8 +87,6 @@ func (ret RiskEventType) String() string {
 		return "unknown"
 	}
 }
-
-
 
 // NewEventProcessor creates a new event processor
 func NewEventProcessor(config *RiskEngineConfig, logger *zap.Logger) *EventProcessor {
@@ -178,15 +176,15 @@ func (ep *EventProcessor) processEvents(ctx context.Context, workerID int) {
 // processEvent processes a single risk event
 func (ep *EventProcessor) processEvent(event *RiskEvent, workerID int) {
 	startTime := time.Now()
-	
+
 	// Get result object from pool
 	result := ep.checkPool.Get().(*RiskCheckResult)
 	defer ep.checkPool.Put(result)
 
 	// Reset result
 	*result = RiskCheckResult{
-		Approved:  true,
-		Metadata:  make(map[string]interface{}),
+		Approved: true,
+		Metadata: make(map[string]interface{}),
 	}
 
 	// Process based on event type
@@ -211,7 +209,7 @@ func (ep *EventProcessor) processEvent(event *RiskEvent, workerID int) {
 	// Calculate processing latency
 	processingTime := time.Since(startTime)
 	result.Latency = processingTime
-	
+
 	// Update metrics
 	atomic.AddInt64(&ep.eventsProcessed, 1)
 	atomic.AddInt64(&ep.processingTime, processingTime.Nanoseconds())
@@ -288,17 +286,17 @@ func (ep *EventProcessor) processCircuitBreakerEvent(event *RiskEvent, result *R
 func (ep *EventProcessor) calculateRiskScore(event *RiskEvent) float64 {
 	// Simple risk scoring - would be more sophisticated in production
 	score := 0.0
-	
+
 	// Size-based risk
 	if event.Quantity > ep.config.MaxOrderSize*0.8 {
 		score += 0.3
 	}
-	
+
 	// Price-based risk (simplified)
 	if event.Price > 0 {
 		score += 0.1
 	}
-	
+
 	return score
 }
 

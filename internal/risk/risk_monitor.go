@@ -13,25 +13,25 @@ import (
 
 // RiskMonitor handles real-time risk monitoring and alerting
 type RiskMonitor struct {
-	logger         *zap.Logger
-	ctx            context.Context
-	cancel         context.CancelFunc
-	mu             sync.RWMutex
-	
+	logger *zap.Logger
+	ctx    context.Context
+	cancel context.CancelFunc
+	mu     sync.RWMutex
+
 	// Market data processing
 	marketDataChan chan MarketDataUpdate
-	
+
 	// Circuit breakers
 	circuitBreakers map[string]*riskengine.CircuitBreaker
-	
+
 	// Monitoring state
-	isRunning      bool
+	isRunning       bool
 	lastHealthCheck time.Time
-	
+
 	// Caches for performance
-	positionCache  *cache.Cache
-	metricsCache   *cache.Cache
-	
+	positionCache *cache.Cache
+	metricsCache  *cache.Cache
+
 	// Callbacks for alerts
 	alertCallbacks []AlertCallback
 }
@@ -41,15 +41,15 @@ type AlertCallback func(alert *RiskAlert)
 
 // RiskAlert represents a risk alert
 type RiskAlert struct {
-	ID          string                 `json:"id"`
-	Type        RiskAlertType          `json:"type"`
-	Severity    RiskAlertSeverity      `json:"severity"`
-	UserID      string                 `json:"user_id,omitempty"`
-	Symbol      string                 `json:"symbol,omitempty"`
-	Message     string                 `json:"message"`
-	Details     map[string]interface{} `json:"details"`
-	Timestamp   time.Time              `json:"timestamp"`
-	Acknowledged bool                  `json:"acknowledged"`
+	ID           string                 `json:"id"`
+	Type         RiskAlertType          `json:"type"`
+	Severity     RiskAlertSeverity      `json:"severity"`
+	UserID       string                 `json:"user_id,omitempty"`
+	Symbol       string                 `json:"symbol,omitempty"`
+	Message      string                 `json:"message"`
+	Details      map[string]interface{} `json:"details"`
+	Timestamp    time.Time              `json:"timestamp"`
+	Acknowledged bool                   `json:"acknowledged"`
 }
 
 // RiskAlertType represents the type of risk alert
@@ -77,7 +77,7 @@ const (
 // NewRiskMonitor creates a new risk monitor
 func NewRiskMonitor(logger *zap.Logger) *RiskMonitor {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	return &RiskMonitor{
 		logger:          logger,
 		ctx:             ctx,
@@ -95,23 +95,23 @@ func NewRiskMonitor(logger *zap.Logger) *RiskMonitor {
 func (rm *RiskMonitor) Start() error {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
-	
+
 	if rm.isRunning {
 		return nil
 	}
-	
+
 	rm.isRunning = true
 	rm.logger.Info("Starting risk monitor")
-	
+
 	// Start market data processor
 	go rm.processMarketData()
-	
+
 	// Start circuit breaker checker
 	go rm.checkCircuitBreakers()
-	
+
 	// Start health monitor
 	go rm.healthMonitor()
-	
+
 	return nil
 }
 
@@ -119,15 +119,15 @@ func (rm *RiskMonitor) Start() error {
 func (rm *RiskMonitor) Stop() error {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
-	
+
 	if !rm.isRunning {
 		return nil
 	}
-	
+
 	rm.logger.Info("Stopping risk monitor")
 	rm.cancel()
 	rm.isRunning = false
-	
+
 	return nil
 }
 
@@ -135,7 +135,7 @@ func (rm *RiskMonitor) Stop() error {
 func (rm *RiskMonitor) AddAlertCallback(callback AlertCallback) {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
-	
+
 	rm.alertCallbacks = append(rm.alertCallbacks, callback)
 }
 
@@ -144,7 +144,7 @@ func (rm *RiskMonitor) UpdateMarketData(update MarketDataUpdate) {
 	select {
 	case rm.marketDataChan <- update:
 	default:
-		rm.logger.Warn("Market data channel full, dropping update", 
+		rm.logger.Warn("Market data channel full, dropping update",
 			zap.String("symbol", update.Symbol))
 	}
 }
@@ -153,9 +153,9 @@ func (rm *RiskMonitor) UpdateMarketData(update MarketDataUpdate) {
 func (rm *RiskMonitor) AddCircuitBreaker(symbol string, percentageThreshold float64, cooldownPeriod time.Duration) {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
-	
+
 	rm.circuitBreakers[symbol] = riskengine.NewCircuitBreaker(percentageThreshold, cooldownPeriod)
-	rm.logger.Info("Added circuit breaker", 
+	rm.logger.Info("Added circuit breaker",
 		zap.String("symbol", symbol),
 		zap.Float64("threshold", percentageThreshold))
 }
@@ -164,7 +164,7 @@ func (rm *RiskMonitor) AddCircuitBreaker(symbol string, percentageThreshold floa
 func (rm *RiskMonitor) RemoveCircuitBreaker(symbol string) {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
-	
+
 	delete(rm.circuitBreakers, symbol)
 	rm.logger.Info("Removed circuit breaker", zap.String("symbol", symbol))
 }
@@ -176,17 +176,17 @@ func (rm *RiskMonitor) MonitorPosition(userID, symbol string, position *riskengi
 		if !limit.IsEnabled() {
 			continue
 		}
-		
+
 		if limit.Symbol != "" && limit.Symbol != symbol {
 			continue
 		}
-		
+
 		violation := rm.checkPositionViolation(position, limit)
 		if violation != nil {
 			rm.sendAlert(violation)
 		}
 	}
-	
+
 	// Cache position for monitoring
 	cacheKey := userID + ":" + symbol
 	rm.positionCache.Set(cacheKey, position, cache.DefaultExpiration)
@@ -196,7 +196,7 @@ func (rm *RiskMonitor) MonitorPosition(userID, symbol string, position *riskengi
 func (rm *RiskMonitor) processMarketData() {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-rm.ctx.Done():
@@ -214,13 +214,13 @@ func (rm *RiskMonitor) processMarketData() {
 func (rm *RiskMonitor) handleMarketDataUpdate(update MarketDataUpdate) {
 	// Update unrealized PnL for positions
 	rm.updatePositionPnL(update.Symbol, update.Price)
-	
+
 	// Check circuit breakers
 	rm.checkCircuitBreaker(update.Symbol, update.Price, update.Timestamp)
-	
+
 	// Check for volatility spikes
 	rm.checkVolatilitySpike(update)
-	
+
 	// Update metrics cache
 	rm.updateMetricsCache(update)
 }
@@ -234,7 +234,7 @@ func (rm *RiskMonitor) updatePositionPnL(symbol string, price float64) {
 				// Update unrealized PnL
 				position.UnrealizedPnL = position.Quantity * (price - position.AveragePrice)
 				position.LastUpdateTime = time.Now()
-				
+
 				// Check for significant PnL changes
 				rm.checkPnLAlert(position)
 			}
@@ -247,11 +247,11 @@ func (rm *RiskMonitor) checkCircuitBreaker(symbol string, price float64, timesta
 	rm.mu.RLock()
 	breaker, exists := rm.circuitBreakers[symbol]
 	rm.mu.RUnlock()
-	
+
 	if !exists {
 		return
 	}
-	
+
 	// Get previous price from cache
 	cacheKey := "price:" + symbol
 	var previousPrice float64
@@ -262,10 +262,10 @@ func (rm *RiskMonitor) checkCircuitBreaker(symbol string, price float64, timesta
 		rm.metricsCache.Set(cacheKey, price, cache.DefaultExpiration)
 		return
 	}
-	
+
 	// Calculate price change percentage
 	priceChange := (price - previousPrice) / previousPrice * 100
-	
+
 	// Check if circuit breaker should trip
 	if breaker.ShouldTrip(priceChange) {
 		alert := &RiskAlert{
@@ -276,15 +276,15 @@ func (rm *RiskMonitor) checkCircuitBreaker(symbol string, price float64, timesta
 			Message:   "Circuit breaker tripped due to excessive price movement",
 			Timestamp: timestamp,
 			Details: map[string]interface{}{
-				"price_change":  priceChange,
-				"current_price": price,
+				"price_change":   priceChange,
+				"current_price":  price,
 				"previous_price": previousPrice,
-				"threshold":     breaker.Threshold,
+				"threshold":      breaker.Threshold,
 			},
 		}
 		rm.sendAlert(alert)
 	}
-	
+
 	// Update price cache
 	rm.metricsCache.Set(cacheKey, price, cache.DefaultExpiration)
 }
@@ -293,28 +293,28 @@ func (rm *RiskMonitor) checkCircuitBreaker(symbol string, price float64, timesta
 func (rm *RiskMonitor) checkVolatilitySpike(update MarketDataUpdate) {
 	// Simple volatility spike detection
 	// In a real implementation, this would use more sophisticated methods
-	
+
 	cacheKey := "volatility:" + update.Symbol
 	var recentPrices []float64
-	
+
 	if cached, found := rm.metricsCache.Get(cacheKey); found {
 		recentPrices = cached.([]float64)
 	} else {
 		recentPrices = make([]float64, 0, 20)
 	}
-	
+
 	// Add current price
 	recentPrices = append(recentPrices, update.Price)
-	
+
 	// Keep only last 20 prices
 	if len(recentPrices) > 20 {
 		recentPrices = recentPrices[1:]
 	}
-	
+
 	// Calculate volatility if we have enough data
 	if len(recentPrices) >= 10 {
 		volatility := rm.calculateVolatility(recentPrices)
-		
+
 		// Check for spike (simplified threshold)
 		if volatility > 0.05 { // 5% volatility threshold
 			alert := &RiskAlert{
@@ -332,7 +332,7 @@ func (rm *RiskMonitor) checkVolatilitySpike(update MarketDataUpdate) {
 			rm.sendAlert(alert)
 		}
 	}
-	
+
 	// Update cache
 	rm.metricsCache.Set(cacheKey, recentPrices, cache.DefaultExpiration)
 }
@@ -341,7 +341,7 @@ func (rm *RiskMonitor) checkVolatilitySpike(update MarketDataUpdate) {
 func (rm *RiskMonitor) checkCircuitBreakers() {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-rm.ctx.Done():
@@ -363,10 +363,10 @@ func (rm *RiskMonitor) checkCircuitBreakers() {
 func (rm *RiskMonitor) performPeriodicChecks() {
 	// Check for stale positions
 	rm.checkStalePositions()
-	
+
 	// Check concentration risk
 	rm.checkConcentrationRisk()
-	
+
 	// Update health check timestamp
 	rm.lastHealthCheck = time.Now()
 }
@@ -375,7 +375,7 @@ func (rm *RiskMonitor) performPeriodicChecks() {
 func (rm *RiskMonitor) checkStalePositions() {
 	staleThreshold := 5 * time.Minute
 	now := time.Now()
-	
+
 	for key, item := range rm.positionCache.Items() {
 		if position, ok := item.Object.(*riskengine.Position); ok {
 			if now.Sub(position.LastUpdateTime) > staleThreshold {
@@ -392,17 +392,17 @@ func (rm *RiskMonitor) checkStalePositions() {
 func (rm *RiskMonitor) checkConcentrationRisk() {
 	// Group positions by user
 	userPositions := make(map[string][]*riskengine.Position)
-	
+
 	for _, item := range rm.positionCache.Items() {
 		if position, ok := item.Object.(*riskengine.Position); ok {
 			userPositions[position.UserID] = append(userPositions[position.UserID], position)
 		}
 	}
-	
+
 	// Check concentration for each user
 	for userID, positions := range userPositions {
 		concentration := rm.calculateConcentrationRisk(positions)
-		
+
 		if concentration > 0.4 { // 40% concentration threshold
 			alert := &RiskAlert{
 				ID:        generateAlertID(),
@@ -412,8 +412,8 @@ func (rm *RiskMonitor) checkConcentrationRisk() {
 				Message:   "High concentration risk detected",
 				Timestamp: time.Now(),
 				Details: map[string]interface{}{
-					"concentration": concentration,
-					"threshold":     0.4,
+					"concentration":  concentration,
+					"threshold":      0.4,
 					"position_count": len(positions),
 				},
 			}
@@ -426,7 +426,7 @@ func (rm *RiskMonitor) checkConcentrationRisk() {
 func (rm *RiskMonitor) healthMonitor() {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-rm.ctx.Done():
@@ -440,16 +440,16 @@ func (rm *RiskMonitor) healthMonitor() {
 // performHealthCheck performs a health check
 func (rm *RiskMonitor) performHealthCheck() {
 	now := time.Now()
-	
+
 	// Check if market data is flowing
 	if now.Sub(rm.lastHealthCheck) > 2*time.Minute {
 		rm.logger.Warn("Risk monitor health check: no recent activity")
 	}
-	
+
 	// Check cache sizes
 	positionCount := rm.positionCache.ItemCount()
 	metricsCount := rm.metricsCache.ItemCount()
-	
+
 	rm.logger.Debug("Risk monitor health check",
 		zap.Int("cached_positions", positionCount),
 		zap.Int("cached_metrics", metricsCount),
@@ -496,7 +496,7 @@ func (rm *RiskMonitor) checkPositionViolation(position *riskengine.Position, lim
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -525,20 +525,20 @@ func (rm *RiskMonitor) calculateVolatility(prices []float64) float64 {
 	if len(prices) < 2 {
 		return 0
 	}
-	
+
 	// Calculate returns
 	returns := make([]float64, len(prices)-1)
 	for i := 1; i < len(prices); i++ {
 		returns[i-1] = (prices[i] - prices[i-1]) / prices[i-1]
 	}
-	
+
 	// Calculate mean return
 	mean := 0.0
 	for _, ret := range returns {
 		mean += ret
 	}
 	mean /= float64(len(returns))
-	
+
 	// Calculate variance
 	variance := 0.0
 	for _, ret := range returns {
@@ -546,7 +546,7 @@ func (rm *RiskMonitor) calculateVolatility(prices []float64) float64 {
 		variance += diff * diff
 	}
 	variance /= float64(len(returns) - 1)
-	
+
 	// Return standard deviation (volatility)
 	return math.Sqrt(variance)
 }
@@ -556,10 +556,10 @@ func (rm *RiskMonitor) calculateConcentrationRisk(positions []*riskengine.Positi
 	if len(positions) == 0 {
 		return 0
 	}
-	
+
 	totalValue := 0.0
 	maxValue := 0.0
-	
+
 	for _, pos := range positions {
 		value := abs(pos.Quantity * pos.AveragePrice)
 		totalValue += value
@@ -567,11 +567,11 @@ func (rm *RiskMonitor) calculateConcentrationRisk(positions []*riskengine.Positi
 			maxValue = value
 		}
 	}
-	
+
 	if totalValue == 0 {
 		return 0
 	}
-	
+
 	return maxValue / totalValue
 }
 
@@ -581,7 +581,7 @@ func (rm *RiskMonitor) sendAlert(alert *RiskAlert) {
 		zap.String("type", string(alert.Type)),
 		zap.String("severity", string(alert.Severity)),
 		zap.String("message", alert.Message))
-	
+
 	// Send to all callbacks
 	for _, callback := range rm.alertCallbacks {
 		go func(cb AlertCallback) {
@@ -617,5 +617,3 @@ func abs(x float64) float64 {
 	}
 	return x
 }
-
-

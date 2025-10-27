@@ -45,21 +45,21 @@ type EventStore interface {
 // Order Commands
 
 type CreateOrderCommand struct {
-	ID            string                `json:"id"`
-	ClientOrderID string                `json:"client_order_id"`
-	UserID        string                `json:"user_id"`
-	Symbol        string                `json:"symbol"`
-	Side          types.OrderSide       `json:"side"`
-	Type          types.OrderType       `json:"type"`
-	Price         float64               `json:"price"`
-	Quantity      float64               `json:"quantity"`
-	TimeInForce   types.TimeInForce     `json:"time_in_force"`
-	StopPrice     *float64              `json:"stop_price,omitempty"`
-	Timestamp     time.Time             `json:"timestamp"`
+	ID            string            `json:"id"`
+	ClientOrderID string            `json:"client_order_id"`
+	UserID        string            `json:"user_id"`
+	Symbol        string            `json:"symbol"`
+	Side          types.OrderSide   `json:"side"`
+	Type          types.OrderType   `json:"type"`
+	Price         float64           `json:"price"`
+	Quantity      float64           `json:"quantity"`
+	TimeInForce   types.TimeInForce `json:"time_in_force"`
+	StopPrice     *float64          `json:"stop_price,omitempty"`
+	Timestamp     time.Time         `json:"timestamp"`
 }
 
-func (c *CreateOrderCommand) GetID() string        { return c.ID }
-func (c *CreateOrderCommand) GetType() string      { return "CreateOrder" }
+func (c *CreateOrderCommand) GetID() string           { return c.ID }
+func (c *CreateOrderCommand) GetType() string         { return "CreateOrder" }
 func (c *CreateOrderCommand) GetTimestamp() time.Time { return c.Timestamp }
 
 type CancelOrderCommand struct {
@@ -70,21 +70,21 @@ type CancelOrderCommand struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-func (c *CancelOrderCommand) GetID() string        { return c.ID }
-func (c *CancelOrderCommand) GetType() string      { return "CancelOrder" }
+func (c *CancelOrderCommand) GetID() string           { return c.ID }
+func (c *CancelOrderCommand) GetType() string         { return "CancelOrder" }
 func (c *CancelOrderCommand) GetTimestamp() time.Time { return c.Timestamp }
 
 type UpdateOrderCommand struct {
-	ID              string    `json:"id"`
-	OrderID         string    `json:"order_id"`
-	FilledQuantity  float64   `json:"filled_quantity"`
-	RemainingQuantity float64 `json:"remaining_quantity"`
-	Status          types.OrderStatus `json:"status"`
-	Timestamp       time.Time `json:"timestamp"`
+	ID                string            `json:"id"`
+	OrderID           string            `json:"order_id"`
+	FilledQuantity    float64           `json:"filled_quantity"`
+	RemainingQuantity float64           `json:"remaining_quantity"`
+	Status            types.OrderStatus `json:"status"`
+	Timestamp         time.Time         `json:"timestamp"`
 }
 
-func (c *UpdateOrderCommand) GetID() string        { return c.ID }
-func (c *UpdateOrderCommand) GetType() string      { return "UpdateOrder" }
+func (c *UpdateOrderCommand) GetID() string           { return c.ID }
+func (c *UpdateOrderCommand) GetType() string         { return "UpdateOrder" }
 func (c *UpdateOrderCommand) GetTimestamp() time.Time { return c.Timestamp }
 
 // Trade Commands
@@ -104,19 +104,19 @@ type CreateTradeCommand struct {
 	Timestamp    time.Time       `json:"timestamp"`
 }
 
-func (c *CreateTradeCommand) GetID() string        { return c.ID }
-func (c *CreateTradeCommand) GetType() string      { return "CreateTrade" }
+func (c *CreateTradeCommand) GetID() string           { return c.ID }
+func (c *CreateTradeCommand) GetType() string         { return "CreateTrade" }
 func (c *CreateTradeCommand) GetTimestamp() time.Time { return c.Timestamp }
 
 // Command Handlers
 
 type OrderCommandHandler struct {
-	repository    interfaces.OrderRepository
-	eventStore    EventStore
-	eventBus      interfaces.EventPublisher
-	validator     interfaces.OrderValidator
-	logger        interfaces.Logger
-	metrics       interfaces.MetricsCollector
+	repository interfaces.OrderRepository
+	eventStore EventStore
+	eventBus   interfaces.EventPublisher
+	validator  interfaces.OrderValidator
+	logger     interfaces.Logger
+	metrics    interfaces.MetricsCollector
 }
 
 func NewOrderCommandHandler(
@@ -183,18 +183,18 @@ func (h *OrderCommandHandler) HandleCreateOrder(ctx context.Context, cmd *Create
 
 	// Create and save event
 	event := &OrderCreatedEvent{
-		ID:            generateEventID(),
-		AggregateID:   order.ID,
-		OrderID:       order.ID,
-		UserID:        order.UserID,
-		Symbol:        order.Symbol,
-		Side:          order.Side,
-		Type:          order.Type,
-		Price:         order.Price,
-		Quantity:      order.Quantity,
-		TimeInForce:   order.TimeInForce,
-		StopPrice:     order.StopPrice,
-		Timestamp:     time.Now(),
+		ID:          generateEventID(),
+		AggregateID: order.ID,
+		OrderID:     order.ID,
+		UserID:      order.UserID,
+		Symbol:      order.Symbol,
+		Side:        order.Side,
+		Type:        order.Type,
+		Price:       order.Price,
+		Quantity:    order.Quantity,
+		TimeInForce: order.TimeInForce,
+		StopPrice:   order.StopPrice,
+		Timestamp:   time.Now(),
 	}
 
 	if err := h.eventStore.SaveEvents(ctx, order.ID, []Event{event}, 0); err != nil {

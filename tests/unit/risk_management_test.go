@@ -12,18 +12,18 @@ import (
 
 func TestRiskCalculator_VaRCalculation(t *testing.T) {
 	calculator := risk.NewCalculator(&risk.Config{
-		VaRConfidence:        0.95,
-		CalculationInterval:  time.Second,
-		MaxPositionSize:      1000000,
-		ConcentrationLimit:   0.3,
-		EnableRealTimeCalc:   true,
+		VaRConfidence:       0.95,
+		CalculationInterval: time.Second,
+		MaxPositionSize:     1000000,
+		ConcentrationLimit:  0.3,
+		EnableRealTimeCalc:  true,
 	})
 
 	ctx := context.Background()
 
 	// Create test portfolio
 	portfolio := &risk.Portfolio{
-		UserID:    "user-001",
+		UserID: "user-001",
 		Positions: []risk.Position{
 			{
 				Symbol:        "AAPL",
@@ -44,8 +44,8 @@ func TestRiskCalculator_VaRCalculation(t *testing.T) {
 		},
 		TotalMarketValue:   430000,
 		TotalUnrealizedPnL: 0,
-		Cash:              70000,
-		TotalValue:        500000,
+		Cash:               70000,
+		TotalValue:         500000,
 	}
 
 	// Calculate VaR
@@ -56,24 +56,24 @@ func TestRiskCalculator_VaRCalculation(t *testing.T) {
 	// VaR should be positive (potential loss)
 	assert.Greater(t, varResult.VaR95, 0.0)
 	assert.Greater(t, varResult.VaR99, varResult.VaR95, "99% VaR should be higher than 95% VaR")
-	
+
 	// Expected Shortfall should be higher than VaR
 	assert.Greater(t, varResult.ExpectedShortfall, varResult.VaR95)
-	
+
 	// Confidence level should match
 	assert.Equal(t, 0.95, varResult.Confidence)
-	
+
 	// Should have calculation timestamp
 	assert.WithinDuration(t, time.Now(), varResult.CalculatedAt, time.Minute)
 }
 
 func TestRiskCalculator_GreeksCalculation(t *testing.T) {
 	calculator := risk.NewCalculator(&risk.Config{
-		VaRConfidence:        0.95,
-		CalculationInterval:  time.Second,
-		MaxPositionSize:      1000000,
-		ConcentrationLimit:   0.3,
-		EnableRealTimeCalc:   true,
+		VaRConfidence:       0.95,
+		CalculationInterval: time.Second,
+		MaxPositionSize:     1000000,
+		ConcentrationLimit:  0.3,
+		EnableRealTimeCalc:  true,
 	})
 
 	ctx := context.Background()
@@ -116,11 +116,11 @@ func TestRiskCalculator_GreeksCalculation(t *testing.T) {
 
 func TestRiskCalculator_ConcentrationRisk(t *testing.T) {
 	calculator := risk.NewCalculator(&risk.Config{
-		VaRConfidence:        0.95,
-		CalculationInterval:  time.Second,
-		MaxPositionSize:      1000000,
-		ConcentrationLimit:   0.3, // 30% max concentration
-		EnableRealTimeCalc:   true,
+		VaRConfidence:       0.95,
+		CalculationInterval: time.Second,
+		MaxPositionSize:     1000000,
+		ConcentrationLimit:  0.3, // 30% max concentration
+		EnableRealTimeCalc:  true,
 	})
 
 	ctx := context.Background()
@@ -156,8 +156,8 @@ func TestRiskCalculator_ConcentrationRisk(t *testing.T) {
 		},
 		TotalMarketValue:   500750,
 		TotalUnrealizedPnL: 8250,
-		Cash:              -750,
-		TotalValue:        500000,
+		Cash:               -750,
+		TotalValue:         500000,
 	}
 
 	// Calculate concentration risk
@@ -179,11 +179,11 @@ func TestRiskCalculator_ConcentrationRisk(t *testing.T) {
 
 func TestRiskCalculator_PositionRisk(t *testing.T) {
 	calculator := risk.NewCalculator(&risk.Config{
-		VaRConfidence:        0.95,
-		CalculationInterval:  time.Second,
-		MaxPositionSize:      1000000,
-		ConcentrationLimit:   0.3,
-		EnableRealTimeCalc:   true,
+		VaRConfidence:       0.95,
+		CalculationInterval: time.Second,
+		MaxPositionSize:     1000000,
+		ConcentrationLimit:  0.3,
+		EnableRealTimeCalc:  true,
 	})
 
 	ctx := context.Background()
@@ -227,11 +227,11 @@ func TestRiskCalculator_PositionRisk(t *testing.T) {
 
 func TestRiskCalculator_OrderRisk(t *testing.T) {
 	calculator := risk.NewCalculator(&risk.Config{
-		VaRConfidence:        0.95,
-		CalculationInterval:  time.Second,
-		MaxPositionSize:      1000000,
-		ConcentrationLimit:   0.3,
-		EnableRealTimeCalc:   true,
+		VaRConfidence:       0.95,
+		CalculationInterval: time.Second,
+		MaxPositionSize:     1000000,
+		ConcentrationLimit:  0.3,
+		EnableRealTimeCalc:  true,
 	})
 
 	ctx := context.Background()
@@ -251,17 +251,17 @@ func TestRiskCalculator_OrderRisk(t *testing.T) {
 		},
 		TotalMarketValue:   77500,
 		TotalUnrealizedPnL: 2500,
-		Cash:              422500,
-		TotalValue:        500000,
+		Cash:               422500,
+		TotalValue:         500000,
 	}
 
 	// Test order that would be acceptable
 	order := &risk.OrderRisk{
-		UserID:   "user-001",
-		Symbol:   "AAPL",
-		Side:     "buy",
-		Quantity: 1000,
-		Price:    155.00,
+		UserID:    "user-001",
+		Symbol:    "AAPL",
+		Side:      "buy",
+		Quantity:  1000,
+		Price:     155.00,
 		OrderType: "limit",
 	}
 
@@ -275,11 +275,11 @@ func TestRiskCalculator_OrderRisk(t *testing.T) {
 
 	// Test order that would exceed limits
 	largeOrder := &risk.OrderRisk{
-		UserID:   "user-001",
-		Symbol:   "AAPL",
-		Side:     "buy",
-		Quantity: 10000,
-		Price:    155.00,
+		UserID:    "user-001",
+		Symbol:    "AAPL",
+		Side:      "buy",
+		Quantity:  10000,
+		Price:     155.00,
 		OrderType: "limit",
 	}
 
@@ -295,11 +295,11 @@ func TestRiskCalculator_OrderRisk(t *testing.T) {
 
 func TestRiskCalculator_AccountRisk(t *testing.T) {
 	calculator := risk.NewCalculator(&risk.Config{
-		VaRConfidence:        0.95,
-		CalculationInterval:  time.Second,
-		MaxPositionSize:      1000000,
-		ConcentrationLimit:   0.3,
-		EnableRealTimeCalc:   true,
+		VaRConfidence:       0.95,
+		CalculationInterval: time.Second,
+		MaxPositionSize:     1000000,
+		ConcentrationLimit:  0.3,
+		EnableRealTimeCalc:  true,
 	})
 
 	ctx := context.Background()
@@ -322,8 +322,8 @@ func TestRiskCalculator_AccountRisk(t *testing.T) {
 				},
 				TotalMarketValue:   155000,
 				TotalUnrealizedPnL: 5000,
-				Cash:              345000,
-				TotalValue:        500000,
+				Cash:               345000,
+				TotalValue:         500000,
 			},
 			"retirement": {
 				UserID: "user-001",
@@ -339,14 +339,14 @@ func TestRiskCalculator_AccountRisk(t *testing.T) {
 				},
 				TotalMarketValue:   205000,
 				TotalUnrealizedPnL: 5000,
-				Cash:              95000,
-				TotalValue:        300000,
+				Cash:               95000,
+				TotalValue:         300000,
 			},
 		},
-		TotalValue:        800000,
+		TotalValue:         800000,
 		TotalUnrealizedPnL: 10000,
-		MarginUsed:        0,
-		AvailableMargin:   200000,
+		MarginUsed:         0,
+		AvailableMargin:    200000,
 	}
 
 	// Calculate account risk
@@ -368,11 +368,11 @@ func TestRiskCalculator_AccountRisk(t *testing.T) {
 
 func TestRiskCalculator_RealTimeMonitoring(t *testing.T) {
 	calculator := risk.NewCalculator(&risk.Config{
-		VaRConfidence:        0.95,
-		CalculationInterval:  100 * time.Millisecond, // Fast for testing
-		MaxPositionSize:      1000000,
-		ConcentrationLimit:   0.3,
-		EnableRealTimeCalc:   true,
+		VaRConfidence:       0.95,
+		CalculationInterval: 100 * time.Millisecond, // Fast for testing
+		MaxPositionSize:     1000000,
+		ConcentrationLimit:  0.3,
+		EnableRealTimeCalc:  true,
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -393,8 +393,8 @@ func TestRiskCalculator_RealTimeMonitoring(t *testing.T) {
 		},
 		TotalMarketValue:   155000,
 		TotalUnrealizedPnL: 5000,
-		Cash:              345000,
-		TotalValue:        500000,
+		Cash:               345000,
+		TotalValue:         500000,
 	}
 
 	// Start real-time monitoring
@@ -428,11 +428,11 @@ func TestRiskCalculator_RealTimeMonitoring(t *testing.T) {
 
 func BenchmarkRiskCalculator_VaRCalculation(b *testing.B) {
 	calculator := risk.NewCalculator(&risk.Config{
-		VaRConfidence:        0.95,
-		CalculationInterval:  time.Second,
-		MaxPositionSize:      1000000,
-		ConcentrationLimit:   0.3,
-		EnableRealTimeCalc:   false, // Disable for benchmarking
+		VaRConfidence:       0.95,
+		CalculationInterval: time.Second,
+		MaxPositionSize:     1000000,
+		ConcentrationLimit:  0.3,
+		EnableRealTimeCalc:  false, // Disable for benchmarking
 	})
 
 	ctx := context.Background()
@@ -455,8 +455,8 @@ func BenchmarkRiskCalculator_VaRCalculation(b *testing.B) {
 		Positions:          positions,
 		TotalMarketValue:   10500000,
 		TotalUnrealizedPnL: 500000,
-		Cash:              500000,
-		TotalValue:        11000000,
+		Cash:               500000,
+		TotalValue:         11000000,
 	}
 
 	b.ResetTimer()
@@ -472,11 +472,11 @@ func BenchmarkRiskCalculator_VaRCalculation(b *testing.B) {
 
 func BenchmarkRiskCalculator_GreeksCalculation(b *testing.B) {
 	calculator := risk.NewCalculator(&risk.Config{
-		VaRConfidence:        0.95,
-		CalculationInterval:  time.Second,
-		MaxPositionSize:      1000000,
-		ConcentrationLimit:   0.3,
-		EnableRealTimeCalc:   false,
+		VaRConfidence:       0.95,
+		CalculationInterval: time.Second,
+		MaxPositionSize:     1000000,
+		ConcentrationLimit:  0.3,
+		EnableRealTimeCalc:  false,
 	})
 
 	ctx := context.Background()

@@ -34,27 +34,27 @@ type ADXConnectionManager struct {
 	healthChecker    *ConnectionHealthChecker
 	reconnectManager *ReconnectManager
 	mu               sync.RWMutex
-	
+
 	// Connection metrics
-	totalConnections    int64
-	activeConnections   int64
-	failedConnections   int64
-	reconnectAttempts   int64
+	totalConnections  int64
+	activeConnections int64
+	failedConnections int64
+	reconnectAttempts int64
 }
 
 // ADXConnection represents a single connection to ADX
 type ADXConnection struct {
-	ID              string
-	Type            ConnectionType
-	Status          ConnectionStatus
-	Endpoint        string
-	LastHeartbeat   time.Time
-	ConnectedAt     time.Time
-	ReconnectCount  int
-	ErrorCount      int64
-	BytesSent       int64
-	BytesReceived   int64
-	mu              sync.RWMutex
+	ID             string
+	Type           ConnectionType
+	Status         ConnectionStatus
+	Endpoint       string
+	LastHeartbeat  time.Time
+	ConnectedAt    time.Time
+	ReconnectCount int
+	ErrorCount     int64
+	BytesSent      int64
+	BytesReceived  int64
+	mu             sync.RWMutex
 }
 
 // ConnectionType defines the type of ADX connection
@@ -122,29 +122,29 @@ type ConnectionPool struct {
 
 // ConnectionHealthChecker monitors connection health
 type ConnectionHealthChecker struct {
-	interval        time.Duration
-	timeout         time.Duration
-	maxFailures     int
-	healthChecks    map[string]*HealthCheck
-	mu              sync.RWMutex
+	interval     time.Duration
+	timeout      time.Duration
+	maxFailures  int
+	healthChecks map[string]*HealthCheck
+	mu           sync.RWMutex
 }
 
 // HealthCheck represents a connection health check
 type HealthCheck struct {
-	ConnectionID    string
-	LastCheck       time.Time
+	ConnectionID     string
+	LastCheck        time.Time
 	ConsecutiveFails int
-	IsHealthy       bool
+	IsHealthy        bool
 }
 
 // ReconnectManager handles automatic reconnection logic
 type ReconnectManager struct {
-	maxRetries      int
-	baseDelay       time.Duration
-	maxDelay        time.Duration
-	backoffFactor   float64
-	reconnectQueue  chan *ReconnectRequest
-	mu              sync.RWMutex
+	maxRetries     int
+	baseDelay      time.Duration
+	maxDelay       time.Duration
+	backoffFactor  float64
+	reconnectQueue chan *ReconnectRequest
+	mu             sync.RWMutex
 }
 
 // ReconnectRequest represents a reconnection request
@@ -202,13 +202,13 @@ func (acm *ADXConnectionManager) Connect(ctx context.Context, connType Connectio
 	defer acm.mu.Unlock()
 
 	connectionID := fmt.Sprintf("adx_%s_%d", connType.String(), time.Now().UnixNano())
-	
+
 	connection := &ADXConnection{
-		ID:            connectionID,
-		Type:          connType,
-		Status:        ConnectionStatusConnecting,
-		Endpoint:      acm.getEndpointForType(connType),
-		ConnectedAt:   time.Now(),
+		ID:          connectionID,
+		Type:        connType,
+		Status:      ConnectionStatusConnecting,
+		Endpoint:    acm.getEndpointForType(connType),
+		ConnectedAt: time.Now(),
 	}
 
 	// Simulate connection establishment
@@ -220,7 +220,7 @@ func (acm *ADXConnectionManager) Connect(ctx context.Context, connType Connectio
 
 	connection.Status = ConnectionStatusConnected
 	connection.LastHeartbeat = time.Now()
-	
+
 	acm.connections[connectionID] = connection
 	acm.activeConnections++
 	acm.totalConnections++
@@ -347,7 +347,7 @@ func (acm *ADXConnectionManager) monitorConnection(ctx context.Context, connecti
 					zap.String("connectionID", connection.ID),
 					zap.Error(err),
 				)
-				
+
 				// Trigger reconnection if needed
 				acm.scheduleReconnect(connection, "health_check_failed")
 			}
@@ -362,7 +362,7 @@ func (acm *ADXConnectionManager) performHealthCheck(ctx context.Context, connect
 
 	// Simulate health check
 	connection.LastHeartbeat = time.Now()
-	
+
 	// Check if connection is stale
 	if time.Since(connection.LastHeartbeat) > 2*acm.healthChecker.interval {
 		connection.ErrorCount++
@@ -416,7 +416,7 @@ func (acm *ADXConnectionManager) handleReconnectRequest(ctx context.Context, req
 	}
 
 	// Calculate backoff delay
-	delay := time.Duration(float64(acm.reconnectManager.baseDelay) * 
+	delay := time.Duration(float64(acm.reconnectManager.baseDelay) *
 		float64(request.Attempt) * acm.reconnectManager.backoffFactor)
 	if delay > acm.reconnectManager.maxDelay {
 		delay = acm.reconnectManager.maxDelay
@@ -447,7 +447,7 @@ func (acm *ADXConnectionManager) handleReconnectRequest(ctx context.Context, req
 			zap.String("connectionID", request.ConnectionID),
 			zap.Error(err),
 		)
-		
+
 		// Schedule another attempt
 		acm.scheduleReconnect(connection, "reconnect_failed")
 		return
@@ -469,10 +469,10 @@ func (acm *ADXConnectionManager) GetMetrics() map[string]interface{} {
 	defer acm.mu.RUnlock()
 
 	return map[string]interface{}{
-		"total_connections":    acm.totalConnections,
-		"active_connections":   acm.activeConnections,
-		"failed_connections":   acm.failedConnections,
-		"reconnect_attempts":   acm.reconnectAttempts,
+		"total_connections":  acm.totalConnections,
+		"active_connections": acm.activeConnections,
+		"failed_connections": acm.failedConnections,
+		"reconnect_attempts": acm.reconnectAttempts,
 		"connection_types": map[string]int{
 			"market_data": len(acm.GetConnectionsByType(ConnectionTypeMarketData)),
 			"trading":     len(acm.GetConnectionsByType(ConnectionTypeTrading)),

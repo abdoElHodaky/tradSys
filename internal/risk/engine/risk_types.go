@@ -68,27 +68,27 @@ type RiskLimit struct {
 	UserID      string        `json:"user_id,omitempty"`
 	AccountID   string        `json:"account_id,omitempty"`
 	Limit       float64       `json:"limit"`
-	Value       float64       `json:"value"`       // Current value for comparison
+	Value       float64       `json:"value"` // Current value for comparison
 	Warning     float64       `json:"warning,omitempty"`
 	Enabled     bool          `json:"enabled"`
 	CreatedAt   time.Time     `json:"created_at"`
 	UpdatedAt   time.Time     `json:"updated_at"`
 	Description string        `json:"description,omitempty"`
-	
+
 	// Time-based limits
 	TimeWindow *time.Duration `json:"time_window,omitempty"`
-	
+
 	// Metadata
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // RiskOperation represents a risk operation for batch processing
 type RiskOperation struct {
-	OpType    string      `json:"op_type"`
-	UserID    string      `json:"user_id"`
-	AccountID string      `json:"account_id"`
-	Symbol    string      `json:"symbol"`
-	Data      interface{} `json:"data"`
+	OpType    string                   `json:"op_type"`
+	UserID    string                   `json:"user_id"`
+	AccountID string                   `json:"account_id"`
+	Symbol    string                   `json:"symbol"`
+	Data      interface{}              `json:"data"`
 	ResultCh  chan RiskOperationResult `json:"-"`
 }
 
@@ -107,18 +107,18 @@ type Position struct {
 	Symbol        string    `json:"symbol"`
 	Quantity      float64   `json:"quantity"`
 	AveragePrice  float64   `json:"average_price"`
-	AvgPrice      float64   `json:"avg_price"`      // Alias for AveragePrice for compatibility
+	AvgPrice      float64   `json:"avg_price"` // Alias for AveragePrice for compatibility
 	MarketPrice   float64   `json:"market_price"`
 	UnrealizedPnL float64   `json:"unrealized_pnl"`
 	RealizedPnL   float64   `json:"realized_pnl"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
-	
+
 	// Risk metrics
-	VaR           float64 `json:"var"`
-	Beta          float64 `json:"beta"`
-	Volatility    float64 `json:"volatility"`
-	
+	VaR        float64 `json:"var"`
+	Beta       float64 `json:"beta"`
+	Volatility float64 `json:"volatility"`
+
 	// Metadata
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
@@ -146,10 +146,10 @@ type RiskMetrics struct {
 	Volatility    float64   `json:"volatility"`
 	Sharpe        float64   `json:"sharpe"`
 	UpdatedAt     time.Time `json:"updated_at"`
-	
+
 	// Position breakdown
 	Positions map[string]*Position `json:"positions"`
-	
+
 	// Risk limits status
 	LimitUtilization map[string]float64 `json:"limit_utilization"`
 }
@@ -165,39 +165,39 @@ const (
 
 // CircuitBreaker represents a circuit breaker for risk management
 type CircuitBreaker struct {
-	ID               string              `json:"id"`
-	Symbol           string              `json:"symbol"`
-	State            CircuitBreakerState `json:"state"`
-	Threshold        float64             `json:"threshold"`
-	TimeWindow       time.Duration       `json:"time_window"`
-	CooldownPeriod   time.Duration       `json:"cooldown_period"`
-	FailureCount     int                 `json:"failure_count"`
-	LastFailureTime  *time.Time          `json:"last_failure_time"`
-	LastSuccessTime  *time.Time          `json:"last_success_time"`
-	CreatedAt        time.Time           `json:"created_at"`
-	UpdatedAt        time.Time           `json:"updated_at"`
-	
+	ID              string              `json:"id"`
+	Symbol          string              `json:"symbol"`
+	State           CircuitBreakerState `json:"state"`
+	Threshold       float64             `json:"threshold"`
+	TimeWindow      time.Duration       `json:"time_window"`
+	CooldownPeriod  time.Duration       `json:"cooldown_period"`
+	FailureCount    int                 `json:"failure_count"`
+	LastFailureTime *time.Time          `json:"last_failure_time"`
+	LastSuccessTime *time.Time          `json:"last_success_time"`
+	CreatedAt       time.Time           `json:"created_at"`
+	UpdatedAt       time.Time           `json:"updated_at"`
+
 	// Configuration
-	MaxFailures      int           `json:"max_failures"`
-	HalfOpenRequests int           `json:"half_open_requests"`
-	
+	MaxFailures      int `json:"max_failures"`
+	HalfOpenRequests int `json:"half_open_requests"`
+
 	// Metadata
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // RiskAlert represents a risk alert
 type RiskAlert struct {
-	ID          string    `json:"id"`
-	Type        string    `json:"type"`
-	Level       RiskLevel `json:"level"`
-	UserID      string    `json:"user_id"`
-	AccountID   string    `json:"account_id"`
-	Symbol      string    `json:"symbol,omitempty"`
-	Message     string    `json:"message"`
-	Details     map[string]interface{} `json:"details"`
-	CreatedAt   time.Time `json:"created_at"`
-	AcknowledgedAt *time.Time `json:"acknowledged_at,omitempty"`
-	ResolvedAt     *time.Time `json:"resolved_at,omitempty"`
+	ID             string                 `json:"id"`
+	Type           string                 `json:"type"`
+	Level          RiskLevel              `json:"level"`
+	UserID         string                 `json:"user_id"`
+	AccountID      string                 `json:"account_id"`
+	Symbol         string                 `json:"symbol,omitempty"`
+	Message        string                 `json:"message"`
+	Details        map[string]interface{} `json:"details"`
+	CreatedAt      time.Time              `json:"created_at"`
+	AcknowledgedAt *time.Time             `json:"acknowledged_at,omitempty"`
+	ResolvedAt     *time.Time             `json:"resolved_at,omitempty"`
 }
 
 // NewRiskLimit creates a new risk limit
@@ -305,7 +305,7 @@ func (p *Position) AddTrade(quantity, price float64) {
 			// Position reversal or closure
 			realizedPnL := (price - p.AveragePrice) * p.Quantity
 			p.RealizedPnL += realizedPnL
-			
+
 			remainingQuantity := quantity + p.Quantity
 			if remainingQuantity != 0 {
 				p.Quantity = remainingQuantity
@@ -321,7 +321,7 @@ func (p *Position) AddTrade(quantity, price float64) {
 			p.Quantity += quantity
 		}
 	}
-	
+
 	p.UpdatedAt = time.Now()
 }
 
@@ -359,11 +359,11 @@ func (cb *CircuitBreaker) RecordSuccess() {
 	now := time.Now()
 	cb.LastSuccessTime = &now
 	cb.FailureCount = 0
-	
+
 	if cb.State == CircuitBreakerStateHalf {
 		cb.State = CircuitBreakerStateClosed
 	}
-	
+
 	cb.UpdatedAt = now
 }
 
@@ -372,11 +372,11 @@ func (cb *CircuitBreaker) RecordFailure() {
 	now := time.Now()
 	cb.LastFailureTime = &now
 	cb.FailureCount++
-	
+
 	if cb.FailureCount >= cb.MaxFailures {
 		cb.State = CircuitBreakerStateOpen
 	}
-	
+
 	cb.UpdatedAt = now
 }
 
@@ -385,11 +385,11 @@ func (cb *CircuitBreaker) ShouldAttemptReset() bool {
 	if cb.State != CircuitBreakerStateOpen {
 		return false
 	}
-	
+
 	if cb.LastFailureTime == nil {
 		return false
 	}
-	
+
 	return time.Since(*cb.LastFailureTime) >= cb.CooldownPeriod
 }
 

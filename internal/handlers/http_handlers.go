@@ -42,20 +42,20 @@ func (h *HTTPHandlers) RegisterRoutes(mux *http.ServeMux) {
 	// Order endpoints
 	mux.HandleFunc("/api/v1/orders", h.handleOrders)
 	mux.HandleFunc("/api/v1/orders/", h.handleOrderByID)
-	
+
 	// Trade endpoints
 	mux.HandleFunc("/api/v1/trades", h.handleTrades)
 	mux.HandleFunc("/api/v1/trades/", h.handleTradeByID)
-	
+
 	// Market data endpoints
 	mux.HandleFunc("/api/v1/market-data/", h.handleMarketData)
 	mux.HandleFunc("/api/v1/ohlcv/", h.handleOHLCV)
 	mux.HandleFunc("/api/v1/symbols", h.handleSymbols)
-	
+
 	// System endpoints
 	mux.HandleFunc("/api/v1/health", h.handleHealth)
 	mux.HandleFunc("/api/v1/metrics", h.handleMetrics)
-	
+
 	// WebSocket endpoint for real-time data
 	mux.HandleFunc("/ws", h.handleWebSocket)
 }
@@ -73,7 +73,7 @@ func (h *HTTPHandlers) handleOrders(w http.ResponseWriter, r *http.Request) {
 			return h.writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		}
 	})
-	
+
 	if err != nil {
 		h.logger.Error("Request failed", "error", err, "path", r.URL.Path, "method", r.Method)
 	}
@@ -95,7 +95,7 @@ func (h *HTTPHandlers) handleOrderByID(w http.ResponseWriter, r *http.Request) {
 			return h.writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		}
 	})
-	
+
 	if err != nil {
 		h.logger.Error("Request failed", "error", err, "path", r.URL.Path, "method", r.Method)
 	}
@@ -183,11 +183,11 @@ func (h *HTTPHandlers) listOrders(w http.ResponseWriter, r *http.Request) error 
 
 	// Parse filters
 	filters := &interfaces.OrderFilters{
-		Symbol:  r.URL.Query().Get("symbol"),
-		Side:    types.OrderSide(r.URL.Query().Get("side")),
-		Status:  types.OrderStatus(r.URL.Query().Get("status")),
-		Limit:   limit,
-		Offset:  offset,
+		Symbol: r.URL.Query().Get("symbol"),
+		Side:   types.OrderSide(r.URL.Query().Get("side")),
+		Status: types.OrderStatus(r.URL.Query().Get("status")),
+		Limit:  limit,
+		Offset: offset,
 	}
 
 	orderService := h.registry.GetOrderService()
@@ -242,7 +242,7 @@ func (h *HTTPHandlers) handleTrades(w http.ResponseWriter, r *http.Request) {
 			return h.writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		}
 	})
-	
+
 	if err != nil {
 		h.logger.Error("Request failed", "error", err, "path", r.URL.Path, "method", r.Method)
 	}
@@ -262,7 +262,7 @@ func (h *HTTPHandlers) handleTradeByID(w http.ResponseWriter, r *http.Request) {
 			return h.writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		}
 	})
-	
+
 	if err != nil {
 		h.logger.Error("Request failed", "error", err, "path", r.URL.Path, "method", r.Method)
 	}
@@ -341,7 +341,7 @@ func (h *HTTPHandlers) handleMarketData(w http.ResponseWriter, r *http.Request) 
 			return h.writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		}
 	})
-	
+
 	if err != nil {
 		h.logger.Error("Request failed", "error", err, "path", r.URL.Path, "method", r.Method)
 	}
@@ -378,7 +378,7 @@ func (h *HTTPHandlers) handleOHLCV(w http.ResponseWriter, r *http.Request) {
 			return h.writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		}
 	})
-	
+
 	if err != nil {
 		h.logger.Error("Request failed", "error", err, "path", r.URL.Path, "method", r.Method)
 	}
@@ -424,7 +424,7 @@ func (h *HTTPHandlers) handleSymbols(w http.ResponseWriter, r *http.Request) {
 			return h.writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		}
 	})
-	
+
 	if err != nil {
 		h.logger.Error("Request failed", "error", err, "path", r.URL.Path, "method", r.Method)
 	}
@@ -453,15 +453,15 @@ func (h *HTTPHandlers) handleHealth(w http.ResponseWriter, r *http.Request) {
 	err := h.performance.TrackRequest(r.Context(), "handle_health", func() error {
 		ctx := context.WithValue(r.Context(), "timestamp", time.Now())
 		healthStatus := h.registry.GetHealthStatus(ctx)
-		
+
 		statusCode := http.StatusOK
 		if healthStatus.Overall != interfaces.HealthStatusHealthy {
 			statusCode = http.StatusServiceUnavailable
 		}
-		
+
 		return h.writeJSON(w, statusCode, healthStatus)
 	})
-	
+
 	if err != nil {
 		h.logger.Error("Health check failed", "error", err)
 	}
@@ -471,15 +471,15 @@ func (h *HTTPHandlers) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	err := h.performance.TrackRequest(r.Context(), "handle_metrics", func() error {
 		stats := h.performance.GetStatistics()
 		serviceStats := h.registry.GetServiceStatistics()
-		
+
 		response := map[string]interface{}{
 			"performance": stats,
 			"services":    serviceStats,
 		}
-		
+
 		return h.writeJSON(w, http.StatusOK, response)
 	})
-	
+
 	if err != nil {
 		h.logger.Error("Metrics request failed", "error", err)
 	}

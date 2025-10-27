@@ -14,14 +14,14 @@ type OrderLifecycle struct {
 	orderService *OrderService
 	logger       *zap.Logger
 	mu           sync.RWMutex
-	
+
 	// Lifecycle tracking
 	orderStates map[string]*OrderState
-	
+
 	// Background processing
 	ctx    context.Context
 	cancel context.CancelFunc
-	
+
 	// Channels for lifecycle events
 	stateChangeChan chan *OrderStateChange
 	expirationChan  chan *OrderExpiration
@@ -29,22 +29,22 @@ type OrderLifecycle struct {
 
 // OrderState represents the internal state of an order
 type OrderState struct {
-	OrderID       string
-	CurrentStatus OrderStatus
+	OrderID        string
+	CurrentStatus  OrderStatus
 	PreviousStatus OrderStatus
 	StateChangedAt time.Time
-	ExpiresAt     time.Time
-	Metadata      map[string]interface{}
+	ExpiresAt      time.Time
+	Metadata       map[string]interface{}
 }
 
 // OrderStateChange represents a state change event
 type OrderStateChange struct {
-	OrderID       string
-	FromStatus    OrderStatus
-	ToStatus      OrderStatus
-	Reason        string
-	Timestamp     time.Time
-	Metadata      map[string]interface{}
+	OrderID    string
+	FromStatus OrderStatus
+	ToStatus   OrderStatus
+	Reason     string
+	Timestamp  time.Time
+	Metadata   map[string]interface{}
 }
 
 // OrderExpiration represents an order expiration event
@@ -56,7 +56,7 @@ type OrderExpiration struct {
 // NewOrderLifecycle creates a new order lifecycle manager
 func NewOrderLifecycle(orderService *OrderService, logger *zap.Logger) *OrderLifecycle {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	return &OrderLifecycle{
 		orderService:    orderService,
 		logger:          logger,
@@ -79,13 +79,13 @@ func (ol *OrderLifecycle) InitializeOrder(ctx context.Context, order *Order) err
 		CurrentStatus:  order.Status,
 		PreviousStatus: "",
 		StateChangedAt: time.Now(),
-		ExpiresAt:      func() time.Time {
+		ExpiresAt: func() time.Time {
 			if order.ExpiresAt != nil {
 				return *order.ExpiresAt
 			}
 			return time.Time{}
 		}(),
-		Metadata:       make(map[string]interface{}),
+		Metadata: make(map[string]interface{}),
 	}
 
 	ol.orderStates[order.ID] = state
@@ -277,9 +277,9 @@ func (ol *OrderLifecycle) isValidStatusTransition(from, to OrderStatus) bool {
 
 // canOrderExpire checks if an order can expire
 func (ol *OrderLifecycle) canOrderExpire(status OrderStatus) bool {
-	return status == OrderStatusNew || 
-		   status == OrderStatusPending || 
-		   status == OrderStatusPartiallyFilled
+	return status == OrderStatusNew ||
+		status == OrderStatusPending ||
+		status == OrderStatusPartiallyFilled
 }
 
 // scheduleExpiration schedules an order for expiration
@@ -483,9 +483,9 @@ func (ol *OrderLifecycle) GetStats() *LifecycleStats {
 
 // LifecycleStats represents lifecycle statistics
 type LifecycleStats struct {
-	TotalOrders     int                    `json:"total_orders"`
-	OrdersByStatus  map[OrderStatus]int    `json:"orders_by_status"`
-	LastUpdateTime  time.Time              `json:"last_update_time"`
+	TotalOrders    int                 `json:"total_orders"`
+	OrdersByStatus map[OrderStatus]int `json:"orders_by_status"`
+	LastUpdateTime time.Time           `json:"last_update_time"`
 }
 
 // Error definitions for lifecycle

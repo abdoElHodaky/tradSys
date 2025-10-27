@@ -11,10 +11,10 @@ import (
 
 // LimitsManager handles risk limits management
 type LimitsManager struct {
-	logger      *zap.Logger
-	limits      map[string]map[string]*RiskLimit // userID -> limitType -> limit
-	mu          sync.RWMutex
-	calculator  *RiskCalculator
+	logger     *zap.Logger
+	limits     map[string]map[string]*RiskLimit // userID -> limitType -> limit
+	mu         sync.RWMutex
+	calculator *RiskCalculator
 }
 
 // NewLimitsManager creates a new limits manager
@@ -31,26 +31,26 @@ func (lm *LimitsManager) SetLimit(userID string, limit *RiskLimit) error {
 	if limit == nil {
 		return fmt.Errorf("limit cannot be nil")
 	}
-	
+
 	if userID == "" {
 		return fmt.Errorf("userID cannot be empty")
 	}
-	
+
 	lm.mu.Lock()
 	defer lm.mu.Unlock()
-	
+
 	if lm.limits[userID] == nil {
 		lm.limits[userID] = make(map[string]*RiskLimit)
 	}
-	
+
 	lm.limits[userID][string(limit.Type)] = limit
-	
+
 	lm.logger.Info("Risk limit set",
 		zap.String("user_id", userID),
 		zap.String("limit_type", string(limit.Type)),
 		zap.Float64("value", limit.Value),
 		zap.String("symbol", limit.Symbol))
-	
+
 	return nil
 }
 
@@ -58,17 +58,17 @@ func (lm *LimitsManager) SetLimit(userID string, limit *RiskLimit) error {
 func (lm *LimitsManager) GetLimit(userID string, limitType RiskLimitType) (*RiskLimit, error) {
 	lm.mu.RLock()
 	defer lm.mu.RUnlock()
-	
+
 	userLimits, exists := lm.limits[userID]
 	if !exists {
 		return nil, fmt.Errorf("no limits found for user %s", userID)
 	}
-	
+
 	limit, exists := userLimits[string(limitType)]
 	if !exists {
 		return nil, fmt.Errorf("limit type %s not found for user %s", limitType, userID)
 	}
-	
+
 	return limit, nil
 }
 
@@ -76,18 +76,18 @@ func (lm *LimitsManager) GetLimit(userID string, limitType RiskLimitType) (*Risk
 func (lm *LimitsManager) GetAllLimits(userID string) (map[string]*RiskLimit, error) {
 	lm.mu.RLock()
 	defer lm.mu.RUnlock()
-	
+
 	userLimits, exists := lm.limits[userID]
 	if !exists {
 		return nil, fmt.Errorf("no limits found for user %s", userID)
 	}
-	
+
 	// Return a copy to prevent external modification
 	result := make(map[string]*RiskLimit)
 	for k, v := range userLimits {
 		result[k] = v
 	}
-	
+
 	return result, nil
 }
 
@@ -95,25 +95,25 @@ func (lm *LimitsManager) GetAllLimits(userID string) (map[string]*RiskLimit, err
 func (lm *LimitsManager) RemoveLimit(userID string, limitType RiskLimitType) error {
 	lm.mu.Lock()
 	defer lm.mu.Unlock()
-	
+
 	userLimits, exists := lm.limits[userID]
 	if !exists {
 		return fmt.Errorf("no limits found for user %s", userID)
 	}
-	
+
 	delete(userLimits, string(limitType))
-	
+
 	lm.logger.Info("Risk limit removed",
 		zap.String("user_id", userID),
 		zap.String("limit_type", string(limitType)))
-	
+
 	return nil
 }
 
 // CheckPositionLimit checks if a position violates risk limits
 func (lm *LimitsManager) CheckPositionLimit(userID, symbol string, quantity, price float64) (*RiskCheckResult, error) {
 	positionValue := quantity * price
-	
+
 	// Check position size limit
 	positionLimit, err := lm.GetLimit(userID, RiskLimitTypePositionSize)
 	if err == nil {
@@ -129,7 +129,7 @@ func (lm *LimitsManager) CheckPositionLimit(userID, symbol string, quantity, pri
 			}
 		}
 	}
-	
+
 	// Check daily loss limit
 	dailyLossLimit, err := lm.GetLimit(userID, RiskLimitTypeDailyLoss)
 	if err == nil {
@@ -145,7 +145,7 @@ func (lm *LimitsManager) CheckPositionLimit(userID, symbol string, quantity, pri
 			}, nil
 		}
 	}
-	
+
 	return &RiskCheckResult{
 		Passed:     true,
 		RiskLevel:  RiskLevelLow,
@@ -158,7 +158,7 @@ func (lm *LimitsManager) CheckPositionLimit(userID, symbol string, quantity, pri
 // CheckDrawdownLimit checks if drawdown violates limits
 func (lm *LimitsManager) CheckDrawdownLimit(userID string, currentValue, peakValue float64) (*RiskCheckResult, error) {
 	drawdown := lm.calculator.CalculateDrawdown(userID, currentValue, peakValue)
-	
+
 	// Check max drawdown limit
 	drawdownLimit, err := lm.GetLimit(userID, RiskLimitTypeMaxDrawdown)
 	if err == nil {
@@ -171,7 +171,7 @@ func (lm *LimitsManager) CheckDrawdownLimit(userID string, currentValue, peakVal
 				CheckedAt:  time.Now(),
 			}, nil
 		}
-		
+
 		// Warning at 80% of limit
 		if drawdown > drawdownLimit.Value*0.8 {
 			return &RiskCheckResult{
@@ -183,7 +183,7 @@ func (lm *LimitsManager) CheckDrawdownLimit(userID string, currentValue, peakVal
 			}, nil
 		}
 	}
-	
+
 	return &RiskCheckResult{
 		Passed:     true,
 		RiskLevel:  RiskLevelLow,
@@ -204,9 +204,9 @@ func (lm *LimitsManager) CheckConcentrationLimit(userID, symbol string, position
 			CheckedAt:  time.Now(),
 		}, nil
 	}
-	
+
 	concentration := positionValue / totalPortfolioValue
-	
+
 	// Check concentration limit
 	concentrationLimit, err := lm.GetLimit(userID, RiskLimitTypeConcentration)
 	if err == nil {
@@ -220,7 +220,7 @@ func (lm *LimitsManager) CheckConcentrationLimit(userID, symbol string, position
 					CheckedAt:  time.Now(),
 				}, nil
 			}
-			
+
 			// Warning at 80% of limit
 			if concentration > concentrationLimit.Value*0.8 {
 				return &RiskCheckResult{
@@ -233,7 +233,7 @@ func (lm *LimitsManager) CheckConcentrationLimit(userID, symbol string, position
 			}
 		}
 	}
-	
+
 	return &RiskCheckResult{
 		Passed:     true,
 		RiskLevel:  RiskLevelLow,
@@ -248,7 +248,7 @@ func (lm *LimitsManager) CheckAllLimits(ctx context.Context, userID, symbol stri
 	var allViolations []string
 	var allWarnings []string
 	var highestRiskLevel RiskLevel = RiskLevelLow
-	
+
 	// Check position limit
 	positionResult, err := lm.CheckPositionLimit(userID, symbol, quantity, price)
 	if err == nil {
@@ -260,14 +260,14 @@ func (lm *LimitsManager) CheckAllLimits(ctx context.Context, userID, symbol stri
 			highestRiskLevel = RiskLevelMedium
 		}
 	}
-	
+
 	// In a real implementation, we would also check:
 	// - Portfolio-level limits
 	// - Sector concentration limits
 	// - Leverage limits
 	// - VaR limits
 	// - Correlation limits
-	
+
 	return &RiskCheckResult{
 		Passed:     len(allViolations) == 0,
 		RiskLevel:  highestRiskLevel,
@@ -309,13 +309,13 @@ func (lm *LimitsManager) SetDefaultLimits(userID string) error {
 			UpdatedAt: time.Now(),
 		},
 	}
-	
+
 	for _, limit := range defaultLimits {
 		if err := lm.SetLimit(userID, limit); err != nil {
 			return fmt.Errorf("failed to set default limit %s: %w", limit.Type, err)
 		}
 	}
-	
+
 	lm.logger.Info("Default risk limits set", zap.String("user_id", userID))
 	return nil
 }

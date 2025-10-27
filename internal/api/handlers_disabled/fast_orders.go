@@ -9,9 +9,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/abdoElHodaky/tradSys/pkg/common/pool"
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
 	"github.com/abdoElHodaky/tradSys/internal/trading/metrics"
+	"github.com/abdoElHodaky/tradSys/pkg/common/pool"
 )
 
 // FastOrderHandler provides high-performance order handling with minimal allocations

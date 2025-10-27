@@ -37,7 +37,7 @@ func (f *Factory) CreateEngine(cfg *config.MatchingConfig) (interfaces.MatchingE
 	if cfg == nil {
 		return nil, errors.New(errors.ErrInvalidConfiguration, "matching configuration cannot be nil")
 	}
-	
+
 	engineConfig := &EngineConfig{
 		MaxOrdersPerSymbol: cfg.MaxOrdersPerSymbol,
 		TickSize:           cfg.TickSize,
@@ -50,16 +50,16 @@ func (f *Factory) CreateEngine(cfg *config.MatchingConfig) (interfaces.MatchingE
 		EnableOrderBook:    cfg.EnableOrderBook,
 		OrderBookDepth:     cfg.OrderBookDepth,
 	}
-	
+
 	engineType := EngineType(cfg.EngineType)
-	
+
 	switch engineType {
 	case EngineTypeUnified, EngineTypeHFT, EngineTypeStandard, EngineTypeOptimized:
 		// All engine types now use the unified implementation
 		// This eliminates the code duplication while maintaining API compatibility
 		return NewUnifiedMatchingEngine(engineConfig, f.logger, f.publisher), nil
 	default:
-		return nil, errors.Newf(errors.ErrInvalidConfiguration, 
+		return nil, errors.Newf(errors.ErrInvalidConfiguration,
 			"unsupported engine type: %s", cfg.EngineType)
 	}
 }
@@ -79,47 +79,47 @@ func (f *Factory) ValidateConfig(cfg *config.MatchingConfig) error {
 	if cfg == nil {
 		return errors.New(errors.ErrMissingConfiguration, "matching configuration is required")
 	}
-	
+
 	if cfg.MaxOrdersPerSymbol <= 0 {
 		return errors.New(errors.ErrInvalidConfiguration, "max orders per symbol must be positive")
 	}
-	
+
 	if cfg.TickSize <= 0 {
 		return errors.New(errors.ErrInvalidConfiguration, "tick size must be positive")
 	}
-	
+
 	if cfg.ProcessingTimeout <= 0 {
 		return errors.New(errors.ErrInvalidConfiguration, "processing timeout must be positive")
 	}
-	
+
 	if cfg.WorkerCount <= 0 {
 		return errors.New(errors.ErrInvalidConfiguration, "worker count must be positive")
 	}
-	
+
 	if cfg.PoolSize <= 0 {
 		return errors.New(errors.ErrInvalidConfiguration, "pool size must be positive")
 	}
-	
+
 	if cfg.BufferSize <= 0 {
 		return errors.New(errors.ErrInvalidConfiguration, "buffer size must be positive")
 	}
-	
+
 	if cfg.OrderBookDepth <= 0 {
 		return errors.New(errors.ErrInvalidConfiguration, "order book depth must be positive")
 	}
-	
+
 	// Validate engine type
 	engineType := EngineType(cfg.EngineType)
 	supportedTypes := f.GetSupportedEngineTypes()
-	
+
 	for _, supportedType := range supportedTypes {
 		if string(engineType) == supportedType {
 			return nil // Valid engine type found
 		}
 	}
-	
-	return errors.Newf(errors.ErrInvalidConfiguration, 
-		"unsupported engine type: %s. Supported types: %v", 
+
+	return errors.Newf(errors.ErrInvalidConfiguration,
+		"unsupported engine type: %s. Supported types: %v",
 		cfg.EngineType, supportedTypes)
 }
 
@@ -138,7 +138,7 @@ func (f *Factory) CreateEngineWithDefaults(engineType EngineType) (interfaces.Ma
 		EnableOrderBook:    true,
 		OrderBookDepth:     20,
 	}
-	
+
 	return f.CreateEngine(defaultConfig)
 }
 
@@ -158,10 +158,10 @@ func (f *Factory) GetEngineInfo(engineType EngineType) (*EngineInfo, error) {
 				"Object pooling for performance",
 			},
 			Performance: PerformanceInfo{
-				MaxThroughput:    "100k+ orders/second",
-				AverageLatency:   "< 1ms",
-				MemoryEfficient:  true,
-				ConcurrencySafe:  true,
+				MaxThroughput:   "100k+ orders/second",
+				AverageLatency:  "< 1ms",
+				MemoryEfficient: true,
+				ConcurrencySafe: true,
 			},
 		}, nil
 	case EngineTypeHFT:
@@ -175,10 +175,10 @@ func (f *Factory) GetEngineInfo(engineType EngineType) (*EngineInfo, error) {
 				"Real-time risk management",
 			},
 			Performance: PerformanceInfo{
-				MaxThroughput:    "100k+ orders/second",
-				AverageLatency:   "< 1ms",
-				MemoryEfficient:  true,
-				ConcurrencySafe:  true,
+				MaxThroughput:   "100k+ orders/second",
+				AverageLatency:  "< 1ms",
+				MemoryEfficient: true,
+				ConcurrencySafe: true,
 			},
 		}, nil
 	case EngineTypeStandard:
@@ -192,10 +192,10 @@ func (f *Factory) GetEngineInfo(engineType EngineType) (*EngineInfo, error) {
 				"Easy to configure",
 			},
 			Performance: PerformanceInfo{
-				MaxThroughput:    "50k+ orders/second",
-				AverageLatency:   "< 5ms",
-				MemoryEfficient:  true,
-				ConcurrencySafe:  true,
+				MaxThroughput:   "50k+ orders/second",
+				AverageLatency:  "< 5ms",
+				MemoryEfficient: true,
+				ConcurrencySafe: true,
 			},
 		}, nil
 	case EngineTypeOptimized:
@@ -209,14 +209,14 @@ func (f *Factory) GetEngineInfo(engineType EngineType) (*EngineInfo, error) {
 				"Advanced monitoring",
 			},
 			Performance: PerformanceInfo{
-				MaxThroughput:    "75k+ orders/second",
-				AverageLatency:   "< 2ms",
-				MemoryEfficient:  true,
-				ConcurrencySafe:  true,
+				MaxThroughput:   "75k+ orders/second",
+				AverageLatency:  "< 2ms",
+				MemoryEfficient: true,
+				ConcurrencySafe: true,
 			},
 		}, nil
 	default:
-		return nil, errors.Newf(errors.ErrInvalidConfiguration, 
+		return nil, errors.Newf(errors.ErrInvalidConfiguration,
 			"unknown engine type: %s", engineType)
 	}
 }
@@ -240,17 +240,17 @@ type PerformanceInfo struct {
 // ListAllEngines returns information about all supported engine types
 func (f *Factory) ListAllEngines() ([]*EngineInfo, error) {
 	var engines []*EngineInfo
-	
+
 	for _, engineTypeStr := range f.GetSupportedEngineTypes() {
 		engineType := EngineType(engineTypeStr)
 		info, err := f.GetEngineInfo(engineType)
 		if err != nil {
-			return nil, errors.Wrapf(err, errors.ErrInternalError, 
+			return nil, errors.Wrapf(err, errors.ErrInternalError,
 				"failed to get info for engine type: %s", engineTypeStr)
 		}
 		engines = append(engines, info)
 	}
-	
+
 	return engines, nil
 }
 
@@ -259,14 +259,14 @@ func (f *Factory) CreateEngineFromConfig(cfg *config.Config) (interfaces.Matchin
 	if cfg == nil {
 		return nil, errors.New(errors.ErrMissingConfiguration, "application configuration is required")
 	}
-	
+
 	return f.CreateEngine(&cfg.Matching)
 }
 
 // MigrateFromLegacyEngine helps migrate from old engine implementations
 func (f *Factory) MigrateFromLegacyEngine(legacyType string) (interfaces.MatchingEngine, error) {
 	f.logger.Info("Migrating from legacy engine", "legacy_type", legacyType)
-	
+
 	// Map legacy engine types to new unified implementation
 	var engineType EngineType
 	switch legacyType {
@@ -280,16 +280,16 @@ func (f *Factory) MigrateFromLegacyEngine(legacyType string) (interfaces.Matchin
 		f.logger.Warn("Unknown legacy engine type, using unified", "legacy_type", legacyType)
 		engineType = EngineTypeUnified
 	}
-	
+
 	engine, err := f.CreateEngineWithDefaults(engineType)
 	if err != nil {
-		return nil, errors.Wrapf(err, errors.ErrInternalError, 
+		return nil, errors.Wrapf(err, errors.ErrInternalError,
 			"failed to create engine during migration from legacy type: %s", legacyType)
 	}
-	
-	f.logger.Info("Successfully migrated from legacy engine", 
+
+	f.logger.Info("Successfully migrated from legacy engine",
 		"legacy_type", legacyType, "new_type", engineType)
-	
+
 	return engine, nil
 }
 
@@ -298,43 +298,43 @@ func (f *Factory) GetRecommendedEngineType(requirements *EngineRequirements) Eng
 	if requirements == nil {
 		return EngineTypeUnified
 	}
-	
+
 	// High-frequency trading requirements
 	if requirements.MaxLatency != nil && *requirements.MaxLatency < 2000000 { // < 2ms
 		return EngineTypeHFT
 	}
-	
+
 	// High throughput requirements
 	if requirements.MinThroughput != nil && *requirements.MinThroughput > 75000 {
 		return EngineTypeHFT
 	}
-	
+
 	// Performance optimization requirements
 	if requirements.OptimizeFor == "performance" {
 		return EngineTypeOptimized
 	}
-	
+
 	// Memory efficiency requirements
 	if requirements.OptimizeFor == "memory" {
 		return EngineTypeOptimized
 	}
-	
+
 	// Standard requirements
 	if requirements.OptimizeFor == "reliability" {
 		return EngineTypeStandard
 	}
-	
+
 	// Default to unified
 	return EngineTypeUnified
 }
 
 // EngineRequirements defines requirements for engine selection
 type EngineRequirements struct {
-	MaxLatency     *int64  `json:"max_latency_ns,omitempty"`     // Maximum acceptable latency in nanoseconds
-	MinThroughput  *int    `json:"min_throughput,omitempty"`     // Minimum required throughput (orders/second)
-	OptimizeFor    string  `json:"optimize_for,omitempty"`       // "performance", "memory", "reliability"
-	MemoryLimit    *int64  `json:"memory_limit_mb,omitempty"`    // Memory limit in MB
-	ConcurrentUsers *int   `json:"concurrent_users,omitempty"`   // Expected concurrent users
+	MaxLatency      *int64 `json:"max_latency_ns,omitempty"`   // Maximum acceptable latency in nanoseconds
+	MinThroughput   *int   `json:"min_throughput,omitempty"`   // Minimum required throughput (orders/second)
+	OptimizeFor     string `json:"optimize_for,omitempty"`     // "performance", "memory", "reliability"
+	MemoryLimit     *int64 `json:"memory_limit_mb,omitempty"`  // Memory limit in MB
+	ConcurrentUsers *int   `json:"concurrent_users,omitempty"` // Expected concurrent users
 }
 
 // String returns a string representation of the factory

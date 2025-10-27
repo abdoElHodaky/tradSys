@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/pkg/matching"
+	"github.com/abdoElHodaky/tradSys/internal/matching"
 	"github.com/google/uuid"
 	cache "github.com/patrickmn/go-cache"
 	"go.uber.org/zap"
@@ -14,7 +14,7 @@ import (
 // OrderService handles core order management operations
 type OrderService struct {
 	// MatchingEngine is the order matching engine
-	MatchingEngine *matching.MatchingEngine
+	MatchingEngine *matching.UnifiedMatchingEngine
 	// Orders is a map of order ID to order
 	Orders map[string]*Order
 	// UserOrders is a map of user ID to order IDs
@@ -40,9 +40,9 @@ type OrderService struct {
 }
 
 // NewOrderService creates a new order service
-func NewOrderService(matchingEngine *matching.MatchingEngine, logger *zap.Logger) *OrderService {
+func NewOrderService(matchingEngine *matching.UnifiedMatchingEngine, logger *zap.Logger) *OrderService {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	service := &OrderService{
 		MatchingEngine: matchingEngine,
 		Orders:         make(map[string]*Order),
@@ -54,11 +54,11 @@ func NewOrderService(matchingEngine *matching.MatchingEngine, logger *zap.Logger
 		ctx:            ctx,
 		cancel:         cancel,
 	}
-	
+
 	// Initialize components
 	service.lifecycle = NewOrderLifecycle(service, logger)
 	service.validator = NewOrderValidator(logger)
-	
+
 	return service
 }
 
@@ -78,23 +78,23 @@ func (s *OrderService) CreateOrder(ctx context.Context, req *OrderRequest) (*Ord
 
 	// Create order
 	order := &Order{
-		ID:              uuid.New().String(),
-		UserID:          req.UserID,
-		ClientOrderID:   req.ClientOrderID,
-		Symbol:          req.Symbol,
-		Side:            req.Side,
-		Type:            req.Type,
-		Price:           req.Price,
-		StopPrice:       req.StopPrice,
-		Quantity:        req.Quantity,
-		FilledQuantity:  0,
-		Status:          OrderStatusNew,
-		TimeInForce:     req.TimeInForce,
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
-		ExpiresAt:       req.ExpiresAt,
-		Trades:          make([]*Trade, 0),
-		Metadata:        make(map[string]interface{}),
+		ID:             uuid.New().String(),
+		UserID:         req.UserID,
+		ClientOrderID:  req.ClientOrderID,
+		Symbol:         req.Symbol,
+		Side:           req.Side,
+		Type:           req.Type,
+		Price:          req.Price,
+		StopPrice:      req.StopPrice,
+		Quantity:       req.Quantity,
+		FilledQuantity: 0,
+		Status:         OrderStatusNew,
+		TimeInForce:    req.TimeInForce,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+		ExpiresAt:      req.ExpiresAt,
+		Trades:         make([]*Trade, 0),
+		Metadata:       make(map[string]interface{}),
 	}
 
 	// Store order
@@ -236,7 +236,6 @@ func (s *OrderService) UpdateOrder(ctx context.Context, req *OrderUpdateRequest)
 	if !req.ExpiresAt.IsZero() {
 		order.ExpiresAt = req.ExpiresAt
 	}
-
 
 	order.UpdatedAt = time.Now()
 
@@ -434,26 +433,26 @@ func (s *OrderService) matchesFilter(order *Order, filter *OrderFilter) bool {
 // Start starts the order service
 func (s *OrderService) Start() error {
 	s.logger.Info("Starting order service")
-	
+
 	// Start lifecycle manager
 	if err := s.lifecycle.Start(); err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
 // Stop stops the order service
 func (s *OrderService) Stop() error {
 	s.logger.Info("Stopping order service")
-	
+
 	s.cancel()
-	
+
 	// Stop lifecycle manager
 	if err := s.lifecycle.Stop(); err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -488,10 +487,10 @@ func (s *OrderService) calculateCacheHitRate() float64 {
 
 // OrderServiceStats represents order service statistics
 type OrderServiceStats struct {
-	TotalOrders     int                    `json:"total_orders"`
-	TotalUsers      int                    `json:"total_users"`
-	TotalSymbols    int                    `json:"total_symbols"`
-	OrdersByStatus  map[OrderStatus]int    `json:"orders_by_status"`
-	CacheHitRate    float64                `json:"cache_hit_rate"`
-	LastUpdateTime  time.Time              `json:"last_update_time"`
+	TotalOrders    int                 `json:"total_orders"`
+	TotalUsers     int                 `json:"total_users"`
+	TotalSymbols   int                 `json:"total_symbols"`
+	OrdersByStatus map[OrderStatus]int `json:"orders_by_status"`
+	CacheHitRate   float64             `json:"cache_hit_rate"`
+	LastUpdateTime time.Time           `json:"last_update_time"`
 }

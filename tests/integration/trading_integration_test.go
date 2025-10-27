@@ -67,15 +67,15 @@ func TestTradingSystemIntegration(t *testing.T) {
 func testOrderProcessingFlow(t *testing.T, registry *services.ServiceRegistry, testSuite *testing.TestSuite) {
 	ctx := context.Background()
 	generator := testSuite.GetGenerator()
-	
+
 	// Get services
 	matchingEngine := registry.GetMatchingEngine()
 	marketDataService := registry.GetMarketDataService()
-	
+
 	if matchingEngine == nil {
 		t.Skip("Matching engine not available")
 	}
-	
+
 	if marketDataService == nil {
 		t.Skip("Market data service not available")
 	}
@@ -140,7 +140,7 @@ func testOrderProcessingFlow(t *testing.T, registry *services.ServiceRegistry, t
 func testMarketDataFlow(t *testing.T, registry *services.ServiceRegistry, testSuite *testing.TestSuite) {
 	ctx := context.Background()
 	generator := testSuite.GetGenerator()
-	
+
 	marketDataService := registry.GetMarketDataService()
 	if marketDataService == nil {
 		t.Skip("Market data service not available")
@@ -148,7 +148,7 @@ func testMarketDataFlow(t *testing.T, registry *services.ServiceRegistry, testSu
 
 	// Test market data updates
 	marketData := generator.GenerateMarketData("BTCUSD")
-	
+
 	if mds, ok := marketDataService.(*services.MarketDataService); ok {
 		err := mds.UpdateMarketData("BTCUSD", marketData)
 		if err != nil {
@@ -193,7 +193,7 @@ func testMarketDataFlow(t *testing.T, registry *services.ServiceRegistry, testSu
 func testTradeExecutionFlow(t *testing.T, registry *services.ServiceRegistry, testSuite *testing.TestSuite) {
 	ctx := context.Background()
 	generator := testSuite.GetGenerator()
-	
+
 	tradeService := registry.GetTradeService()
 	if tradeService == nil {
 		t.Skip("Trade service not available")
@@ -246,7 +246,7 @@ func testTradeExecutionFlow(t *testing.T, registry *services.ServiceRegistry, te
 func testPerformanceUnderLoad(t *testing.T, registry *services.ServiceRegistry, testSuite *testing.TestSuite) {
 	ctx := context.Background()
 	generator := testSuite.GetGenerator()
-	
+
 	matchingEngine := registry.GetMatchingEngine()
 	if matchingEngine == nil {
 		t.Skip("Matching engine not available")
@@ -254,9 +254,9 @@ func testPerformanceUnderLoad(t *testing.T, registry *services.ServiceRegistry, 
 
 	// Create load test runner
 	loadTestRunner := testing.NewLoadTestRunner(
-		10,                // 10 concurrent workers
-		5*time.Second,     // 5 second duration
-		1*time.Second,     // 1 second ramp-up
+		10,            // 10 concurrent workers
+		5*time.Second, // 5 second duration
+		1*time.Second, // 1 second ramp-up
 	)
 
 	// Define test function
@@ -265,7 +265,7 @@ func testPerformanceUnderLoad(t *testing.T, registry *services.ServiceRegistry, 
 		order.Symbol = "BTCUSD"
 		order.Type = types.OrderTypeLimit
 		order.Price = 50000.0 + (generator.GenerateOrder().Price-50000.0)*0.1 // Small price variation
-		
+
 		_, err := matchingEngine.ProcessOrder(ctx, order)
 		return err
 	}
@@ -377,7 +377,7 @@ func TestConcurrentOperations(t *testing.T) {
 				order.Symbol = "BTCUSD"
 				order.Type = types.OrderTypeLimit
 				order.Price = 50000.0
-				
+
 				_, err := matchingEngine.ProcessOrder(ctx, order)
 				if err != nil {
 					errChan <- err
@@ -404,7 +404,7 @@ func TestConcurrentOperations(t *testing.T) {
 	// Verify metrics
 	totalOrders := numWorkers * ordersPerWorker
 	processedOrders := testSuite.GetMetrics().GetCounter("matching_engine.orders_processed", nil)
-	
+
 	if int(processedOrders) != totalOrders {
 		t.Errorf("Expected %d processed orders, got %.0f", totalOrders, processedOrders)
 	}

@@ -13,10 +13,10 @@ import (
 // MarketDataService implements the MarketDataService interface
 type MarketDataService struct {
 	// Data storage
-	marketData     map[string]*types.MarketData
-	ohlcvData      map[string]map[string][]*types.OHLCV // symbol -> interval -> data
-	symbols        map[string]*types.Symbol
-	mu             sync.RWMutex
+	marketData map[string]*types.MarketData
+	ohlcvData  map[string]map[string][]*types.OHLCV // symbol -> interval -> data
+	symbols    map[string]*types.Symbol
+	mu         sync.RWMutex
 
 	// Dependencies
 	publisher interfaces.EventPublisher
@@ -426,10 +426,10 @@ func (s *MarketDataService) GetMarketDataStatistics() *MarketDataStatistics {
 	defer s.mu.RUnlock()
 
 	stats := &MarketDataStatistics{
-		TotalSymbols:     len(s.symbols),
-		ActiveSymbols:    len(s.marketData),
-		SymbolStats:      make(map[string]*SymbolMarketDataStats),
-		IntervalStats:    make(map[string]int),
+		TotalSymbols:  len(s.symbols),
+		ActiveSymbols: len(s.marketData),
+		SymbolStats:   make(map[string]*SymbolMarketDataStats),
+		IntervalStats: make(map[string]int),
 	}
 
 	// Count OHLCV data by interval
@@ -559,12 +559,12 @@ func (s *MarketDataService) notifyOHLCVSubscribers(symbol string, interval strin
 
 // MarketDataStatistics contains statistics about market data
 type MarketDataStatistics struct {
-	TotalSymbols            int                              `json:"total_symbols"`
-	ActiveSymbols           int                              `json:"active_symbols"`
-	MarketDataSubscribers   int                              `json:"market_data_subscribers"`
-	OHLCVSubscribers        int                              `json:"ohlcv_subscribers"`
-	SymbolStats             map[string]*SymbolMarketDataStats `json:"symbol_stats"`
-	IntervalStats           map[string]int                   `json:"interval_stats"`
+	TotalSymbols          int                               `json:"total_symbols"`
+	ActiveSymbols         int                               `json:"active_symbols"`
+	MarketDataSubscribers int                               `json:"market_data_subscribers"`
+	OHLCVSubscribers      int                               `json:"ohlcv_subscribers"`
+	SymbolStats           map[string]*SymbolMarketDataStats `json:"symbol_stats"`
+	IntervalStats         map[string]int                    `json:"interval_stats"`
 }
 
 // SymbolMarketDataStats contains statistics for a specific symbol

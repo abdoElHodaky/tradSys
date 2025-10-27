@@ -11,34 +11,34 @@ type ErrorCode string
 
 const (
 	// Order related errors
-	ErrInvalidOrder     ErrorCode = "INVALID_ORDER"
-	ErrOrderNotFound    ErrorCode = "ORDER_NOT_FOUND"
-	ErrOrderCanceled    ErrorCode = "ORDER_CANCELED"
+	ErrInvalidOrder      ErrorCode = "INVALID_ORDER"
+	ErrOrderNotFound     ErrorCode = "ORDER_NOT_FOUND"
+	ErrOrderCanceled     ErrorCode = "ORDER_CANCELED"
 	ErrInsufficientFunds ErrorCode = "INSUFFICIENT_FUNDS"
-	
+
 	// Market data errors
-	ErrSymbolNotFound   ErrorCode = "SYMBOL_NOT_FOUND"
-	ErrMarketClosed     ErrorCode = "MARKET_CLOSED"
-	ErrInvalidPrice     ErrorCode = "INVALID_PRICE"
-	
+	ErrSymbolNotFound ErrorCode = "SYMBOL_NOT_FOUND"
+	ErrMarketClosed   ErrorCode = "MARKET_CLOSED"
+	ErrInvalidPrice   ErrorCode = "INVALID_PRICE"
+
 	// System errors
 	ErrDatabaseConnection ErrorCode = "DATABASE_CONNECTION"
 	ErrServiceUnavailable ErrorCode = "SERVICE_UNAVAILABLE"
-	ErrTimeout           ErrorCode = "TIMEOUT"
-	ErrRateLimited       ErrorCode = "RATE_LIMITED"
-	
+	ErrTimeout            ErrorCode = "TIMEOUT"
+	ErrRateLimited        ErrorCode = "RATE_LIMITED"
+
 	// Authentication errors
-	ErrUnauthorized      ErrorCode = "UNAUTHORIZED"
-	ErrInvalidToken      ErrorCode = "INVALID_TOKEN"
-	ErrTokenExpired      ErrorCode = "TOKEN_EXPIRED"
-	
+	ErrUnauthorized ErrorCode = "UNAUTHORIZED"
+	ErrInvalidToken ErrorCode = "INVALID_TOKEN"
+	ErrTokenExpired ErrorCode = "TOKEN_EXPIRED"
+
 	// Risk management errors
-	ErrRiskLimitExceeded ErrorCode = "RISK_LIMIT_EXCEEDED"
+	ErrRiskLimitExceeded     ErrorCode = "RISK_LIMIT_EXCEEDED"
 	ErrPositionLimitExceeded ErrorCode = "POSITION_LIMIT_EXCEEDED"
-	
+
 	// Matching engine errors
-	ErrMatchingFailed    ErrorCode = "MATCHING_FAILED"
-	ErrEngineOverloaded  ErrorCode = "ENGINE_OVERLOADED"
+	ErrMatchingFailed   ErrorCode = "MATCHING_FAILED"
+	ErrEngineOverloaded ErrorCode = "ENGINE_OVERLOADED"
 )
 
 // TradSysError represents a structured error in the trading system
@@ -102,7 +102,7 @@ func Wrap(err error, code ErrorCode, message string) *TradSysError {
 	if err == nil {
 		return nil
 	}
-	
+
 	_, file, line, _ := runtime.Caller(1)
 	return &TradSysError{
 		Code:      code,
@@ -133,19 +133,19 @@ func As(err error, target interface{}) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	if tradSysErr, ok := err.(*TradSysError); ok {
 		if targetPtr, ok := target.(**TradSysError); ok {
 			*targetPtr = tradSysErr
 			return true
 		}
 	}
-	
+
 	// Check if the error implements Unwrap
 	if unwrapper, ok := err.(interface{ Unwrap() error }); ok {
 		return As(unwrapper.Unwrap(), target)
 	}
-	
+
 	return false
 }
 
@@ -182,8 +182,8 @@ func IsRetryable(err error) bool {
 func IsClientError(err error) bool {
 	code := GetErrorCode(err)
 	switch code {
-	case ErrInvalidOrder, ErrOrderNotFound, ErrInvalidPrice, ErrUnauthorized, 
-		 ErrInvalidToken, ErrTokenExpired, ErrSymbolNotFound:
+	case ErrInvalidOrder, ErrOrderNotFound, ErrInvalidPrice, ErrUnauthorized,
+		ErrInvalidToken, ErrTokenExpired, ErrSymbolNotFound:
 		return true
 	default:
 		return false
@@ -194,8 +194,8 @@ func IsClientError(err error) bool {
 func IsServerError(err error) bool {
 	code := GetErrorCode(err)
 	switch code {
-	case ErrDatabaseConnection, ErrServiceUnavailable, ErrTimeout, 
-		 ErrMatchingFailed, ErrEngineOverloaded:
+	case ErrDatabaseConnection, ErrServiceUnavailable, ErrTimeout,
+		ErrMatchingFailed, ErrEngineOverloaded:
 		return true
 	default:
 		return false

@@ -74,4 +74,3 @@ type CircuitBreaker struct {
 	referencePrice       float64
 	mu                   sync.RWMutex
 }
-

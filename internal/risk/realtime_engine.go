@@ -8,8 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/pkg/common/pool"
 	"github.com/abdoElHodaky/tradSys/internal/trading/types"
+	"github.com/abdoElHodaky/tradSys/pkg/common/pool"
 	"go.uber.org/zap"
 )
 
@@ -114,14 +114,14 @@ type CircuitBreaker struct {
 
 // RiskEvent represents a risk management event
 type RiskEvent struct {
-	Type      RiskEventType `json:"type"`
-	Symbol    string        `json:"symbol"`
-	Order     *types.Order  `json:"order,omitempty"`
-	Position  *RealtimePosition     `json:"position,omitempty"`
-	RiskCheck *RiskCheck    `json:"risk_check,omitempty"`
-	Timestamp time.Time     `json:"timestamp"`
-	Severity  RiskSeverity  `json:"severity"`
-	Message   string        `json:"message"`
+	Type      RiskEventType     `json:"type"`
+	Symbol    string            `json:"symbol"`
+	Order     *types.Order      `json:"order,omitempty"`
+	Position  *RealtimePosition `json:"position,omitempty"`
+	RiskCheck *RiskCheck        `json:"risk_check,omitempty"`
+	Timestamp time.Time         `json:"timestamp"`
+	Severity  RiskSeverity      `json:"severity"`
+	Message   string            `json:"message"`
 }
 
 // RiskEventType defines types of risk events

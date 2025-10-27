@@ -18,8 +18,6 @@ type PeerServer struct {
 	mu       sync.RWMutex
 }
 
-
-
 // NewPeerServer creates a new PeerJS server
 func NewPeerServer(logger *zap.Logger) *PeerServer {
 	return &PeerServer{
@@ -222,11 +220,11 @@ func (s *PeerServer) CleanupInactivePeers(timeout time.Duration) {
 
 	now := time.Now()
 	var inactivePeers []string
-	
+
 	s.peers.Range(func(key, value interface{}) bool {
 		id := key.(string)
 		peer := value.(*Peer)
-		
+
 		peer.mu.RLock()
 		lastSeen := peer.LastSeen
 		connected := peer.Connected
@@ -244,7 +242,7 @@ func (s *PeerServer) CleanupInactivePeers(timeout time.Duration) {
 		}
 		return true
 	})
-	
+
 	// Remove inactive peers from the map
 	for _, id := range inactivePeers {
 		s.peers.Delete(id)
@@ -265,7 +263,7 @@ func (s *PeerServer) StartCleanupTask(interval, timeout time.Duration) {
 func (s *PeerServer) GetPeerCount() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	count := 0
 	s.peers.Range(func(key, value interface{}) bool {
 		count++

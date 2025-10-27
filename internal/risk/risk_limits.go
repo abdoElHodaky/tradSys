@@ -13,21 +13,21 @@ import (
 
 // RiskLimitsManager manages risk limits for users and symbols
 type RiskLimitsManager struct {
-	logger         *zap.Logger
-	mu             sync.RWMutex
-	
+	logger *zap.Logger
+	mu     sync.RWMutex
+
 	// Risk limits storage
-	riskLimits     map[string][]*RiskLimit // userID -> limits
-	symbolLimits   map[string][]*RiskLimit // symbol -> limits
-	globalLimits   []*RiskLimit            // global limits
-	
+	riskLimits   map[string][]*RiskLimit // userID -> limits
+	symbolLimits map[string][]*RiskLimit // symbol -> limits
+	globalLimits []*RiskLimit            // global limits
+
 	// Cache for performance
 	riskLimitCache *cache.Cache
-	
+
 	// Batch processing
-	batchChan      chan RiskLimitOperation
-	ctx            context.Context
-	cancel         context.CancelFunc
+	batchChan chan RiskLimitOperation
+	ctx       context.Context
+	cancel    context.CancelFunc
 }
 
 // RiskLimitOperation represents a batch operation on risk limits
@@ -49,7 +49,7 @@ type RiskLimitOperationResult struct {
 // NewRiskLimitsManager creates a new risk limits manager
 func NewRiskLimitsManager(logger *zap.Logger) *RiskLimitsManager {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	manager := &RiskLimitsManager{
 		logger:         logger,
 		riskLimits:     make(map[string][]*RiskLimit),
@@ -60,10 +60,10 @@ func NewRiskLimitsManager(logger *zap.Logger) *RiskLimitsManager {
 		ctx:            ctx,
 		cancel:         cancel,
 	}
-	
+
 	// Start batch processor
 	go manager.processBatchOperations()
-	
+
 	return manager
 }
 
@@ -72,12 +72,12 @@ func (rlm *RiskLimitsManager) AddRiskLimit(ctx context.Context, limit *RiskLimit
 	if limit == nil {
 		return nil, errors.New("limit cannot be nil")
 	}
-	
+
 	// Generate ID if not provided
 	if limit.ID == "" {
 		limit.ID = uuid.New().String()
 	}
-	
+
 	// Set timestamps
 	now := time.Now()
 	if limit.CreatedAt.IsZero() {
@@ -85,7 +85,7 @@ func (rlm *RiskLimitsManager) AddRiskLimit(ctx context.Context, limit *RiskLimit
 	}
 	limit.UpdatedAt = now
 	limit.Enabled = true // Enable by default
-	
+
 	// Use batch processing for better performance
 	resultCh := make(chan RiskLimitOperationResult, 1)
 	operation := RiskLimitOperation{
@@ -95,13 +95,13 @@ func (rlm *RiskLimitsManager) AddRiskLimit(ctx context.Context, limit *RiskLimit
 		Limit:    limit,
 		ResultCh: resultCh,
 	}
-	
+
 	select {
 	case rlm.batchChan <- operation:
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
-	
+
 	// Wait for result
 	select {
 	case result := <-resultCh:
@@ -119,10 +119,10 @@ func (rlm *RiskLimitsManager) UpdateRiskLimit(ctx context.Context, limit *RiskLi
 	if limit == nil || limit.ID == "" {
 		return nil, errors.New("limit and limit ID cannot be empty")
 	}
-	
+
 	// Set update timestamp
 	limit.UpdatedAt = time.Now()
-	
+
 	// Use batch processing
 	resultCh := make(chan RiskLimitOperationResult, 1)
 	operation := RiskLimitOperation{
@@ -132,13 +132,13 @@ func (rlm *RiskLimitsManager) UpdateRiskLimit(ctx context.Context, limit *RiskLi
 		Limit:    limit,
 		ResultCh: resultCh,
 	}
-	
+
 	select {
 	case rlm.batchChan <- operation:
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
-	
+
 	// Wait for result
 	select {
 	case result := <-resultCh:
@@ -156,7 +156,7 @@ func (rlm *RiskLimitsManager) DeleteRiskLimit(ctx context.Context, userID, limit
 	if userID == "" || limitID == "" {
 		return errors.New("userID and limitID cannot be empty")
 	}
-	
+
 	// Use batch processing
 	resultCh := make(chan RiskLimitOperationResult, 1)
 	operation := RiskLimitOperation{
@@ -165,13 +165,13 @@ func (rlm *RiskLimitsManager) DeleteRiskLimit(ctx context.Context, userID, limit
 		Limit:    &RiskLimit{ID: limitID},
 		ResultCh: resultCh,
 	}
-	
+
 	select {
 	case rlm.batchChan <- operation:
 	case <-ctx.Done():
 		return ctx.Err()
 	}
-	
+
 	// Wait for result
 	select {
 	case result := <-resultCh:
@@ -189,28 +189,28 @@ func (rlm *RiskLimitsManager) GetRiskLimits(ctx context.Context, userID string) 
 	if userID == "" {
 		return nil, errors.New("userID cannot be empty")
 	}
-	
+
 	// Check cache first
 	cacheKey := "user_limits:" + userID
 	if cached, found := rlm.riskLimitCache.Get(cacheKey); found {
 		return cached.([]*RiskLimit), nil
 	}
-	
+
 	rlm.mu.RLock()
 	userLimits, exists := rlm.riskLimits[userID]
 	rlm.mu.RUnlock()
-	
+
 	if !exists {
 		return []*RiskLimit{}, nil
 	}
-	
+
 	// Create a copy to avoid race conditions
 	limits := make([]*RiskLimit, len(userLimits))
 	copy(limits, userLimits)
-	
+
 	// Cache the result
 	rlm.riskLimitCache.Set(cacheKey, limits, cache.DefaultExpiration)
-	
+
 	return limits, nil
 }
 
@@ -219,28 +219,28 @@ func (rlm *RiskLimitsManager) GetRiskLimitsBySymbol(ctx context.Context, symbol 
 	if symbol == "" {
 		return nil, errors.New("symbol cannot be empty")
 	}
-	
+
 	// Check cache first
 	cacheKey := "symbol_limits:" + symbol
 	if cached, found := rlm.riskLimitCache.Get(cacheKey); found {
 		return cached.([]*RiskLimit), nil
 	}
-	
+
 	rlm.mu.RLock()
 	symbolLimits, exists := rlm.symbolLimits[symbol]
 	rlm.mu.RUnlock()
-	
+
 	if !exists {
 		return []*RiskLimit{}, nil
 	}
-	
+
 	// Create a copy to avoid race conditions
 	limits := make([]*RiskLimit, len(symbolLimits))
 	copy(limits, symbolLimits)
-	
+
 	// Cache the result
 	rlm.riskLimitCache.Set(cacheKey, limits, cache.DefaultExpiration)
-	
+
 	return limits, nil
 }
 
@@ -251,15 +251,15 @@ func (rlm *RiskLimitsManager) GetGlobalRiskLimits(ctx context.Context) ([]*RiskL
 	if cached, found := rlm.riskLimitCache.Get(cacheKey); found {
 		return cached.([]*RiskLimit), nil
 	}
-	
+
 	rlm.mu.RLock()
 	limits := make([]*RiskLimit, len(rlm.globalLimits))
 	copy(limits, rlm.globalLimits)
 	rlm.mu.RUnlock()
-	
+
 	// Cache the result
 	rlm.riskLimitCache.Set(cacheKey, limits, cache.DefaultExpiration)
-	
+
 	return limits, nil
 }
 
@@ -270,41 +270,41 @@ func (rlm *RiskLimitsManager) CheckRiskLimit(ctx context.Context, userID, symbol
 	if err != nil {
 		return false, "", err
 	}
-	
+
 	symbolLimits, err := rlm.GetRiskLimitsBySymbol(ctx, symbol)
 	if err != nil {
 		return false, "", err
 	}
-	
+
 	globalLimits, err := rlm.GetGlobalRiskLimits(ctx)
 	if err != nil {
 		return false, "", err
 	}
-	
+
 	// Combine all applicable limits
 	allLimits := make([]*RiskLimit, 0)
 	allLimits = append(allLimits, userLimits...)
 	allLimits = append(allLimits, symbolLimits...)
 	allLimits = append(allLimits, globalLimits...)
-	
+
 	// Check each limit
 	for _, limit := range allLimits {
 		if !limit.IsEnabled() {
 			continue
 		}
-		
+
 		// Check if limit applies to this symbol
 		if limit.Symbol != "" && limit.Symbol != symbol {
 			continue
 		}
-		
+
 		// Check specific limit types
 		violated, reason := rlm.checkSpecificLimit(limit, userID, symbol, quantity, price, side)
 		if violated {
 			return false, reason, nil
 		}
 	}
-	
+
 	return true, "", nil
 }
 
@@ -322,21 +322,21 @@ func (rlm *RiskLimitsManager) DisableRiskLimit(ctx context.Context, userID, limi
 func (rlm *RiskLimitsManager) GetRiskLimitStats(ctx context.Context) (map[string]interface{}, error) {
 	rlm.mu.RLock()
 	defer rlm.mu.RUnlock()
-	
+
 	stats := map[string]interface{}{
-		"total_users":        len(rlm.riskLimits),
-		"total_symbols":      len(rlm.symbolLimits),
-		"global_limits":      len(rlm.globalLimits),
-		"cache_items":        rlm.riskLimitCache.ItemCount(),
-		"limits_by_type":     make(map[string]int),
-		"enabled_limits":     0,
-		"disabled_limits":    0,
+		"total_users":     len(rlm.riskLimits),
+		"total_symbols":   len(rlm.symbolLimits),
+		"global_limits":   len(rlm.globalLimits),
+		"cache_items":     rlm.riskLimitCache.ItemCount(),
+		"limits_by_type":  make(map[string]int),
+		"enabled_limits":  0,
+		"disabled_limits": 0,
 	}
-	
+
 	limitsByType := stats["limits_by_type"].(map[string]int)
 	enabledCount := 0
 	disabledCount := 0
-	
+
 	// Count user limits
 	for _, userLimits := range rlm.riskLimits {
 		for _, limit := range userLimits {
@@ -348,7 +348,7 @@ func (rlm *RiskLimitsManager) GetRiskLimitStats(ctx context.Context) (map[string
 			}
 		}
 	}
-	
+
 	// Count symbol limits
 	for _, symbolLimits := range rlm.symbolLimits {
 		for _, limit := range symbolLimits {
@@ -360,7 +360,7 @@ func (rlm *RiskLimitsManager) GetRiskLimitStats(ctx context.Context) (map[string
 			}
 		}
 	}
-	
+
 	// Count global limits
 	for _, limit := range rlm.globalLimits {
 		limitsByType[string(limit.Type)]++
@@ -370,10 +370,10 @@ func (rlm *RiskLimitsManager) GetRiskLimitStats(ctx context.Context) (map[string
 			disabledCount++
 		}
 	}
-	
+
 	stats["enabled_limits"] = enabledCount
 	stats["disabled_limits"] = disabledCount
-	
+
 	return stats, nil
 }
 
@@ -386,16 +386,16 @@ func (rlm *RiskLimitsManager) Stop() {
 func (rlm *RiskLimitsManager) processBatchOperations() {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
-	
+
 	batch := make([]RiskLimitOperation, 0, 100)
-	
+
 	for {
 		select {
 		case <-rlm.ctx.Done():
 			return
 		case op := <-rlm.batchChan:
 			batch = append(batch, op)
-			
+
 			// Process batch when it's full or on ticker
 			if len(batch) >= 100 {
 				rlm.processBatch(batch)
@@ -416,7 +416,7 @@ func (rlm *RiskLimitsManager) processBatch(batch []RiskLimitOperation) {
 	addOps := make([]RiskLimitOperation, 0)
 	updateOps := make([]RiskLimitOperation, 0)
 	deleteOps := make([]RiskLimitOperation, 0)
-	
+
 	for _, op := range batch {
 		switch op.OpType {
 		case "add":
@@ -427,7 +427,7 @@ func (rlm *RiskLimitsManager) processBatch(batch []RiskLimitOperation) {
 			deleteOps = append(deleteOps, op)
 		}
 	}
-	
+
 	// Process each type
 	if len(addOps) > 0 {
 		rlm.processAddBatch(addOps)
@@ -444,10 +444,10 @@ func (rlm *RiskLimitsManager) processBatch(batch []RiskLimitOperation) {
 func (rlm *RiskLimitsManager) processAddBatch(ops []RiskLimitOperation) {
 	rlm.mu.Lock()
 	defer rlm.mu.Unlock()
-	
+
 	for _, op := range ops {
 		limit := op.Limit
-		
+
 		// Add to user limits
 		if limit.UserID != "" {
 			if _, exists := rlm.riskLimits[limit.UserID]; !exists {
@@ -455,7 +455,7 @@ func (rlm *RiskLimitsManager) processAddBatch(ops []RiskLimitOperation) {
 			}
 			rlm.riskLimits[limit.UserID] = append(rlm.riskLimits[limit.UserID], limit)
 		}
-		
+
 		// Add to symbol limits
 		if limit.Symbol != "" {
 			if _, exists := rlm.symbolLimits[limit.Symbol]; !exists {
@@ -463,18 +463,18 @@ func (rlm *RiskLimitsManager) processAddBatch(ops []RiskLimitOperation) {
 			}
 			rlm.symbolLimits[limit.Symbol] = append(rlm.symbolLimits[limit.Symbol], limit)
 		}
-		
+
 		// Add to global limits if no user or symbol specified
 		if limit.UserID == "" && limit.Symbol == "" {
 			rlm.globalLimits = append(rlm.globalLimits, limit)
 		}
-		
+
 		// Add to cache
 		rlm.riskLimitCache.Set(limit.UserID+":"+limit.ID, limit, cache.DefaultExpiration)
-		
+
 		// Invalidate related caches
 		rlm.invalidateCache(limit.UserID, limit.Symbol)
-		
+
 		// Send result
 		op.ResultCh <- RiskLimitOperationResult{
 			Success: true,
@@ -487,11 +487,11 @@ func (rlm *RiskLimitsManager) processAddBatch(ops []RiskLimitOperation) {
 func (rlm *RiskLimitsManager) processUpdateBatch(ops []RiskLimitOperation) {
 	rlm.mu.Lock()
 	defer rlm.mu.Unlock()
-	
+
 	for _, op := range ops {
 		limit := op.Limit
 		found := false
-		
+
 		// Update in user limits
 		if userLimits, exists := rlm.riskLimits[limit.UserID]; exists {
 			for i, existingLimit := range userLimits {
@@ -502,7 +502,7 @@ func (rlm *RiskLimitsManager) processUpdateBatch(ops []RiskLimitOperation) {
 				}
 			}
 		}
-		
+
 		// Update in symbol limits
 		if symbolLimits, exists := rlm.symbolLimits[limit.Symbol]; exists {
 			for i, existingLimit := range symbolLimits {
@@ -513,7 +513,7 @@ func (rlm *RiskLimitsManager) processUpdateBatch(ops []RiskLimitOperation) {
 				}
 			}
 		}
-		
+
 		// Update in global limits
 		for i, existingLimit := range rlm.globalLimits {
 			if existingLimit.ID == limit.ID {
@@ -522,14 +522,14 @@ func (rlm *RiskLimitsManager) processUpdateBatch(ops []RiskLimitOperation) {
 				break
 			}
 		}
-		
+
 		if found {
 			// Update cache
 			rlm.riskLimitCache.Set(limit.UserID+":"+limit.ID, limit, cache.DefaultExpiration)
-			
+
 			// Invalidate related caches
 			rlm.invalidateCache(limit.UserID, limit.Symbol)
-			
+
 			op.ResultCh <- RiskLimitOperationResult{
 				Success: true,
 				Data:    limit,
@@ -547,12 +547,12 @@ func (rlm *RiskLimitsManager) processUpdateBatch(ops []RiskLimitOperation) {
 func (rlm *RiskLimitsManager) processDeleteBatch(ops []RiskLimitOperation) {
 	rlm.mu.Lock()
 	defer rlm.mu.Unlock()
-	
+
 	for _, op := range ops {
 		limitID := op.Limit.ID
 		userID := op.UserID
 		found := false
-		
+
 		// Delete from user limits
 		if userLimits, exists := rlm.riskLimits[userID]; exists {
 			for i, limit := range userLimits {
@@ -563,14 +563,14 @@ func (rlm *RiskLimitsManager) processDeleteBatch(ops []RiskLimitOperation) {
 				}
 			}
 		}
-		
+
 		if found {
 			// Remove from cache
 			rlm.riskLimitCache.Delete(userID + ":" + limitID)
-			
+
 			// Invalidate related caches
 			rlm.invalidateCache(userID, "")
-			
+
 			op.ResultCh <- RiskLimitOperationResult{
 				Success: true,
 			}
@@ -587,25 +587,25 @@ func (rlm *RiskLimitsManager) processDeleteBatch(ops []RiskLimitOperation) {
 func (rlm *RiskLimitsManager) setRiskLimitStatus(ctx context.Context, userID, limitID string, enabled bool) error {
 	rlm.mu.Lock()
 	defer rlm.mu.Unlock()
-	
+
 	// Find and update the limit
 	if userLimits, exists := rlm.riskLimits[userID]; exists {
 		for _, limit := range userLimits {
 			if limit.ID == limitID {
 				limit.Enabled = enabled
 				limit.UpdatedAt = time.Now()
-				
+
 				// Update cache
 				rlm.riskLimitCache.Set(userID+":"+limitID, limit, cache.DefaultExpiration)
-				
+
 				// Invalidate related caches
 				rlm.invalidateCache(userID, limit.Symbol)
-				
+
 				return nil
 			}
 		}
 	}
-	
+
 	return errors.New("risk limit not found")
 }
 
@@ -631,7 +631,7 @@ func (rlm *RiskLimitsManager) checkSpecificLimit(limit *RiskLimit, userID, symbo
 			return true, "Exposure limit would be exceeded"
 		}
 	}
-	
+
 	return false, ""
 }
 

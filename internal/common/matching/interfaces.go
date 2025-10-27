@@ -39,43 +39,43 @@ type Order struct {
 
 // Trade represents a completed trade
 type Trade struct {
-	ID           string    `json:"id"`
-	Symbol       string    `json:"symbol"`
-	BuyOrderID   string    `json:"buy_order_id"`
-	SellOrderID  string    `json:"sell_order_id"`
-	Price        float64   `json:"price"`
-	Quantity     float64   `json:"quantity"`
-	Timestamp    time.Time `json:"timestamp"`
-	BuyUserID    string    `json:"buy_user_id"`
-	SellUserID   string    `json:"sell_user_id"`
+	ID          string    `json:"id"`
+	Symbol      string    `json:"symbol"`
+	BuyOrderID  string    `json:"buy_order_id"`
+	SellOrderID string    `json:"sell_order_id"`
+	Price       float64   `json:"price"`
+	Quantity    float64   `json:"quantity"`
+	Timestamp   time.Time `json:"timestamp"`
+	BuyUserID   string    `json:"buy_user_id"`
+	SellUserID  string    `json:"sell_user_id"`
 }
 
 // MatchingEngine defines the interface for order matching engines
 type MatchingEngine interface {
 	// ProcessOrder processes a new order and returns resulting trades
 	ProcessOrder(ctx context.Context, order *Order) ([]*Trade, error)
-	
+
 	// CancelOrder cancels an existing order
 	CancelOrder(ctx context.Context, orderID string) error
-	
+
 	// GetOrderBook returns the current order book state
 	GetOrderBook(symbol string) (*OrderBook, error)
-	
+
 	// GetMetrics returns engine performance metrics
 	GetMetrics() *EngineMetrics
-	
+
 	// Start starts the matching engine
 	Start(ctx context.Context) error
-	
+
 	// Stop stops the matching engine gracefully
 	Stop(ctx context.Context) error
 }
 
 // OrderBook represents the current state of buy and sell orders
 type OrderBook struct {
-	Symbol string             `json:"symbol"`
-	Bids   []*OrderBookLevel  `json:"bids"`
-	Asks   []*OrderBookLevel  `json:"asks"`
+	Symbol string            `json:"symbol"`
+	Bids   []*OrderBookLevel `json:"bids"`
+	Asks   []*OrderBookLevel `json:"asks"`
 }
 
 // OrderBookLevel represents a price level in the order book
@@ -87,11 +87,11 @@ type OrderBookLevel struct {
 
 // EngineMetrics contains performance metrics for the matching engine
 type EngineMetrics struct {
-	OrdersProcessed   uint64        `json:"orders_processed"`
-	TradesExecuted    uint64        `json:"trades_executed"`
-	AverageLatency    time.Duration `json:"average_latency"`
-	ThroughputPerSec  float64       `json:"throughput_per_sec"`
-	LastProcessedAt   time.Time     `json:"last_processed_at"`
+	OrdersProcessed  uint64        `json:"orders_processed"`
+	TradesExecuted   uint64        `json:"trades_executed"`
+	AverageLatency   time.Duration `json:"average_latency"`
+	ThroughputPerSec float64       `json:"throughput_per_sec"`
+	LastProcessedAt  time.Time     `json:"last_processed_at"`
 }
 
 // EngineConfig contains configuration for matching engines

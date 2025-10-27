@@ -44,10 +44,10 @@ func (s *TradeServiceUnified) CreateTrade(ctx context.Context, trade *types.Trad
 		})
 	}()
 
-	s.logger.Info("Creating trade", 
-		"trade_id", trade.ID, 
-		"symbol", trade.Symbol, 
-		"price", trade.Price, 
+	s.logger.Info("Creating trade",
+		"trade_id", trade.ID,
+		"symbol", trade.Symbol,
+		"price", trade.Price,
 		"quantity", trade.Quantity)
 
 	// Validate trade
@@ -99,11 +99,11 @@ func (s *TradeServiceUnified) CreateTrade(ctx context.Context, trade *types.Trad
 		"symbol": trade.Symbol,
 	})
 
-	s.logger.Info("Trade created successfully", 
-		"trade_id", trade.ID, 
-		"symbol", trade.Symbol, 
+	s.logger.Info("Trade created successfully",
+		"trade_id", trade.ID,
+		"symbol", trade.Symbol,
 		"value", trade.Value)
-	
+
 	return nil
 }
 
@@ -213,7 +213,7 @@ func (s *TradeServiceUnified) GetTradesByOrder(ctx context.Context, orderID stri
 		Limit:  1000,
 		Offset: 0,
 	}
-	
+
 	allTrades, err := s.ListTrades(ctx, filters)
 	if err != nil {
 		return nil, err
@@ -388,12 +388,12 @@ func (s *TradeServiceUnified) updatePositions(ctx context.Context, trade *types.
 	if buyerPosition == nil {
 		// Create new position for buyer
 		buyerPosition = &types.Position{
-			UserID:        trade.BuyUserID,
-			Symbol:        trade.Symbol,
-			Quantity:      trade.Quantity,
-			AveragePrice:  trade.Price,
-			MarketValue:   trade.Value,
-			LastUpdated:   time.Now(),
+			UserID:       trade.BuyUserID,
+			Symbol:       trade.Symbol,
+			Quantity:     trade.Quantity,
+			AveragePrice: trade.Price,
+			MarketValue:  trade.Value,
+			LastUpdated:  time.Now(),
 		}
 	} else {
 		// Update existing position
@@ -418,19 +418,19 @@ func (s *TradeServiceUnified) updatePositions(ctx context.Context, trade *types.
 	if sellerPosition == nil {
 		// Create new position for seller (negative quantity)
 		sellerPosition = &types.Position{
-			UserID:        trade.SellUserID,
-			Symbol:        trade.Symbol,
-			Quantity:      -trade.Quantity,
-			AveragePrice:  trade.Price,
-			MarketValue:   -trade.Value,
-			LastUpdated:   time.Now(),
+			UserID:       trade.SellUserID,
+			Symbol:       trade.Symbol,
+			Quantity:     -trade.Quantity,
+			AveragePrice: trade.Price,
+			MarketValue:  -trade.Value,
+			LastUpdated:  time.Now(),
 		}
 	} else {
 		// Update existing position
 		sellerPosition.Quantity -= trade.Quantity
 		sellerPosition.MarketValue -= trade.Value
 		sellerPosition.LastUpdated = time.Now()
-		
+
 		// Recalculate average price if position is still open
 		if sellerPosition.Quantity != 0 {
 			sellerPosition.AveragePrice = sellerPosition.MarketValue / sellerPosition.Quantity
@@ -479,12 +479,12 @@ func (s *TradeServiceUnified) applyTradeFilters(trades []*types.Trade, filters *
 
 // TradeStatistics contains statistics about trades
 type TradeStatistics struct {
-	TotalTrades       int                           `json:"total_trades"`
-	TotalVolume       float64                       `json:"total_volume"`
-	TotalValue        float64                       `json:"total_value"`
-	AverageTradeSize  float64                       `json:"average_trade_size"`
-	AverageTradeValue float64                       `json:"average_trade_value"`
-	SymbolStats       map[string]*SymbolTradeStats  `json:"symbol_stats"`
+	TotalTrades       int                          `json:"total_trades"`
+	TotalVolume       float64                      `json:"total_volume"`
+	TotalValue        float64                      `json:"total_value"`
+	AverageTradeSize  float64                      `json:"average_trade_size"`
+	AverageTradeValue float64                      `json:"average_trade_value"`
+	SymbolStats       map[string]*SymbolTradeStats `json:"symbol_stats"`
 }
 
 // SymbolTradeStats contains statistics for a specific symbol

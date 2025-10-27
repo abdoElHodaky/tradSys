@@ -15,30 +15,30 @@ import (
 // PerformanceOptimizer handles high-frequency trading optimizations
 type PerformanceOptimizer struct {
 	logger *zap.Logger
-	
+
 	// Memory pools for object reuse
-	orderPool    sync.Pool
-	tradePool    sync.Pool
-	matchPool    sync.Pool
-	
+	orderPool sync.Pool
+	tradePool sync.Pool
+	matchPool sync.Pool
+
 	// Lock-free data structures
-	orderQueue   *LockFreeQueue
-	tradeQueue   *LockFreeQueue
-	
+	orderQueue *LockFreeQueue
+	tradeQueue *LockFreeQueue
+
 	// Performance metrics
 	latencyStats *LatencyStats
 	throughput   *ThroughputStats
-	
+
 	// Configuration
 	config *PerformanceConfig
-	
+
 	// CPU affinity and NUMA optimization
 	cpuAffinity []int
 	numaNode    int
-	
+
 	// Memory management
 	memoryPool *MemoryPool
-	
+
 	// Hot path optimization
 	hotPathCache *HotPathCache
 }
@@ -46,33 +46,33 @@ type PerformanceOptimizer struct {
 // PerformanceConfig holds performance optimization configuration
 type PerformanceConfig struct {
 	// Memory pool sizes
-	OrderPoolSize    int `json:"order_pool_size"`
-	TradePoolSize    int `json:"trade_pool_size"`
-	MatchPoolSize    int `json:"match_pool_size"`
-	
+	OrderPoolSize int `json:"order_pool_size"`
+	TradePoolSize int `json:"trade_pool_size"`
+	MatchPoolSize int `json:"match_pool_size"`
+
 	// Queue sizes
-	OrderQueueSize   int `json:"order_queue_size"`
-	TradeQueueSize   int `json:"trade_queue_size"`
-	
+	OrderQueueSize int `json:"order_queue_size"`
+	TradeQueueSize int `json:"trade_queue_size"`
+
 	// CPU optimization
-	CPUAffinity      []int `json:"cpu_affinity"`
-	NUMANode         int   `json:"numa_node"`
-	
+	CPUAffinity []int `json:"cpu_affinity"`
+	NUMANode    int   `json:"numa_node"`
+
 	// Memory optimization
 	PreallocateMemory bool `json:"preallocate_memory"`
 	MemoryPoolSize    int  `json:"memory_pool_size"`
-	
+
 	// Cache optimization
-	HotPathCacheSize int `json:"hot_path_cache_size"`
+	HotPathCacheSize int           `json:"hot_path_cache_size"`
 	CacheTTL         time.Duration `json:"cache_ttl"`
-	
+
 	// Latency targets (microseconds)
-	TargetLatency    int64 `json:"target_latency_us"`
-	MaxLatency       int64 `json:"max_latency_us"`
-	
+	TargetLatency int64 `json:"target_latency_us"`
+	MaxLatency    int64 `json:"max_latency_us"`
+
 	// Throughput targets
-	TargetTPS        int64 `json:"target_tps"`
-	MaxTPS           int64 `json:"max_tps"`
+	TargetTPS int64 `json:"target_tps"`
+	MaxTPS    int64 `json:"max_tps"`
 }
 
 // LockFreeQueue implements a lock-free queue for high-performance operations
@@ -90,14 +90,14 @@ type QueueNode struct {
 
 // LatencyStats tracks latency statistics
 type LatencyStats struct {
-	count       int64
-	totalTime   int64
-	minLatency  int64
-	maxLatency  int64
-	p50Latency  int64
-	p95Latency  int64
-	p99Latency  int64
-	
+	count      int64
+	totalTime  int64
+	minLatency int64
+	maxLatency int64
+	p50Latency int64
+	p95Latency int64
+	p99Latency int64
+
 	// Histogram for detailed analysis
 	histogram [100]int64
 	mutex     sync.RWMutex
@@ -105,14 +105,14 @@ type LatencyStats struct {
 
 // ThroughputStats tracks throughput statistics
 type ThroughputStats struct {
-	totalOps      int64
-	currentTPS    int64
-	peakTPS       int64
-	avgTPS        int64
-	lastUpdate    time.Time
-	windowStart   time.Time
-	windowOps     int64
-	
+	totalOps    int64
+	currentTPS  int64
+	peakTPS     int64
+	avgTPS      int64
+	lastUpdate  time.Time
+	windowStart time.Time
+	windowOps   int64
+
 	mutex sync.RWMutex
 }
 
@@ -152,20 +152,20 @@ func NewPerformanceOptimizer(config *PerformanceConfig, logger *zap.Logger) *Per
 		memoryPool:   NewMemoryPool(config.MemoryPoolSize, 1024), // 1KB blocks
 		hotPathCache: NewHotPathCache(config.HotPathCacheSize, config.CacheTTL),
 	}
-	
+
 	// Initialize object pools
 	po.initializePools()
-	
+
 	// Set CPU affinity if configured
 	if len(config.CPUAffinity) > 0 {
 		po.setCPUAffinity(config.CPUAffinity)
 	}
-	
+
 	// Initialize NUMA optimization
 	if config.NUMANode >= 0 {
 		po.optimizeNUMA(config.NUMANode)
 	}
-	
+
 	return po
 }
 
@@ -177,14 +177,14 @@ func (po *PerformanceOptimizer) initializePools() {
 			return &matching.Order{}
 		},
 	}
-	
+
 	// Trade pool
 	po.tradePool = sync.Pool{
 		New: func() interface{} {
 			return &matching.Trade{}
 		},
 	}
-	
+
 	// Match result pool
 	po.matchPool = sync.Pool{
 		New: func() interface{} {
@@ -256,7 +256,7 @@ func (po *PerformanceOptimizer) OptimizeHotPath(key string, fn func() interface{
 	if cached := po.hotPathCache.Get(key); cached != nil {
 		return cached
 	}
-	
+
 	// Execute function and cache result
 	result := fn()
 	po.hotPathCache.Set(key, result)
@@ -305,11 +305,11 @@ func NewLockFreeQueue() *LockFreeQueue {
 // Enqueue adds an item to the queue
 func (q *LockFreeQueue) Enqueue(data interface{}) {
 	node := &QueueNode{data: data}
-	
+
 	for {
 		tail := (*QueueNode)(atomic.LoadPointer(&q.tail))
 		next := (*QueueNode)(atomic.LoadPointer(&tail.next))
-		
+
 		if tail == (*QueueNode)(atomic.LoadPointer(&q.tail)) {
 			if next == nil {
 				if atomic.CompareAndSwapPointer(&tail.next, unsafe.Pointer(next), unsafe.Pointer(node)) {
@@ -320,7 +320,7 @@ func (q *LockFreeQueue) Enqueue(data interface{}) {
 			}
 		}
 	}
-	
+
 	atomic.CompareAndSwapPointer(&q.tail, unsafe.Pointer((*QueueNode)(atomic.LoadPointer(&q.tail))), unsafe.Pointer(node))
 	atomic.AddInt64(&q.length, 1)
 }
@@ -331,7 +331,7 @@ func (q *LockFreeQueue) Dequeue() interface{} {
 		head := (*QueueNode)(atomic.LoadPointer(&q.head))
 		tail := (*QueueNode)(atomic.LoadPointer(&q.tail))
 		next := (*QueueNode)(atomic.LoadPointer(&head.next))
-		
+
 		if head == (*QueueNode)(atomic.LoadPointer(&q.head)) {
 			if head == tail {
 				if next == nil {
@@ -367,10 +367,10 @@ func NewLatencyStats() *LatencyStats {
 // Record records a latency measurement
 func (ls *LatencyStats) Record(duration time.Duration) {
 	latencyUs := duration.Nanoseconds() / 1000 // Convert to microseconds
-	
+
 	atomic.AddInt64(&ls.count, 1)
 	atomic.AddInt64(&ls.totalTime, latencyUs)
-	
+
 	// Update min/max atomically
 	for {
 		current := atomic.LoadInt64(&ls.minLatency)
@@ -378,14 +378,14 @@ func (ls *LatencyStats) Record(duration time.Duration) {
 			break
 		}
 	}
-	
+
 	for {
 		current := atomic.LoadInt64(&ls.maxLatency)
 		if latencyUs <= current || atomic.CompareAndSwapInt64(&ls.maxLatency, current, latencyUs) {
 			break
 		}
 	}
-	
+
 	// Update histogram
 	bucket := int(latencyUs / 10) // 10us buckets
 	if bucket >= len(ls.histogram) {
@@ -402,16 +402,16 @@ func (ls *LatencyStats) GetStats() map[string]interface{} {
 			"count": 0,
 		}
 	}
-	
+
 	totalTime := atomic.LoadInt64(&ls.totalTime)
 	avgLatency := totalTime / count
-	
+
 	return map[string]interface{}{
-		"count":        count,
-		"avg_latency":  avgLatency,
-		"min_latency":  atomic.LoadInt64(&ls.minLatency),
-		"max_latency":  atomic.LoadInt64(&ls.maxLatency),
-		"total_time":   totalTime,
+		"count":       count,
+		"avg_latency": avgLatency,
+		"min_latency": atomic.LoadInt64(&ls.minLatency),
+		"max_latency": atomic.LoadInt64(&ls.maxLatency),
+		"total_time":  totalTime,
 	}
 }
 
@@ -427,25 +427,25 @@ func NewThroughputStats() *ThroughputStats {
 // Record records throughput measurement
 func (ts *ThroughputStats) Record(ops int64) {
 	now := time.Now()
-	
+
 	atomic.AddInt64(&ts.totalOps, ops)
 	atomic.AddInt64(&ts.windowOps, ops)
-	
+
 	ts.mutex.Lock()
 	defer ts.mutex.Unlock()
-	
+
 	// Calculate current TPS
 	if now.Sub(ts.lastUpdate) >= time.Second {
 		windowDuration := now.Sub(ts.windowStart).Seconds()
 		if windowDuration > 0 {
 			currentTPS := int64(float64(ts.windowOps) / windowDuration)
 			atomic.StoreInt64(&ts.currentTPS, currentTPS)
-			
+
 			if currentTPS > atomic.LoadInt64(&ts.peakTPS) {
 				atomic.StoreInt64(&ts.peakTPS, currentTPS)
 			}
 		}
-		
+
 		ts.lastUpdate = now
 		ts.windowStart = now
 		ts.windowOps = 0
@@ -469,14 +469,14 @@ func NewMemoryPool(poolSize, blockSize int) *MemoryPool {
 		blockSize: blockSize,
 		poolSize:  poolSize,
 	}
-	
+
 	// Pre-allocate blocks
 	for i := 0; i < poolSize; i++ {
 		block := make([]byte, blockSize)
 		mp.blocks[i] = block
 		mp.available <- block
 	}
-	
+
 	return mp
 }
 
@@ -496,7 +496,7 @@ func (mp *MemoryPool) Put(block []byte) {
 	if len(block) != mp.blockSize {
 		return // Wrong size, discard
 	}
-	
+
 	select {
 	case mp.available <- block:
 		// Successfully returned to pool
@@ -529,11 +529,11 @@ func (hpc *HotPathCache) Get(key string) interface{} {
 	hpc.mutex.RLock()
 	entry, exists := hpc.data[key]
 	hpc.mutex.RUnlock()
-	
+
 	if !exists {
 		return nil
 	}
-	
+
 	// Check TTL
 	if time.Since(entry.timestamp) > hpc.ttl {
 		hpc.mutex.Lock()
@@ -541,7 +541,7 @@ func (hpc *HotPathCache) Get(key string) interface{} {
 		hpc.mutex.Unlock()
 		return nil
 	}
-	
+
 	atomic.AddInt64(&entry.hits, 1)
 	return entry.value
 }
@@ -550,25 +550,25 @@ func (hpc *HotPathCache) Get(key string) interface{} {
 func (hpc *HotPathCache) Set(key string, value interface{}) {
 	hpc.mutex.Lock()
 	defer hpc.mutex.Unlock()
-	
+
 	// Check if we need to evict
 	if len(hpc.data) >= hpc.maxSize {
 		// Simple LRU eviction - remove oldest entry
 		var oldestKey string
 		var oldestTime time.Time
-		
+
 		for k, v := range hpc.data {
 			if oldestKey == "" || v.timestamp.Before(oldestTime) {
 				oldestKey = k
 				oldestTime = v.timestamp
 			}
 		}
-		
+
 		if oldestKey != "" {
 			delete(hpc.data, oldestKey)
 		}
 	}
-	
+
 	hpc.data[key] = &CacheEntry{
 		value:     value,
 		timestamp: time.Now(),
@@ -580,12 +580,12 @@ func (hpc *HotPathCache) Set(key string, value interface{}) {
 func (hpc *HotPathCache) GetStats() map[string]interface{} {
 	hpc.mutex.RLock()
 	defer hpc.mutex.RUnlock()
-	
+
 	totalHits := int64(0)
 	for _, entry := range hpc.data {
 		totalHits += atomic.LoadInt64(&entry.hits)
 	}
-	
+
 	return map[string]interface{}{
 		"size":       len(hpc.data),
 		"max_size":   hpc.maxSize,

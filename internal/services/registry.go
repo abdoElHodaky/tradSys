@@ -14,12 +14,12 @@ import (
 // ServiceRegistry manages all services in the trading system
 type ServiceRegistry struct {
 	// Core services
-	orderService       interfaces.OrderService
-	tradeService       interfaces.TradeService
-	marketDataService  interfaces.MarketDataService
-	positionService    interfaces.PositionService
-	riskService        interfaces.RiskService
-	matchingEngine     interfaces.MatchingEngine
+	orderService      interfaces.OrderService
+	tradeService      interfaces.TradeService
+	marketDataService interfaces.MarketDataService
+	positionService   interfaces.PositionService
+	riskService       interfaces.RiskService
+	matchingEngine    interfaces.MatchingEngine
 
 	// Infrastructure services
 	logger    interfaces.Logger

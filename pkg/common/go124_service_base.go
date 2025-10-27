@@ -23,25 +23,25 @@ type Go124ServiceBase struct {
 	cancel      context.CancelFunc
 	metrics     types.Metadata
 	healthCheck types.Validator[*Go124ServiceBase]
-	
+
 	// Go 1.24 enhanced features
-	attributes  types.StringAttributes
-	metadata    types.Metadata
+	attributes types.StringAttributes
+	metadata   types.Metadata
 }
 
 // NewGo124ServiceBase creates a new service base with Go 1.24 optimizations
 func NewGo124ServiceBase(name, version string, logger *zap.Logger) *Go124ServiceBase {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	return &Go124ServiceBase{
-		name:        name,
-		version:     version,
-		logger:      logger,
-		ctx:         ctx,
-		cancel:      cancel,
-		metrics:     make(types.Metadata),
-		attributes:  make(types.StringAttributes),
-		metadata:    make(types.Metadata),
+		name:       name,
+		version:    version,
+		logger:     logger,
+		ctx:        ctx,
+		cancel:     cancel,
+		metrics:    make(types.Metadata),
+		attributes: make(types.StringAttributes),
+		metadata:   make(types.Metadata),
 	}
 }
 
@@ -117,7 +117,7 @@ func (s *Go124ServiceBase) Health() types.HealthStatus {
 	details["version"] = s.version
 	details["running"] = s.running
 	details["uptime_seconds"] = s.getUptime().Seconds()
-	
+
 	// Add custom attributes and metadata
 	for k, v := range s.attributes {
 		details[k] = v
@@ -157,7 +157,7 @@ func (s *Go124ServiceBase) SetAttribute(key string, value interface{}) {
 func (s *Go124ServiceBase) GetAttribute(key string) types.Option[interface{}] {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	if value, exists := s.attributes[key]; exists {
 		return types.Some(value)
 	}
@@ -175,7 +175,7 @@ func (s *Go124ServiceBase) SetMetadata(key string, value interface{}) {
 func (s *Go124ServiceBase) GetMetadata(key string) types.Option[interface{}] {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	if value, exists := s.metadata[key]; exists {
 		return types.Some(value)
 	}
@@ -191,12 +191,12 @@ func (s *Go124ServiceBase) GetAllMetrics() types.Metadata {
 	for k, v := range s.metrics {
 		metricsCopy[k] = v
 	}
-	
+
 	// Add runtime metrics
 	metricsCopy["current_time"] = time.Now()
 	metricsCopy["uptime_seconds"] = s.getUptime().Seconds()
 	metricsCopy["running"] = s.running
-	
+
 	return metricsCopy
 }
 
@@ -228,7 +228,7 @@ func (s *Go124ServiceBase) IsRunning() bool {
 func (s *Go124ServiceBase) GetStartTime() types.Option[time.Time] {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	if s.startTime.IsZero() {
 		return types.None[time.Time]()
 	}

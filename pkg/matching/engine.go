@@ -351,15 +351,15 @@ func (ob *OrderBook) executeTrade(takerOrder, makerOrder *Order, remainingQuanti
 	}
 
 	trade := &Trade{
-		ID:         uuid.New().String(),
-		Symbol:     ob.Symbol,
-		Price:      makerOrder.Price,
-		Quantity:   tradeQuantity,
-		Timestamp:  time.Now(),
-		TakerSide:  takerOrder.Side,
-		MakerSide:  makerOrder.Side,
-		TakerFee:   0.001 * tradeQuantity * makerOrder.Price, // 0.1% fee
-		MakerFee:   0.0005 * tradeQuantity * makerOrder.Price, // 0.05% fee
+		ID:        uuid.New().String(),
+		Symbol:    ob.Symbol,
+		Price:     makerOrder.Price,
+		Quantity:  tradeQuantity,
+		Timestamp: time.Now(),
+		TakerSide: takerOrder.Side,
+		MakerSide: makerOrder.Side,
+		TakerFee:  0.001 * tradeQuantity * makerOrder.Price,  // 0.1% fee
+		MakerFee:  0.0005 * tradeQuantity * makerOrder.Price, // 0.05% fee
 	}
 
 	if takerOrder.Side == OrderSideBuy {
@@ -419,11 +419,11 @@ func (ob *OrderBook) CancelOrder(orderID string) bool {
 	if removed != nil {
 		removed.Status = OrderStatusCancelled
 		delete(ob.Orders, orderID)
-		
+
 		ob.logger.Debug("Order cancelled",
 			zap.String("order_id", orderID),
 			zap.String("symbol", ob.Symbol))
-		
+
 		return true
 	}
 

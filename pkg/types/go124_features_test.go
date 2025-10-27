@@ -241,14 +241,14 @@ func TestOrderWithGenericAttributes(t *testing.T) {
 		Quantity: 100.0,
 		Status:   OrderStatusPending,
 		Attributes: OrderAttributes{
-			"priority":     "high",
-			"algo_params":  map[string]interface{}{"twap": true},
-			"client_info":  "institutional",
+			"priority":    "high",
+			"algo_params": map[string]interface{}{"twap": true},
+			"client_info": "institutional",
 		},
 		Metadata: Metadata{
-			"source":      "api",
-			"version":     "v2",
-			"created_by":  "user-456",
+			"source":     "api",
+			"version":    "v2",
+			"created_by": "user-456",
 		},
 	}
 

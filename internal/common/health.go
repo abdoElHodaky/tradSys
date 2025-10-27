@@ -39,15 +39,15 @@ func (h *HealthHandler) RegisterRoutes(router *gin.Engine) {
 // healthCheck returns the general health status
 func (h *HealthHandler) healthCheck(c *gin.Context) {
 	uptime := time.Since(h.startTime)
-	
+
 	response := gin.H{
-		"status":      "healthy",
-		"service":     h.serviceName,
-		"version":     h.version,
-		"uptime":      uptime.String(),
-		"timestamp":   time.Now().UTC().Format(time.RFC3339),
+		"status":    "healthy",
+		"service":   h.serviceName,
+		"version":   h.version,
+		"uptime":    uptime.String(),
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
 	}
-	
+
 	c.JSON(http.StatusOK, response)
 }
 
@@ -55,13 +55,13 @@ func (h *HealthHandler) healthCheck(c *gin.Context) {
 func (h *HealthHandler) readinessCheck(c *gin.Context) {
 	// In a real implementation, you would check dependencies here
 	// (database connections, external services, etc.)
-	
+
 	response := gin.H{
 		"status":    "ready",
 		"service":   h.serviceName,
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 	}
-	
+
 	c.JSON(http.StatusOK, response)
 }
 
@@ -72,6 +72,6 @@ func (h *HealthHandler) livenessCheck(c *gin.Context) {
 		"service":   h.serviceName,
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 	}
-	
+
 	c.JSON(http.StatusOK, response)
 }

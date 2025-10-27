@@ -94,7 +94,7 @@ func (bp *BatchProcessor) processBatchOperations() {
 
 		case op := <-bp.riskBatchChan:
 			batch = append(batch, op)
-			
+
 			// Process batch if it's full
 			if len(batch) >= 100 {
 				bp.processBatch(batch)

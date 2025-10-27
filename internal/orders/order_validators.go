@@ -207,7 +207,7 @@ func (v *OrderValidator) validateBusinessRules(ctx context.Context, req *OrderRe
 // validateUpdateFields validates fields in order update request
 func (v *OrderValidator) validateUpdateFields(req *OrderUpdateRequest) error {
 	// At least one field must be updated
-	if req.Price <= 0 && req.Quantity <= 0 && req.StopPrice <= 0 && 
+	if req.Price <= 0 && req.Quantity <= 0 && req.StopPrice <= 0 &&
 		req.TimeInForce == "" && req.ExpiresAt.IsZero() {
 		return ErrNoFieldsToUpdate
 	}
@@ -270,9 +270,9 @@ func (v *OrderValidator) canOrderBeUpdated(order *Order) bool {
 // canOrderBeCancelled checks if an order can be cancelled
 func (v *OrderValidator) canOrderBeCancelled(order *Order) bool {
 	// Only new, pending, and partially filled orders can be cancelled
-	return order.Status == OrderStatusNew || 
-		   order.Status == OrderStatusPending || 
-		   order.Status == OrderStatusPartiallyFilled
+	return order.Status == OrderStatusNew ||
+		order.Status == OrderStatusPending ||
+		order.Status == OrderStatusPartiallyFilled
 }
 
 // isValidOrderSide checks if order side is valid
@@ -451,7 +451,7 @@ func (v *OrderValidator) isMarketOpen(symbol string) bool {
 	// Simplified market hours check
 	now := time.Now()
 	hour := now.Hour()
-	
+
 	// Assume market is open 9 AM to 4 PM
 	return hour >= 9 && hour < 16
 }

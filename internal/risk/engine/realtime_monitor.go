@@ -171,4 +171,3 @@ func (e *RealTimeRiskEngine) calculatePortfolioValue(positions map[string]*Posit
 
 	return totalValue
 }
-

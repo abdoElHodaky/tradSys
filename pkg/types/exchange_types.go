@@ -36,7 +36,7 @@ func (et ExchangeType) GetTimezone() string {
 	case EGX:
 		return "Africa/Cairo" // EET (Egypt Eastern Time)
 	case ADX:
-		return "Asia/Dubai"   // GST (Gulf Standard Time)
+		return "Asia/Dubai" // GST (Gulf Standard Time)
 	default:
 		return "UTC"
 	}
@@ -101,25 +101,25 @@ func (et ExchangeType) IsMarketOpen() bool {
 	if err != nil {
 		return false
 	}
-	
+
 	now := time.Now().In(location)
-	
+
 	// Parse open and close times
 	_, err = time.Parse("15:04", hours.Open)
 	if err != nil {
 		return false
 	}
-	
+
 	_, err = time.Parse("15:04", hours.Close)
 	if err != nil {
 		return false
 	}
-	
+
 	// Create today's open and close times
 	today := now.Format("2006-01-02")
 	todayOpen, _ := time.ParseInLocation("2006-01-02 15:04", today+" "+hours.Open, location)
 	todayClose, _ := time.ParseInLocation("2006-01-02 15:04", today+" "+hours.Close, location)
-	
+
 	// Check if current time is between open and close
 	return now.After(todayOpen) && now.Before(todayClose) && isWeekday(now)
 }

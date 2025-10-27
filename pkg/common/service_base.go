@@ -71,23 +71,23 @@ type BaseService struct {
 	name    string
 	version string
 	logger  *zap.Logger
-	
+
 	// State management
-	state     ServiceState
-	stateMu   sync.RWMutex
-	
+	state   ServiceState
+	stateMu sync.RWMutex
+
 	// Context management
 	ctx    context.Context
 	cancel context.CancelFunc
-	
+
 	// Health monitoring
-	health     ServiceHealthStatus
-	healthMu   sync.RWMutex
-	
+	health   ServiceHealthStatus
+	healthMu sync.RWMutex
+
 	// Lifecycle hooks
 	startHook func(ctx context.Context) error
 	stopHook  func(ctx context.Context) error
-	
+
 	// Wait group for graceful shutdown
 	wg sync.WaitGroup
 }
@@ -122,16 +122,16 @@ func (bs *BaseService) SetStopHook(hook func(ctx context.Context) error) {
 func (bs *BaseService) Start(ctx context.Context) error {
 	bs.stateMu.Lock()
 	defer bs.stateMu.Unlock()
-	
+
 	if bs.state != ServiceStateStopped {
 		return ErrServiceAlreadyStarted
 	}
-	
+
 	bs.state = ServiceStateStarting
 	bs.ctx, bs.cancel = context.WithCancel(ctx)
-	
+
 	bs.logger.Info("Starting service", zap.String("service", bs.name))
-	
+
 	// Call start hook if provided
 	if bs.startHook != nil {
 		if err := bs.startHook(bs.ctx); err != nil {
@@ -140,10 +140,10 @@ func (bs *BaseService) Start(ctx context.Context) error {
 			return err
 		}
 	}
-	
+
 	bs.state = ServiceStateRunning
 	bs.updateHealth("healthy", "Service running")
-	
+
 	bs.logger.Info("Service started successfully", zap.String("service", bs.name))
 	return nil
 }
@@ -152,19 +152,19 @@ func (bs *BaseService) Start(ctx context.Context) error {
 func (bs *BaseService) Stop(ctx context.Context) error {
 	bs.stateMu.Lock()
 	defer bs.stateMu.Unlock()
-	
+
 	if bs.state != ServiceStateRunning {
 		return ErrServiceNotRunning
 	}
-	
+
 	bs.state = ServiceStateStopping
 	bs.logger.Info("Stopping service", zap.String("service", bs.name))
-	
+
 	// Cancel context to signal shutdown
 	if bs.cancel != nil {
 		bs.cancel()
 	}
-	
+
 	// Call stop hook if provided
 	if bs.stopHook != nil {
 		if err := bs.stopHook(ctx); err != nil {
@@ -172,14 +172,14 @@ func (bs *BaseService) Stop(ctx context.Context) error {
 			// Continue with shutdown even if hook fails
 		}
 	}
-	
+
 	// Wait for all goroutines to finish
 	done := make(chan struct{})
 	go func() {
 		bs.wg.Wait()
 		close(done)
 	}()
-	
+
 	select {
 	case <-done:
 		// All goroutines finished
@@ -187,10 +187,10 @@ func (bs *BaseService) Stop(ctx context.Context) error {
 		// Timeout during shutdown
 		bs.logger.Warn("Service shutdown timeout", zap.String("service", bs.name))
 	}
-	
+
 	bs.state = ServiceStateStopped
 	bs.updateHealth("healthy", "Service stopped")
-	
+
 	bs.logger.Info("Service stopped", zap.String("service", bs.name))
 	return nil
 }
@@ -199,7 +199,7 @@ func (bs *BaseService) Stop(ctx context.Context) error {
 func (bs *BaseService) Health() HealthStatus {
 	bs.healthMu.RLock()
 	defer bs.healthMu.RUnlock()
-	return bs.health
+	return HealthStatus(bs.health.Status)
 }
 
 // Name returns the service name
@@ -243,7 +243,7 @@ func (bs *BaseService) WorkerDone() {
 func (bs *BaseService) updateHealth(status, message string) {
 	bs.healthMu.Lock()
 	defer bs.healthMu.Unlock()
-	
+
 	bs.health.Status = status
 	bs.health.Message = message
 	bs.health.Timestamp = time.Now()
@@ -253,7 +253,7 @@ func (bs *BaseService) updateHealth(status, message string) {
 func (bs *BaseService) UpdateHealthDetails(key, value string) {
 	bs.healthMu.Lock()
 	defer bs.healthMu.Unlock()
-	
+
 	if bs.health.Details == nil {
 		bs.health.Details = make(map[string]string)
 	}

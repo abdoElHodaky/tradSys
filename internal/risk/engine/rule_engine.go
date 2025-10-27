@@ -16,7 +16,7 @@ type RuleEngine struct {
 	rules      map[string]*RiskRule
 	ruleGroups map[string]*RuleGroup
 	mu         sync.RWMutex
-	
+
 	// Rule execution metrics
 	rulesExecuted int64
 	rulesFailed   int64
@@ -72,9 +72,9 @@ func (rrt RiskRuleType) String() string {
 
 // RuleCondition defines the condition for a risk rule
 type RuleCondition struct {
-	Field    string      `json:"field"`    // e.g., "order.quantity", "position.value"
-	Operator string      `json:"operator"` // e.g., ">", "<", "==", "!=", "in", "not_in"
-	Value    interface{} `json:"value"`    // The value to compare against
+	Field    string           `json:"field"`         // e.g., "order.quantity", "position.value"
+	Operator string           `json:"operator"`      // e.g., ">", "<", "==", "!=", "in", "not_in"
+	Value    interface{}      `json:"value"`         // The value to compare against
 	And      []*RuleCondition `json:"and,omitempty"` // AND conditions
 	Or       []*RuleCondition `json:"or,omitempty"`  // OR conditions
 }
@@ -139,12 +139,12 @@ type RuleEvaluationContext struct {
 
 // RuleEvaluationResult contains the result of rule evaluation
 type RuleEvaluationResult struct {
-	RuleID      string                 `json:"rule_id"`
-	Triggered   bool                   `json:"triggered"`
-	Action      *RuleAction            `json:"action"`
-	Message     string                 `json:"message"`
-	Metadata    map[string]interface{} `json:"metadata"`
-	ExecutionTime time.Duration        `json:"execution_time"`
+	RuleID        string                 `json:"rule_id"`
+	Triggered     bool                   `json:"triggered"`
+	Action        *RuleAction            `json:"action"`
+	Message       string                 `json:"message"`
+	Metadata      map[string]interface{} `json:"metadata"`
+	ExecutionTime time.Duration          `json:"execution_time"`
 }
 
 // NewRuleEngine creates a new rule engine
@@ -473,7 +473,7 @@ func (re *RuleEngine) compareIn(a, b interface{}) (bool, error) {
 	if !ok {
 		return false, fmt.Errorf("'in' operator requires array value")
 	}
-	
+
 	for _, item := range bSlice {
 		if a == item {
 			return true, nil
@@ -504,9 +504,9 @@ func (re *RuleEngine) GetMetrics() map[string]interface{} {
 	defer re.mu.RUnlock()
 
 	return map[string]interface{}{
-		"total_rules":      len(re.rules),
-		"rules_executed":   re.rulesExecuted,
-		"rules_failed":     re.rulesFailed,
+		"total_rules":       len(re.rules),
+		"rules_executed":    re.rulesExecuted,
+		"rules_failed":      re.rulesFailed,
 		"execution_time_ns": re.executionTime,
 	}
 }

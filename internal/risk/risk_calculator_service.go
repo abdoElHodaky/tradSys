@@ -86,4 +86,3 @@ func (s *Service) processUpdatePositionBatch(ops []RiskOperation) {
 		}
 	}
 }
-

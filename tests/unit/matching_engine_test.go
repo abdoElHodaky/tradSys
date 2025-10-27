@@ -24,13 +24,13 @@ func TestMatchingEngine_BasicMatching(t *testing.T) {
 
 	// Test buy order
 	buyOrder := &matching.Order{
-		ID:       "buy-001",
-		UserID:   "user-001",
-		Symbol:   "AAPL",
-		Side:     matching.SideBuy,
-		Type:     matching.TypeLimit,
-		Quantity: 100,
-		Price:    150.50,
+		ID:          "buy-001",
+		UserID:      "user-001",
+		Symbol:      "AAPL",
+		Side:        matching.SideBuy,
+		Type:        matching.TypeLimit,
+		Quantity:    100,
+		Price:       150.50,
 		TimeInForce: matching.TimeInForceGTC,
 		Timestamp:   time.Now(),
 	}
@@ -41,13 +41,13 @@ func TestMatchingEngine_BasicMatching(t *testing.T) {
 
 	// Test sell order that should match
 	sellOrder := &matching.Order{
-		ID:       "sell-001",
-		UserID:   "user-002",
-		Symbol:   "AAPL",
-		Side:     matching.SideSell,
-		Type:     matching.TypeLimit,
-		Quantity: 50,
-		Price:    150.50,
+		ID:          "sell-001",
+		UserID:      "user-002",
+		Symbol:      "AAPL",
+		Side:        matching.SideSell,
+		Type:        matching.TypeLimit,
+		Quantity:    50,
+		Price:       150.50,
 		TimeInForce: matching.TimeInForceGTC,
 		Timestamp:   time.Now(),
 	}
@@ -65,24 +65,24 @@ func TestMatchingEngine_BasicMatching(t *testing.T) {
 
 func TestMatchingEngine_PriceTimePriority(t *testing.T) {
 	engine := matching.NewEngine(&matching.Config{
-		Symbol:           "AAPL",
-		LatencyTargetNS:  100000,
-		MaxOrdersPerSec:  100000,
-		OrderBookDepth:   1000,
-		EnableHFTMode:    true,
+		Symbol:          "AAPL",
+		LatencyTargetNS: 100000,
+		MaxOrdersPerSec: 100000,
+		OrderBookDepth:  1000,
+		EnableHFTMode:   true,
 	})
 
 	ctx := context.Background()
 
 	// Add first buy order at lower price
 	buyOrder1 := &matching.Order{
-		ID:       "buy-001",
-		UserID:   "user-001",
-		Symbol:   "AAPL",
-		Side:     matching.SideBuy,
-		Type:     matching.TypeLimit,
-		Quantity: 100,
-		Price:    150.00,
+		ID:          "buy-001",
+		UserID:      "user-001",
+		Symbol:      "AAPL",
+		Side:        matching.SideBuy,
+		Type:        matching.TypeLimit,
+		Quantity:    100,
+		Price:       150.00,
 		TimeInForce: matching.TimeInForceGTC,
 		Timestamp:   time.Now(),
 	}
@@ -92,13 +92,13 @@ func TestMatchingEngine_PriceTimePriority(t *testing.T) {
 
 	// Add second buy order at higher price (should have priority)
 	buyOrder2 := &matching.Order{
-		ID:       "buy-002",
-		UserID:   "user-002",
-		Symbol:   "AAPL",
-		Side:     matching.SideBuy,
-		Type:     matching.TypeLimit,
-		Quantity: 100,
-		Price:    150.50,
+		ID:          "buy-002",
+		UserID:      "user-002",
+		Symbol:      "AAPL",
+		Side:        matching.SideBuy,
+		Type:        matching.TypeLimit,
+		Quantity:    100,
+		Price:       150.50,
 		TimeInForce: matching.TimeInForceGTC,
 		Timestamp:   time.Now(),
 	}
@@ -108,13 +108,13 @@ func TestMatchingEngine_PriceTimePriority(t *testing.T) {
 
 	// Add sell order that should match with higher price buy order
 	sellOrder := &matching.Order{
-		ID:       "sell-001",
-		UserID:   "user-003",
-		Symbol:   "AAPL",
-		Side:     matching.SideSell,
-		Type:     matching.TypeLimit,
-		Quantity: 50,
-		Price:    150.25,
+		ID:          "sell-001",
+		UserID:      "user-003",
+		Symbol:      "AAPL",
+		Side:        matching.SideSell,
+		Type:        matching.TypeLimit,
+		Quantity:    50,
+		Price:       150.25,
 		TimeInForce: matching.TimeInForceGTC,
 		Timestamp:   time.Now(),
 	}
@@ -130,24 +130,24 @@ func TestMatchingEngine_PriceTimePriority(t *testing.T) {
 
 func TestMatchingEngine_PartialFill(t *testing.T) {
 	engine := matching.NewEngine(&matching.Config{
-		Symbol:           "AAPL",
-		LatencyTargetNS:  100000,
-		MaxOrdersPerSec:  100000,
-		OrderBookDepth:   1000,
-		EnableHFTMode:    true,
+		Symbol:          "AAPL",
+		LatencyTargetNS: 100000,
+		MaxOrdersPerSec: 100000,
+		OrderBookDepth:  1000,
+		EnableHFTMode:   true,
 	})
 
 	ctx := context.Background()
 
 	// Large buy order
 	buyOrder := &matching.Order{
-		ID:       "buy-001",
-		UserID:   "user-001",
-		Symbol:   "AAPL",
-		Side:     matching.SideBuy,
-		Type:     matching.TypeLimit,
-		Quantity: 1000,
-		Price:    150.50,
+		ID:          "buy-001",
+		UserID:      "user-001",
+		Symbol:      "AAPL",
+		Side:        matching.SideBuy,
+		Type:        matching.TypeLimit,
+		Quantity:    1000,
+		Price:       150.50,
 		TimeInForce: matching.TimeInForceGTC,
 		Timestamp:   time.Now(),
 	}
@@ -157,13 +157,13 @@ func TestMatchingEngine_PartialFill(t *testing.T) {
 
 	// Smaller sell order (partial fill)
 	sellOrder := &matching.Order{
-		ID:       "sell-001",
-		UserID:   "user-002",
-		Symbol:   "AAPL",
-		Side:     matching.SideSell,
-		Type:     matching.TypeLimit,
-		Quantity: 300,
-		Price:    150.50,
+		ID:          "sell-001",
+		UserID:      "user-002",
+		Symbol:      "AAPL",
+		Side:        matching.SideSell,
+		Type:        matching.TypeLimit,
+		Quantity:    300,
+		Price:       150.50,
 		TimeInForce: matching.TimeInForceGTC,
 		Timestamp:   time.Now(),
 	}
@@ -178,11 +178,11 @@ func TestMatchingEngine_PartialFill(t *testing.T) {
 	// Check remaining quantity in order book
 	orderBook := engine.GetOrderBook()
 	assert.NotNil(t, orderBook)
-	
+
 	// The buy order should still have 700 remaining
 	buyLevels := orderBook.GetBuyLevels()
 	assert.NotEmpty(t, buyLevels)
-	
+
 	topBuyLevel := buyLevels[0]
 	assert.Equal(t, 150.50, topBuyLevel.Price)
 	assert.Equal(t, float64(700), topBuyLevel.Quantity)
@@ -190,24 +190,24 @@ func TestMatchingEngine_PartialFill(t *testing.T) {
 
 func TestMatchingEngine_MarketOrder(t *testing.T) {
 	engine := matching.NewEngine(&matching.Config{
-		Symbol:           "AAPL",
-		LatencyTargetNS:  100000,
-		MaxOrdersPerSec:  100000,
-		OrderBookDepth:   1000,
-		EnableHFTMode:    true,
+		Symbol:          "AAPL",
+		LatencyTargetNS: 100000,
+		MaxOrdersPerSec: 100000,
+		OrderBookDepth:  1000,
+		EnableHFTMode:   true,
 	})
 
 	ctx := context.Background()
 
 	// Add limit sell orders at different prices
 	sellOrder1 := &matching.Order{
-		ID:       "sell-001",
-		UserID:   "user-001",
-		Symbol:   "AAPL",
-		Side:     matching.SideSell,
-		Type:     matching.TypeLimit,
-		Quantity: 100,
-		Price:    150.50,
+		ID:          "sell-001",
+		UserID:      "user-001",
+		Symbol:      "AAPL",
+		Side:        matching.SideSell,
+		Type:        matching.TypeLimit,
+		Quantity:    100,
+		Price:       150.50,
 		TimeInForce: matching.TimeInForceGTC,
 		Timestamp:   time.Now(),
 	}
@@ -216,13 +216,13 @@ func TestMatchingEngine_MarketOrder(t *testing.T) {
 	require.NoError(t, err)
 
 	sellOrder2 := &matching.Order{
-		ID:       "sell-002",
-		UserID:   "user-002",
-		Symbol:   "AAPL",
-		Side:     matching.SideSell,
-		Type:     matching.TypeLimit,
-		Quantity: 100,
-		Price:    150.75,
+		ID:          "sell-002",
+		UserID:      "user-002",
+		Symbol:      "AAPL",
+		Side:        matching.SideSell,
+		Type:        matching.TypeLimit,
+		Quantity:    100,
+		Price:       150.75,
 		TimeInForce: matching.TimeInForceGTC,
 		Timestamp:   time.Now(),
 	}
@@ -232,12 +232,12 @@ func TestMatchingEngine_MarketOrder(t *testing.T) {
 
 	// Market buy order should match with best ask price
 	marketBuyOrder := &matching.Order{
-		ID:       "buy-market-001",
-		UserID:   "user-003",
-		Symbol:   "AAPL",
-		Side:     matching.SideBuy,
-		Type:     matching.TypeMarket,
-		Quantity: 150,
+		ID:          "buy-market-001",
+		UserID:      "user-003",
+		Symbol:      "AAPL",
+		Side:        matching.SideBuy,
+		Type:        matching.TypeMarket,
+		Quantity:    150,
 		TimeInForce: matching.TimeInForceIOC,
 		Timestamp:   time.Now(),
 	}
@@ -261,24 +261,24 @@ func TestMatchingEngine_MarketOrder(t *testing.T) {
 
 func TestMatchingEngine_OrderCancellation(t *testing.T) {
 	engine := matching.NewEngine(&matching.Config{
-		Symbol:           "AAPL",
-		LatencyTargetNS:  100000,
-		MaxOrdersPerSec:  100000,
-		OrderBookDepth:   1000,
-		EnableHFTMode:    true,
+		Symbol:          "AAPL",
+		LatencyTargetNS: 100000,
+		MaxOrdersPerSec: 100000,
+		OrderBookDepth:  1000,
+		EnableHFTMode:   true,
 	})
 
 	ctx := context.Background()
 
 	// Add buy order
 	buyOrder := &matching.Order{
-		ID:       "buy-001",
-		UserID:   "user-001",
-		Symbol:   "AAPL",
-		Side:     matching.SideBuy,
-		Type:     matching.TypeLimit,
-		Quantity: 100,
-		Price:    150.50,
+		ID:          "buy-001",
+		UserID:      "user-001",
+		Symbol:      "AAPL",
+		Side:        matching.SideBuy,
+		Type:        matching.TypeLimit,
+		Quantity:    100,
+		Price:       150.50,
 		TimeInForce: matching.TimeInForceGTC,
 		Timestamp:   time.Now(),
 	}
@@ -292,13 +292,13 @@ func TestMatchingEngine_OrderCancellation(t *testing.T) {
 
 	// Try to match with sell order - should not match
 	sellOrder := &matching.Order{
-		ID:       "sell-001",
-		UserID:   "user-002",
-		Symbol:   "AAPL",
-		Side:     matching.SideSell,
-		Type:     matching.TypeLimit,
-		Quantity: 100,
-		Price:    150.50,
+		ID:          "sell-001",
+		UserID:      "user-002",
+		Symbol:      "AAPL",
+		Side:        matching.SideSell,
+		Type:        matching.TypeLimit,
+		Quantity:    100,
+		Price:       150.50,
 		TimeInForce: matching.TimeInForceGTC,
 		Timestamp:   time.Now(),
 	}
@@ -310,24 +310,24 @@ func TestMatchingEngine_OrderCancellation(t *testing.T) {
 
 func TestMatchingEngine_TimeInForceIOC(t *testing.T) {
 	engine := matching.NewEngine(&matching.Config{
-		Symbol:           "AAPL",
-		LatencyTargetNS:  100000,
-		MaxOrdersPerSec:  100000,
-		OrderBookDepth:   1000,
-		EnableHFTMode:    true,
+		Symbol:          "AAPL",
+		LatencyTargetNS: 100000,
+		MaxOrdersPerSec: 100000,
+		OrderBookDepth:  1000,
+		EnableHFTMode:   true,
 	})
 
 	ctx := context.Background()
 
 	// Add IOC order that cannot be fully filled
 	iocOrder := &matching.Order{
-		ID:       "ioc-001",
-		UserID:   "user-001",
-		Symbol:   "AAPL",
-		Side:     matching.SideBuy,
-		Type:     matching.TypeLimit,
-		Quantity: 1000,
-		Price:    150.50,
+		ID:          "ioc-001",
+		UserID:      "user-001",
+		Symbol:      "AAPL",
+		Side:        matching.SideBuy,
+		Type:        matching.TypeLimit,
+		Quantity:    1000,
+		Price:       150.50,
 		TimeInForce: matching.TimeInForceIOC,
 		Timestamp:   time.Now(),
 	}
@@ -344,26 +344,26 @@ func TestMatchingEngine_TimeInForceIOC(t *testing.T) {
 
 func TestMatchingEngine_Performance(t *testing.T) {
 	engine := matching.NewEngine(&matching.Config{
-		Symbol:           "AAPL",
-		LatencyTargetNS:  100000, // 100μs target
-		MaxOrdersPerSec:  100000,
-		OrderBookDepth:   1000,
-		EnableHFTMode:    true,
+		Symbol:          "AAPL",
+		LatencyTargetNS: 100000, // 100μs target
+		MaxOrdersPerSec: 100000,
+		OrderBookDepth:  1000,
+		EnableHFTMode:   true,
 	})
 
 	ctx := context.Background()
 
 	// Measure order processing latency
 	start := time.Now()
-	
+
 	order := &matching.Order{
-		ID:       "perf-001",
-		UserID:   "user-001",
-		Symbol:   "AAPL",
-		Side:     matching.SideBuy,
-		Type:     matching.TypeLimit,
-		Quantity: 100,
-		Price:    150.50,
+		ID:          "perf-001",
+		UserID:      "user-001",
+		Symbol:      "AAPL",
+		Side:        matching.SideBuy,
+		Type:        matching.TypeLimit,
+		Quantity:    100,
+		Price:       150.50,
 		TimeInForce: matching.TimeInForceGTC,
 		Timestamp:   time.Now(),
 	}
@@ -372,19 +372,19 @@ func TestMatchingEngine_Performance(t *testing.T) {
 	require.NoError(t, err)
 
 	latency := time.Since(start)
-	
+
 	// Assert latency is under target (100μs = 100,000ns)
-	assert.Less(t, latency.Nanoseconds(), int64(100000), 
+	assert.Less(t, latency.Nanoseconds(), int64(100000),
 		"Order processing should be under 100μs, got %v", latency)
 }
 
 func BenchmarkMatchingEngine_ProcessOrder(b *testing.B) {
 	engine := matching.NewEngine(&matching.Config{
-		Symbol:           "AAPL",
-		LatencyTargetNS:  100000,
-		MaxOrdersPerSec:  100000,
-		OrderBookDepth:   1000,
-		EnableHFTMode:    true,
+		Symbol:          "AAPL",
+		LatencyTargetNS: 100000,
+		MaxOrdersPerSec: 100000,
+		OrderBookDepth:  1000,
+		EnableHFTMode:   true,
 	})
 
 	ctx := context.Background()
@@ -394,13 +394,13 @@ func BenchmarkMatchingEngine_ProcessOrder(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		order := &matching.Order{
-			ID:       "bench-" + string(rune(i)),
-			UserID:   "user-001",
-			Symbol:   "AAPL",
-			Side:     matching.SideBuy,
-			Type:     matching.TypeLimit,
-			Quantity: 100,
-			Price:    150.50 + float64(i%100)*0.01,
+			ID:          "bench-" + string(rune(i)),
+			UserID:      "user-001",
+			Symbol:      "AAPL",
+			Side:        matching.SideBuy,
+			Type:        matching.TypeLimit,
+			Quantity:    100,
+			Price:       150.50 + float64(i%100)*0.01,
 			TimeInForce: matching.TimeInForceGTC,
 			Timestamp:   time.Now(),
 		}
@@ -414,11 +414,11 @@ func BenchmarkMatchingEngine_ProcessOrder(b *testing.B) {
 
 func BenchmarkMatchingEngine_MatchingThroughput(b *testing.B) {
 	engine := matching.NewEngine(&matching.Config{
-		Symbol:           "AAPL",
-		LatencyTargetNS:  100000,
-		MaxOrdersPerSec:  100000,
-		OrderBookDepth:   1000,
-		EnableHFTMode:    true,
+		Symbol:          "AAPL",
+		LatencyTargetNS: 100000,
+		MaxOrdersPerSec: 100000,
+		OrderBookDepth:  1000,
+		EnableHFTMode:   true,
 	})
 
 	ctx := context.Background()
@@ -426,13 +426,13 @@ func BenchmarkMatchingEngine_MatchingThroughput(b *testing.B) {
 	// Pre-populate order book with buy orders
 	for i := 0; i < 1000; i++ {
 		buyOrder := &matching.Order{
-			ID:       "buy-" + string(rune(i)),
-			UserID:   "user-buy",
-			Symbol:   "AAPL",
-			Side:     matching.SideBuy,
-			Type:     matching.TypeLimit,
-			Quantity: 100,
-			Price:    150.00 + float64(i)*0.01,
+			ID:          "buy-" + string(rune(i)),
+			UserID:      "user-buy",
+			Symbol:      "AAPL",
+			Side:        matching.SideBuy,
+			Type:        matching.TypeLimit,
+			Quantity:    100,
+			Price:       150.00 + float64(i)*0.01,
 			TimeInForce: matching.TimeInForceGTC,
 			Timestamp:   time.Now(),
 		}
@@ -445,13 +445,13 @@ func BenchmarkMatchingEngine_MatchingThroughput(b *testing.B) {
 	// Benchmark matching with sell orders
 	for i := 0; i < b.N; i++ {
 		sellOrder := &matching.Order{
-			ID:       "sell-" + string(rune(i)),
-			UserID:   "user-sell",
-			Symbol:   "AAPL",
-			Side:     matching.SideSell,
-			Type:     matching.TypeLimit,
-			Quantity: 100,
-			Price:    150.00 + float64(i%1000)*0.01,
+			ID:          "sell-" + string(rune(i)),
+			UserID:      "user-sell",
+			Symbol:      "AAPL",
+			Side:        matching.SideSell,
+			Type:        matching.TypeLimit,
+			Quantity:    100,
+			Price:       150.00 + float64(i%1000)*0.01,
 			TimeInForce: matching.TimeInForceGTC,
 			Timestamp:   time.Now(),
 		}

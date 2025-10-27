@@ -25,16 +25,16 @@ func (c *CorrelationMiddleware) Handler() gin.HandlerFunc {
 		if correlationID == "" {
 			correlationID = generateCorrelationID()
 		}
-		
+
 		ctx.Header("X-Correlation-ID", correlationID)
 		ctx.Set("correlation_id", correlationID)
-		
+
 		c.logger.Info("Request received",
 			zap.String("correlation_id", correlationID),
 			zap.String("method", ctx.Request.Method),
 			zap.String("path", ctx.Request.URL.Path),
 		)
-		
+
 		ctx.Next()
 	})
 }

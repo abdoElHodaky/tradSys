@@ -463,8 +463,8 @@ func (r *OrderRepository) GetOrderStatistics(ctx context.Context, userID string)
 		FROM orders
 		WHERE user_id = $1`
 
-	row := r.db.QueryRowContext(ctx, query, userID, 
-		string(types.OrderStatusPending), 
+	row := r.db.QueryRowContext(ctx, query, userID,
+		string(types.OrderStatusPending),
 		string(types.OrderStatusPartiallyFilled),
 		string(types.OrderStatusFilled))
 

@@ -13,23 +13,23 @@ import (
 // UnifiedMonitor provides comprehensive system monitoring and metrics collection
 type UnifiedMonitor struct {
 	// Core components
-	metricsCollector *UnifiedMetricsCollector
-	alertManager     *UnifiedAlertManager
-	healthChecker    *HealthChecker
+	metricsCollector   *UnifiedMetricsCollector
+	alertManager       *UnifiedAlertManager
+	healthChecker      *HealthChecker
 	performanceTracker *PerformanceTracker
-	
+
 	// Configuration
 	config *MonitorConfig
 	logger *zap.Logger
-	
+
 	// Metrics registry
 	registry *prometheus.Registry
-	
+
 	// Lifecycle management
 	ctx    context.Context
 	cancel context.CancelFunc
 	mu     sync.RWMutex
-	
+
 	// System state
 	isRunning bool
 	startTime time.Time
@@ -50,30 +50,30 @@ type MonitorConfig struct {
 // SystemMetrics represents comprehensive system metrics
 type SystemMetrics struct {
 	// Trading metrics
-	OrdersPerSecond     float64 `json:"orders_per_second"`
-	TradesPerSecond     float64 `json:"trades_per_second"`
-	MatchingLatency     float64 `json:"matching_latency_ms"`
-	OrderBookDepth      int     `json:"order_book_depth"`
-	ActiveConnections   int64   `json:"active_connections"`
-	
+	OrdersPerSecond   float64 `json:"orders_per_second"`
+	TradesPerSecond   float64 `json:"trades_per_second"`
+	MatchingLatency   float64 `json:"matching_latency_ms"`
+	OrderBookDepth    int     `json:"order_book_depth"`
+	ActiveConnections int64   `json:"active_connections"`
+
 	// Performance metrics
-	CPUUsage           float64 `json:"cpu_usage_percent"`
-	MemoryUsage        float64 `json:"memory_usage_percent"`
-	DiskUsage          float64 `json:"disk_usage_percent"`
-	NetworkThroughput  float64 `json:"network_throughput_mbps"`
-	
+	CPUUsage          float64 `json:"cpu_usage_percent"`
+	MemoryUsage       float64 `json:"memory_usage_percent"`
+	DiskUsage         float64 `json:"disk_usage_percent"`
+	NetworkThroughput float64 `json:"network_throughput_mbps"`
+
 	// Application metrics
-	ErrorRate          float64 `json:"error_rate_percent"`
-	ResponseTime       float64 `json:"response_time_ms"`
-	ThroughputRPS      float64 `json:"throughput_rps"`
-	CacheHitRate       float64 `json:"cache_hit_rate_percent"`
-	
+	ErrorRate     float64 `json:"error_rate_percent"`
+	ResponseTime  float64 `json:"response_time_ms"`
+	ThroughputRPS float64 `json:"throughput_rps"`
+	CacheHitRate  float64 `json:"cache_hit_rate_percent"`
+
 	// Business metrics
-	TotalVolume        float64   `json:"total_volume"`
-	TotalTrades        int64     `json:"total_trades"`
-	ActiveUsers        int64     `json:"active_users"`
-	ComplianceScore    float64   `json:"compliance_score"`
-	
+	TotalVolume     float64 `json:"total_volume"`
+	TotalTrades     int64   `json:"total_trades"`
+	ActiveUsers     int64   `json:"active_users"`
+	ComplianceScore float64 `json:"compliance_score"`
+
 	// Timestamp
 	Timestamp time.Time `json:"timestamp"`
 }
@@ -91,10 +91,10 @@ type UnifiedHealthStatus struct {
 type HealthState string
 
 const (
-	HealthStateHealthy   HealthState = "healthy"
-	HealthStateWarning   HealthState = "warning"
-	HealthStateCritical  HealthState = "critical"
-	HealthStateUnknown   HealthState = "unknown"
+	HealthStateHealthy  HealthState = "healthy"
+	HealthStateWarning  HealthState = "warning"
+	HealthStateCritical HealthState = "critical"
+	HealthStateUnknown  HealthState = "unknown"
 )
 
 // UnifiedAlert represents a system alert
@@ -138,7 +138,7 @@ const (
 // NewUnifiedMonitor creates a new unified monitor
 func NewUnifiedMonitor(config *MonitorConfig, logger *zap.Logger) *UnifiedMonitor {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	monitor := &UnifiedMonitor{
 		config:    config,
 		logger:    logger,
@@ -147,13 +147,13 @@ func NewUnifiedMonitor(config *MonitorConfig, logger *zap.Logger) *UnifiedMonito
 		cancel:    cancel,
 		startTime: time.Now(),
 	}
-	
+
 	// Initialize components
 	monitor.metricsCollector = NewUnifiedMetricsCollector(config, logger)
 	monitor.alertManager = NewUnifiedAlertManager(config, logger)
 	monitor.healthChecker = NewHealthChecker(config, logger)
 	monitor.performanceTracker = NewPerformanceTracker(config, logger)
-	
+
 	return monitor
 }
 
@@ -161,44 +161,44 @@ func NewUnifiedMonitor(config *MonitorConfig, logger *zap.Logger) *UnifiedMonito
 func (m *UnifiedMonitor) Start() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	if m.isRunning {
 		return ErrMonitorAlreadyRunning
 	}
-	
+
 	m.logger.Info("Starting unified monitor",
 		zap.Duration("metrics_interval", m.config.MetricsInterval),
 		zap.Duration("health_check_interval", m.config.HealthCheckInterval))
-	
+
 	// Start components
 	if err := m.metricsCollector.Start(); err != nil {
 		return err
 	}
-	
+
 	if m.config.EnableAlerts {
 		if err := m.alertManager.Start(); err != nil {
 			return err
 		}
 	}
-	
+
 	if m.config.EnableHealthChecks {
 		if err := m.healthChecker.Start(); err != nil {
 			return err
 		}
 	}
-	
+
 	if err := m.performanceTracker.Start(); err != nil {
 		return err
 	}
-	
+
 	// Start background processes
 	go m.metricsLoop()
 	go m.healthCheckLoop()
 	go m.alertCheckLoop()
-	
+
 	m.isRunning = true
 	m.startTime = time.Now()
-	
+
 	return nil
 }
 
@@ -206,23 +206,23 @@ func (m *UnifiedMonitor) Start() error {
 func (m *UnifiedMonitor) Stop() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	if !m.isRunning {
 		return ErrMonitorNotRunning
 	}
-	
+
 	m.logger.Info("Stopping unified monitor")
-	
+
 	m.cancel()
-	
+
 	// Stop components
 	m.metricsCollector.Stop()
 	m.alertManager.Stop()
 	m.healthChecker.Stop()
 	m.performanceTracker.Stop()
-	
+
 	m.isRunning = false
-	
+
 	return nil
 }
 
@@ -260,7 +260,7 @@ func (m *UnifiedMonitor) RegisterHealthCheck(name string, checker HealthCheckFun
 func (m *UnifiedMonitor) metricsLoop() {
 	ticker := time.NewTicker(m.config.MetricsInterval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -278,10 +278,10 @@ func (m *UnifiedMonitor) healthCheckLoop() {
 	if !m.config.EnableHealthChecks {
 		return
 	}
-	
+
 	ticker := time.NewTicker(m.config.HealthCheckInterval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -299,10 +299,10 @@ func (m *UnifiedMonitor) alertCheckLoop() {
 	if !m.config.EnableAlerts {
 		return
 	}
-	
+
 	ticker := time.NewTicker(m.config.AlertCheckInterval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -367,19 +367,19 @@ func (mc *UnifiedMetricsCollector) Stop() error {
 func (mc *UnifiedMetricsCollector) CollectMetrics() error {
 	mc.mu.Lock()
 	defer mc.mu.Unlock()
-	
+
 	// Collect metrics from various sources
 	mc.metrics = &SystemMetrics{
-		OrdersPerSecond:   mc.getOrdersPerSecond(),
-		TradesPerSecond:   mc.getTradesPerSecond(),
-		MatchingLatency:   mc.getMatchingLatency(),
-		CPUUsage:         mc.getCPUUsage(),
-		MemoryUsage:      mc.getMemoryUsage(),
-		ErrorRate:        mc.getErrorRate(),
-		ResponseTime:     mc.getResponseTime(),
-		Timestamp:        time.Now(),
+		OrdersPerSecond: mc.getOrdersPerSecond(),
+		TradesPerSecond: mc.getTradesPerSecond(),
+		MatchingLatency: mc.getMatchingLatency(),
+		CPUUsage:        mc.getCPUUsage(),
+		MemoryUsage:     mc.getMemoryUsage(),
+		ErrorRate:       mc.getErrorRate(),
+		ResponseTime:    mc.getResponseTime(),
+		Timestamp:       time.Now(),
 	}
-	
+
 	return nil
 }
 
@@ -387,7 +387,7 @@ func (mc *UnifiedMetricsCollector) CollectMetrics() error {
 func (mc *UnifiedMetricsCollector) GetCurrentMetrics() (*SystemMetrics, error) {
 	mc.mu.RLock()
 	defer mc.mu.RUnlock()
-	
+
 	// Return a copy
 	metrics := *mc.metrics
 	return &metrics, nil
@@ -448,10 +448,10 @@ func (am *UnifiedAlertManager) CheckAlerts() error {
 func (am *UnifiedAlertManager) TriggerAlert(alert *UnifiedAlert) {
 	am.mu.Lock()
 	defer am.mu.Unlock()
-	
+
 	alert.Timestamp = time.Now()
 	am.alerts = append(am.alerts, alert)
-	
+
 	am.logger.Warn("Alert triggered",
 		zap.String("id", alert.ID),
 		zap.String("type", string(alert.Type)),
@@ -463,24 +463,24 @@ func (am *UnifiedAlertManager) TriggerAlert(alert *UnifiedAlert) {
 func (am *UnifiedAlertManager) GetActiveAlerts() ([]*UnifiedAlert, error) {
 	am.mu.RLock()
 	defer am.mu.RUnlock()
-	
+
 	activeAlerts := make([]*UnifiedAlert, 0)
 	for _, alert := range am.alerts {
 		if !alert.Resolved {
 			activeAlerts = append(activeAlerts, alert)
 		}
 	}
-	
+
 	return activeAlerts, nil
 }
 
 // HealthChecker performs health checks
 type HealthChecker struct {
-	config  *MonitorConfig
-	logger  *zap.Logger
-	checks  map[string]HealthCheckFunc
-	status  *UnifiedHealthStatus
-	mu      sync.RWMutex
+	config *MonitorConfig
+	logger *zap.Logger
+	checks map[string]HealthCheckFunc
+	status *UnifiedHealthStatus
+	mu     sync.RWMutex
 }
 
 // HealthCheckFunc represents a health check function
@@ -516,7 +516,7 @@ func (hc *HealthChecker) Stop() error {
 func (hc *HealthChecker) RegisterCheck(name string, checker HealthCheckFunc) {
 	hc.mu.Lock()
 	defer hc.mu.Unlock()
-	
+
 	hc.checks[name] = checker
 	hc.logger.Info("Health check registered", zap.String("name", name))
 }
@@ -525,14 +525,14 @@ func (hc *HealthChecker) RegisterCheck(name string, checker HealthCheckFunc) {
 func (hc *HealthChecker) RunHealthChecks() error {
 	hc.mu.Lock()
 	defer hc.mu.Unlock()
-	
+
 	components := make(map[string]HealthState)
 	overall := HealthStateHealthy
-	
+
 	for name, checker := range hc.checks {
 		state := checker()
 		components[name] = state
-		
+
 		// Determine overall health
 		if state == HealthStateCritical {
 			overall = HealthStateCritical
@@ -540,13 +540,13 @@ func (hc *HealthChecker) RunHealthChecks() error {
 			overall = HealthStateWarning
 		}
 	}
-	
+
 	hc.status = &UnifiedHealthStatus{
 		Overall:    overall,
 		Components: components,
 		Timestamp:  time.Now(),
 	}
-	
+
 	return nil
 }
 
@@ -554,7 +554,7 @@ func (hc *HealthChecker) RunHealthChecks() error {
 func (hc *HealthChecker) GetCurrentHealth() (*UnifiedHealthStatus, error) {
 	hc.mu.RLock()
 	defer hc.mu.RUnlock()
-	
+
 	// Return a copy
 	status := *hc.status
 	return &status, nil

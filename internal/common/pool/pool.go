@@ -110,11 +110,11 @@ func (o *Order) Reset() {
 
 // FastOrder represents a high-performance order with additional fields
 type FastOrder struct {
-	Order           *Order
-	PriceInt64      int64
-	QuantityInt64   int64
-	CreatedAtNano   int64
-	UpdatedAtNano   int64
+	Order         *Order
+	PriceInt64    int64
+	QuantityInt64 int64
+	CreatedAtNano int64
+	UpdatedAtNano int64
 }
 
 // Reset resets the fast order fields
@@ -130,13 +130,13 @@ func (f *FastOrder) Reset() {
 
 // Trade represents a trade execution
 type Trade struct {
-	ID           string
-	Symbol       string
-	Price        float64
-	Quantity     float64
-	BuyOrderID   string
-	SellOrderID  string
-	Timestamp    int64
+	ID          string
+	Symbol      string
+	Price       float64
+	Quantity    float64
+	BuyOrderID  string
+	SellOrderID string
+	Timestamp   int64
 }
 
 // Reset resets the trade fields
@@ -282,8 +282,6 @@ func (p *OrderUpdateMessagePool) Put(msg *OrderUpdateMessage) {
 	msg.Reset()
 	p.pool.Put(msg)
 }
-
-
 
 // MatchResult represents the result of a matching operation
 type MatchResult struct {

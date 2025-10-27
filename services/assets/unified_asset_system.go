@@ -28,47 +28,47 @@ type UnifiedAssetSystem struct {
 
 // AssetRegistry maintains registry of all assets across exchanges
 type AssetRegistry struct {
-	assets          map[string]*UnifiedAsset
+	assets           map[string]*UnifiedAsset
 	assetsByExchange map[string]map[string]*UnifiedAsset
-	assetsByType    map[exchanges.AssetType][]*UnifiedAsset
-	searchIndex     *AssetSearchIndex
-	mu              sync.RWMutex
+	assetsByType     map[exchanges.AssetType][]*UnifiedAsset
+	searchIndex      *AssetSearchIndex
+	mu               sync.RWMutex
 }
 
 // UnifiedAsset represents a unified asset across exchanges
 type UnifiedAsset struct {
-	ID               string
-	Symbol           string
-	Name             string
-	AssetType        exchanges.AssetType
-	Exchange         string
-	Region           string
-	Currency         string
-	ISIN             string
-	Sector           string
-	Industry         string
-	MarketCap        float64
-	IslamicInfo      *IslamicAssetInfo
-	ComplianceInfo   *UnifiedComplianceInfo
-	TradingInfo      *TradingInfo
-	PricingInfo      *PricingInfo
-	AnalyticsInfo    *AnalyticsInfo
-	Metadata         map[string]interface{}
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID             string
+	Symbol         string
+	Name           string
+	AssetType      exchanges.AssetType
+	Exchange       string
+	Region         string
+	Currency       string
+	ISIN           string
+	Sector         string
+	Industry       string
+	MarketCap      float64
+	IslamicInfo    *IslamicAssetInfo
+	ComplianceInfo *UnifiedComplianceInfo
+	TradingInfo    *TradingInfo
+	PricingInfo    *PricingInfo
+	AnalyticsInfo  *AnalyticsInfo
+	Metadata       map[string]interface{}
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 // IslamicAssetInfo contains Islamic finance information
 type IslamicAssetInfo struct {
-	IsHalal           bool
-	ComplianceLevel   exchanges.ComplianceLevel
-	ShariaBoard       string
-	LastScreened      time.Time
-	ComplianceScore   float64
-	DebtEquityRatio   float64
+	IsHalal            bool
+	ComplianceLevel    exchanges.ComplianceLevel
+	ShariaBoard        string
+	LastScreened       time.Time
+	ComplianceScore    float64
+	DebtEquityRatio    float64
 	BusinessActivities []string
-	Restrictions      []string
-	ZakatApplicable   bool
+	Restrictions       []string
+	ZakatApplicable    bool
 }
 
 // UnifiedComplianceInfo contains compliance information across jurisdictions
@@ -82,49 +82,49 @@ type UnifiedComplianceInfo struct {
 
 // TradingInfo contains trading-related information
 type TradingInfo struct {
-	TradingHours    *exchanges.TradingSchedule
-	MinOrderSize    float64
-	MaxOrderSize    float64
-	TickSize        float64
-	LotSize         int
-	SettlementDays  int
-	IsActive        bool
-	TradingStatus   string
+	TradingHours   *exchanges.TradingSchedule
+	MinOrderSize   float64
+	MaxOrderSize   float64
+	TickSize       float64
+	LotSize        int
+	SettlementDays int
+	IsActive       bool
+	TradingStatus  string
 }
 
 // PricingInfo contains pricing and market data information
 type PricingInfo struct {
-	CurrentPrice    float64
-	PreviousClose   float64
-	DayChange       float64
+	CurrentPrice     float64
+	PreviousClose    float64
+	DayChange        float64
 	DayChangePercent float64
-	Volume          int64
-	MarketCap       float64
-	PE              float64
-	DividendYield   float64
-	LastUpdated     time.Time
+	Volume           int64
+	MarketCap        float64
+	PE               float64
+	DividendYield    float64
+	LastUpdated      time.Time
 }
 
 // AnalyticsInfo contains analytics and performance information
 type AnalyticsInfo struct {
-	Volatility      float64
-	Beta            float64
-	Sharpe          float64
-	MaxDrawdown     float64
-	Performance1D   float64
-	Performance1W   float64
-	Performance1M   float64
-	Performance1Y   float64
-	LastCalculated  time.Time
+	Volatility     float64
+	Beta           float64
+	Sharpe         float64
+	MaxDrawdown    float64
+	Performance1D  float64
+	Performance1W  float64
+	Performance1M  float64
+	Performance1Y  float64
+	LastCalculated time.Time
 }
 
 // UnifiedPricingEngine provides unified pricing across exchanges
 type UnifiedPricingEngine struct {
-	pricingModels   map[string]PricingModel
-	dataAggregator  *DataAggregator
-	priceCache      *PriceCache
-	realTimeFeeds   map[string]*RealTimeFeed
-	mu              sync.RWMutex
+	pricingModels  map[string]PricingModel
+	dataAggregator *DataAggregator
+	priceCache     *PriceCache
+	realTimeFeeds  map[string]*RealTimeFeed
+	mu             sync.RWMutex
 }
 
 // CrossExchangePortfolioManager manages portfolios across exchanges
@@ -138,34 +138,34 @@ type CrossExchangePortfolioManager struct {
 
 // UnifiedPortfolio represents a portfolio across multiple exchanges
 type UnifiedPortfolio struct {
-	UserID          string
-	PortfolioID     string
-	Name            string
-	Currency        string
-	TotalValue      float64
-	CashBalance     float64
-	Positions       []*UnifiedPosition
-	Performance     *PortfolioPerformance
-	RiskMetrics     *PortfolioRiskMetrics
-	IslamicInfo     *IslamicPortfolioInfo
-	LastUpdated     time.Time
+	UserID      string
+	PortfolioID string
+	Name        string
+	Currency    string
+	TotalValue  float64
+	CashBalance float64
+	Positions   []*UnifiedPosition
+	Performance *PortfolioPerformance
+	RiskMetrics *PortfolioRiskMetrics
+	IslamicInfo *IslamicPortfolioInfo
+	LastUpdated time.Time
 }
 
 // UnifiedPosition represents a position across exchanges
 type UnifiedPosition struct {
-	AssetID         string
-	Symbol          string
-	Exchange        string
-	AssetType       exchanges.AssetType
-	Quantity        float64
-	AverageCost     float64
-	CurrentPrice    float64
-	MarketValue     float64
-	UnrealizedPnL   float64
-	RealizedPnL     float64
-	DayChange       float64
-	Weight          float64
-	LastUpdated     time.Time
+	AssetID       string
+	Symbol        string
+	Exchange      string
+	AssetType     exchanges.AssetType
+	Quantity      float64
+	AverageCost   float64
+	CurrentPrice  float64
+	MarketValue   float64
+	UnrealizedPnL float64
+	RealizedPnL   float64
+	DayChange     float64
+	Weight        float64
+	LastUpdated   time.Time
 }
 
 // UnifiedAnalyticsEngine provides analytics across exchanges
@@ -415,7 +415,7 @@ func (uas *UnifiedAssetSystem) updateAssetPricing(ctx context.Context, asset *Un
 // updatePortfolioValues updates portfolio values and metrics
 func (uas *UnifiedAssetSystem) updatePortfolioValues(ctx context.Context, portfolio *UnifiedPortfolio) error {
 	totalValue := portfolio.CashBalance
-	
+
 	for _, position := range portfolio.Positions {
 		// Get current price
 		pricing, err := uas.pricingEngine.GetCurrentPricing(position.Symbol, position.Exchange)
@@ -458,7 +458,7 @@ func (uas *UnifiedAssetSystem) updatePortfolioPerformance(portfolio *UnifiedPort
 	// Calculate performance metrics
 	// This would involve historical data analysis
 	// For now, we'll set placeholder values
-	
+
 	if portfolio.Performance == nil {
 		portfolio.Performance = &PortfolioPerformance{}
 	}
@@ -526,11 +526,11 @@ type AnalyticsRequest struct {
 
 // ComplianceRequest represents a compliance request
 type ComplianceRequest struct {
-	UserID      string
-	PortfolioID string
-	AssetIDs    []string
+	UserID        string
+	PortfolioID   string
+	AssetIDs      []string
 	Jurisdictions []string
-	ReportType  string
+	ReportType    string
 }
 
 // TimeRange represents a time range for analytics
@@ -550,31 +550,31 @@ type SystemMetrics struct {
 
 // PortfolioPerformance represents portfolio performance metrics
 type PortfolioPerformance struct {
-	TotalReturn     float64
+	TotalReturn      float64
 	AnnualizedReturn float64
-	Volatility      float64
-	SharpeRatio     float64
-	MaxDrawdown     float64
-	Beta            float64
-	Alpha           float64
-	LastUpdated     time.Time
+	Volatility       float64
+	SharpeRatio      float64
+	MaxDrawdown      float64
+	Beta             float64
+	Alpha            float64
+	LastUpdated      time.Time
 }
 
 // PortfolioRiskMetrics represents portfolio risk metrics
 type PortfolioRiskMetrics struct {
-	VaR95           float64
-	VaR99           float64
+	VaR95             float64
+	VaR99             float64
 	ExpectedShortfall float64
 	ConcentrationRisk float64
-	CurrencyRisk    float64
-	LastCalculated  time.Time
+	CurrencyRisk      float64
+	LastCalculated    time.Time
 }
 
 // IslamicPortfolioInfo represents Islamic portfolio information
 type IslamicPortfolioInfo struct {
-	IsCompliant     bool
-	ComplianceScore float64
-	ZakatDue        float64
+	IsCompliant       bool
+	ComplianceScore   float64
+	ZakatDue          float64
 	NonCompliantValue float64
-	LastScreened    time.Time
+	LastScreened      time.Time
 }

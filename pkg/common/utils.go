@@ -36,21 +36,21 @@ func ValidateSymbol(symbol string) error {
 	if symbol == "" {
 		return fmt.Errorf("symbol cannot be empty")
 	}
-	
+
 	if len(symbol) < 2 || len(symbol) > 10 {
 		return fmt.Errorf("symbol must be between 2 and 10 characters")
 	}
-	
+
 	// Symbol should contain only alphanumeric characters and dots
 	for _, char := range symbol {
-		if !((char >= 'A' && char <= 'Z') || 
-			 (char >= 'a' && char <= 'z') || 
-			 (char >= '0' && char <= '9') || 
-			 char == '.') {
+		if !((char >= 'A' && char <= 'Z') ||
+			(char >= 'a' && char <= 'z') ||
+			(char >= '0' && char <= '9') ||
+			char == '.') {
 			return fmt.Errorf("symbol contains invalid character: %c", char)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -64,11 +64,11 @@ func ValidatePrice(price float64) error {
 	if price <= 0 {
 		return fmt.Errorf("price must be positive, got: %f", price)
 	}
-	
+
 	if price > 1000000 {
 		return fmt.Errorf("price too high, got: %f", price)
 	}
-	
+
 	return nil
 }
 
@@ -77,11 +77,11 @@ func ValidateQuantity(quantity float64) error {
 	if quantity <= 0 {
 		return fmt.Errorf("quantity must be positive, got: %f", quantity)
 	}
-	
+
 	if quantity > 1000000 {
 		return fmt.Errorf("quantity too high, got: %f", quantity)
 	}
-	
+
 	return nil
 }
 

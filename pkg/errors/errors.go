@@ -11,53 +11,53 @@ type ErrorCode string
 
 const (
 	// Order related errors
-	ErrInvalidOrder     ErrorCode = "INVALID_ORDER"
-	ErrOrderNotFound    ErrorCode = "ORDER_NOT_FOUND"
-	ErrOrderCanceled    ErrorCode = "ORDER_CANCELED"
+	ErrInvalidOrder      ErrorCode = "INVALID_ORDER"
+	ErrOrderNotFound     ErrorCode = "ORDER_NOT_FOUND"
+	ErrOrderCanceled     ErrorCode = "ORDER_CANCELED"
 	ErrInsufficientFunds ErrorCode = "INSUFFICIENT_FUNDS"
-	ErrOrderExpired     ErrorCode = "ORDER_EXPIRED"
-	ErrDuplicateOrder   ErrorCode = "DUPLICATE_ORDER"
-	
+	ErrOrderExpired      ErrorCode = "ORDER_EXPIRED"
+	ErrDuplicateOrder    ErrorCode = "DUPLICATE_ORDER"
+
 	// Market data errors
-	ErrSymbolNotFound   ErrorCode = "SYMBOL_NOT_FOUND"
-	ErrMarketClosed     ErrorCode = "MARKET_CLOSED"
-	ErrInvalidPrice     ErrorCode = "INVALID_PRICE"
-	ErrInvalidQuantity  ErrorCode = "INVALID_QUANTITY"
-	ErrPriceOutOfRange  ErrorCode = "PRICE_OUT_OF_RANGE"
-	
+	ErrSymbolNotFound  ErrorCode = "SYMBOL_NOT_FOUND"
+	ErrMarketClosed    ErrorCode = "MARKET_CLOSED"
+	ErrInvalidPrice    ErrorCode = "INVALID_PRICE"
+	ErrInvalidQuantity ErrorCode = "INVALID_QUANTITY"
+	ErrPriceOutOfRange ErrorCode = "PRICE_OUT_OF_RANGE"
+
 	// System errors
 	ErrDatabaseConnection ErrorCode = "DATABASE_CONNECTION"
 	ErrServiceUnavailable ErrorCode = "SERVICE_UNAVAILABLE"
-	ErrTimeout           ErrorCode = "TIMEOUT"
-	ErrRateLimited       ErrorCode = "RATE_LIMITED"
-	ErrInternalError     ErrorCode = "INTERNAL_ERROR"
-	
+	ErrTimeout            ErrorCode = "TIMEOUT"
+	ErrRateLimited        ErrorCode = "RATE_LIMITED"
+	ErrInternalError      ErrorCode = "INTERNAL_ERROR"
+
 	// Authentication errors
-	ErrUnauthorized      ErrorCode = "UNAUTHORIZED"
-	ErrInvalidToken      ErrorCode = "INVALID_TOKEN"
-	ErrTokenExpired      ErrorCode = "TOKEN_EXPIRED"
-	ErrPermissionDenied  ErrorCode = "PERMISSION_DENIED"
-	
+	ErrUnauthorized     ErrorCode = "UNAUTHORIZED"
+	ErrInvalidToken     ErrorCode = "INVALID_TOKEN"
+	ErrTokenExpired     ErrorCode = "TOKEN_EXPIRED"
+	ErrPermissionDenied ErrorCode = "PERMISSION_DENIED"
+
 	// Risk management errors
-	ErrRiskLimitExceeded ErrorCode = "RISK_LIMIT_EXCEEDED"
+	ErrRiskLimitExceeded     ErrorCode = "RISK_LIMIT_EXCEEDED"
 	ErrPositionLimitExceeded ErrorCode = "POSITION_LIMIT_EXCEEDED"
-	ErrDailyLimitExceeded ErrorCode = "DAILY_LIMIT_EXCEEDED"
-	ErrLeverageExceeded  ErrorCode = "LEVERAGE_EXCEEDED"
-	
+	ErrDailyLimitExceeded    ErrorCode = "DAILY_LIMIT_EXCEEDED"
+	ErrLeverageExceeded      ErrorCode = "LEVERAGE_EXCEEDED"
+
 	// Matching engine errors
-	ErrMatchingFailed    ErrorCode = "MATCHING_FAILED"
-	ErrEngineOverloaded  ErrorCode = "ENGINE_OVERLOADED"
-	ErrOrderBookFull     ErrorCode = "ORDER_BOOK_FULL"
-	ErrCrossedMarket     ErrorCode = "CROSSED_MARKET"
-	
+	ErrMatchingFailed   ErrorCode = "MATCHING_FAILED"
+	ErrEngineOverloaded ErrorCode = "ENGINE_OVERLOADED"
+	ErrOrderBookFull    ErrorCode = "ORDER_BOOK_FULL"
+	ErrCrossedMarket    ErrorCode = "CROSSED_MARKET"
+
 	// Validation errors
-	ErrValidationFailed  ErrorCode = "VALIDATION_FAILED"
-	ErrInvalidInput      ErrorCode = "INVALID_INPUT"
-	ErrMissingField      ErrorCode = "MISSING_FIELD"
-	ErrInvalidFormat     ErrorCode = "INVALID_FORMAT"
-	
+	ErrValidationFailed ErrorCode = "VALIDATION_FAILED"
+	ErrInvalidInput     ErrorCode = "INVALID_INPUT"
+	ErrMissingField     ErrorCode = "MISSING_FIELD"
+	ErrInvalidFormat    ErrorCode = "INVALID_FORMAT"
+
 	// Configuration errors
-	ErrConfigurationError ErrorCode = "CONFIGURATION_ERROR"
+	ErrConfigurationError   ErrorCode = "CONFIGURATION_ERROR"
 	ErrMissingConfiguration ErrorCode = "MISSING_CONFIGURATION"
 	ErrInvalidConfiguration ErrorCode = "INVALID_CONFIGURATION"
 )
@@ -142,7 +142,7 @@ func New(code ErrorCode, message string) *TradSysError {
 	if fn != nil {
 		funcName = fn.Name()
 	}
-	
+
 	return &TradSysError{
 		Code:      code,
 		Message:   message,
@@ -171,14 +171,14 @@ func Wrap(err error, code ErrorCode, message string) *TradSysError {
 	if err == nil {
 		return nil
 	}
-	
+
 	pc, file, line, _ := runtime.Caller(1)
 	fn := runtime.FuncForPC(pc)
 	var funcName string
 	if fn != nil {
 		funcName = fn.Name()
 	}
-	
+
 	return &TradSysError{
 		Code:      code,
 		Message:   message,
@@ -210,19 +210,19 @@ func As(err error, target interface{}) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	if tradSysErr, ok := err.(*TradSysError); ok {
 		if targetPtr, ok := target.(**TradSysError); ok {
 			*targetPtr = tradSysErr
 			return true
 		}
 	}
-	
+
 	// Check if the error implements Unwrap
 	if unwrapper, ok := err.(interface{ Unwrap() error }); ok {
 		return As(unwrapper.Unwrap(), target)
 	}
-	
+
 	return false
 }
 
@@ -257,8 +257,8 @@ func GetErrorSeverity(err error) ErrorSeverity {
 func IsRetryable(err error) bool {
 	code := GetErrorCode(err)
 	switch code {
-	case ErrTimeout, ErrServiceUnavailable, ErrDatabaseConnection, 
-		 ErrEngineOverloaded, ErrRateLimited, ErrInternalError:
+	case ErrTimeout, ErrServiceUnavailable, ErrDatabaseConnection,
+		ErrEngineOverloaded, ErrRateLimited, ErrInternalError:
 		return true
 	default:
 		return false
@@ -269,10 +269,10 @@ func IsRetryable(err error) bool {
 func IsClientError(err error) bool {
 	code := GetErrorCode(err)
 	switch code {
-	case ErrInvalidOrder, ErrOrderNotFound, ErrInvalidPrice, ErrUnauthorized, 
-		 ErrInvalidToken, ErrTokenExpired, ErrSymbolNotFound, ErrValidationFailed,
-		 ErrInvalidInput, ErrMissingField, ErrInvalidFormat, ErrPermissionDenied,
-		 ErrInvalidQuantity, ErrDuplicateOrder:
+	case ErrInvalidOrder, ErrOrderNotFound, ErrInvalidPrice, ErrUnauthorized,
+		ErrInvalidToken, ErrTokenExpired, ErrSymbolNotFound, ErrValidationFailed,
+		ErrInvalidInput, ErrMissingField, ErrInvalidFormat, ErrPermissionDenied,
+		ErrInvalidQuantity, ErrDuplicateOrder:
 		return true
 	default:
 		return false
@@ -283,9 +283,9 @@ func IsClientError(err error) bool {
 func IsServerError(err error) bool {
 	code := GetErrorCode(err)
 	switch code {
-	case ErrDatabaseConnection, ErrServiceUnavailable, ErrTimeout, 
-		 ErrMatchingFailed, ErrEngineOverloaded, ErrInternalError,
-		 ErrConfigurationError:
+	case ErrDatabaseConnection, ErrServiceUnavailable, ErrTimeout,
+		ErrMatchingFailed, ErrEngineOverloaded, ErrInternalError,
+		ErrConfigurationError:
 		return true
 	default:
 		return false
@@ -302,13 +302,13 @@ func IsCritical(err error) bool {
 func getSeverityForCode(code ErrorCode) ErrorSeverity {
 	switch code {
 	case ErrDatabaseConnection, ErrServiceUnavailable, ErrEngineOverloaded,
-		 ErrInternalError, ErrConfigurationError:
+		ErrInternalError, ErrConfigurationError:
 		return SeverityCritical
 	case ErrMatchingFailed, ErrOrderBookFull, ErrRiskLimitExceeded,
-		 ErrPositionLimitExceeded, ErrTimeout:
+		ErrPositionLimitExceeded, ErrTimeout:
 		return SeverityHigh
 	case ErrInvalidOrder, ErrOrderNotFound, ErrUnauthorized, ErrInvalidToken,
-		 ErrSymbolNotFound, ErrMarketClosed, ErrRateLimited:
+		ErrSymbolNotFound, ErrMarketClosed, ErrRateLimited:
 		return SeverityMedium
 	default:
 		return SeverityLow
@@ -372,18 +372,18 @@ type ErrorHandler interface {
 
 // DefaultErrorHandler provides default error handling behavior
 type DefaultErrorHandler struct {
-	MaxRetries   int
-	BaseDelay    time.Duration
-	MaxDelay     time.Duration
+	MaxRetries    int
+	BaseDelay     time.Duration
+	MaxDelay      time.Duration
 	BackoffFactor float64
 }
 
 // NewDefaultErrorHandler creates a new default error handler
 func NewDefaultErrorHandler() *DefaultErrorHandler {
 	return &DefaultErrorHandler{
-		MaxRetries:   3,
-		BaseDelay:    100 * time.Millisecond,
-		MaxDelay:     5 * time.Second,
+		MaxRetries:    3,
+		BaseDelay:     100 * time.Millisecond,
+		MaxDelay:      5 * time.Second,
 		BackoffFactor: 2.0,
 	}
 }
@@ -404,11 +404,11 @@ func (h *DefaultErrorHandler) GetRetryDelay(err error, attempt int) time.Duratio
 	if attempt <= 0 {
 		return h.BaseDelay
 	}
-	
+
 	delay := time.Duration(float64(h.BaseDelay) * float64(attempt) * h.BackoffFactor)
 	if delay > h.MaxDelay {
 		delay = h.MaxDelay
 	}
-	
+
 	return delay
 }

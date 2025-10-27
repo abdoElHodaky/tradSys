@@ -22,12 +22,12 @@ func NewRiskCalculator(logger *zap.Logger) *RiskCalculator {
 func (rc *RiskCalculator) CalculatePositionRisk(userID, symbol string, quantity, price float64) (*RiskCheckResult, error) {
 	// Calculate position value
 	positionValue := quantity * price
-	
+
 	// Determine risk level based on position size
 	var riskLevel RiskLevel
 	var violations []string
 	var warnings []string
-	
+
 	// Example risk calculation logic
 	if positionValue > 1000000 { // $1M threshold
 		riskLevel = RiskLevelHigh
@@ -38,7 +38,7 @@ func (rc *RiskCalculator) CalculatePositionRisk(userID, symbol string, quantity,
 	} else {
 		riskLevel = RiskLevelLow
 	}
-	
+
 	return &RiskCheckResult{
 		Passed:     len(violations) == 0,
 		RiskLevel:  riskLevel,
@@ -54,11 +54,11 @@ func (rc *RiskCalculator) CalculatePortfolioRisk(userID string, positions map[st
 	for _, value := range positions {
 		totalValue += value
 	}
-	
+
 	var riskLevel RiskLevel
 	var violations []string
 	var warnings []string
-	
+
 	// Portfolio risk assessment
 	if totalValue > 5000000 { // $5M portfolio threshold
 		riskLevel = RiskLevelHigh
@@ -69,7 +69,7 @@ func (rc *RiskCalculator) CalculatePortfolioRisk(userID string, positions map[st
 	} else {
 		riskLevel = RiskLevelLow
 	}
-	
+
 	return &RiskCheckResult{
 		Passed:     len(violations) == 0,
 		RiskLevel:  riskLevel,
@@ -85,7 +85,7 @@ func (rc *RiskCalculator) CalculateVaR(symbol string, quantity, price float64, c
 	// In a real implementation, this would use historical data and statistical models
 	volatility := 0.02 // 2% daily volatility assumption
 	positionValue := quantity * price
-	
+
 	// Calculate VaR using normal distribution approximation
 	var zScore float64
 	switch confidenceLevel {
@@ -96,7 +96,7 @@ func (rc *RiskCalculator) CalculateVaR(symbol string, quantity, price float64, c
 	default:
 		zScore = 1.645 // Default to 95%
 	}
-	
+
 	var_ := positionValue * volatility * zScore
 	return var_, nil
 }
@@ -106,12 +106,12 @@ func (rc *RiskCalculator) CalculateDrawdown(userID string, currentValue, peakVal
 	if peakValue <= 0 {
 		return 0
 	}
-	
+
 	drawdown := (peakValue - currentValue) / peakValue
 	if drawdown < 0 {
 		drawdown = 0 // No drawdown if current value exceeds peak
 	}
-	
+
 	return drawdown
 }
 
@@ -120,7 +120,7 @@ func (rc *RiskCalculator) CalculateMarginRequirement(symbol string, quantity, pr
 	// Simplified margin calculation
 	// In practice, this would vary by instrument type and market conditions
 	positionValue := quantity * price
-	
+
 	// Example margin rates by position size
 	var marginRate float64
 	if positionValue > 1000000 {
@@ -130,7 +130,7 @@ func (rc *RiskCalculator) CalculateMarginRequirement(symbol string, quantity, pr
 	} else {
 		marginRate = 0.10 // 10% for small positions
 	}
-	
+
 	marginRequired := positionValue * marginRate
 	return marginRequired, nil
 }
@@ -146,13 +146,13 @@ func (rc *RiskCalculator) CalculateConcentrationRisk(userID, symbol string, posi
 			CheckedAt:  time.Now(),
 		}, nil
 	}
-	
+
 	concentration := positionValue / totalPortfolioValue
-	
+
 	var riskLevel RiskLevel
 	var violations []string
 	var warnings []string
-	
+
 	// Concentration risk thresholds
 	if concentration > 0.25 { // 25% concentration limit
 		riskLevel = RiskLevelHigh
@@ -163,7 +163,7 @@ func (rc *RiskCalculator) CalculateConcentrationRisk(userID, symbol string, posi
 	} else {
 		riskLevel = RiskLevelLow
 	}
-	
+
 	return &RiskCheckResult{
 		Passed:     len(violations) == 0,
 		RiskLevel:  riskLevel,

@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/pkg/common/pool"
 	"github.com/abdoElHodaky/tradSys/internal/trading/types"
+	"github.com/abdoElHodaky/tradSys/pkg/common/pool"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )

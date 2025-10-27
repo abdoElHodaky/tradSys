@@ -8,6 +8,7 @@ import (
 
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
+	"github.com/abdoElHodaky/tradSys/pkg/types"
 	"go.uber.org/zap"
 )
 
@@ -28,14 +29,14 @@ func (f EventSourcedHandlerFunc) Handle(ctx context.Context, command Command) ([
 // EventSourcedCommandBus represents a command bus that uses event sourcing
 type EventSourcedCommandBus struct {
 	handlers      map[string]EventSourcedHandler
-	eventBus      eventbus.EventBus
-	aggregateRepo aggregate.Repository
+	eventBus      types.EventBus[*eventsourcing.Event]
+	aggregateRepo handlers.Repository
 	logger        *zap.Logger
 	mu            sync.RWMutex
 }
 
 // NewEventSourcedCommandBus creates a new event-sourced command bus
-func NewEventSourcedCommandBus(eventBus eventbus.EventBus, aggregateRepo aggregate.Repository, logger *zap.Logger) *EventSourcedCommandBus {
+func NewEventSourcedCommandBus(eventBus types.EventBus[*eventsourcing.Event], aggregateRepo handlers.Repository, logger *zap.Logger) *EventSourcedCommandBus {
 	return &EventSourcedCommandBus{
 		handlers:      make(map[string]EventSourcedHandler),
 		eventBus:      eventBus,

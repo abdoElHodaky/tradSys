@@ -84,62 +84,62 @@ type Order struct {
 	ExpiresAt         *time.Time  `json:"expires_at,omitempty"`
 	UserID            string      `json:"user_id"`
 	AccountID         string      `json:"account_id"`
-	
+
 	// Internal fields
-	OriginalQuantity float64 `json:"original_quantity"`
-	LastTradePrice   float64 `json:"last_trade_price"`
+	OriginalQuantity float64    `json:"original_quantity"`
+	LastTradePrice   float64    `json:"last_trade_price"`
 	LastTradeTime    *time.Time `json:"last_trade_time,omitempty"`
-	
+
 	// Trades associated with this order
 	Trades []*Trade `json:"trades,omitempty"`
-	
+
 	// Metadata
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // Trade represents a trade execution
 type Trade struct {
-	ID           string    `json:"id"`
-	OrderID      string    `json:"order_id"`
-	Symbol       string    `json:"symbol"`
-	Side         OrderSide `json:"side"`
-	Quantity     float64   `json:"quantity"`
-	Price        float64   `json:"price"`
-	Fee          float64   `json:"fee"`
-	FeeAsset     string    `json:"fee_asset"`
-	Timestamp    time.Time `json:"timestamp"`
-	IsMaker      bool      `json:"is_maker"`
-	
+	ID        string    `json:"id"`
+	OrderID   string    `json:"order_id"`
+	Symbol    string    `json:"symbol"`
+	Side      OrderSide `json:"side"`
+	Quantity  float64   `json:"quantity"`
+	Price     float64   `json:"price"`
+	Fee       float64   `json:"fee"`
+	FeeAsset  string    `json:"fee_asset"`
+	Timestamp time.Time `json:"timestamp"`
+	IsMaker   bool      `json:"is_maker"`
+
 	// Execution information
 	ExecutedAt time.Time `json:"executed_at"`
-	
+
 	// Fee information
 	FeeCurrency string `json:"fee_currency"`
-	
+
 	// Counterparty information
 	CounterOrderID      string `json:"counter_order_id,omitempty"`
 	CounterPartyOrderID string `json:"counter_party_order_id,omitempty"`
-	
+
 	// Settlement information
-	SettlementStatus string `json:"settlement_status"`
+	SettlementStatus string     `json:"settlement_status"`
 	SettledAt        *time.Time `json:"settled_at,omitempty"`
-	
+
 	// Metadata
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // OrderFilter represents filters for querying orders
 type OrderFilter struct {
-	UserID      string       `json:"user_id,omitempty"`
-	AccountID   string       `json:"account_id,omitempty"`
-	Symbol      string       `json:"symbol,omitempty"`
-	Side        *OrderSide   `json:"side,omitempty"`
-	Type        *OrderType   `json:"type,omitempty"`
-	Status      *OrderStatus `json:"status,omitempty"`
-	StartTime   *time.Time   `json:"start_time,omitempty"`
-	EndTime     *time.Time   `json:"end_time,omitempty"`
-	Limit       int          `json:"limit,omitempty"`
-	Offset      int          `json:"offset,omitempty"`
+	UserID    string       `json:"user_id,omitempty"`
+	AccountID string       `json:"account_id,omitempty"`
+	Symbol    string       `json:"symbol,omitempty"`
+	Side      *OrderSide   `json:"side,omitempty"`
+	Type      *OrderType   `json:"type,omitempty"`
+	Status    *OrderStatus `json:"status,omitempty"`
+	StartTime *time.Time   `json:"start_time,omitempty"`
+	EndTime   *time.Time   `json:"end_time,omitempty"`
+	Limit     int          `json:"limit,omitempty"`
+	Offset    int          `json:"offset,omitempty"`
 }
 
 // OrderRequest represents a request to place an order
@@ -155,7 +155,7 @@ type OrderRequest struct {
 	UserID        string      `json:"user_id" validate:"required"`
 	AccountID     string      `json:"account_id" validate:"required"`
 	ExpiresAt     *time.Time  `json:"expires_at,omitempty"`
-	
+
 	// Metadata
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
@@ -171,16 +171,16 @@ type OrderCancelRequest struct {
 
 // OrderUpdateRequest represents a request to update an order
 type OrderUpdateRequest struct {
-	OrderID       string  `json:"order_id,omitempty"`
-	ClientOrderID string  `json:"client_order_id,omitempty"`
-	UserID        string  `json:"user_id" validate:"required"`
-	AccountID     string  `json:"account_id" validate:"required"`
+	OrderID       string      `json:"order_id,omitempty"`
+	ClientOrderID string      `json:"client_order_id,omitempty"`
+	UserID        string      `json:"user_id" validate:"required"`
+	AccountID     string      `json:"account_id" validate:"required"`
 	Quantity      float64     `json:"quantity,omitempty"`
 	Price         float64     `json:"price,omitempty"`
 	StopPrice     float64     `json:"stop_price,omitempty"`
 	TimeInForce   TimeInForce `json:"time_in_force,omitempty"`
 	ExpiresAt     *time.Time  `json:"expires_at,omitempty"`
-	
+
 	// Metadata updates
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
@@ -198,17 +198,17 @@ func NewOrder() *Order {
 
 // IsActive returns true if the order is in an active state
 func (o *Order) IsActive() bool {
-	return o.Status == OrderStatusNew || 
-		   o.Status == OrderStatusPending || 
-		   o.Status == OrderStatusPartiallyFilled
+	return o.Status == OrderStatusNew ||
+		o.Status == OrderStatusPending ||
+		o.Status == OrderStatusPartiallyFilled
 }
 
 // IsFinal returns true if the order is in a final state
 func (o *Order) IsFinal() bool {
-	return o.Status == OrderStatusFilled || 
-		   o.Status == OrderStatusCancelled || 
-		   o.Status == OrderStatusRejected || 
-		   o.Status == OrderStatusExpired
+	return o.Status == OrderStatusFilled ||
+		o.Status == OrderStatusCancelled ||
+		o.Status == OrderStatusRejected ||
+		o.Status == OrderStatusExpired
 }
 
 // IsExpired returns true if the order has expired
@@ -233,14 +233,14 @@ func (o *Order) AddTrade(trade *Trade) {
 	now := trade.Timestamp
 	o.LastTradeTime = &now
 	o.UpdatedAt = time.Now()
-	
+
 	// Update average price
 	if o.FilledQuantity > 0 {
 		// Weighted average calculation would go here
 		// For simplicity, using last trade price
 		o.AveragePrice = trade.Price
 	}
-	
+
 	// Update status based on fill
 	if o.RemainingQuantity <= 0 {
 		o.UpdateStatus(OrderStatusFilled)

@@ -76,18 +76,18 @@ type ShariaBoard struct {
 
 // ShariaScholar represents a Sharia scholar
 type ShariaScholar struct {
-	Name         string
-	Qualification string
+	Name           string
+	Qualification  string
 	Specialization []string
-	IsActive     bool
+	IsActive       bool
 }
 
 // ZakatCalculator calculates Zakat for Islamic investments
 type ZakatCalculator struct {
-	zakatRates    map[AssetType]float64
+	zakatRates     map[AssetType]float64
 	nisabThreshold float64
-	currency      string
-	mu            sync.RWMutex
+	currency       string
+	mu             sync.RWMutex
 }
 
 // UAECompliance handles UAE regulatory compliance
@@ -101,11 +101,11 @@ type UAECompliance struct {
 
 // ReportingRequirements defines regulatory reporting requirements
 type ReportingRequirements struct {
-	frequency    string
-	format       string
-	deadline     time.Duration
-	recipients   []string
-	mandatory    bool
+	frequency  string
+	format     string
+	deadline   time.Duration
+	recipients []string
+	mandatory  bool
 }
 
 // LicensingRequirements defines licensing requirements
@@ -118,25 +118,25 @@ type LicensingRequirements struct {
 
 // SCACompliance handles SCA (Securities and Commodities Authority) compliance
 type SCACompliance struct {
-	rules       map[string]ComplianceRule
+	rules        map[string]ComplianceRule
 	reportingReq ReportingRequirements
-	licensing   LicensingRequirements
+	licensing    LicensingRequirements
 }
 
 // ADXOrderManager manages orders for ADX
 type ADXOrderManager struct {
-	orders      map[string]*Order
-	riskEngine  *ADXRiskEngine
-	connector   *ADXConnector
-	mu          sync.RWMutex
+	orders     map[string]*Order
+	riskEngine *ADXRiskEngine
+	connector  *ADXConnector
+	mu         sync.RWMutex
 }
 
 // ADXRiskEngine handles risk management for ADX
 type ADXRiskEngine struct {
-	riskLimits    map[string]float64
+	riskLimits     map[string]float64
 	positionLimits map[string]int64
-	alertManager  *AlertManager
-	mu            sync.RWMutex
+	alertManager   *AlertManager
+	mu             sync.RWMutex
 }
 
 // ADXConnector handles connection to Abu Dhabi Exchange
@@ -153,11 +153,11 @@ type ADXConnector struct {
 
 // DataFeed represents a market data feed
 type DataFeed struct {
-	Symbol      string
-	Price       float64
-	Volume      int64
-	Timestamp   time.Time
-	IsActive    bool
+	Symbol    string
+	Price     float64
+	Volume    int64
+	Timestamp time.Time
+	IsActive  bool
 }
 
 // IslamicIndexCalculator calculates Islamic indices
@@ -204,13 +204,13 @@ type ComplianceData struct {
 
 // ADXMarketData handles Islamic-focused market data from ADX
 type ADXMarketData struct {
-	realTimeFeeds     map[string]*DataFeed
-	islamicFeeds      map[string]*IslamicDataFeed
-	sukukPricing      *SukukPricingEngine
-	islamicIndices    *IslamicIndexCalculator
-	historicalData    *HistoricalDataStore
-	complianceData    *ComplianceDataStore
-	mu                sync.RWMutex
+	realTimeFeeds  map[string]*DataFeed
+	islamicFeeds   map[string]*IslamicDataFeed
+	sukukPricing   *SukukPricingEngine
+	islamicIndices *IslamicIndexCalculator
+	historicalData *HistoricalDataStore
+	complianceData *ComplianceDataStore
+	mu             sync.RWMutex
 }
 
 // IslamicDataFeed represents Islamic-compliant data feed
@@ -255,13 +255,13 @@ type SukukService struct {
 
 // SukukType defines types of Sukuk
 type SukukType struct {
-	TypeID      string
-	Name        string
-	Structure   string
-	Underlying  string
-	Maturity    time.Duration
-	MinInvest   float64
-	IsActive    bool
+	TypeID     string
+	Name       string
+	Structure  string
+	Underlying string
+	Maturity   time.Duration
+	MinInvest  float64
+	IsActive   bool
 }
 
 // PricingModel defines a pricing model interface
@@ -358,7 +358,7 @@ type IslamicFundType struct {
 func NewADXService() *ADXService {
 	// Initialize UAE timezone
 	uaeTZ, _ := time.LoadLocation("Asia/Dubai")
-	
+
 	service := &ADXService{
 		exchangeID:         "ADX",
 		region:             "UAE",
@@ -495,7 +495,7 @@ func (adx *ADXService) CalculateZakat(ctx context.Context, portfolio *IslamicPor
 		TotalValue: portfolio.TotalValue,
 		Currency:   portfolio.Currency,
 	}
-	
+
 	// Calculate Zakat
 	calculation, err := adx.zakatCalculator.Calculate(ctx, islamicPortfolio)
 	if err != nil {
@@ -540,7 +540,7 @@ func (adx *ADXService) ScreenAsset(ctx context.Context, symbol string) (*Screeni
 // GetTradingStatus returns current ADX trading status
 func (adx *ADXService) GetTradingStatus() *TradingStatus {
 	now := time.Now().In(adx.tradingHours.Timezone)
-	
+
 	status := &TradingStatus{
 		Exchange:    "ADX",
 		IsOpen:      adx.isMarketOpen(now),
@@ -621,7 +621,7 @@ func (adx *ADXService) isIslamicAsset(assetType AssetType) bool {
 func (adx *ADXService) isMarketOpen(now time.Time) bool {
 	// Convert to UAE timezone
 	uaeTime := now.In(adx.tradingHours.Timezone)
-	
+
 	// Check if it's a weekend (Friday-Saturday in UAE)
 	weekday := uaeTime.Weekday()
 	if weekday == time.Friday || weekday == time.Saturday {
@@ -640,8 +640,8 @@ func (adx *ADXService) isMarketOpen(now time.Time) bool {
 	minute := uaeTime.Minute()
 	currentMinutes := hour*60 + minute
 
-	openMinutes := 10*60     // 10:00 AM
-	closeMinutes := 15*60    // 3:00 PM
+	openMinutes := 10 * 60  // 10:00 AM
+	closeMinutes := 15 * 60 // 3:00 PM
 
 	return currentMinutes >= openMinutes && currentMinutes < closeMinutes
 }
@@ -649,30 +649,30 @@ func (adx *ADXService) isMarketOpen(now time.Time) bool {
 // getCurrentSession returns the current trading session
 func (adx *ADXService) getCurrentSession(now time.Time) *TradingSession {
 	uaeTime := now.In(adx.tradingHours.Timezone)
-	
+
 	for _, session := range adx.tradingHours.TradingSessions {
 		if uaeTime.After(session.StartTime) && uaeTime.Before(session.EndTime) {
 			return &session
 		}
 	}
-	
+
 	return nil
 }
 
 // getNextMarketOpen returns the next market opening time
 func (adx *ADXService) getNextMarketOpen(now time.Time) time.Time {
 	uaeTime := now.In(adx.tradingHours.Timezone)
-	
+
 	// If market is currently open, return tomorrow's opening
 	if adx.isMarketOpen(uaeTime) {
 		return adx.getNextBusinessDay(uaeTime).Add(10 * time.Hour) // 10:00 AM
 	}
-	
+
 	// If it's the same day but before opening, return today's opening
 	if uaeTime.Hour() < 10 {
 		return time.Date(uaeTime.Year(), uaeTime.Month(), uaeTime.Day(), 10, 0, 0, 0, adx.tradingHours.Timezone)
 	}
-	
+
 	// Otherwise, return next business day opening
 	return adx.getNextBusinessDay(uaeTime).Add(10 * time.Hour)
 }
@@ -680,12 +680,12 @@ func (adx *ADXService) getNextMarketOpen(now time.Time) time.Time {
 // getNextMarketClose returns the next market closing time
 func (adx *ADXService) getNextMarketClose(now time.Time) time.Time {
 	uaeTime := now.In(adx.tradingHours.Timezone)
-	
+
 	// If market is currently open, return today's closing
 	if adx.isMarketOpen(uaeTime) {
 		return time.Date(uaeTime.Year(), uaeTime.Month(), uaeTime.Day(), 15, 0, 0, 0, adx.tradingHours.Timezone)
 	}
-	
+
 	// Otherwise, return next business day closing
 	return adx.getNextBusinessDay(uaeTime).Add(15 * time.Hour)
 }
@@ -693,7 +693,7 @@ func (adx *ADXService) getNextMarketClose(now time.Time) time.Time {
 // getNextBusinessDay returns the next business day (excluding weekends and holidays)
 func (adx *ADXService) getNextBusinessDay(from time.Time) time.Time {
 	next := from.AddDate(0, 0, 1)
-	
+
 	for {
 		weekday := next.Weekday()
 		if weekday != time.Friday && weekday != time.Saturday {
@@ -718,14 +718,14 @@ func (adx *ADXService) getMarketMessage(now time.Time) string {
 	if adx.isMarketOpen(now) {
 		return "Market is open for trading"
 	}
-	
+
 	uaeTime := now.In(adx.tradingHours.Timezone)
 	weekday := uaeTime.Weekday()
-	
+
 	if weekday == time.Friday || weekday == time.Saturday {
 		return "Market closed for weekend"
 	}
-	
+
 	return "Market is closed"
 }
 
@@ -750,17 +750,17 @@ func getADXSupportedAssetTypes() []AssetType {
 // createADXTradingSchedule creates the trading schedule for ADX
 func createADXTradingSchedule(timezone *time.Location) *TradingSchedule {
 	now := time.Now().In(timezone)
-	
+
 	return &TradingSchedule{
-		MarketOpen:    time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, timezone),
-		MarketClose:   time.Date(now.Year(), now.Month(), now.Day(), 15, 0, 0, 0, timezone),
-		PreMarketOpen: time.Date(now.Year(), now.Month(), now.Day(), 9, 30, 0, 0, timezone),
+		MarketOpen:      time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, timezone),
+		MarketClose:     time.Date(now.Year(), now.Month(), now.Day(), 15, 0, 0, 0, timezone),
+		PreMarketOpen:   time.Date(now.Year(), now.Month(), now.Day(), 9, 30, 0, 0, timezone),
 		PostMarketClose: time.Date(now.Year(), now.Month(), now.Day(), 15, 30, 0, 0, timezone),
 		TradingSessions: []TradingSession{
 			{
-				Name:      "Main Session",
-				StartTime: time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, timezone),
-				EndTime:   time.Date(now.Year(), now.Month(), now.Day(), 15, 0, 0, 0, timezone),
+				Name:       "Main Session",
+				StartTime:  time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, timezone),
+				EndTime:    time.Date(now.Year(), now.Month(), now.Day(), 15, 0, 0, 0, timezone),
 				AssetTypes: getADXSupportedAssetTypes(),
 			},
 		},
@@ -773,8 +773,8 @@ func createADXTradingSchedule(timezone *time.Location) *TradingSchedule {
 func getADXHolidays(year int) []time.Time {
 	// UAE holidays (simplified list)
 	return []time.Time{
-		time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC),   // New Year
-		time.Date(year, 12, 2, 0, 0, 0, 0, time.UTC),  // UAE National Day
+		time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC),  // New Year
+		time.Date(year, 12, 2, 0, 0, 0, 0, time.UTC), // UAE National Day
 		time.Date(year, 12, 3, 0, 0, 0, 0, time.UTC), // UAE National Day
 		// Islamic holidays would be calculated based on lunar calendar
 	}
@@ -866,12 +866,12 @@ type IslamicFundData struct {
 
 // FundPerformance represents fund performance metrics
 type FundPerformance struct {
-	OneDay    float64
-	OneWeek   float64
-	OneMonth  float64
+	OneDay     float64
+	OneWeek    float64
+	OneMonth   float64
 	ThreeMonth float64
-	OneYear   float64
-	Inception float64
+	OneYear    float64
+	Inception  float64
 }
 
 // IslamicHolding represents an Islamic fund holding

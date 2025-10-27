@@ -110,14 +110,14 @@ func convertTradesToResponse(trades []*types.Trade) []TradeResponse {
 
 // CreateOrderRequest represents a request to create an order.
 type CreateOrderRequest struct {
-	ClientOrderID string  `json:"client_order_id"`
-	UserID        string  `json:"user_id"`
-	Symbol        string  `json:"symbol"`
-	Side          string  `json:"side"`
-	Type          string  `json:"type"`
-	Price         float64 `json:"price"`
-	Quantity      float64 `json:"quantity"`
-	TimeInForce   string  `json:"time_in_force"`
+	ClientOrderID string   `json:"client_order_id"`
+	UserID        string   `json:"user_id"`
+	Symbol        string   `json:"symbol"`
+	Side          string   `json:"side"`
+	Type          string   `json:"type"`
+	Price         float64  `json:"price"`
+	Quantity      float64  `json:"quantity"`
+	TimeInForce   string   `json:"time_in_force"`
 	StopPrice     *float64 `json:"stop_price,omitempty"`
 }
 
@@ -263,14 +263,14 @@ var (
 		string(types.OrderSideBuy),
 		string(types.OrderSideSell),
 	}
-	
+
 	ValidOrderTypes = []string{
 		string(types.OrderTypeMarket),
 		string(types.OrderTypeLimit),
 		string(types.OrderTypeStop),
 		string(types.OrderTypeStopLimit),
 	}
-	
+
 	ValidTimeInForce = []string{
 		string(types.TimeInForceGTC),
 		string(types.TimeInForceIOC),

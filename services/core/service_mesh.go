@@ -24,6 +24,16 @@ type ServiceDiscovery struct {
 	logger interface{} // Using interface{} to avoid import issues
 }
 
+// Register registers a service with the discovery system
+func (sd *ServiceDiscovery) Register(service *ServiceNode) error {
+	// Implementation for service registration
+	// For now, just log the registration
+	if sd.logger != nil {
+		// Log service registration
+	}
+	return nil
+}
+
 // LoadBalancer handles load balancing
 type LoadBalancer struct {
 	logger interface{}
@@ -131,7 +141,7 @@ func (sm *ServiceMesh) RegisterService(ctx context.Context, service *ServiceNode
 	// Register health service
 	healthServer := health.NewServer()
 	grpc_health_v1.RegisterHealthServer(server, healthServer)
-	
+
 	// Enable reflection for development
 	reflection.Register(server)
 
@@ -150,7 +160,7 @@ func (sm *ServiceMesh) RegisterService(ctx context.Context, service *ServiceNode
 	// Add to services map
 	sm.services[service.ID] = service
 
-	log.Printf("Service registered: %s (%s) at %s:%d", 
+	log.Printf("Service registered: %s (%s) at %s:%d",
 		service.Name, service.ID, service.Address, service.Port)
 
 	return nil

@@ -32,29 +32,29 @@ func NewServiceMigrationTool(rootDir string, logger *zap.Logger) *ServiceMigrati
 // DiscoverServices discovers all services in the codebase
 func (smt *ServiceMigrationTool) DiscoverServices() ([]string, error) {
 	var services []string
-	
+
 	// Common service directories
 	serviceDirs := []string{
 		"services",
 		"internal",
 		"cmd",
 	}
-	
+
 	for _, dir := range serviceDirs {
 		fullPath := filepath.Join(smt.rootDir, dir)
 		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
 			continue
 		}
-		
+
 		err := filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
-			
+
 			if info.IsDir() {
 				return nil
 			}
-			
+
 			// Look for Go files that might contain services
 			if strings.HasSuffix(path, ".go") && !strings.HasSuffix(path, "_test.go") {
 				// Check if file contains service patterns
@@ -62,15 +62,15 @@ func (smt *ServiceMigrationTool) DiscoverServices() ([]string, error) {
 					services = append(services, path)
 				}
 			}
-			
+
 			return nil
 		})
-		
+
 		if err != nil {
 			smt.logger.Error("Error walking directory", zap.String("dir", fullPath), zap.Error(err))
 		}
 	}
-	
+
 	return services, nil
 }
 
@@ -80,9 +80,9 @@ func (smt *ServiceMigrationTool) containsServicePatterns(filePath string) bool {
 	if err != nil {
 		return false
 	}
-	
+
 	fileContent := string(content)
-	
+
 	// Look for service patterns
 	servicePatterns := []string{
 		"type.*Service struct",
@@ -92,13 +92,13 @@ func (smt *ServiceMigrationTool) containsServicePatterns(filePath string) bool {
 		"func.*New.*Service",
 		"interface.*Service",
 	}
-	
+
 	for _, pattern := range servicePatterns {
 		if strings.Contains(fileContent, pattern) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -108,46 +108,46 @@ func (smt *ServiceMigrationTool) AnalyzeService(filePath string) (*common.Servic
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s: %w", filePath, err)
 	}
-	
+
 	return smt.migrator.AnalyzeService(string(content))
 }
 
 // GenerateMigrationReport generates a comprehensive migration report
 func (smt *ServiceMigrationTool) GenerateMigrationReport(services []string) error {
 	report := &MigrationReport{
-		TotalServices:     len(services),
-		AnalyzedServices:  0,
-		MigrationNeeded:   0,
-		HighPriority:      0,
-		MediumPriority:    0,
-		LowPriority:       0,
-		Services:          make([]*ServiceMigrationInfo, 0),
+		TotalServices:    len(services),
+		AnalyzedServices: 0,
+		MigrationNeeded:  0,
+		HighPriority:     0,
+		MediumPriority:   0,
+		LowPriority:      0,
+		Services:         make([]*ServiceMigrationInfo, 0),
 	}
-	
+
 	for _, servicePath := range services {
 		analysis, err := smt.AnalyzeService(servicePath)
 		if err != nil {
-			smt.logger.Error("Failed to analyze service", 
-				zap.String("path", servicePath), 
+			smt.logger.Error("Failed to analyze service",
+				zap.String("path", servicePath),
 				zap.Error(err))
 			continue
 		}
-		
+
 		report.AnalyzedServices++
-		
+
 		migrationInfo := &ServiceMigrationInfo{
-			FilePath:         servicePath,
-			ServiceName:      analysis.ServiceName,
-			CurrentPatterns:  analysis.Patterns,
-			MigrationNeeded:  analysis.NeedsMigration,
-			Priority:         smt.calculatePriority(analysis),
-			Recommendations:  analysis.Recommendations,
-			EstimatedEffort:  smt.estimateEffort(analysis),
+			FilePath:        servicePath,
+			ServiceName:     analysis.ServiceName,
+			CurrentPatterns: analysis.Patterns,
+			MigrationNeeded: analysis.NeedsMigration,
+			Priority:        smt.calculatePriority(analysis),
+			Recommendations: analysis.Recommendations,
+			EstimatedEffort: smt.estimateEffort(analysis),
 		}
-		
+
 		if analysis.NeedsMigration {
 			report.MigrationNeeded++
-			
+
 			switch migrationInfo.Priority {
 			case "high":
 				report.HighPriority++
@@ -157,10 +157,10 @@ func (smt *ServiceMigrationTool) GenerateMigrationReport(services []string) erro
 				report.LowPriority++
 			}
 		}
-		
+
 		report.Services = append(report.Services, migrationInfo)
 	}
-	
+
 	// Generate report file
 	return smt.writeReport(report)
 }
@@ -168,7 +168,7 @@ func (smt *ServiceMigrationTool) GenerateMigrationReport(services []string) erro
 // calculatePriority calculates migration priority based on analysis
 func (smt *ServiceMigrationTool) calculatePriority(analysis *common.ServiceAnalysis) string {
 	score := 0
-	
+
 	// High priority factors
 	if analysis.HasStartStop {
 		score += 3
@@ -182,7 +182,7 @@ func (smt *ServiceMigrationTool) calculatePriority(analysis *common.ServiceAnaly
 	if analysis.HasMetrics {
 		score += 1
 	}
-	
+
 	// Complexity factors
 	if analysis.LineCount > 500 {
 		score += 2
@@ -190,7 +190,7 @@ func (smt *ServiceMigrationTool) calculatePriority(analysis *common.ServiceAnaly
 	if len(analysis.Dependencies) > 5 {
 		score += 1
 	}
-	
+
 	if score >= 6 {
 		return "high"
 	} else if score >= 3 {
@@ -202,7 +202,7 @@ func (smt *ServiceMigrationTool) calculatePriority(analysis *common.ServiceAnaly
 // estimateEffort estimates migration effort in hours
 func (smt *ServiceMigrationTool) estimateEffort(analysis *common.ServiceAnalysis) int {
 	baseEffort := 2 // Base 2 hours for any migration
-	
+
 	// Add effort based on complexity
 	if analysis.LineCount > 200 {
 		baseEffort += 2
@@ -213,10 +213,10 @@ func (smt *ServiceMigrationTool) estimateEffort(analysis *common.ServiceAnalysis
 	if analysis.LineCount > 1000 {
 		baseEffort += 8
 	}
-	
+
 	// Add effort for dependencies
 	baseEffort += len(analysis.Dependencies) / 2
-	
+
 	// Add effort for missing patterns
 	if !analysis.HasStartStop {
 		baseEffort += 3
@@ -227,21 +227,21 @@ func (smt *ServiceMigrationTool) estimateEffort(analysis *common.ServiceAnalysis
 	if !analysis.UsesContext {
 		baseEffort += 2
 	}
-	
+
 	return baseEffort
 }
 
 // writeReport writes the migration report to a file
 func (smt *ServiceMigrationTool) writeReport(report *MigrationReport) error {
 	reportPath := filepath.Join(smt.rootDir, "SERVICE_MIGRATION_REPORT.md")
-	
+
 	content := smt.generateReportContent(report)
-	
+
 	err := os.WriteFile(reportPath, []byte(content), 0644)
 	if err != nil {
 		return fmt.Errorf("failed to write report: %w", err)
 	}
-	
+
 	smt.logger.Info("Migration report generated", zap.String("path", reportPath))
 	return nil
 }
@@ -249,7 +249,7 @@ func (smt *ServiceMigrationTool) writeReport(report *MigrationReport) error {
 // generateReportContent generates the markdown content for the report
 func (smt *ServiceMigrationTool) generateReportContent(report *MigrationReport) string {
 	var sb strings.Builder
-	
+
 	sb.WriteString("# 🔄 Service Migration Report\n\n")
 	sb.WriteString("## 📊 Summary\n\n")
 	sb.WriteString(fmt.Sprintf("- **Total Services Discovered**: %d\n", report.TotalServices))
@@ -258,7 +258,7 @@ func (smt *ServiceMigrationTool) generateReportContent(report *MigrationReport) 
 	sb.WriteString(fmt.Sprintf("- **High Priority**: %d\n", report.HighPriority))
 	sb.WriteString(fmt.Sprintf("- **Medium Priority**: %d\n", report.MediumPriority))
 	sb.WriteString(fmt.Sprintf("- **Low Priority**: %d\n", report.LowPriority))
-	
+
 	totalEffort := 0
 	for _, service := range report.Services {
 		if service.MigrationNeeded {
@@ -266,7 +266,7 @@ func (smt *ServiceMigrationTool) generateReportContent(report *MigrationReport) 
 		}
 	}
 	sb.WriteString(fmt.Sprintf("- **Total Estimated Effort**: %d hours\n\n", totalEffort))
-	
+
 	// High priority services
 	sb.WriteString("## 🔴 High Priority Services\n\n")
 	for _, service := range report.Services {
@@ -285,7 +285,7 @@ func (smt *ServiceMigrationTool) generateReportContent(report *MigrationReport) 
 			sb.WriteString("\n")
 		}
 	}
-	
+
 	// Medium priority services
 	sb.WriteString("## 🟡 Medium Priority Services\n\n")
 	for _, service := range report.Services {
@@ -296,16 +296,16 @@ func (smt *ServiceMigrationTool) generateReportContent(report *MigrationReport) 
 			sb.WriteString("- **Recommendations**: %s\n\n", strings.Join(service.Recommendations, ", "))
 		}
 	}
-	
+
 	// Low priority services
 	sb.WriteString("## 🟢 Low Priority Services\n\n")
 	for _, service := range report.Services {
 		if service.Priority == "low" && service.MigrationNeeded {
-			sb.WriteString(fmt.Sprintf("- **%s** (`%s`) - %d hours\n", 
+			sb.WriteString(fmt.Sprintf("- **%s** (`%s`) - %d hours\n",
 				service.ServiceName, service.FilePath, service.EstimatedEffort))
 		}
 	}
-	
+
 	// Migration guide
 	sb.WriteString("\n## 🚀 Migration Guide\n\n")
 	sb.WriteString("### Step 1: High Priority Services\n")
@@ -325,30 +325,30 @@ func (smt *ServiceMigrationTool) generateReportContent(report *MigrationReport) 
 	sb.WriteString("```\n\n")
 	sb.WriteString("### Step 4: Test and Validate\n")
 	sb.WriteString("Ensure all migrated services maintain existing functionality while gaining new capabilities.\n\n")
-	
+
 	return sb.String()
 }
 
 // MigrationReport represents the overall migration report
 type MigrationReport struct {
-	TotalServices    int                      `json:"total_services"`
-	AnalyzedServices int                      `json:"analyzed_services"`
-	MigrationNeeded  int                      `json:"migration_needed"`
-	HighPriority     int                      `json:"high_priority"`
-	MediumPriority   int                      `json:"medium_priority"`
-	LowPriority      int                      `json:"low_priority"`
-	Services         []*ServiceMigrationInfo  `json:"services"`
+	TotalServices    int                     `json:"total_services"`
+	AnalyzedServices int                     `json:"analyzed_services"`
+	MigrationNeeded  int                     `json:"migration_needed"`
+	HighPriority     int                     `json:"high_priority"`
+	MediumPriority   int                     `json:"medium_priority"`
+	LowPriority      int                     `json:"low_priority"`
+	Services         []*ServiceMigrationInfo `json:"services"`
 }
 
 // ServiceMigrationInfo represents migration info for a single service
 type ServiceMigrationInfo struct {
-	FilePath         string   `json:"file_path"`
-	ServiceName      string   `json:"service_name"`
-	CurrentPatterns  []string `json:"current_patterns"`
-	MigrationNeeded  bool     `json:"migration_needed"`
-	Priority         string   `json:"priority"`
-	Recommendations  []string `json:"recommendations"`
-	EstimatedEffort  int      `json:"estimated_effort"`
+	FilePath        string   `json:"file_path"`
+	ServiceName     string   `json:"service_name"`
+	CurrentPatterns []string `json:"current_patterns"`
+	MigrationNeeded bool     `json:"migration_needed"`
+	Priority        string   `json:"priority"`
+	Recommendations []string `json:"recommendations"`
+	EstimatedEffort int      `json:"estimated_effort"`
 }
 
 func main() {
@@ -357,40 +357,40 @@ func main() {
 		verbose = flag.Bool("verbose", false, "Enable verbose logging")
 	)
 	flag.Parse()
-	
+
 	// Setup logger
 	var logger *zap.Logger
 	var err error
-	
+
 	if *verbose {
 		logger, err = zap.NewDevelopment()
 	} else {
 		logger, err = zap.NewProduction()
 	}
-	
+
 	if err != nil {
 		log.Fatalf("Failed to create logger: %v", err)
 	}
 	defer logger.Sync()
-	
+
 	// Create migration tool
 	tool := NewServiceMigrationTool(*rootDir, logger)
-	
+
 	logger.Info("Starting service discovery and migration analysis")
-	
+
 	// Discover services
 	services, err := tool.DiscoverServices()
 	if err != nil {
 		logger.Fatal("Failed to discover services", zap.Error(err))
 	}
-	
+
 	logger.Info("Services discovered", zap.Int("count", len(services)))
-	
+
 	// Generate migration report
 	err = tool.GenerateMigrationReport(services)
 	if err != nil {
 		logger.Fatal("Failed to generate migration report", zap.Error(err))
 	}
-	
+
 	logger.Info("Service migration analysis complete")
 }

@@ -61,7 +61,7 @@ func (m *MockLogger) Fatal(msg string, fields ...interface{}) {
 func (m *MockLogger) addLog(level, msg string, fields []interface{}) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	m.logs = append(m.logs, LogEntry{
 		Level:   level,
 		Message: msg,
@@ -74,7 +74,7 @@ func (m *MockLogger) addLog(level, msg string, fields []interface{}) {
 func (m *MockLogger) GetLogs() []LogEntry {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	logs := make([]LogEntry, len(m.logs))
 	copy(logs, m.logs)
 	return logs
@@ -84,7 +84,7 @@ func (m *MockLogger) GetLogs() []LogEntry {
 func (m *MockLogger) GetLogsByLevel(level string) []LogEntry {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	var filtered []LogEntry
 	for _, log := range m.logs {
 		if log.Level == level {
@@ -124,7 +124,7 @@ func NewMockMetricsCollector() *MockMetricsCollector {
 func (m *MockMetricsCollector) IncrementCounter(name string, tags map[string]string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	key := m.buildKey(name, tags)
 	m.counters[key]++
 }
@@ -133,7 +133,7 @@ func (m *MockMetricsCollector) IncrementCounter(name string, tags map[string]str
 func (m *MockMetricsCollector) RecordGauge(name string, value float64, tags map[string]string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	key := m.buildKey(name, tags)
 	m.gauges[key] = value
 }
@@ -142,7 +142,7 @@ func (m *MockMetricsCollector) RecordGauge(name string, value float64, tags map[
 func (m *MockMetricsCollector) RecordHistogram(name string, value float64, tags map[string]string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	key := m.buildKey(name, tags)
 	m.histograms[key] = append(m.histograms[key], value)
 }
@@ -151,7 +151,7 @@ func (m *MockMetricsCollector) RecordHistogram(name string, value float64, tags 
 func (m *MockMetricsCollector) RecordTimer(name string, duration time.Duration, tags map[string]string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	key := m.buildKey(name, tags)
 	m.timers[key] = append(m.timers[key], duration)
 }
@@ -160,7 +160,7 @@ func (m *MockMetricsCollector) RecordTimer(name string, duration time.Duration, 
 func (m *MockMetricsCollector) Counter(name string, value float64, tags map[string]string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	key := m.buildKey(name, tags)
 	m.counters[key] += value
 }
@@ -185,7 +185,7 @@ func (m *MockMetricsCollector) buildKey(name string, tags map[string]string) str
 	if len(tags) == 0 {
 		return name
 	}
-	
+
 	key := name
 	for k, v := range tags {
 		key += fmt.Sprintf(",%s=%s", k, v)
@@ -197,7 +197,7 @@ func (m *MockMetricsCollector) buildKey(name string, tags map[string]string) str
 func (m *MockMetricsCollector) GetCounter(name string, tags map[string]string) float64 {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	key := m.buildKey(name, tags)
 	return m.counters[key]
 }
@@ -206,7 +206,7 @@ func (m *MockMetricsCollector) GetCounter(name string, tags map[string]string) f
 func (m *MockMetricsCollector) GetGauge(name string, tags map[string]string) float64 {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	key := m.buildKey(name, tags)
 	return m.gauges[key]
 }
@@ -215,7 +215,7 @@ func (m *MockMetricsCollector) GetGauge(name string, tags map[string]string) flo
 func (m *MockMetricsCollector) GetHistogram(name string, tags map[string]string) []float64 {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	key := m.buildKey(name, tags)
 	values := m.histograms[key]
 	result := make([]float64, len(values))
@@ -227,7 +227,7 @@ func (m *MockMetricsCollector) GetHistogram(name string, tags map[string]string)
 func (m *MockMetricsCollector) GetTimer(name string, tags map[string]string) []time.Duration {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	key := m.buildKey(name, tags)
 	values := m.timers[key]
 	result := make([]time.Duration, len(values))
@@ -239,7 +239,7 @@ func (m *MockMetricsCollector) GetTimer(name string, tags map[string]string) []t
 func (m *MockMetricsCollector) Clear() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	m.counters = make(map[string]float64)
 	m.gauges = make(map[string]float64)
 	m.histograms = make(map[string][]float64)
@@ -293,7 +293,7 @@ func (m *MockEventPublisher) PublishBatch(ctx context.Context, events []interfac
 func (m *MockEventPublisher) PublishOrderEvent(ctx context.Context, event interfaces.OrderEvent) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	m.orderEvents = append(m.orderEvents, event)
 	return nil
 }
@@ -302,7 +302,7 @@ func (m *MockEventPublisher) PublishOrderEvent(ctx context.Context, event interf
 func (m *MockEventPublisher) PublishTradeEvent(ctx context.Context, event interfaces.TradeEvent) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	m.tradeEvents = append(m.tradeEvents, event)
 	return nil
 }
@@ -311,7 +311,7 @@ func (m *MockEventPublisher) PublishTradeEvent(ctx context.Context, event interf
 func (m *MockEventPublisher) PublishMarketDataEvent(ctx context.Context, event interfaces.MarketDataEvent) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	m.marketDataEvents = append(m.marketDataEvents, event)
 	return nil
 }
@@ -320,7 +320,7 @@ func (m *MockEventPublisher) PublishMarketDataEvent(ctx context.Context, event i
 func (m *MockEventPublisher) GetOrderEvents() []interfaces.OrderEvent {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	events := make([]interfaces.OrderEvent, len(m.orderEvents))
 	copy(events, m.orderEvents)
 	return events
@@ -330,7 +330,7 @@ func (m *MockEventPublisher) GetOrderEvents() []interfaces.OrderEvent {
 func (m *MockEventPublisher) GetTradeEvents() []interfaces.TradeEvent {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	events := make([]interfaces.TradeEvent, len(m.tradeEvents))
 	copy(events, m.tradeEvents)
 	return events
@@ -340,7 +340,7 @@ func (m *MockEventPublisher) GetTradeEvents() []interfaces.TradeEvent {
 func (m *MockEventPublisher) GetMarketDataEvents() []interfaces.MarketDataEvent {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	events := make([]interfaces.MarketDataEvent, len(m.marketDataEvents))
 	copy(events, m.marketDataEvents)
 	return events
@@ -350,7 +350,7 @@ func (m *MockEventPublisher) GetMarketDataEvents() []interfaces.MarketDataEvent 
 func (m *MockEventPublisher) Clear() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	m.orderEvents = m.orderEvents[:0]
 	m.tradeEvents = m.tradeEvents[:0]
 	m.marketDataEvents = m.marketDataEvents[:0]
@@ -373,7 +373,7 @@ func (g *TestDataGenerator) GenerateOrder() *types.Order {
 	sides := []types.OrderSide{types.OrderSideBuy, types.OrderSideSell}
 	orderTypes := []types.OrderType{types.OrderTypeLimit, types.OrderTypeMarket}
 	symbols := []string{"BTCUSD", "ETHUSD", "ADAUSD", "DOTUSD"}
-	
+
 	order := &types.Order{
 		ID:            g.generateID(),
 		ClientOrderID: g.generateID(),
@@ -387,13 +387,13 @@ func (g *TestDataGenerator) GenerateOrder() *types.Order {
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
 	}
-	
+
 	if order.Type == types.OrderTypeLimit {
 		order.Price = g.rand.Float64()*50000 + 1000 // 1000-51000
 	}
-	
+
 	order.RemainingQuantity = order.Quantity
-	
+
 	return order
 }
 
@@ -401,10 +401,10 @@ func (g *TestDataGenerator) GenerateOrder() *types.Order {
 func (g *TestDataGenerator) GenerateTrade() *types.Trade {
 	symbols := []string{"BTCUSD", "ETHUSD", "ADAUSD", "DOTUSD"}
 	sides := []types.OrderSide{types.OrderSideBuy, types.OrderSideSell}
-	
+
 	price := g.rand.Float64()*50000 + 1000
 	quantity := g.rand.Float64()*10 + 0.1
-	
+
 	trade := &types.Trade{
 		ID:           g.generateID(),
 		Symbol:       symbols[g.rand.Intn(len(symbols))],
@@ -420,7 +420,7 @@ func (g *TestDataGenerator) GenerateTrade() *types.Trade {
 		MakerOrderID: g.generateID(),
 		TakerOrderID: g.generateID(),
 	}
-	
+
 	return trade
 }
 
@@ -428,7 +428,7 @@ func (g *TestDataGenerator) GenerateTrade() *types.Trade {
 func (g *TestDataGenerator) GenerateMarketData(symbol string) *types.MarketData {
 	basePrice := g.rand.Float64()*50000 + 1000
 	spread := basePrice * 0.001 // 0.1% spread
-	
+
 	return &types.MarketData{
 		Symbol:           symbol,
 		LastPrice:        basePrice,
@@ -448,10 +448,10 @@ func (g *TestDataGenerator) GenerateOHLCV(symbol, interval string) *types.OHLCV 
 	open := g.rand.Float64()*50000 + 1000
 	change := (g.rand.Float64() - 0.5) * open * 0.05 // 5% max change
 	close := open + change
-	
+
 	high := max(open, close) * (1 + g.rand.Float64()*0.02)
 	low := min(open, close) * (1 - g.rand.Float64()*0.02)
-	
+
 	return &types.OHLCV{
 		Symbol:    symbol,
 		Open:      open,
@@ -550,11 +550,11 @@ func (ts *TestSuite) AssertMetricExists(name string, tags map[string]string) err
 	gauge := ts.metrics.GetGauge(name, tags)
 	histogram := ts.metrics.GetHistogram(name, tags)
 	timer := ts.metrics.GetTimer(name, tags)
-	
+
 	if counter == 0 && gauge == 0 && len(histogram) == 0 && len(timer) == 0 {
 		return fmt.Errorf("metric %s with tags %v not found", name, tags)
 	}
-	
+
 	return nil
 }
 
@@ -576,7 +576,7 @@ func (ts *TestSuite) AssertEventPublished(eventType string) error {
 	default:
 		return fmt.Errorf("unknown event type: %s", eventType)
 	}
-	
+
 	return nil
 }
 
@@ -599,33 +599,33 @@ func NewLoadTestRunner(concurrency int, duration, rampUp time.Duration) *LoadTes
 // Run runs a load test
 func (ltr *LoadTestRunner) Run(testFunc func() error) *LoadTestResults {
 	results := &LoadTestResults{
-		StartTime:    time.Now(),
-		Concurrency:  ltr.concurrency,
-		Duration:     ltr.duration,
-		Requests:     make([]RequestResult, 0),
+		StartTime:   time.Now(),
+		Concurrency: ltr.concurrency,
+		Duration:    ltr.duration,
+		Requests:    make([]RequestResult, 0),
 	}
-	
+
 	var wg sync.WaitGroup
 	requestCh := make(chan RequestResult, ltr.concurrency*10)
-	
+
 	// Start workers
 	for i := 0; i < ltr.concurrency; i++ {
 		wg.Add(1)
 		go func(workerID int) {
 			defer wg.Done()
-			
+
 			// Ramp up delay
 			if ltr.rampUp > 0 {
 				delay := time.Duration(int64(ltr.rampUp) * int64(workerID) / int64(ltr.concurrency))
 				time.Sleep(delay)
 			}
-			
+
 			endTime := results.StartTime.Add(ltr.duration)
 			for time.Now().Before(endTime) {
 				start := time.Now()
 				err := testFunc()
 				duration := time.Since(start)
-				
+
 				requestCh <- RequestResult{
 					Duration: duration,
 					Error:    err,
@@ -634,23 +634,23 @@ func (ltr *LoadTestRunner) Run(testFunc func() error) *LoadTestResults {
 			}
 		}(i)
 	}
-	
+
 	// Collect results
 	go func() {
 		wg.Wait()
 		close(requestCh)
 	}()
-	
+
 	for result := range requestCh {
 		results.Requests = append(results.Requests, result)
 		if result.Error != nil {
 			results.ErrorCount++
 		}
 	}
-	
+
 	results.EndTime = time.Now()
 	results.calculateStatistics()
-	
+
 	return results
 }
 
@@ -684,19 +684,19 @@ func (ltr *LoadTestResults) calculateStatistics() {
 	if ltr.TotalRequests == 0 {
 		return
 	}
-	
+
 	actualDuration := ltr.EndTime.Sub(ltr.StartTime)
 	ltr.RPS = float64(ltr.TotalRequests) / actualDuration.Seconds()
-	
+
 	// Calculate latency statistics
 	var totalLatency time.Duration
 	ltr.MinLatency = time.Hour // Start with a large value
-	
+
 	latencies := make([]time.Duration, len(ltr.Requests))
 	for i, req := range ltr.Requests {
 		latencies[i] = req.Duration
 		totalLatency += req.Duration
-		
+
 		if req.Duration > ltr.MaxLatency {
 			ltr.MaxLatency = req.Duration
 		}
@@ -704,9 +704,9 @@ func (ltr *LoadTestResults) calculateStatistics() {
 			ltr.MinLatency = req.Duration
 		}
 	}
-	
+
 	ltr.AvgLatency = totalLatency / time.Duration(ltr.TotalRequests)
-	
+
 	// Calculate percentiles (simple implementation)
 	if len(latencies) > 0 {
 		// Sort latencies for percentile calculation
@@ -717,10 +717,10 @@ func (ltr *LoadTestResults) calculateStatistics() {
 				}
 			}
 		}
-		
+
 		p95Index := int(float64(len(latencies)) * 0.95)
 		p99Index := int(float64(len(latencies)) * 0.99)
-		
+
 		if p95Index < len(latencies) {
 			ltr.P95Latency = latencies[p95Index]
 		}

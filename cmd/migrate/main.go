@@ -166,7 +166,7 @@ func runMigrationsDown(db *sql.DB, logger *testing.MockLogger, metrics *testing.
 	// Drop tables in reverse order
 	tables := []string{
 		"market_data",
-		"symbols", 
+		"symbols",
 		"trades",
 		"orders",
 		"users",

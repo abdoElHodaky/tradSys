@@ -11,7 +11,7 @@ var LicenseConfigs = map[LicenseTier]*LicenseConfig{
 	BASIC: {
 		Tier: BASIC,
 		Features: []LicenseFeature{
-			BASIC_TRADING, EGX_ACCESS, BASIC_ASSETS, 
+			BASIC_TRADING, EGX_ACCESS, BASIC_ASSETS,
 			BASIC_ANALYTICS, REST_API,
 		},
 		Quotas: map[string]int64{
@@ -22,9 +22,9 @@ var LicenseConfigs = map[LicenseTier]*LicenseConfig{
 			"portfolio_assets":      50,
 		},
 		RateLimits: map[string]int64{
-			"orders_per_minute":     10,
-			"api_calls_per_second":  5,
-			"market_data_requests":  20,
+			"orders_per_minute":    10,
+			"api_calls_per_second": 5,
+			"market_data_requests": 20,
 		},
 		MaxUsers:  5,
 		MaxAssets: 50,
@@ -34,7 +34,7 @@ var LicenseConfigs = map[LicenseTier]*LicenseConfig{
 		Tier: PROFESSIONAL,
 		Features: []LicenseFeature{
 			BASIC_TRADING, ADVANCED_TRADING, EGX_ACCESS, ADX_ACCESS,
-			BASIC_ASSETS, ADVANCED_ASSETS, BASIC_ANALYTICS, 
+			BASIC_ASSETS, ADVANCED_ASSETS, BASIC_ANALYTICS,
 			ADVANCED_ANALYTICS, REST_API, WEBSOCKET_API,
 		},
 		Quotas: map[string]int64{
@@ -46,9 +46,9 @@ var LicenseConfigs = map[LicenseTier]*LicenseConfig{
 			"reports_per_month":     100,
 		},
 		RateLimits: map[string]int64{
-			"orders_per_minute":     100,
-			"api_calls_per_second":  50,
-			"market_data_requests":  200,
+			"orders_per_minute":    100,
+			"api_calls_per_second": 50,
+			"market_data_requests": 200,
 		},
 		MaxUsers:  25,
 		MaxAssets: 500,
@@ -72,9 +72,9 @@ var LicenseConfigs = map[LicenseTier]*LicenseConfig{
 			"reports_per_month":     -1, // unlimited
 		},
 		RateLimits: map[string]int64{
-			"orders_per_minute":     -1, // unlimited
-			"api_calls_per_second":  -1, // unlimited
-			"market_data_requests":  -1, // unlimited
+			"orders_per_minute":    -1, // unlimited
+			"api_calls_per_second": -1, // unlimited
+			"market_data_requests": -1, // unlimited
 		},
 		MaxUsers:  -1, // unlimited
 		MaxAssets: -1, // unlimited
@@ -84,7 +84,7 @@ var LicenseConfigs = map[LicenseTier]*LicenseConfig{
 		Tier: ISLAMIC,
 		Features: []LicenseFeature{
 			BASIC_TRADING, ADVANCED_TRADING, EGX_ACCESS, ADX_ACCESS,
-			BASIC_ASSETS, ISLAMIC_ASSETS, BASIC_ANALYTICS, 
+			BASIC_ASSETS, ISLAMIC_ASSETS, BASIC_ANALYTICS,
 			ADVANCED_ANALYTICS, SHARIA_COMPLIANCE, ZAKAT_CALCULATION,
 			HALAL_SCREENING, REST_API, WEBSOCKET_API,
 		},
@@ -98,10 +98,10 @@ var LicenseConfigs = map[LicenseTier]*LicenseConfig{
 			"zakat_calculations":    100,
 		},
 		RateLimits: map[string]int64{
-			"orders_per_minute":     50,
-			"api_calls_per_second":  25,
-			"market_data_requests":  100,
-			"sharia_requests":       10,
+			"orders_per_minute":    50,
+			"api_calls_per_second": 25,
+			"market_data_requests": 100,
+			"sharia_requests":      10,
 		},
 		MaxUsers:  15,
 		MaxAssets: 300,
@@ -112,11 +112,11 @@ var LicenseConfigs = map[LicenseTier]*LicenseConfig{
 // BillingPlans defines the billing configuration for each license tier
 var BillingPlans = map[LicenseTier]*BillingPlan{
 	BASIC: {
-		TierID:      "basic",
-		Name:        "Basic Plan",
-		Description: "Essential trading features for individual traders",
-		BaseFee:     99.00,
-		Currency:    "USD",
+		TierID:       "basic",
+		Name:         "Basic Plan",
+		Description:  "Essential trading features for individual traders",
+		BaseFee:      99.00,
+		Currency:     "USD",
 		BillingCycle: "monthly",
 		UsageRates: map[string]float64{
 			"orders_per_day":       0.01,  // $0.01 per order
@@ -133,17 +133,17 @@ var BillingPlans = map[LicenseTier]*BillingPlan{
 		IsActive: true,
 	},
 	PROFESSIONAL: {
-		TierID:      "professional",
-		Name:        "Professional Plan",
-		Description: "Advanced trading features for professional traders",
-		BaseFee:     499.00,
-		Currency:    "USD",
+		TierID:       "professional",
+		Name:         "Professional Plan",
+		Description:  "Advanced trading features for professional traders",
+		BaseFee:      499.00,
+		Currency:     "USD",
 		BillingCycle: "monthly",
 		UsageRates: map[string]float64{
-			"orders_per_day":       0.005, // $0.005 per order
+			"orders_per_day":       0.005,  // $0.005 per order
 			"api_calls_per_minute": 0.0005, // $0.0005 per API call
-			"market_data_symbols":  0.05,  // $0.05 per symbol
-			"reports_per_month":    1.00,  // $1.00 per report
+			"market_data_symbols":  0.05,   // $0.05 per symbol
+			"reports_per_month":    1.00,   // $1.00 per report
 		},
 		OverageRates: map[string]float64{
 			"orders_per_day":       0.01,  // $0.01 per order over quota
@@ -156,38 +156,38 @@ var BillingPlans = map[LicenseTier]*BillingPlan{
 		IsActive: true,
 	},
 	ENTERPRISE: {
-		TierID:      "enterprise",
-		Name:        "Enterprise Plan",
-		Description: "Unlimited features for institutional trading",
-		BaseFee:     2999.00,
-		Currency:    "USD",
+		TierID:       "enterprise",
+		Name:         "Enterprise Plan",
+		Description:  "Unlimited features for institutional trading",
+		BaseFee:      2999.00,
+		Currency:     "USD",
 		BillingCycle: "monthly",
-		UsageRates:  map[string]float64{}, // No usage rates - unlimited
+		UsageRates:   map[string]float64{}, // No usage rates - unlimited
 		OverageRates: map[string]float64{}, // No overage rates - unlimited
-		Features:    LicenseConfigs[ENTERPRISE].Features,
-		Quotas:      LicenseConfigs[ENTERPRISE].Quotas,
-		IsActive:    true,
+		Features:     LicenseConfigs[ENTERPRISE].Features,
+		Quotas:       LicenseConfigs[ENTERPRISE].Quotas,
+		IsActive:     true,
 	},
 	ISLAMIC: {
-		TierID:      "islamic",
-		Name:        "Islamic Finance Plan",
-		Description: "Sharia-compliant trading with Islamic finance features",
-		BaseFee:     299.00,
-		Currency:    "USD",
+		TierID:       "islamic",
+		Name:         "Islamic Finance Plan",
+		Description:  "Sharia-compliant trading with Islamic finance features",
+		BaseFee:      299.00,
+		Currency:     "USD",
 		BillingCycle: "monthly",
 		UsageRates: map[string]float64{
-			"orders_per_day":       0.008, // $0.008 per order
+			"orders_per_day":       0.008,  // $0.008 per order
 			"api_calls_per_minute": 0.0008, // $0.0008 per API call
-			"market_data_symbols":  0.08,  // $0.08 per symbol
-			"sharia_screenings":    0.50,  // $0.50 per screening
-			"zakat_calculations":   2.00,  // $2.00 per calculation
+			"market_data_symbols":  0.08,   // $0.08 per symbol
+			"sharia_screenings":    0.50,   // $0.50 per screening
+			"zakat_calculations":   2.00,   // $2.00 per calculation
 		},
 		OverageRates: map[string]float64{
-			"orders_per_day":       0.016, // $0.016 per order over quota
+			"orders_per_day":       0.016,  // $0.016 per order over quota
 			"api_calls_per_minute": 0.0016, // $0.0016 per API call over quota
-			"market_data_symbols":  0.16,  // $0.16 per symbol over quota
-			"sharia_screenings":    1.00,  // $1.00 per screening over quota
-			"zakat_calculations":   4.00,  // $4.00 per calculation over quota
+			"market_data_symbols":  0.16,   // $0.16 per symbol over quota
+			"sharia_screenings":    1.00,   // $1.00 per screening over quota
+			"zakat_calculations":   4.00,   // $4.00 per calculation over quota
 		},
 		Features: LicenseConfigs[ISLAMIC].Features,
 		Quotas:   LicenseConfigs[ISLAMIC].Quotas,
@@ -257,7 +257,7 @@ func CreateLicense(userID, organizationID string, tier LicenseTier, duration tim
 	if !exists {
 		return nil, ErrInvalidLicenseTier
 	}
-	
+
 	now := time.Now()
 	license := &License{
 		ID:             generateLicenseID(),
@@ -269,13 +269,13 @@ func CreateLicense(userID, organizationID string, tier LicenseTier, duration tim
 		RateLimits:     config.RateLimits,
 		IssuedAt:       now,
 		ExpiresAt:      now.Add(duration),
-		IsActive:       true,
+		Active:         true,
 		MaxUsers:       config.MaxUsers,
 		MaxAssets:      config.MaxAssets,
 		MaxOrders:      config.MaxOrders,
 		Metadata:       make(map[string]interface{}),
 	}
-	
+
 	return license, nil
 }
 
@@ -285,7 +285,7 @@ func UpgradeLicense(license *License, newTier LicenseTier) error {
 	if !exists {
 		return ErrInvalidLicenseTier
 	}
-	
+
 	// Update license with new tier configuration
 	license.Tier = newTier
 	license.Features = newConfig.Features
@@ -294,7 +294,7 @@ func UpgradeLicense(license *License, newTier LicenseTier) error {
 	license.MaxUsers = newConfig.MaxUsers
 	license.MaxAssets = newConfig.MaxAssets
 	license.MaxOrders = newConfig.MaxOrders
-	
+
 	return nil
 }
 
@@ -325,7 +325,7 @@ func ValidateLicenseConfig(config *LicenseConfig) error {
 	if !config.Tier.IsValid() {
 		return ErrInvalidLicenseTier
 	}
-	
+
 	for _, feature := range config.Features {
 		if !feature.IsValid() {
 			return &LicenseError{
@@ -334,7 +334,7 @@ func ValidateLicenseConfig(config *LicenseConfig) error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -343,17 +343,17 @@ func GetRecommendedTier(usage map[string]int64) LicenseTier {
 	// Simple recommendation logic based on usage
 	ordersPerDay := usage["orders_per_day"]
 	apiCallsPerMinute := usage["api_calls_per_minute"]
-	
+
 	// Enterprise tier for high usage
 	if ordersPerDay > 5000 || apiCallsPerMinute > 500 {
 		return ENTERPRISE
 	}
-	
+
 	// Professional tier for medium usage
 	if ordersPerDay > 1000 || apiCallsPerMinute > 100 {
 		return PROFESSIONAL
 	}
-	
+
 	// Basic tier for low usage
 	return BASIC
 }

@@ -4,7 +4,16 @@ import (
 	"context"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
+	"github.com/abdoElHodaky/tradSys/internal/matching"
 )
+
+// Engine is an alias for the unified matching engine
+type Engine = matching.UnifiedMatchingEngine
+
+// NewEngine creates a new order matching engine
+func NewEngine(logger *zap.Logger) *Engine {
+	return matching.NewUnifiedMatchingEngine(logger, nil)
+}
 
 // OrderMatchingModule provides the order matching module for the fx application
 var OrderMatchingModule = fx.Options(

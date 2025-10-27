@@ -7,6 +7,15 @@ import (
 	"github.com/abdoElHodaky/tradSys/pkg/types"
 )
 
+// HealthStatus represents the health status of a service
+type HealthStatus string
+
+const (
+	HealthStatusHealthy   HealthStatus = "healthy"
+	HealthStatusUnhealthy HealthStatus = "unhealthy"
+	HealthStatusDegraded  HealthStatus = "degraded"
+)
+
 // Event type constants
 const (
 	OrderEventCreated  = "order.created"
@@ -39,6 +48,103 @@ type EventStore interface {
 	GetEventsSince(ctx context.Context, since time.Time) ([]Event, error)
 	// Subscribe subscribes to events
 	Subscribe(ctx context.Context, handler EventHandler) error
+}
+
+// OrderService defines the interface for order management
+type OrderService interface {
+	// CreateOrder creates a new order
+	CreateOrder(ctx context.Context, order *types.Order) error
+	// CancelOrder cancels an existing order
+	CancelOrder(ctx context.Context, orderID string) error
+	// GetOrder retrieves an order by ID
+	GetOrder(ctx context.Context, orderID string) (*types.Order, error)
+	// GetOrdersByUser retrieves orders for a user
+	GetOrdersByUser(ctx context.Context, userID string) ([]*types.Order, error)
+}
+
+// TradeService defines the interface for trade management
+type TradeService interface {
+	// ExecuteTrade executes a trade
+	ExecuteTrade(ctx context.Context, trade *types.Trade) error
+	// GetTrade retrieves a trade by ID
+	GetTrade(ctx context.Context, tradeID string) (*types.Trade, error)
+	// GetTradesByUser retrieves trades for a user
+	GetTradesByUser(ctx context.Context, userID string) ([]*types.Trade, error)
+}
+
+// MarketDataService defines the interface for market data management
+type MarketDataService interface {
+	// GetMarketData retrieves market data for a symbol
+	GetMarketData(ctx context.Context, symbol string) (*types.MarketData, error)
+	// SubscribeToMarketData subscribes to market data updates
+	SubscribeToMarketData(ctx context.Context, symbol string, handler func(*types.MarketData)) error
+}
+
+// PositionService defines the interface for position management
+type PositionService interface {
+	// GetPosition retrieves a position
+	GetPosition(ctx context.Context, userID, symbol string) (*types.Position, error)
+	// UpdatePosition updates a position
+	UpdatePosition(ctx context.Context, position *types.Position) error
+	// GetPositionsByUser retrieves all positions for a user
+	GetPositionsByUser(ctx context.Context, userID string) ([]*types.Position, error)
+}
+
+// RiskService defines the interface for risk management
+type RiskService interface {
+	// CheckRisk checks if an order passes risk checks
+	CheckRisk(ctx context.Context, order *types.Order) error
+	// GetRiskMetrics retrieves risk metrics for a user
+	GetRiskMetrics(ctx context.Context, userID string) (*types.RiskMetrics, error)
+}
+
+// MatchingEngine defines the interface for order matching
+type MatchingEngine interface {
+	// ProcessOrder processes an order
+	ProcessOrder(ctx context.Context, order *types.Order) ([]*types.Trade, error)
+	// GetOrderBook retrieves the order book for a symbol
+	GetOrderBook(ctx context.Context, symbol string) (*types.OrderBook, error)
+}
+
+// Logger defines the interface for logging
+type Logger interface {
+	Debug(msg string, fields ...interface{})
+	Info(msg string, fields ...interface{})
+	Warn(msg string, fields ...interface{})
+	Error(msg string, fields ...interface{})
+}
+
+// MetricsCollector defines the interface for metrics collection
+type MetricsCollector interface {
+	// Counter increments a counter metric
+	Counter(name string, value float64, tags map[string]string)
+	// Gauge sets a gauge metric
+	Gauge(name string, value float64, tags map[string]string)
+	// Histogram records a histogram metric
+	Histogram(name string, value float64, tags map[string]string)
+}
+
+// EventPublisher defines the interface for event publishing
+type EventPublisher interface {
+	// PublishOrderEvent publishes an order event
+	PublishOrderEvent(ctx context.Context, event OrderEvent) error
+	// PublishTradeEvent publishes a trade event
+	PublishTradeEvent(ctx context.Context, event TradeEvent) error
+}
+
+// OrderEvent represents an order-related event
+type OrderEvent struct {
+	Type      string       `json:"type"`
+	Order     *types.Order `json:"order"`
+	Timestamp time.Time    `json:"timestamp"`
+	UserID    string       `json:"user_id"`
+}
+
+// TradeEvent represents a trade-related event
+type TradeEvent struct {
+	Type      string       `json:"type"`
+	Trade     *types.Trade `json:"trade"`
+	Timestamp time.Time    `json:"timestamp"`
 }
 
 // Event represents a domain event
@@ -159,19 +265,7 @@ type Serializer interface {
 	GetContentType() string
 }
 
-// Logger defines a logging interface
-type Logger interface {
-	// Debug logs a debug message
-	Debug(msg string, fields ...interface{})
-	// Info logs an info message
-	Info(msg string, fields ...interface{})
-	// Warn logs a warning message
-	Warn(msg string, fields ...interface{})
-	// Error logs an error message
-	Error(msg string, fields ...interface{})
-	// Fatal logs a fatal message and exits
-	Fatal(msg string, fields ...interface{})
-}
+
 
 // Metrics defines a metrics interface
 type Metrics interface {
@@ -323,26 +417,7 @@ type Notification interface {
 	GetMetadata() map[string]interface{}
 }
 
-// MatchingEngine defines the interface for order matching engines
-type MatchingEngine interface {
-	// ProcessOrder processes a new order and returns resulting trades
-	ProcessOrder(ctx context.Context, order *types.Order) ([]*types.Trade, error)
-	
-	// CancelOrder cancels an existing order
-	CancelOrder(ctx context.Context, orderID string) error
-	
-	// GetOrderBook returns the current order book state
-	GetOrderBook(symbol string) (*types.OrderBook, error)
-	
-	// GetMetrics returns engine performance metrics
-	GetMetrics() *EngineMetrics
-	
-	// Start starts the matching engine
-	Start(ctx context.Context) error
-	
-	// Stop stops the matching engine gracefully
-	Stop(ctx context.Context) error
-}
+
 
 // EngineMetrics represents performance metrics for a matching engine
 type EngineMetrics struct {
@@ -355,29 +430,4 @@ type EngineMetrics struct {
 	QueueDepth       int           `json:"queue_depth"`
 }
 
-// OrderEvent represents an order-related event
-type OrderEvent struct {
-	ID        string                 `json:"id"`
-	OrderID   string                 `json:"order_id"`
-	Symbol    string                 `json:"symbol"`
-	Type      string                 `json:"type"`
-	EventType string                 `json:"event_type"`
-	Timestamp time.Time              `json:"timestamp"`
-	Order     *types.Order           `json:"order"`
-	UserID    string                 `json:"user_id"`
-	Data      map[string]interface{} `json:"data"`
-}
 
-// TradeEvent represents a trade-related event
-type TradeEvent struct {
-	ID        string                 `json:"id"`
-	TradeID   string                 `json:"trade_id"`
-	Symbol    string                 `json:"symbol"`
-	Type      string                 `json:"type"`
-	EventType string                 `json:"event_type"`
-	Timestamp time.Time              `json:"timestamp"`
-	Trade     *types.Trade           `json:"trade"`
-	Price     float64                `json:"price"`
-	Quantity  float64                `json:"quantity"`
-	Data      map[string]interface{} `json:"data"`
-}

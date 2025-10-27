@@ -16,34 +16,34 @@ type BaseEvent struct {
 	Data        interface{} `json:"data"`
 }
 
-func (e *BaseEvent) GetID() string          { return e.ID }
-func (e *BaseEvent) GetType() string        { return e.Type }
-func (e *BaseEvent) GetAggregateID() string { return e.AggregateID }
+func (e *BaseEvent) GetID() string           { return e.ID }
+func (e *BaseEvent) GetType() string         { return e.Type }
+func (e *BaseEvent) GetAggregateID() string  { return e.AggregateID }
 func (e *BaseEvent) GetTimestamp() time.Time { return e.Timestamp }
-func (e *BaseEvent) GetData() interface{}   { return e.Data }
+func (e *BaseEvent) GetData() interface{}    { return e.Data }
 
 // Order Events
 
 type OrderCreatedEvent struct {
-	ID            string                `json:"id"`
-	AggregateID   string                `json:"aggregate_id"`
-	OrderID       string                `json:"order_id"`
-	UserID        string                `json:"user_id"`
-	Symbol        string                `json:"symbol"`
-	Side          types.OrderSide       `json:"side"`
-	Type          types.OrderType       `json:"type"`
-	Price         float64               `json:"price"`
-	Quantity      float64               `json:"quantity"`
-	TimeInForce   types.TimeInForce     `json:"time_in_force"`
-	StopPrice     *float64              `json:"stop_price,omitempty"`
-	Timestamp     time.Time             `json:"timestamp"`
+	ID          string            `json:"id"`
+	AggregateID string            `json:"aggregate_id"`
+	OrderID     string            `json:"order_id"`
+	UserID      string            `json:"user_id"`
+	Symbol      string            `json:"symbol"`
+	Side        types.OrderSide   `json:"side"`
+	Type        types.OrderType   `json:"type"`
+	Price       float64           `json:"price"`
+	Quantity    float64           `json:"quantity"`
+	TimeInForce types.TimeInForce `json:"time_in_force"`
+	StopPrice   *float64          `json:"stop_price,omitempty"`
+	Timestamp   time.Time         `json:"timestamp"`
 }
 
-func (e *OrderCreatedEvent) GetID() string          { return e.ID }
-func (e *OrderCreatedEvent) GetType() string        { return "OrderCreated" }
-func (e *OrderCreatedEvent) GetAggregateID() string { return e.AggregateID }
+func (e *OrderCreatedEvent) GetID() string           { return e.ID }
+func (e *OrderCreatedEvent) GetType() string         { return "OrderCreated" }
+func (e *OrderCreatedEvent) GetAggregateID() string  { return e.AggregateID }
 func (e *OrderCreatedEvent) GetTimestamp() time.Time { return e.Timestamp }
-func (e *OrderCreatedEvent) GetData() interface{}   { return e }
+func (e *OrderCreatedEvent) GetData() interface{}    { return e }
 
 type OrderUpdatedEvent struct {
 	ID                string            `json:"id"`
@@ -55,11 +55,11 @@ type OrderUpdatedEvent struct {
 	Timestamp         time.Time         `json:"timestamp"`
 }
 
-func (e *OrderUpdatedEvent) GetID() string          { return e.ID }
-func (e *OrderUpdatedEvent) GetType() string        { return "OrderUpdated" }
-func (e *OrderUpdatedEvent) GetAggregateID() string { return e.AggregateID }
+func (e *OrderUpdatedEvent) GetID() string           { return e.ID }
+func (e *OrderUpdatedEvent) GetType() string         { return "OrderUpdated" }
+func (e *OrderUpdatedEvent) GetAggregateID() string  { return e.AggregateID }
 func (e *OrderUpdatedEvent) GetTimestamp() time.Time { return e.Timestamp }
-func (e *OrderUpdatedEvent) GetData() interface{}   { return e }
+func (e *OrderUpdatedEvent) GetData() interface{}    { return e }
 
 type OrderCancelledEvent struct {
 	ID          string    `json:"id"`
@@ -70,47 +70,47 @@ type OrderCancelledEvent struct {
 	Timestamp   time.Time `json:"timestamp"`
 }
 
-func (e *OrderCancelledEvent) GetID() string          { return e.ID }
-func (e *OrderCancelledEvent) GetType() string        { return "OrderCancelled" }
-func (e *OrderCancelledEvent) GetAggregateID() string { return e.AggregateID }
+func (e *OrderCancelledEvent) GetID() string           { return e.ID }
+func (e *OrderCancelledEvent) GetType() string         { return "OrderCancelled" }
+func (e *OrderCancelledEvent) GetAggregateID() string  { return e.AggregateID }
 func (e *OrderCancelledEvent) GetTimestamp() time.Time { return e.Timestamp }
-func (e *OrderCancelledEvent) GetData() interface{}   { return e }
+func (e *OrderCancelledEvent) GetData() interface{}    { return e }
 
 type OrderMatchedEvent struct {
-	ID               string          `json:"id"`
-	AggregateID      string          `json:"aggregate_id"`
-	OrderID          string          `json:"order_id"`
-	MatchedOrderID   string          `json:"matched_order_id"`
-	TradeID          string          `json:"trade_id"`
-	Price            float64         `json:"price"`
-	Quantity         float64         `json:"quantity"`
-	RemainingQuantity float64        `json:"remaining_quantity"`
-	TakerSide        types.OrderSide `json:"taker_side"`
-	Timestamp        time.Time       `json:"timestamp"`
+	ID                string          `json:"id"`
+	AggregateID       string          `json:"aggregate_id"`
+	OrderID           string          `json:"order_id"`
+	MatchedOrderID    string          `json:"matched_order_id"`
+	TradeID           string          `json:"trade_id"`
+	Price             float64         `json:"price"`
+	Quantity          float64         `json:"quantity"`
+	RemainingQuantity float64         `json:"remaining_quantity"`
+	TakerSide         types.OrderSide `json:"taker_side"`
+	Timestamp         time.Time       `json:"timestamp"`
 }
 
-func (e *OrderMatchedEvent) GetID() string          { return e.ID }
-func (e *OrderMatchedEvent) GetType() string        { return "OrderMatched" }
-func (e *OrderMatchedEvent) GetAggregateID() string { return e.AggregateID }
+func (e *OrderMatchedEvent) GetID() string           { return e.ID }
+func (e *OrderMatchedEvent) GetType() string         { return "OrderMatched" }
+func (e *OrderMatchedEvent) GetAggregateID() string  { return e.AggregateID }
 func (e *OrderMatchedEvent) GetTimestamp() time.Time { return e.Timestamp }
-func (e *OrderMatchedEvent) GetData() interface{}   { return e }
+func (e *OrderMatchedEvent) GetData() interface{}    { return e }
 
 type OrderFilledEvent struct {
-	ID          string    `json:"id"`
-	AggregateID string    `json:"aggregate_id"`
-	OrderID     string    `json:"order_id"`
-	UserID      string    `json:"user_id"`
-	Symbol      string    `json:"symbol"`
-	TotalFilled float64   `json:"total_filled"`
-	AveragePrice float64  `json:"average_price"`
-	Timestamp   time.Time `json:"timestamp"`
+	ID           string    `json:"id"`
+	AggregateID  string    `json:"aggregate_id"`
+	OrderID      string    `json:"order_id"`
+	UserID       string    `json:"user_id"`
+	Symbol       string    `json:"symbol"`
+	TotalFilled  float64   `json:"total_filled"`
+	AveragePrice float64   `json:"average_price"`
+	Timestamp    time.Time `json:"timestamp"`
 }
 
-func (e *OrderFilledEvent) GetID() string          { return e.ID }
-func (e *OrderFilledEvent) GetType() string        { return "OrderFilled" }
-func (e *OrderFilledEvent) GetAggregateID() string { return e.AggregateID }
+func (e *OrderFilledEvent) GetID() string           { return e.ID }
+func (e *OrderFilledEvent) GetType() string         { return "OrderFilled" }
+func (e *OrderFilledEvent) GetAggregateID() string  { return e.AggregateID }
 func (e *OrderFilledEvent) GetTimestamp() time.Time { return e.Timestamp }
-func (e *OrderFilledEvent) GetData() interface{}   { return e }
+func (e *OrderFilledEvent) GetData() interface{}    { return e }
 
 // Trade Events
 
@@ -132,11 +132,11 @@ type TradeCreatedEvent struct {
 	Timestamp    time.Time       `json:"timestamp"`
 }
 
-func (e *TradeCreatedEvent) GetID() string          { return e.ID }
-func (e *TradeCreatedEvent) GetType() string        { return "TradeCreated" }
-func (e *TradeCreatedEvent) GetAggregateID() string { return e.AggregateID }
+func (e *TradeCreatedEvent) GetID() string           { return e.ID }
+func (e *TradeCreatedEvent) GetType() string         { return "TradeCreated" }
+func (e *TradeCreatedEvent) GetAggregateID() string  { return e.AggregateID }
 func (e *TradeCreatedEvent) GetTimestamp() time.Time { return e.Timestamp }
-func (e *TradeCreatedEvent) GetData() interface{}   { return e }
+func (e *TradeCreatedEvent) GetData() interface{}    { return e }
 
 type TradeSettledEvent struct {
 	ID          string    `json:"id"`
@@ -147,11 +147,11 @@ type TradeSettledEvent struct {
 	Timestamp   time.Time `json:"timestamp"`
 }
 
-func (e *TradeSettledEvent) GetID() string          { return e.ID }
-func (e *TradeSettledEvent) GetType() string        { return "TradeSettled" }
-func (e *TradeSettledEvent) GetAggregateID() string { return e.AggregateID }
+func (e *TradeSettledEvent) GetID() string           { return e.ID }
+func (e *TradeSettledEvent) GetType() string         { return "TradeSettled" }
+func (e *TradeSettledEvent) GetAggregateID() string  { return e.AggregateID }
 func (e *TradeSettledEvent) GetTimestamp() time.Time { return e.Timestamp }
-func (e *TradeSettledEvent) GetData() interface{}   { return e }
+func (e *TradeSettledEvent) GetData() interface{}    { return e }
 
 // Market Data Events
 
@@ -170,30 +170,30 @@ type MarketDataUpdatedEvent struct {
 	Timestamp        time.Time `json:"timestamp"`
 }
 
-func (e *MarketDataUpdatedEvent) GetID() string          { return e.ID }
-func (e *MarketDataUpdatedEvent) GetType() string        { return "MarketDataUpdated" }
-func (e *MarketDataUpdatedEvent) GetAggregateID() string { return e.AggregateID }
+func (e *MarketDataUpdatedEvent) GetID() string           { return e.ID }
+func (e *MarketDataUpdatedEvent) GetType() string         { return "MarketDataUpdated" }
+func (e *MarketDataUpdatedEvent) GetAggregateID() string  { return e.AggregateID }
 func (e *MarketDataUpdatedEvent) GetTimestamp() time.Time { return e.Timestamp }
-func (e *MarketDataUpdatedEvent) GetData() interface{}   { return e }
+func (e *MarketDataUpdatedEvent) GetData() interface{}    { return e }
 
 type OHLCVUpdatedEvent struct {
-	ID        string    `json:"id"`
-	AggregateID string  `json:"aggregate_id"`
-	Symbol    string    `json:"symbol"`
-	Interval  string    `json:"interval"`
-	Open      float64   `json:"open"`
-	High      float64   `json:"high"`
-	Low       float64   `json:"low"`
-	Close     float64   `json:"close"`
-	Volume    float64   `json:"volume"`
-	Timestamp time.Time `json:"timestamp"`
+	ID          string    `json:"id"`
+	AggregateID string    `json:"aggregate_id"`
+	Symbol      string    `json:"symbol"`
+	Interval    string    `json:"interval"`
+	Open        float64   `json:"open"`
+	High        float64   `json:"high"`
+	Low         float64   `json:"low"`
+	Close       float64   `json:"close"`
+	Volume      float64   `json:"volume"`
+	Timestamp   time.Time `json:"timestamp"`
 }
 
-func (e *OHLCVUpdatedEvent) GetID() string          { return e.ID }
-func (e *OHLCVUpdatedEvent) GetType() string        { return "OHLCVUpdated" }
-func (e *OHLCVUpdatedEvent) GetAggregateID() string { return e.AggregateID }
+func (e *OHLCVUpdatedEvent) GetID() string           { return e.ID }
+func (e *OHLCVUpdatedEvent) GetType() string         { return "OHLCVUpdated" }
+func (e *OHLCVUpdatedEvent) GetAggregateID() string  { return e.AggregateID }
 func (e *OHLCVUpdatedEvent) GetTimestamp() time.Time { return e.Timestamp }
-func (e *OHLCVUpdatedEvent) GetData() interface{}   { return e }
+func (e *OHLCVUpdatedEvent) GetData() interface{}    { return e }
 
 // Position Events
 
@@ -210,11 +210,11 @@ type PositionUpdatedEvent struct {
 	Timestamp    time.Time `json:"timestamp"`
 }
 
-func (e *PositionUpdatedEvent) GetID() string          { return e.ID }
-func (e *PositionUpdatedEvent) GetType() string        { return "PositionUpdated" }
-func (e *PositionUpdatedEvent) GetAggregateID() string { return e.AggregateID }
+func (e *PositionUpdatedEvent) GetID() string           { return e.ID }
+func (e *PositionUpdatedEvent) GetType() string         { return "PositionUpdated" }
+func (e *PositionUpdatedEvent) GetAggregateID() string  { return e.AggregateID }
 func (e *PositionUpdatedEvent) GetTimestamp() time.Time { return e.Timestamp }
-func (e *PositionUpdatedEvent) GetData() interface{}   { return e }
+func (e *PositionUpdatedEvent) GetData() interface{}    { return e }
 
 // User Events
 
@@ -228,11 +228,11 @@ type UserCreatedEvent struct {
 	Timestamp   time.Time `json:"timestamp"`
 }
 
-func (e *UserCreatedEvent) GetID() string          { return e.ID }
-func (e *UserCreatedEvent) GetType() string        { return "UserCreated" }
-func (e *UserCreatedEvent) GetAggregateID() string { return e.AggregateID }
+func (e *UserCreatedEvent) GetID() string           { return e.ID }
+func (e *UserCreatedEvent) GetType() string         { return "UserCreated" }
+func (e *UserCreatedEvent) GetAggregateID() string  { return e.AggregateID }
 func (e *UserCreatedEvent) GetTimestamp() time.Time { return e.Timestamp }
-func (e *UserCreatedEvent) GetData() interface{}   { return e }
+func (e *UserCreatedEvent) GetData() interface{}    { return e }
 
 type UserBalanceUpdatedEvent struct {
 	ID          string    `json:"id"`
@@ -245,11 +245,11 @@ type UserBalanceUpdatedEvent struct {
 	Timestamp   time.Time `json:"timestamp"`
 }
 
-func (e *UserBalanceUpdatedEvent) GetID() string          { return e.ID }
-func (e *UserBalanceUpdatedEvent) GetType() string        { return "UserBalanceUpdated" }
-func (e *UserBalanceUpdatedEvent) GetAggregateID() string { return e.AggregateID }
+func (e *UserBalanceUpdatedEvent) GetID() string           { return e.ID }
+func (e *UserBalanceUpdatedEvent) GetType() string         { return "UserBalanceUpdated" }
+func (e *UserBalanceUpdatedEvent) GetAggregateID() string  { return e.AggregateID }
 func (e *UserBalanceUpdatedEvent) GetTimestamp() time.Time { return e.Timestamp }
-func (e *UserBalanceUpdatedEvent) GetData() interface{}   { return e }
+func (e *UserBalanceUpdatedEvent) GetData() interface{}    { return e }
 
 // System Events
 
@@ -262,11 +262,11 @@ type SystemHealthUpdatedEvent struct {
 	Timestamp   time.Time              `json:"timestamp"`
 }
 
-func (e *SystemHealthUpdatedEvent) GetID() string          { return e.ID }
-func (e *SystemHealthUpdatedEvent) GetType() string        { return "SystemHealthUpdated" }
-func (e *SystemHealthUpdatedEvent) GetAggregateID() string { return e.AggregateID }
+func (e *SystemHealthUpdatedEvent) GetID() string           { return e.ID }
+func (e *SystemHealthUpdatedEvent) GetType() string         { return "SystemHealthUpdated" }
+func (e *SystemHealthUpdatedEvent) GetAggregateID() string  { return e.AggregateID }
 func (e *SystemHealthUpdatedEvent) GetTimestamp() time.Time { return e.Timestamp }
-func (e *SystemHealthUpdatedEvent) GetData() interface{}   { return e }
+func (e *SystemHealthUpdatedEvent) GetData() interface{}    { return e }
 
 // Event Factory
 
@@ -394,7 +394,7 @@ func convertToMap(data interface{}) map[string]interface{} {
 	// This is a simplified implementation
 	// In a real system, you'd use proper JSON marshaling/unmarshaling
 	result := make(map[string]interface{})
-	
+
 	// Use reflection or JSON marshaling to convert struct to map
 	// For now, return empty map as placeholder
 	return result

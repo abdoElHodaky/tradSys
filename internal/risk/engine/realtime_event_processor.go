@@ -104,4 +104,3 @@ func (e *RealTimeRiskEngine) calculateVaR() {
 		zap.Float64("volatility", volatility),
 		zap.Int("positions_count", len(positions)))
 }
-

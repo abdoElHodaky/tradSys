@@ -16,26 +16,26 @@ type PerformanceMonitor struct {
 	logger  interfaces.Logger
 
 	// Performance counters
-	requestCount    uint64
-	errorCount      uint64
-	totalLatency    uint64
-	maxLatency      uint64
-	minLatency      uint64
-	
+	requestCount uint64
+	errorCount   uint64
+	totalLatency uint64
+	maxLatency   uint64
+	minLatency   uint64
+
 	// Memory tracking
-	allocations     uint64
-	deallocations   uint64
-	gcCount         uint64
-	
+	allocations   uint64
+	deallocations uint64
+	gcCount       uint64
+
 	// Concurrency tracking
 	activeGoroutines int64
 	maxGoroutines    int64
-	
+
 	// Circuit breaker state
 	circuitOpen     bool
 	failureCount    uint64
 	lastFailureTime time.Time
-	
+
 	mu sync.RWMutex
 }
 
@@ -51,20 +51,20 @@ func NewPerformanceMonitor(metrics interfaces.MetricsCollector, logger interface
 // TrackRequest tracks a request's performance metrics
 func (pm *PerformanceMonitor) TrackRequest(ctx context.Context, operation string, fn func() error) error {
 	start := time.Now()
-	
+
 	// Increment active goroutines
 	active := atomic.AddInt64(&pm.activeGoroutines, 1)
 	if active > atomic.LoadInt64(&pm.maxGoroutines) {
 		atomic.StoreInt64(&pm.maxGoroutines, active)
 	}
-	
+
 	defer func() {
 		atomic.AddInt64(&pm.activeGoroutines, -1)
-		
+
 		// Track latency
 		latency := time.Since(start)
 		pm.recordLatency(latency)
-		
+
 		// Record metrics
 		if pm.metrics != nil {
 			pm.metrics.RecordTimer(operation+".duration", latency, map[string]string{
@@ -72,7 +72,7 @@ func (pm *PerformanceMonitor) TrackRequest(ctx context.Context, operation string
 			})
 		}
 	}()
-	
+
 	// Check circuit breaker
 	if pm.isCircuitOpen() {
 		atomic.AddUint64(&pm.errorCount, 1)
@@ -83,16 +83,16 @@ func (pm *PerformanceMonitor) TrackRequest(ctx context.Context, operation string
 		}
 		return NewCircuitBreakerError("circuit breaker is open")
 	}
-	
+
 	// Execute the function
 	err := fn()
-	
+
 	// Track results
 	atomic.AddUint64(&pm.requestCount, 1)
 	if err != nil {
 		atomic.AddUint64(&pm.errorCount, 1)
 		pm.recordFailure()
-		
+
 		if pm.metrics != nil {
 			pm.metrics.IncrementCounter(operation+".errors", map[string]string{
 				"operation": operation,
@@ -100,23 +100,23 @@ func (pm *PerformanceMonitor) TrackRequest(ctx context.Context, operation string
 		}
 	} else {
 		pm.recordSuccess()
-		
+
 		if pm.metrics != nil {
 			pm.metrics.IncrementCounter(operation+".success", map[string]string{
 				"operation": operation,
 			})
 		}
 	}
-	
+
 	return err
 }
 
 // recordLatency records latency statistics
 func (pm *PerformanceMonitor) recordLatency(latency time.Duration) {
 	latencyNs := uint64(latency.Nanoseconds())
-	
+
 	atomic.AddUint64(&pm.totalLatency, latencyNs)
-	
+
 	// Update max latency
 	for {
 		current := atomic.LoadUint64(&pm.maxLatency)
@@ -127,7 +127,7 @@ func (pm *PerformanceMonitor) recordLatency(latency time.Duration) {
 			break
 		}
 	}
-	
+
 	// Update min latency
 	for {
 		current := atomic.LoadUint64(&pm.minLatency)
@@ -144,10 +144,10 @@ func (pm *PerformanceMonitor) recordLatency(latency time.Duration) {
 func (pm *PerformanceMonitor) recordFailure() {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
-	
+
 	pm.failureCount++
 	pm.lastFailureTime = time.Now()
-	
+
 	// Open circuit breaker if failure rate is too high
 	if pm.failureCount >= 5 && time.Since(pm.lastFailureTime) < time.Minute {
 		pm.circuitOpen = true
@@ -161,10 +161,10 @@ func (pm *PerformanceMonitor) recordFailure() {
 func (pm *PerformanceMonitor) recordSuccess() {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
-	
+
 	// Reset failure count on success
 	pm.failureCount = 0
-	
+
 	// Close circuit breaker if it was open
 	if pm.circuitOpen {
 		pm.circuitOpen = false
@@ -178,7 +178,7 @@ func (pm *PerformanceMonitor) recordSuccess() {
 func (pm *PerformanceMonitor) isCircuitOpen() bool {
 	pm.mu.RLock()
 	defer pm.mu.RUnlock()
-	
+
 	// Auto-close circuit breaker after timeout
 	if pm.circuitOpen && time.Since(pm.lastFailureTime) > 30*time.Second {
 		pm.circuitOpen = false
@@ -186,7 +186,7 @@ func (pm *PerformanceMonitor) isCircuitOpen() bool {
 			pm.logger.Info("Circuit breaker auto-closed after timeout")
 		}
 	}
-	
+
 	return pm.circuitOpen
 }
 
@@ -199,7 +199,7 @@ func (pm *PerformanceMonitor) GetStatistics() *PerformanceStatistics {
 	minLatency := atomic.LoadUint64(&pm.minLatency)
 	activeGoroutines := atomic.LoadInt64(&pm.activeGoroutines)
 	maxGoroutines := atomic.LoadInt64(&pm.maxGoroutines)
-	
+
 	stats := &PerformanceStatistics{
 		RequestCount:     requestCount,
 		ErrorCount:       errorCount,
@@ -208,20 +208,20 @@ func (pm *PerformanceMonitor) GetStatistics() *PerformanceStatistics {
 		MaxGoroutines:    maxGoroutines,
 		CircuitOpen:      pm.isCircuitOpen(),
 	}
-	
+
 	if requestCount > 0 {
 		stats.ErrorRate = float64(errorCount) / float64(requestCount)
 		stats.AverageLatency = time.Duration(totalLatency / requestCount)
 	}
-	
+
 	if maxLatency > 0 {
 		stats.MaxLatency = time.Duration(maxLatency)
 	}
-	
+
 	if minLatency != ^uint64(0) {
 		stats.MinLatency = time.Duration(minLatency)
 	}
-	
+
 	return stats
 }
 
@@ -229,7 +229,7 @@ func (pm *PerformanceMonitor) GetStatistics() *PerformanceStatistics {
 func (pm *PerformanceMonitor) TrackMemoryUsage() {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	
+
 	if pm.metrics != nil {
 		pm.metrics.RecordGauge("memory.alloc", float64(m.Alloc), nil)
 		pm.metrics.RecordGauge("memory.total_alloc", float64(m.TotalAlloc), nil)
@@ -237,7 +237,7 @@ func (pm *PerformanceMonitor) TrackMemoryUsage() {
 		pm.metrics.RecordGauge("memory.num_gc", float64(m.NumGC), nil)
 		pm.metrics.RecordGauge("memory.gc_cpu_fraction", m.GCCPUFraction, nil)
 	}
-	
+
 	// Track allocations
 	atomic.StoreUint64(&pm.allocations, m.Mallocs)
 	atomic.StoreUint64(&pm.deallocations, m.Frees)
@@ -306,12 +306,12 @@ type BatchProcessor[T any] struct {
 	batchSize    int
 	flushTimeout time.Duration
 	processor    func([]T) error
-	
-	buffer   []T
-	mu       sync.Mutex
-	timer    *time.Timer
-	stopCh   chan struct{}
-	doneCh   chan struct{}
+
+	buffer []T
+	mu     sync.Mutex
+	timer  *time.Timer
+	stopCh chan struct{}
+	doneCh chan struct{}
 }
 
 // NewBatchProcessor creates a new batch processor
@@ -324,7 +324,7 @@ func NewBatchProcessor[T any](batchSize int, flushTimeout time.Duration, process
 		stopCh:       make(chan struct{}),
 		doneCh:       make(chan struct{}),
 	}
-	
+
 	go bp.flushLoop()
 	return bp
 }
@@ -333,20 +333,20 @@ func NewBatchProcessor[T any](batchSize int, flushTimeout time.Duration, process
 func (bp *BatchProcessor[T]) Add(item T) error {
 	bp.mu.Lock()
 	defer bp.mu.Unlock()
-	
+
 	bp.buffer = append(bp.buffer, item)
-	
+
 	// Reset timer
 	if bp.timer != nil {
 		bp.timer.Stop()
 	}
 	bp.timer = time.AfterFunc(bp.flushTimeout, bp.flush)
-	
+
 	// Flush if batch is full
 	if len(bp.buffer) >= bp.batchSize {
 		return bp.flushLocked()
 	}
-	
+
 	return nil
 }
 
@@ -362,18 +362,18 @@ func (bp *BatchProcessor[T]) flushLocked() error {
 	if len(bp.buffer) == 0 {
 		return nil
 	}
-	
+
 	// Stop timer
 	if bp.timer != nil {
 		bp.timer.Stop()
 		bp.timer = nil
 	}
-	
+
 	// Process batch
 	batch := make([]T, len(bp.buffer))
 	copy(batch, bp.buffer)
 	bp.buffer = bp.buffer[:0] // Reset buffer
-	
+
 	return bp.processor(batch)
 }
 
@@ -387,10 +387,10 @@ func (bp *BatchProcessor[T]) flush() {
 // flushLoop runs the periodic flush loop
 func (bp *BatchProcessor[T]) flushLoop() {
 	defer close(bp.doneCh)
-	
+
 	ticker := time.NewTicker(bp.flushTimeout)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-bp.stopCh:
@@ -410,11 +410,11 @@ func (bp *BatchProcessor[T]) Stop() {
 
 // RateLimiter provides rate limiting functionality
 type RateLimiter struct {
-	rate     int
-	capacity int
-	tokens   int
+	rate       int
+	capacity   int
+	tokens     int
 	lastRefill time.Time
-	mu       sync.Mutex
+	mu         sync.Mutex
 }
 
 // NewRateLimiter creates a new rate limiter
@@ -431,23 +431,23 @@ func NewRateLimiter(rate, capacity int) *RateLimiter {
 func (rl *RateLimiter) Allow() bool {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	now := time.Now()
 	elapsed := now.Sub(rl.lastRefill)
-	
+
 	// Refill tokens
 	tokensToAdd := int(elapsed.Seconds()) * rl.rate
 	if tokensToAdd > 0 {
 		rl.tokens = min(rl.capacity, rl.tokens+tokensToAdd)
 		rl.lastRefill = now
 	}
-	
+
 	// Check if request is allowed
 	if rl.tokens > 0 {
 		rl.tokens--
 		return true
 	}
-	
+
 	return false
 }
 

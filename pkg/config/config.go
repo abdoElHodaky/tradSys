@@ -3,24 +3,24 @@ package config
 import (
 	"errors"
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"os"
 	"time"
-	"gopkg.in/yaml.v2"
 )
 
 // Config represents the main application configuration
 type Config struct {
-	Server     ServerConfig     `json:"server" yaml:"server"`
-	Database   DatabaseConfig   `json:"database" yaml:"database"`
-	Redis      RedisConfig      `json:"redis" yaml:"redis"`
-	Matching   MatchingConfig   `json:"matching" yaml:"matching"`
-	Risk       RiskConfig       `json:"risk" yaml:"risk"`
-	Auth       AuthConfig       `json:"auth" yaml:"auth"`
-	Logging    LoggingConfig    `json:"logging" yaml:"logging"`
-	Metrics    MetricsConfig    `json:"metrics" yaml:"metrics"`
-	WebSocket  WebSocketConfig  `json:"websocket" yaml:"websocket"`
-	GRPC       GRPCConfig       `json:"grpc" yaml:"grpc"`
-	Exchange   ExchangeConfig   `json:"exchange" yaml:"exchange"`
+	Server    ServerConfig    `json:"server" yaml:"server"`
+	Database  DatabaseConfig  `json:"database" yaml:"database"`
+	Redis     RedisConfig     `json:"redis" yaml:"redis"`
+	Matching  MatchingConfig  `json:"matching" yaml:"matching"`
+	Risk      RiskConfig      `json:"risk" yaml:"risk"`
+	Auth      AuthConfig      `json:"auth" yaml:"auth"`
+	Logging   LoggingConfig   `json:"logging" yaml:"logging"`
+	Metrics   MetricsConfig   `json:"metrics" yaml:"metrics"`
+	WebSocket WebSocketConfig `json:"websocket" yaml:"websocket"`
+	GRPC      GRPCConfig      `json:"grpc" yaml:"grpc"`
+	Exchange  ExchangeConfig  `json:"exchange" yaml:"exchange"`
 }
 
 // ServerConfig contains HTTP server configuration
@@ -91,134 +91,134 @@ type MatchingConfig struct {
 
 // RiskConfig contains risk management configuration
 type RiskConfig struct {
-	EnableRiskCheck     bool    `json:"enable_risk_check" yaml:"enable_risk_check"`
-	MaxPositionSize     float64 `json:"max_position_size" yaml:"max_position_size"`
-	MaxDailyVolume      float64 `json:"max_daily_volume" yaml:"max_daily_volume"`
-	MaxLeverage         float64 `json:"max_leverage" yaml:"max_leverage"`
-	MarginRequirement   float64 `json:"margin_requirement" yaml:"margin_requirement"`
-	StopLossThreshold   float64 `json:"stop_loss_threshold" yaml:"stop_loss_threshold"`
-	MaxDrawdown         float64 `json:"max_drawdown" yaml:"max_drawdown"`
+	EnableRiskCheck     bool          `json:"enable_risk_check" yaml:"enable_risk_check"`
+	MaxPositionSize     float64       `json:"max_position_size" yaml:"max_position_size"`
+	MaxDailyVolume      float64       `json:"max_daily_volume" yaml:"max_daily_volume"`
+	MaxLeverage         float64       `json:"max_leverage" yaml:"max_leverage"`
+	MarginRequirement   float64       `json:"margin_requirement" yaml:"margin_requirement"`
+	StopLossThreshold   float64       `json:"stop_loss_threshold" yaml:"stop_loss_threshold"`
+	MaxDrawdown         float64       `json:"max_drawdown" yaml:"max_drawdown"`
 	RiskCheckTimeout    time.Duration `json:"risk_check_timeout" yaml:"risk_check_timeout"`
-	EnablePositionLimit bool    `json:"enable_position_limit" yaml:"enable_position_limit"`
-	EnableVolumeLimit   bool    `json:"enable_volume_limit" yaml:"enable_volume_limit"`
+	EnablePositionLimit bool          `json:"enable_position_limit" yaml:"enable_position_limit"`
+	EnableVolumeLimit   bool          `json:"enable_volume_limit" yaml:"enable_volume_limit"`
 }
 
 // AuthConfig contains authentication configuration
 type AuthConfig struct {
-	JWTSecret           string        `json:"jwt_secret" yaml:"jwt_secret"`
-	JWTExpiration       time.Duration `json:"jwt_expiration" yaml:"jwt_expiration"`
-	RefreshExpiration   time.Duration `json:"refresh_expiration" yaml:"refresh_expiration"`
-	EnableRefreshToken  bool          `json:"enable_refresh_token" yaml:"enable_refresh_token"`
-	PasswordMinLength   int           `json:"password_min_length" yaml:"password_min_length"`
-	EnableTwoFactor     bool          `json:"enable_two_factor" yaml:"enable_two_factor"`
-	SessionTimeout      time.Duration `json:"session_timeout" yaml:"session_timeout"`
-	MaxLoginAttempts    int           `json:"max_login_attempts" yaml:"max_login_attempts"`
-	LockoutDuration     time.Duration `json:"lockout_duration" yaml:"lockout_duration"`
-	EnableAPIKeys       bool          `json:"enable_api_keys" yaml:"enable_api_keys"`
-	APIKeyExpiration    time.Duration `json:"api_key_expiration" yaml:"api_key_expiration"`
+	JWTSecret          string        `json:"jwt_secret" yaml:"jwt_secret"`
+	JWTExpiration      time.Duration `json:"jwt_expiration" yaml:"jwt_expiration"`
+	RefreshExpiration  time.Duration `json:"refresh_expiration" yaml:"refresh_expiration"`
+	EnableRefreshToken bool          `json:"enable_refresh_token" yaml:"enable_refresh_token"`
+	PasswordMinLength  int           `json:"password_min_length" yaml:"password_min_length"`
+	EnableTwoFactor    bool          `json:"enable_two_factor" yaml:"enable_two_factor"`
+	SessionTimeout     time.Duration `json:"session_timeout" yaml:"session_timeout"`
+	MaxLoginAttempts   int           `json:"max_login_attempts" yaml:"max_login_attempts"`
+	LockoutDuration    time.Duration `json:"lockout_duration" yaml:"lockout_duration"`
+	EnableAPIKeys      bool          `json:"enable_api_keys" yaml:"enable_api_keys"`
+	APIKeyExpiration   time.Duration `json:"api_key_expiration" yaml:"api_key_expiration"`
 }
 
 // LoggingConfig contains logging configuration
 type LoggingConfig struct {
-	Level       string `json:"level" yaml:"level"`
-	Format      string `json:"format" yaml:"format"`
-	Output      string `json:"output" yaml:"output"`
-	Filename    string `json:"filename" yaml:"filename"`
-	MaxSize     int    `json:"max_size" yaml:"max_size"`
-	MaxBackups  int    `json:"max_backups" yaml:"max_backups"`
-	MaxAge      int    `json:"max_age" yaml:"max_age"`
-	Compress    bool   `json:"compress" yaml:"compress"`
-	EnableColor bool   `json:"enable_color" yaml:"enable_color"`
-	EnableCaller bool  `json:"enable_caller" yaml:"enable_caller"`
-	EnableStacktrace bool `json:"enable_stacktrace" yaml:"enable_stacktrace"`
+	Level            string `json:"level" yaml:"level"`
+	Format           string `json:"format" yaml:"format"`
+	Output           string `json:"output" yaml:"output"`
+	Filename         string `json:"filename" yaml:"filename"`
+	MaxSize          int    `json:"max_size" yaml:"max_size"`
+	MaxBackups       int    `json:"max_backups" yaml:"max_backups"`
+	MaxAge           int    `json:"max_age" yaml:"max_age"`
+	Compress         bool   `json:"compress" yaml:"compress"`
+	EnableColor      bool   `json:"enable_color" yaml:"enable_color"`
+	EnableCaller     bool   `json:"enable_caller" yaml:"enable_caller"`
+	EnableStacktrace bool   `json:"enable_stacktrace" yaml:"enable_stacktrace"`
 }
 
 // MetricsConfig contains metrics configuration
 type MetricsConfig struct {
-	Enabled         bool          `json:"enabled" yaml:"enabled"`
-	Provider        string        `json:"provider" yaml:"provider"`
-	Address         string        `json:"address" yaml:"address"`
-	Port            int           `json:"port" yaml:"port"`
-	Path            string        `json:"path" yaml:"path"`
-	Interval        time.Duration `json:"interval" yaml:"interval"`
-	EnableRuntime   bool          `json:"enable_runtime" yaml:"enable_runtime"`
-	EnableGC        bool          `json:"enable_gc" yaml:"enable_gc"`
-	EnableMemory    bool          `json:"enable_memory" yaml:"enable_memory"`
-	EnableCPU       bool          `json:"enable_cpu" yaml:"enable_cpu"`
-	Tags            map[string]string `json:"tags" yaml:"tags"`
+	Enabled       bool              `json:"enabled" yaml:"enabled"`
+	Provider      string            `json:"provider" yaml:"provider"`
+	Address       string            `json:"address" yaml:"address"`
+	Port          int               `json:"port" yaml:"port"`
+	Path          string            `json:"path" yaml:"path"`
+	Interval      time.Duration     `json:"interval" yaml:"interval"`
+	EnableRuntime bool              `json:"enable_runtime" yaml:"enable_runtime"`
+	EnableGC      bool              `json:"enable_gc" yaml:"enable_gc"`
+	EnableMemory  bool              `json:"enable_memory" yaml:"enable_memory"`
+	EnableCPU     bool              `json:"enable_cpu" yaml:"enable_cpu"`
+	Tags          map[string]string `json:"tags" yaml:"tags"`
 }
 
 // WebSocketConfig contains WebSocket configuration
 type WebSocketConfig struct {
-	Enabled         bool          `json:"enabled" yaml:"enabled"`
-	Host            string        `json:"host" yaml:"host"`
-	Port            int           `json:"port" yaml:"port"`
-	Path            string        `json:"path" yaml:"path"`
-	ReadBufferSize  int           `json:"read_buffer_size" yaml:"read_buffer_size"`
-	WriteBufferSize int           `json:"write_buffer_size" yaml:"write_buffer_size"`
-	HandshakeTimeout time.Duration `json:"handshake_timeout" yaml:"handshake_timeout"`
-	ReadTimeout     time.Duration `json:"read_timeout" yaml:"read_timeout"`
-	WriteTimeout    time.Duration `json:"write_timeout" yaml:"write_timeout"`
-	PingPeriod      time.Duration `json:"ping_period" yaml:"ping_period"`
-	PongWait        time.Duration `json:"pong_wait" yaml:"pong_wait"`
-	MaxMessageSize  int64         `json:"max_message_size" yaml:"max_message_size"`
-	EnableCompression bool        `json:"enable_compression" yaml:"enable_compression"`
-	MaxConnections  int           `json:"max_connections" yaml:"max_connections"`
+	Enabled           bool          `json:"enabled" yaml:"enabled"`
+	Host              string        `json:"host" yaml:"host"`
+	Port              int           `json:"port" yaml:"port"`
+	Path              string        `json:"path" yaml:"path"`
+	ReadBufferSize    int           `json:"read_buffer_size" yaml:"read_buffer_size"`
+	WriteBufferSize   int           `json:"write_buffer_size" yaml:"write_buffer_size"`
+	HandshakeTimeout  time.Duration `json:"handshake_timeout" yaml:"handshake_timeout"`
+	ReadTimeout       time.Duration `json:"read_timeout" yaml:"read_timeout"`
+	WriteTimeout      time.Duration `json:"write_timeout" yaml:"write_timeout"`
+	PingPeriod        time.Duration `json:"ping_period" yaml:"ping_period"`
+	PongWait          time.Duration `json:"pong_wait" yaml:"pong_wait"`
+	MaxMessageSize    int64         `json:"max_message_size" yaml:"max_message_size"`
+	EnableCompression bool          `json:"enable_compression" yaml:"enable_compression"`
+	MaxConnections    int           `json:"max_connections" yaml:"max_connections"`
 }
 
 // GRPCConfig contains gRPC configuration
 type GRPCConfig struct {
-	Enabled         bool          `json:"enabled" yaml:"enabled"`
-	Host            string        `json:"host" yaml:"host"`
-	Port            int           `json:"port" yaml:"port"`
-	EnableTLS       bool          `json:"enable_tls" yaml:"enable_tls"`
-	TLSCertFile     string        `json:"tls_cert_file" yaml:"tls_cert_file"`
-	TLSKeyFile      string        `json:"tls_key_file" yaml:"tls_key_file"`
-	MaxRecvMsgSize  int           `json:"max_recv_msg_size" yaml:"max_recv_msg_size"`
-	MaxSendMsgSize  int           `json:"max_send_msg_size" yaml:"max_send_msg_size"`
+	Enabled           bool          `json:"enabled" yaml:"enabled"`
+	Host              string        `json:"host" yaml:"host"`
+	Port              int           `json:"port" yaml:"port"`
+	EnableTLS         bool          `json:"enable_tls" yaml:"enable_tls"`
+	TLSCertFile       string        `json:"tls_cert_file" yaml:"tls_cert_file"`
+	TLSKeyFile        string        `json:"tls_key_file" yaml:"tls_key_file"`
+	MaxRecvMsgSize    int           `json:"max_recv_msg_size" yaml:"max_recv_msg_size"`
+	MaxSendMsgSize    int           `json:"max_send_msg_size" yaml:"max_send_msg_size"`
 	ConnectionTimeout time.Duration `json:"connection_timeout" yaml:"connection_timeout"`
-	KeepAliveTime   time.Duration `json:"keep_alive_time" yaml:"keep_alive_time"`
-	KeepAliveTimeout time.Duration `json:"keep_alive_timeout" yaml:"keep_alive_timeout"`
-	EnableReflection bool         `json:"enable_reflection" yaml:"enable_reflection"`
-	EnableHealthCheck bool        `json:"enable_health_check" yaml:"enable_health_check"`
+	KeepAliveTime     time.Duration `json:"keep_alive_time" yaml:"keep_alive_time"`
+	KeepAliveTimeout  time.Duration `json:"keep_alive_timeout" yaml:"keep_alive_timeout"`
+	EnableReflection  bool          `json:"enable_reflection" yaml:"enable_reflection"`
+	EnableHealthCheck bool          `json:"enable_health_check" yaml:"enable_health_check"`
 }
 
 // ExchangeConfig contains exchange-specific configuration
 type ExchangeConfig struct {
-	Name            string            `json:"name" yaml:"name"`
-	Symbols         []SymbolConfig    `json:"symbols" yaml:"symbols"`
-	TradingHours    TradingHoursConfig `json:"trading_hours" yaml:"trading_hours"`
-	Fees            FeesConfig        `json:"fees" yaml:"fees"`
-	Limits          LimitsConfig      `json:"limits" yaml:"limits"`
-	EnableHalts     bool              `json:"enable_halts" yaml:"enable_halts"`
-	EnableCircuitBreaker bool         `json:"enable_circuit_breaker" yaml:"enable_circuit_breaker"`
-	CircuitBreakerThreshold float64   `json:"circuit_breaker_threshold" yaml:"circuit_breaker_threshold"`
+	Name                    string             `json:"name" yaml:"name"`
+	Symbols                 []SymbolConfig     `json:"symbols" yaml:"symbols"`
+	TradingHours            TradingHoursConfig `json:"trading_hours" yaml:"trading_hours"`
+	Fees                    FeesConfig         `json:"fees" yaml:"fees"`
+	Limits                  LimitsConfig       `json:"limits" yaml:"limits"`
+	EnableHalts             bool               `json:"enable_halts" yaml:"enable_halts"`
+	EnableCircuitBreaker    bool               `json:"enable_circuit_breaker" yaml:"enable_circuit_breaker"`
+	CircuitBreakerThreshold float64            `json:"circuit_breaker_threshold" yaml:"circuit_breaker_threshold"`
 }
 
 // SymbolConfig contains symbol-specific configuration
 type SymbolConfig struct {
-	Symbol          string  `json:"symbol" yaml:"symbol"`
-	BaseAsset       string  `json:"base_asset" yaml:"base_asset"`
-	QuoteAsset      string  `json:"quote_asset" yaml:"quote_asset"`
-	MinPrice        float64 `json:"min_price" yaml:"min_price"`
-	MaxPrice        float64 `json:"max_price" yaml:"max_price"`
-	TickSize        float64 `json:"tick_size" yaml:"tick_size"`
-	MinQuantity     float64 `json:"min_quantity" yaml:"min_quantity"`
-	MaxQuantity     float64 `json:"max_quantity" yaml:"max_quantity"`
-	StepSize        float64 `json:"step_size" yaml:"step_size"`
-	MinNotional     float64 `json:"min_notional" yaml:"min_notional"`
-	Enabled         bool    `json:"enabled" yaml:"enabled"`
+	Symbol      string  `json:"symbol" yaml:"symbol"`
+	BaseAsset   string  `json:"base_asset" yaml:"base_asset"`
+	QuoteAsset  string  `json:"quote_asset" yaml:"quote_asset"`
+	MinPrice    float64 `json:"min_price" yaml:"min_price"`
+	MaxPrice    float64 `json:"max_price" yaml:"max_price"`
+	TickSize    float64 `json:"tick_size" yaml:"tick_size"`
+	MinQuantity float64 `json:"min_quantity" yaml:"min_quantity"`
+	MaxQuantity float64 `json:"max_quantity" yaml:"max_quantity"`
+	StepSize    float64 `json:"step_size" yaml:"step_size"`
+	MinNotional float64 `json:"min_notional" yaml:"min_notional"`
+	Enabled     bool    `json:"enabled" yaml:"enabled"`
 }
 
 // TradingHoursConfig contains trading hours configuration
 type TradingHoursConfig struct {
-	Timezone    string    `json:"timezone" yaml:"timezone"`
-	MarketOpen  string    `json:"market_open" yaml:"market_open"`
-	MarketClose string    `json:"market_close" yaml:"market_close"`
-	Weekends    []string  `json:"weekends" yaml:"weekends"`
-	Holidays    []string  `json:"holidays" yaml:"holidays"`
-	PreMarket   bool      `json:"pre_market" yaml:"pre_market"`
-	PostMarket  bool      `json:"post_market" yaml:"post_market"`
+	Timezone    string   `json:"timezone" yaml:"timezone"`
+	MarketOpen  string   `json:"market_open" yaml:"market_open"`
+	MarketClose string   `json:"market_close" yaml:"market_close"`
+	Weekends    []string `json:"weekends" yaml:"weekends"`
+	Holidays    []string `json:"holidays" yaml:"holidays"`
+	PreMarket   bool     `json:"pre_market" yaml:"pre_market"`
+	PostMarket  bool     `json:"post_market" yaml:"post_market"`
 }
 
 // FeesConfig contains fee configuration
@@ -231,12 +231,12 @@ type FeesConfig struct {
 
 // LimitsConfig contains various limits configuration
 type LimitsConfig struct {
-	MaxOrderSize     float64 `json:"max_order_size" yaml:"max_order_size"`
-	MinOrderSize     float64 `json:"min_order_size" yaml:"min_order_size"`
-	MaxDailyVolume   float64 `json:"max_daily_volume" yaml:"max_daily_volume"`
-	MaxOpenOrders    int     `json:"max_open_orders" yaml:"max_open_orders"`
-	MaxOrdersPerSec  int     `json:"max_orders_per_sec" yaml:"max_orders_per_sec"`
-	MaxCancelPerSec  int     `json:"max_cancel_per_sec" yaml:"max_cancel_per_sec"`
+	MaxOrderSize    float64 `json:"max_order_size" yaml:"max_order_size"`
+	MinOrderSize    float64 `json:"min_order_size" yaml:"min_order_size"`
+	MaxDailyVolume  float64 `json:"max_daily_volume" yaml:"max_daily_volume"`
+	MaxOpenOrders   int     `json:"max_open_orders" yaml:"max_open_orders"`
+	MaxOrdersPerSec int     `json:"max_orders_per_sec" yaml:"max_orders_per_sec"`
+	MaxCancelPerSec int     `json:"max_cancel_per_sec" yaml:"max_cancel_per_sec"`
 }
 
 // Environment represents the application environment
@@ -275,19 +275,19 @@ func (c *Config) Validate() error {
 	if c.Server.Port <= 0 || c.Server.Port > 65535 {
 		return ErrInvalidPort
 	}
-	
+
 	if c.Database.Driver == "" {
 		return ErrMissingDatabaseDriver
 	}
-	
+
 	if c.Auth.JWTSecret == "" {
 		return ErrMissingJWTSecret
 	}
-	
+
 	if c.Matching.MaxOrdersPerSymbol <= 0 {
 		return ErrInvalidMatchingConfig
 	}
-	
+
 	return nil
 }
 
@@ -339,16 +339,16 @@ var (
 func DefaultConfig() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Host:           "0.0.0.0",
-			Port:           8080,
-			ReadTimeout:    30 * time.Second,
-			WriteTimeout:   30 * time.Second,
-			IdleTimeout:    120 * time.Second,
-			MaxHeaderBytes: 1 << 20, // 1MB
-			EnableCORS:     true,
-			CORSOrigins:    []string{"*"},
-			RateLimitRPS:   1000,
-			RateLimitBurst: 2000,
+			Host:            "0.0.0.0",
+			Port:            8080,
+			ReadTimeout:     30 * time.Second,
+			WriteTimeout:    30 * time.Second,
+			IdleTimeout:     120 * time.Second,
+			MaxHeaderBytes:  1 << 20, // 1MB
+			EnableCORS:      true,
+			CORSOrigins:     []string{"*"},
+			RateLimitRPS:    1000,
+			RateLimitBurst:  2000,
 			ShutdownTimeout: 30 * time.Second,
 		},
 		Database: DatabaseConfig{
@@ -403,15 +403,15 @@ func DefaultConfig() *Config {
 			EnableVolumeLimit:   true,
 		},
 		Auth: AuthConfig{
-			JWTExpiration:     24 * time.Hour,
-			RefreshExpiration: 7 * 24 * time.Hour,
+			JWTExpiration:      24 * time.Hour,
+			RefreshExpiration:  7 * 24 * time.Hour,
 			EnableRefreshToken: true,
-			PasswordMinLength: 8,
-			SessionTimeout:    30 * time.Minute,
-			MaxLoginAttempts:  5,
-			LockoutDuration:   15 * time.Minute,
-			EnableAPIKeys:     true,
-			APIKeyExpiration:  30 * 24 * time.Hour,
+			PasswordMinLength:  8,
+			SessionTimeout:     30 * time.Minute,
+			MaxLoginAttempts:   5,
+			LockoutDuration:    15 * time.Minute,
+			EnableAPIKeys:      true,
+			APIKeyExpiration:   30 * 24 * time.Hour,
 		},
 		Logging: LoggingConfig{
 			Level:            "info",

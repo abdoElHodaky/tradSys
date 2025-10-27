@@ -48,37 +48,37 @@ type RiskCalculator struct {
 
 // UserRiskProfile represents a user's risk profile
 type UserRiskProfile struct {
-	UserID           string    `json:"user_id"`
-	RiskTolerance    string    `json:"risk_tolerance"` // LOW, MEDIUM, HIGH
-	MaxPositionSize  float64   `json:"max_position_size"`
-	MaxDailyVolume   float64   `json:"max_daily_volume"`
-	ConcentrationLimit float64 `json:"concentration_limit"`
-	IsActive         bool      `json:"is_active"`
-	LastUpdated      time.Time `json:"last_updated"`
+	UserID             string    `json:"user_id"`
+	RiskTolerance      string    `json:"risk_tolerance"` // LOW, MEDIUM, HIGH
+	MaxPositionSize    float64   `json:"max_position_size"`
+	MaxDailyVolume     float64   `json:"max_daily_volume"`
+	ConcentrationLimit float64   `json:"concentration_limit"`
+	IsActive           bool      `json:"is_active"`
+	LastUpdated        time.Time `json:"last_updated"`
 }
 
 // Position represents a trading position
 type Position struct {
-	UserID       string          `json:"user_id"`
-	Symbol       string          `json:"symbol"`
-	AssetType    types.AssetType `json:"asset_type"`
+	UserID       string             `json:"user_id"`
+	Symbol       string             `json:"symbol"`
+	AssetType    types.AssetType    `json:"asset_type"`
 	Exchange     types.ExchangeType `json:"exchange"`
-	Quantity     float64         `json:"quantity"`
-	AveragePrice float64         `json:"average_price"`
-	MarketValue  float64         `json:"market_value"`
-	UnrealizedPL float64         `json:"unrealized_pl"`
-	LastUpdated  time.Time       `json:"last_updated"`
+	Quantity     float64            `json:"quantity"`
+	AveragePrice float64            `json:"average_price"`
+	MarketValue  float64            `json:"market_value"`
+	UnrealizedPL float64            `json:"unrealized_pl"`
+	LastUpdated  time.Time          `json:"last_updated"`
 }
 
 // RiskCheckResult represents the result of a risk check
 type RiskCheckResult struct {
-	Approved      bool                   `json:"approved"`
-	Reason        string                 `json:"reason"`
-	RiskScore     float64                `json:"risk_score"`
-	Violations    []RiskViolation        `json:"violations"`
-	Recommendations []string             `json:"recommendations"`
-	CheckedAt     time.Time              `json:"checked_at"`
-	Metadata      map[string]interface{} `json:"metadata"`
+	Approved        bool                   `json:"approved"`
+	Reason          string                 `json:"reason"`
+	RiskScore       float64                `json:"risk_score"`
+	Violations      []RiskViolation        `json:"violations"`
+	Recommendations []string               `json:"recommendations"`
+	CheckedAt       time.Time              `json:"checked_at"`
+	Metadata        map[string]interface{} `json:"metadata"`
 }
 
 // RiskViolation represents a risk rule violation
@@ -92,12 +92,12 @@ type RiskViolation struct {
 
 // RiskCheckRecord represents a risk check record for audit
 type RiskCheckRecord struct {
-	ID       string           `json:"id"`
-	UserID   string           `json:"user_id"`
-	OrderID  string           `json:"order_id"`
-	Result   *RiskCheckResult `json:"result"`
-	Order    *interfaces.Order `json:"order"`
-	CheckedAt time.Time       `json:"checked_at"`
+	ID        string            `json:"id"`
+	UserID    string            `json:"user_id"`
+	OrderID   string            `json:"order_id"`
+	Result    *RiskCheckResult  `json:"result"`
+	Order     *interfaces.Order `json:"order"`
+	CheckedAt time.Time         `json:"checked_at"`
 }
 
 // VolatilityData represents volatility information for an asset
@@ -112,7 +112,7 @@ func NewRiskManager(config *RiskManagerConfig, riskStore RiskStore) *RiskManager
 	if config == nil {
 		config = GetDefaultRiskManagerConfig()
 	}
-	
+
 	return &RiskManager{
 		config:     config,
 		riskStore:  riskStore,
@@ -130,48 +130,48 @@ func (rm *RiskManager) ValidateOrder(ctx context.Context, order *interfaces.Orde
 		CheckedAt:       time.Now(),
 		Metadata:        make(map[string]interface{}),
 	}
-	
+
 	// Get user risk profile
 	profile, err := rm.riskStore.GetUserRisk(ctx, order.UserID)
 	if err != nil {
 		return result, fmt.Errorf("failed to get user risk profile: %w", err)
 	}
-	
+
 	if !profile.IsActive {
 		result.Approved = false
 		result.Reason = "user risk profile is inactive"
 		return result, nil
 	}
-	
+
 	// 1. Order value check
 	orderValue := order.Price * order.Quantity
 	if err := rm.checkOrderValue(orderValue, result); err != nil {
 		return result, err
 	}
-	
+
 	// 2. Position size check
 	if err := rm.checkPositionSize(ctx, order, profile, result); err != nil {
 		return result, err
 	}
-	
+
 	// 3. Daily volume check
 	if err := rm.checkDailyVolume(ctx, order, profile, result); err != nil {
 		return result, err
 	}
-	
+
 	// 4. Concentration check
 	if err := rm.checkConcentration(ctx, order, profile, result); err != nil {
 		return result, err
 	}
-	
+
 	// 5. Volatility check
 	if err := rm.checkVolatility(ctx, order, result); err != nil {
 		return result, err
 	}
-	
+
 	// Calculate overall risk score
 	result.RiskScore = rm.calculateRiskScore(result.Violations)
-	
+
 	// Determine approval based on violations
 	if len(result.Violations) > 0 {
 		for _, violation := range result.Violations {
@@ -182,7 +182,7 @@ func (rm *RiskManager) ValidateOrder(ctx context.Context, order *interfaces.Orde
 			}
 		}
 	}
-	
+
 	// Save risk check record
 	record := &RiskCheckRecord{
 		ID:        generateRiskCheckID(),
@@ -192,12 +192,12 @@ func (rm *RiskManager) ValidateOrder(ctx context.Context, order *interfaces.Orde
 		Order:     order,
 		CheckedAt: time.Now(),
 	}
-	
+
 	if err := rm.riskStore.SaveRiskCheck(ctx, record); err != nil {
 		// Log error but don't fail the check
 		fmt.Printf("Failed to save risk check record: %v\n", err)
 	}
-	
+
 	return result, nil
 }
 
@@ -212,10 +212,10 @@ func (rm *RiskManager) checkOrderValue(orderValue float64, result *RiskCheckResu
 			Limit:       rm.config.MaxOrderValue,
 		}
 		result.Violations = append(result.Violations, violation)
-		result.Recommendations = append(result.Recommendations, 
+		result.Recommendations = append(result.Recommendations,
 			fmt.Sprintf("Reduce order size to stay within $%.2f limit", rm.config.MaxOrderValue))
 	}
-	
+
 	return nil
 }
 
@@ -226,7 +226,7 @@ func (rm *RiskManager) checkPositionSize(ctx context.Context, order *interfaces.
 	if err != nil {
 		return fmt.Errorf("failed to get user positions: %w", err)
 	}
-	
+
 	// Calculate new position size
 	var currentPosition float64
 	for _, pos := range positions {
@@ -235,20 +235,20 @@ func (rm *RiskManager) checkPositionSize(ctx context.Context, order *interfaces.
 			break
 		}
 	}
-	
+
 	var newPosition float64
 	if order.Side == interfaces.OrderSideBuy {
 		newPosition = currentPosition + order.Quantity
 	} else {
 		newPosition = currentPosition - order.Quantity
 	}
-	
+
 	newPositionValue := newPosition * order.Price
 	maxPositionSize := profile.MaxPositionSize
 	if maxPositionSize == 0 {
 		maxPositionSize = rm.config.MaxPositionSize
 	}
-	
+
 	if newPositionValue > maxPositionSize {
 		violation := RiskViolation{
 			Rule:        "MAX_POSITION_SIZE",
@@ -258,10 +258,10 @@ func (rm *RiskManager) checkPositionSize(ctx context.Context, order *interfaces.
 			Limit:       maxPositionSize,
 		}
 		result.Violations = append(result.Violations, violation)
-		result.Recommendations = append(result.Recommendations, 
+		result.Recommendations = append(result.Recommendations,
 			fmt.Sprintf("Reduce position size to stay within $%.2f limit", maxPositionSize))
 	}
-	
+
 	return nil
 }
 
@@ -272,15 +272,15 @@ func (rm *RiskManager) checkDailyVolume(ctx context.Context, order *interfaces.O
 	if err != nil {
 		return fmt.Errorf("failed to get daily volume: %w", err)
 	}
-	
+
 	orderValue := order.Price * order.Quantity
 	newDailyVolume := currentVolume + orderValue
-	
+
 	maxDailyVolume := profile.MaxDailyVolume
 	if maxDailyVolume == 0 {
 		maxDailyVolume = rm.config.MaxDailyVolume
 	}
-	
+
 	if newDailyVolume > maxDailyVolume {
 		violation := RiskViolation{
 			Rule:        "MAX_DAILY_VOLUME",
@@ -290,10 +290,10 @@ func (rm *RiskManager) checkDailyVolume(ctx context.Context, order *interfaces.O
 			Limit:       maxDailyVolume,
 		}
 		result.Violations = append(result.Violations, violation)
-		result.Recommendations = append(result.Recommendations, 
+		result.Recommendations = append(result.Recommendations,
 			fmt.Sprintf("Daily volume limit of $%.2f would be exceeded", maxDailyVolume))
 	}
-	
+
 	return nil
 }
 
@@ -304,32 +304,32 @@ func (rm *RiskManager) checkConcentration(ctx context.Context, order *interfaces
 	if err != nil {
 		return fmt.Errorf("failed to get user positions: %w", err)
 	}
-	
+
 	// Calculate total portfolio value
 	var totalPortfolioValue float64
 	var symbolValue float64
-	
+
 	for _, pos := range positions {
 		totalPortfolioValue += pos.MarketValue
 		if pos.Symbol == order.Symbol {
 			symbolValue = pos.MarketValue
 		}
 	}
-	
+
 	// Add new order value
 	orderValue := order.Price * order.Quantity
 	if order.Side == interfaces.OrderSideBuy {
 		symbolValue += orderValue
 		totalPortfolioValue += orderValue
 	}
-	
+
 	if totalPortfolioValue > 0 {
 		concentration := symbolValue / totalPortfolioValue
 		concentrationLimit := profile.ConcentrationLimit
 		if concentrationLimit == 0 {
 			concentrationLimit = rm.config.ConcentrationLimit
 		}
-		
+
 		if concentration > concentrationLimit {
 			violation := RiskViolation{
 				Rule:        "CONCENTRATION_LIMIT",
@@ -339,11 +339,11 @@ func (rm *RiskManager) checkConcentration(ctx context.Context, order *interfaces
 				Limit:       concentrationLimit * 100,
 			}
 			result.Violations = append(result.Violations, violation)
-			result.Recommendations = append(result.Recommendations, 
+			result.Recommendations = append(result.Recommendations,
 				fmt.Sprintf("Diversify portfolio to stay within %.1f%% concentration limit", concentrationLimit*100))
 		}
 	}
-	
+
 	return nil
 }
 
@@ -355,7 +355,7 @@ func (rm *RiskManager) checkVolatility(ctx context.Context, order *interfaces.Or
 		fmt.Printf("Failed to get volatility for %s: %v\n", order.Symbol, err)
 		return nil
 	}
-	
+
 	if volatility > rm.config.VolatilityThreshold {
 		violation := RiskViolation{
 			Rule:        "VOLATILITY_THRESHOLD",
@@ -365,10 +365,10 @@ func (rm *RiskManager) checkVolatility(ctx context.Context, order *interfaces.Or
 			Limit:       rm.config.VolatilityThreshold * 100,
 		}
 		result.Violations = append(result.Violations, violation)
-		result.Recommendations = append(result.Recommendations, 
+		result.Recommendations = append(result.Recommendations,
 			fmt.Sprintf("Consider reducing position size due to high volatility (%.1f%%)", volatility*100))
 	}
-	
+
 	return nil
 }
 
@@ -377,7 +377,7 @@ func (rm *RiskManager) calculateRiskScore(violations []RiskViolation) float64 {
 	if len(violations) == 0 {
 		return 0.0
 	}
-	
+
 	var score float64
 	for _, violation := range violations {
 		switch violation.Severity {
@@ -391,12 +391,12 @@ func (rm *RiskManager) calculateRiskScore(violations []RiskViolation) float64 {
 			score += 10.0
 		}
 	}
-	
+
 	// Cap at 100
 	if score > 100 {
 		score = 100
 	}
-	
+
 	return score
 }
 
@@ -418,11 +418,11 @@ func (rc *RiskCalculator) GetVolatility(ctx context.Context, symbol string) (flo
 		}
 	}
 	rc.mu.RUnlock()
-	
+
 	// In a real implementation, this would fetch from a market data provider
 	// For now, return a simulated volatility based on asset type
 	volatility := rc.simulateVolatility(symbol)
-	
+
 	// Cache the result
 	rc.mu.Lock()
 	rc.volatilityCache[symbol] = &VolatilityData{
@@ -431,7 +431,7 @@ func (rc *RiskCalculator) GetVolatility(ctx context.Context, symbol string) (flo
 		LastUpdated: time.Now(),
 	}
 	rc.mu.Unlock()
-	
+
 	return volatility, nil
 }
 
@@ -439,7 +439,7 @@ func (rc *RiskCalculator) GetVolatility(ctx context.Context, symbol string) (flo
 func (rc *RiskCalculator) simulateVolatility(symbol string) float64 {
 	// Simplified volatility simulation based on symbol characteristics
 	// In reality, this would come from market data providers
-	
+
 	if len(symbol) > 0 {
 		switch symbol[0] {
 		case 'A', 'B', 'C':
@@ -452,7 +452,7 @@ func (rc *RiskCalculator) simulateVolatility(symbol string) float64 {
 			return 0.20 // 20% default volatility
 		}
 	}
-	
+
 	return 0.20 // Default 20% volatility
 }
 
@@ -488,12 +488,12 @@ func (rm *RiskManager) GetUserRiskProfile(ctx context.Context, userID string) (*
 			IsActive:           true,
 			LastUpdated:        time.Now(),
 		}
-		
+
 		if err := rm.riskStore.UpdateUserRisk(ctx, profile); err != nil {
 			return nil, fmt.Errorf("failed to create default risk profile: %w", err)
 		}
 	}
-	
+
 	return profile, nil
 }
 
@@ -509,29 +509,29 @@ func (rm *RiskManager) GetRiskSummary(ctx context.Context, userID string) (*Risk
 	if err != nil {
 		return nil, err
 	}
-	
+
 	positions, err := rm.riskStore.GetPositions(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	today := time.Now().Truncate(24 * time.Hour)
 	dailyVolume, err := rm.riskStore.GetDailyVolume(ctx, userID, today)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Calculate portfolio metrics
 	var totalValue float64
 	var unrealizedPL float64
 	concentrations := make(map[string]float64)
-	
+
 	for _, pos := range positions {
 		totalValue += pos.MarketValue
 		unrealizedPL += pos.UnrealizedPL
 		concentrations[pos.Symbol] = pos.MarketValue
 	}
-	
+
 	// Find highest concentration
 	var maxConcentration float64
 	var maxConcentrationSymbol string
@@ -544,26 +544,26 @@ func (rm *RiskManager) GetRiskSummary(ctx context.Context, userID string) (*Risk
 			}
 		}
 	}
-	
+
 	return &RiskSummary{
-		UserID:                   userID,
-		RiskTolerance:           profile.RiskTolerance,
-		TotalPortfolioValue:     totalValue,
-		UnrealizedPL:            unrealizedPL,
-		DailyVolume:             dailyVolume,
-		DailyVolumeLimit:        profile.MaxDailyVolume,
-		MaxConcentration:        maxConcentration,
-		MaxConcentrationSymbol:  maxConcentrationSymbol,
-		ConcentrationLimit:      profile.ConcentrationLimit,
-		PositionCount:           len(positions),
-		IsActive:                profile.IsActive,
-		LastUpdated:             time.Now(),
+		UserID:                 userID,
+		RiskTolerance:          profile.RiskTolerance,
+		TotalPortfolioValue:    totalValue,
+		UnrealizedPL:           unrealizedPL,
+		DailyVolume:            dailyVolume,
+		DailyVolumeLimit:       profile.MaxDailyVolume,
+		MaxConcentration:       maxConcentration,
+		MaxConcentrationSymbol: maxConcentrationSymbol,
+		ConcentrationLimit:     profile.ConcentrationLimit,
+		PositionCount:          len(positions),
+		IsActive:               profile.IsActive,
+		LastUpdated:            time.Now(),
 	}, nil
 }
 
 // RiskSummary represents a user's risk summary
 type RiskSummary struct {
-	UserID                  string    `json:"user_id"`
+	UserID                 string    `json:"user_id"`
 	RiskTolerance          string    `json:"risk_tolerance"`
 	TotalPortfolioValue    float64   `json:"total_portfolio_value"`
 	UnrealizedPL           float64   `json:"unrealized_pl"`

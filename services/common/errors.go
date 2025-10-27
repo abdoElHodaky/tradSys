@@ -264,11 +264,11 @@ func (eh *ErrorHandler) HandleError(service string, err error) *ServiceError {
 		if serviceErr.Service == "" {
 			serviceErr.Service = service
 		}
-		
+
 		eh.logError(serviceErr)
 		return serviceErr
 	}
-	
+
 	// Convert unknown errors to internal errors
 	internalErr := NewServiceError(service, "INTERNAL_ERROR", err.Error()).WithCause(err)
 	eh.logError(internalErr)
@@ -283,15 +283,15 @@ func (eh *ErrorHandler) logError(err *ServiceError) {
 		"message", err.Message,
 		"timestamp", err.Timestamp,
 	}
-	
+
 	if len(err.Details) > 0 {
 		fields = append(fields, "details", err.Details)
 	}
-	
+
 	if err.Cause != nil {
 		fields = append(fields, "cause", err.Cause.Error())
 	}
-	
+
 	// Log based on error severity
 	switch err.Code {
 	case "INTERNAL_ERROR", "SERVICE_UNAVAILABLE", "DATABASE_UNAVAILABLE":
@@ -382,13 +382,13 @@ func ValidateRequired(service, field string, value interface{}) error {
 		return NewServiceError(service, "MISSING_REQUIRED", fmt.Sprintf("Required field '%s' is missing", field)).
 			WithDetail("field", field)
 	}
-	
+
 	// Check for empty strings
 	if str, ok := value.(string); ok && str == "" {
 		return NewServiceError(service, "MISSING_REQUIRED", fmt.Sprintf("Required field '%s' is empty", field)).
 			WithDetail("field", field)
 	}
-	
+
 	return nil
 }
 
