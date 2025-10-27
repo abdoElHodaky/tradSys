@@ -34,6 +34,16 @@ type ConnectionPoolStats struct {
 	mu                   sync.RWMutex
 }
 
+// ConnectionPoolStatsSnapshot is a snapshot of connection pool stats without mutex
+type ConnectionPoolStatsSnapshot struct {
+	TotalConnections     int
+	ConnectionsByChannel map[string]int
+	ConnectionsBySymbol  map[string]int
+	MessagesSent         int64
+	MessagesReceived     int64
+	LastStatsReset       time.Time
+}
+
 // NewConnectionPool creates a new connection pool
 func NewConnectionPool(logger *zap.Logger) *ConnectionPool {
 	return &ConnectionPool{
@@ -299,12 +309,12 @@ func (p *ConnectionPool) GetAllConnections() []*Connection {
 }
 
 // GetStats gets the connection pool statistics
-func (p *ConnectionPool) GetStats() ConnectionPoolStats {
+func (p *ConnectionPool) GetStats() ConnectionPoolStatsSnapshot {
 	p.stats.mu.RLock()
 	defer p.stats.mu.RUnlock()
 
-	// Create a copy to avoid race conditions
-	statsCopy := ConnectionPoolStats{
+	// Create a snapshot without the mutex to avoid lock copying issue
+	snapshot := ConnectionPoolStatsSnapshot{
 		TotalConnections:     p.stats.TotalConnections,
 		ConnectionsByChannel: make(map[string]int),
 		ConnectionsBySymbol:  make(map[string]int),
@@ -314,14 +324,14 @@ func (p *ConnectionPool) GetStats() ConnectionPoolStats {
 	}
 
 	for channel, count := range p.stats.ConnectionsByChannel {
-		statsCopy.ConnectionsByChannel[channel] = count
+		snapshot.ConnectionsByChannel[channel] = count
 	}
 
 	for symbol, count := range p.stats.ConnectionsBySymbol {
-		statsCopy.ConnectionsBySymbol[symbol] = count
+		snapshot.ConnectionsBySymbol[symbol] = count
 	}
 
-	return statsCopy
+	return snapshot
 }
 
 // ResetStats resets the connection pool statistics

@@ -273,7 +273,7 @@ func (s *EnhancedServer) BroadcastText(message *Message) error {
 }
 
 // GetStats gets the connection pool statistics
-func (s *EnhancedServer) GetStats() ConnectionPoolStats {
+func (s *EnhancedServer) GetStats() ConnectionPoolStatsSnapshot {
 	return s.pool.GetStats()
 }
 

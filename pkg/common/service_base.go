@@ -22,7 +22,7 @@ type ServiceInterface interface {
 	// Stop stops the service gracefully
 	Stop(ctx context.Context) error
 	// Health returns the health status of the service
-	Health() HealthStatus
+	Health() ServiceHealthStatus
 	// Name returns the service name
 	Name() string
 	// Version returns the service version
@@ -196,10 +196,10 @@ func (bs *BaseService) Stop(ctx context.Context) error {
 }
 
 // Health returns the current health status
-func (bs *BaseService) Health() HealthStatus {
+func (bs *BaseService) Health() ServiceHealthStatus {
 	bs.healthMu.RLock()
 	defer bs.healthMu.RUnlock()
-	return HealthStatus(bs.health.Status)
+	return bs.health
 }
 
 // Name returns the service name

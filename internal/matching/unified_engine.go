@@ -401,7 +401,8 @@ func (e *UnifiedMatchingEngine) TradeChannel() <-chan *types.Trade {
 
 // GetMarketData returns market data for a symbol (for compatibility)
 func (e *UnifiedMatchingEngine) GetMarketData(symbol string) (*types.MarketData, error) {
-	orderBook, err := e.GetOrderBook(symbol)
+	ctx := context.Background()
+	orderBook, err := e.GetOrderBook(ctx, symbol)
 	if err != nil {
 		return nil, err
 	}

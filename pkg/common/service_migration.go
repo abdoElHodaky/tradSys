@@ -64,9 +64,16 @@ type MigratedService struct {
 }
 
 // Health returns custom health status if provided, otherwise base health
-func (ms *MigratedService) Health() HealthStatus {
+func (ms *MigratedService) Health() ServiceHealthStatus {
 	if ms.healthFunc != nil {
-		return ms.healthFunc()
+		// Convert HealthStatus to ServiceHealthStatus if needed
+		status := ms.healthFunc()
+		return ServiceHealthStatus{
+			Status:    string(status),
+			Message:   "Custom health check",
+			Timestamp: time.Now(),
+			Details:   make(map[string]string),
+		}
 	}
 	return ms.BaseService.Health()
 }

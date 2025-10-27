@@ -1,13 +1,11 @@
 package websocket
 
 import (
-	"context"
 	"encoding/json"
 	"sync"
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
-	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
@@ -15,9 +13,10 @@ import (
 // PairsWebSocketHandler handles WebSocket connections for pairs trading
 type PairsWebSocketHandler struct {
 	logger       *zap.Logger
-	pairRepo     *repositories.PairRepository
-	statsRepo    *repositories.PairStatisticsRepository
-	positionRepo *repositories.PairPositionRepository
+	// TODO: Implement these repositories when they are available
+	// pairRepo     *repositories.PairRepository
+	// statsRepo    *repositories.PairStatisticsRepository
+	// positionRepo *repositories.PairPositionRepository
 	clients      map[*websocket.Conn]map[string]bool // Map of clients to subscribed pair IDs
 	clientsMu    sync.RWMutex
 }
@@ -25,15 +24,17 @@ type PairsWebSocketHandler struct {
 // NewPairsWebSocketHandler creates a new pairs WebSocket handler
 func NewPairsWebSocketHandler(
 	logger *zap.Logger,
-	pairRepo *repositories.PairRepository,
-	statsRepo *repositories.PairStatisticsRepository,
-	positionRepo *repositories.PairPositionRepository,
+	// TODO: Add repository parameters when they are implemented
+	// pairRepo *repositories.PairRepository,
+	// statsRepo *repositories.PairStatisticsRepository,
+	// positionRepo *repositories.PairPositionRepository,
 ) *PairsWebSocketHandler {
 	return &PairsWebSocketHandler{
 		logger:       logger,
-		pairRepo:     pairRepo,
-		statsRepo:    statsRepo,
-		positionRepo: positionRepo,
+		// TODO: Initialize repositories when they are available
+		// pairRepo:     pairRepo,
+		// statsRepo:    statsRepo,
+		// positionRepo: positionRepo,
 		clients:      make(map[*websocket.Conn]map[string]bool),
 	}
 }
@@ -127,19 +128,20 @@ func (h *PairsWebSocketHandler) writePump(conn *websocket.Conn) {
 
 			// Get updates for each pair
 			for _, pairID := range pairIDs {
+				// TODO: Implement when repositories are available
 				// Get latest statistics
-				stats, err := h.statsRepo.GetLatestStatistics(context.Background(), pairID)
-				if err != nil {
-					continue
-				}
+				// stats, err := h.statsRepo.GetLatestStatistics(context.Background(), pairID)
+				// if err != nil {
+				//     continue
+				// }
 
 				// Get open positions
-				positions, err := h.positionRepo.GetOpenPositions(context.Background(), pairID)
-				if err != nil {
-					continue
-				}
+				// positions, err := h.positionRepo.GetOpenPositions(context.Background(), pairID)
+				// if err != nil {
+				//     continue
+				// }
 
-				// Create update message
+				// Create update message with placeholder data
 				update := struct {
 					Type      string                 `json:"type"`
 					PairID    string                 `json:"pair_id"`
@@ -148,8 +150,8 @@ func (h *PairsWebSocketHandler) writePump(conn *websocket.Conn) {
 				}{
 					Type:      "pair_update",
 					PairID:    pairID,
-					Stats:     stats,
-					Positions: positions,
+					Stats:     nil, // TODO: Use stats when repository is available
+					Positions: nil, // TODO: Use positions when repository is available
 				}
 
 				// Send update

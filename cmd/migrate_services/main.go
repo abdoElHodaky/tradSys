@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -109,7 +108,8 @@ func (smt *ServiceMigrationTool) AnalyzeService(filePath string) (*common.Servic
 		return nil, fmt.Errorf("failed to read file %s: %w", filePath, err)
 	}
 
-	return smt.migrator.AnalyzeService(string(content))
+	analysis := smt.migrator.AnalyzeService(string(content))
+	return analysis, nil
 }
 
 // GenerateMigrationReport generates a comprehensive migration report
@@ -137,15 +137,15 @@ func (smt *ServiceMigrationTool) GenerateMigrationReport(services []string) erro
 
 		migrationInfo := &ServiceMigrationInfo{
 			FilePath:        servicePath,
-			ServiceName:     analysis.ServiceName,
-			CurrentPatterns: analysis.Patterns,
-			MigrationNeeded: analysis.NeedsMigration,
+			ServiceName:     analysis.ServiceType,
+			CurrentPatterns: analysis.Methods,
+			MigrationNeeded: !analysis.HasStart || !analysis.HasStop,
 			Priority:        smt.calculatePriority(analysis),
-			Recommendations: analysis.Recommendations,
+			Recommendations: []string{"Migrate to BaseService pattern"},
 			EstimatedEffort: smt.estimateEffort(analysis),
 		}
 
-		if analysis.NeedsMigration {
+		if migrationInfo.MigrationNeeded {
 			report.MigrationNeeded++
 
 			switch migrationInfo.Priority {
@@ -170,24 +170,24 @@ func (smt *ServiceMigrationTool) calculatePriority(analysis *common.ServiceAnaly
 	score := 0
 
 	// High priority factors
-	if analysis.HasStartStop {
+	if analysis.HasStart && analysis.HasStop {
 		score += 3
 	}
-	if analysis.HasHealthCheck {
+	if analysis.HasHealth {
 		score += 2
 	}
-	if analysis.UsesContext {
-		score += 2
+	if analysis.HasName {
+		score += 1
 	}
-	if analysis.HasMetrics {
+	if analysis.HasVersion {
 		score += 1
 	}
 
 	// Complexity factors
-	if analysis.LineCount > 500 {
+	if len(analysis.Methods) > 10 {
 		score += 2
 	}
-	if len(analysis.Dependencies) > 5 {
+	if len(analysis.Fields) > 5 {
 		score += 1
 	}
 
@@ -204,27 +204,24 @@ func (smt *ServiceMigrationTool) estimateEffort(analysis *common.ServiceAnalysis
 	baseEffort := 2 // Base 2 hours for any migration
 
 	// Add effort based on complexity
-	if analysis.LineCount > 200 {
+	if len(analysis.Methods) > 10 {
 		baseEffort += 2
 	}
-	if analysis.LineCount > 500 {
+	if len(analysis.Methods) > 20 {
 		baseEffort += 4
 	}
-	if analysis.LineCount > 1000 {
-		baseEffort += 8
-	}
-
-	// Add effort for dependencies
-	baseEffort += len(analysis.Dependencies) / 2
-
-	// Add effort for missing patterns
-	if !analysis.HasStartStop {
-		baseEffort += 3
-	}
-	if !analysis.HasHealthCheck {
+	if len(analysis.Fields) > 10 {
 		baseEffort += 2
 	}
-	if !analysis.UsesContext {
+
+	// Add effort for missing patterns
+	if !analysis.HasStart {
+		baseEffort += 3
+	}
+	if !analysis.HasStop {
+		baseEffort += 2
+	}
+	if !analysis.HasHealth {
 		baseEffort += 2
 	}
 
@@ -293,7 +290,7 @@ func (smt *ServiceMigrationTool) generateReportContent(report *MigrationReport) 
 			sb.WriteString(fmt.Sprintf("### %s\n", service.ServiceName))
 			sb.WriteString(fmt.Sprintf("- **File**: `%s`\n", service.FilePath))
 			sb.WriteString(fmt.Sprintf("- **Estimated Effort**: %d hours\n", service.EstimatedEffort))
-			sb.WriteString("- **Recommendations**: %s\n\n", strings.Join(service.Recommendations, ", "))
+			sb.WriteString(fmt.Sprintf("- **Recommendations**: %s\n\n", strings.Join(service.Recommendations, ", ")))
 		}
 	}
 
