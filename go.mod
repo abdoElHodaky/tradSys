@@ -1,8 +1,8 @@
 module github.com/abdoElHodaky/tradSys
 
-go 1.24.0
+go 1.23
 
-toolchain go1.24.9
+toolchain go1.23.3
 
 require (
 	github.com/ThreeDotsLabs/watermill v1.2.0-rc.11
