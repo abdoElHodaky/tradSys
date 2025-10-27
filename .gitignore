@@ -40,3 +40,6 @@ go.work
 # Build artifacts
 bin/
 dist/
+gateway
+tradsys
+*.exe
