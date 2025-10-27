@@ -168,12 +168,7 @@ type PerformanceMetrics struct {
 
 // Supporting component interfaces and types
 
-// ConnectionPool manages connections to exchange
-type ConnectionPool struct {
-	MaxConnections int
-	IdleTimeout    time.Duration
-	connections    chan interface{}
-}
+
 
 // RateLimiter manages API rate limiting
 type RateLimiter struct {

@@ -19,28 +19,6 @@ type RiskEngineConfig struct {
 	StressTestEnabled     bool          `json:"stress_test_enabled"`
 }
 
-// RiskEventType defines types of risk events
-type RiskEventType string
-
-const (
-	EventPreTradeCheck  RiskEventType = "pre_trade_check"
-	EventPostTradeCheck RiskEventType = "post_trade_check"
-	EventLimitBreach    RiskEventType = "limit_breach"
-	EventCircuitBreaker RiskEventType = "circuit_breaker"
-	EventVaRCalculation RiskEventType = "var_calculation"
-	EventPositionUpdate RiskEventType = "position_update"
-)
-
-// RiskSeverity defines risk event severity levels
-type RiskSeverity string
-
-const (
-	SeverityInfo     RiskSeverity = "info"
-	SeverityWarning  RiskSeverity = "warning"
-	SeverityError    RiskSeverity = "error"
-	SeverityCritical RiskSeverity = "critical"
-)
-
 // RiskCheck represents a risk check result
 type RiskCheck struct {
 	CheckType    string        `json:"check_type"`
@@ -51,17 +29,3 @@ type RiskCheck struct {
 	Latency      time.Duration `json:"latency"`
 	Timestamp    time.Time     `json:"timestamp"`
 }
-
-// RiskEvent represents a risk event
-type RiskEvent struct {
-	ID        string        `json:"id"`
-	Type      RiskEventType `json:"type"`
-	Severity  RiskSeverity  `json:"severity"`
-	Message   string        `json:"message"`
-	UserID    string        `json:"user_id,omitempty"`
-	Symbol    string        `json:"symbol,omitempty"`
-	OrderID   string        `json:"order_id,omitempty"`
-	Data      interface{}   `json:"data,omitempty"`
-	Timestamp time.Time     `json:"timestamp"`
-}
-

@@ -80,6 +80,8 @@ type OrderBook struct {
 	mu sync.RWMutex
 	// Logger
 	logger *zap.Logger
+	// UpdatedAt is the last update time
+	UpdatedAt time.Time
 }
 
 // OrderHeap is a heap of orders

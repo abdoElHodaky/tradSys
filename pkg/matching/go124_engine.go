@@ -25,23 +25,7 @@ type Go124MatchingEngine struct {
 	riskManager  interfaces.RiskManager
 }
 
-// OrderBook represents an order book for a symbol using Go 1.24 optimizations
-type OrderBook struct {
-	Symbol    string
-	Bids      *PriceLevel
-	Asks      *PriceLevel
-	LastTrade *types.Trade
-	UpdatedAt time.Time
-}
 
-// PriceLevel represents a price level in the order book
-type PriceLevel struct {
-	Price    float64
-	Quantity float64
-	Orders   []types.Order
-	Next     *PriceLevel
-	Prev     *PriceLevel
-}
 
 // NewGo124MatchingEngine creates a new Go 1.24 optimized matching engine
 func NewGo124MatchingEngine(

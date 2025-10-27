@@ -142,11 +142,11 @@ func NewAdvancedOrderMatchingEngine(config *EngineConfig, logger *zap.Logger) *A
 	// Initialize object pools for performance
 	engine.tradePool = pool.NewObjectPool(func() interface{} {
 		return &Trade{}
-	})
+	}, 1000)
 
 	engine.orderPool = pool.NewObjectPool(func() interface{} {
 		return &types.Order{}
-	})
+	}, 1000)
 
 	return engine
 }

@@ -18,12 +18,18 @@ const (
 
 // RiskCheckResult represents the result of a risk check
 type RiskCheckResult struct {
-	Passed     bool      `json:"passed"`
-	RiskLevel  RiskLevel `json:"risk_level"`
-	Violations []string  `json:"violations"`
-	Warnings   []string  `json:"warnings"`
-	CheckedAt  time.Time `json:"checked_at"`
-	Details    map[string]interface{} `json:"details,omitempty"`
+	Passed       bool                   `json:"passed"`
+	Approved     bool                   `json:"approved"`
+	Reason       string                 `json:"reason"`
+	RiskLevel    RiskLevel              `json:"risk_level"`
+	RiskScore    float64                `json:"risk_score"`
+	Violations   []string               `json:"violations"`
+	Warnings     []string               `json:"warnings"`
+	MaxOrderSize float64                `json:"max_order_size"`
+	Latency      time.Duration          `json:"latency"`
+	CheckedAt    time.Time              `json:"checked_at"`
+	Details      map[string]interface{} `json:"details,omitempty"`
+	Metadata     map[string]interface{} `json:"metadata"`
 }
 
 // RiskLimitType represents the type of risk limit
@@ -32,12 +38,18 @@ type RiskLimitType string
 const (
 	// RiskLimitTypePosition represents a position limit
 	RiskLimitTypePosition RiskLimitType = "position"
+	// RiskLimitTypePositionSize represents a position size limit
+	RiskLimitTypePositionSize RiskLimitType = "position_size"
 	// RiskLimitTypeOrderSize represents an order size limit
 	RiskLimitTypeOrderSize RiskLimitType = "order_size"
 	// RiskLimitTypeExposure represents an exposure limit
 	RiskLimitTypeExposure RiskLimitType = "exposure"
 	// RiskLimitTypeDrawdown represents a drawdown limit
 	RiskLimitTypeDrawdown RiskLimitType = "drawdown"
+	// RiskLimitTypeMaxDrawdown represents a maximum drawdown limit
+	RiskLimitTypeMaxDrawdown RiskLimitType = "max_drawdown"
+	// RiskLimitTypeDailyLoss represents a daily loss limit
+	RiskLimitTypeDailyLoss RiskLimitType = "daily_loss"
 	// RiskLimitTypeTradeFrequency represents a trade frequency limit
 	RiskLimitTypeTradeFrequency RiskLimitType = "trade_frequency"
 	// RiskLimitTypeVaR represents a Value at Risk limit
@@ -56,6 +68,7 @@ type RiskLimit struct {
 	UserID      string        `json:"user_id,omitempty"`
 	AccountID   string        `json:"account_id,omitempty"`
 	Limit       float64       `json:"limit"`
+	Value       float64       `json:"value"`       // Current value for comparison
 	Warning     float64       `json:"warning,omitempty"`
 	Enabled     bool          `json:"enabled"`
 	CreatedAt   time.Time     `json:"created_at"`
@@ -94,6 +107,7 @@ type Position struct {
 	Symbol        string    `json:"symbol"`
 	Quantity      float64   `json:"quantity"`
 	AveragePrice  float64   `json:"average_price"`
+	AvgPrice      float64   `json:"avg_price"`      // Alias for AveragePrice for compatibility
 	MarketPrice   float64   `json:"market_price"`
 	UnrealizedPnL float64   `json:"unrealized_pnl"`
 	RealizedPnL   float64   `json:"realized_pnl"`

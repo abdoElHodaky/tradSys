@@ -41,6 +41,12 @@ type RiskEvent struct {
 	Timestamp   time.Time       `json:"timestamp"`
 	Metadata    map[string]interface{} `json:"metadata"`
 	ResultChan  chan *RiskCheckResult  `json:"-"`
+	
+	// Additional fields for compatibility
+	Order       interface{}     `json:"order,omitempty"`
+	Data        interface{}     `json:"data,omitempty"`
+	Severity    string          `json:"severity,omitempty"`
+	Message     string          `json:"message,omitempty"`
 }
 
 // RiskEventType defines the type of risk event
@@ -53,6 +59,13 @@ const (
 	RiskEventMarketData
 	RiskEventLimitBreach
 	RiskEventCircuitBreaker
+)
+
+// Severity constants for compatibility
+const (
+	SeverityError   = "error"
+	SeverityWarning = "warning"
+	SeverityInfo    = "info"
 )
 
 // String returns the string representation of the risk event type
@@ -75,24 +88,15 @@ func (ret RiskEventType) String() string {
 	}
 }
 
-// RiskCheckResult contains the result of a risk check
-type RiskCheckResult struct {
-	Approved     bool              `json:"approved"`
-	Reason       string            `json:"reason"`
-	RiskScore    float64           `json:"risk_score"`
-	Violations   []string          `json:"violations"`
-	MaxOrderSize float64           `json:"max_order_size"`
-	Latency      time.Duration     `json:"latency"`
-	Metadata     map[string]interface{} `json:"metadata"`
-}
+
 
 // NewEventProcessor creates a new event processor
 func NewEventProcessor(config *RiskEngineConfig, logger *zap.Logger) *EventProcessor {
 	return &EventProcessor{
 		config:       config,
 		logger:       logger,
-		eventPool:    pool.NewObjectPool(1000, func() interface{} { return &RiskEvent{} }),
-		checkPool:    pool.NewObjectPool(1000, func() interface{} { return &RiskCheckResult{} }),
+		eventPool:    pool.NewObjectPool(func() interface{} { return &RiskEvent{} }, 1000),
+		checkPool:    pool.NewObjectPool(func() interface{} { return &RiskCheckResult{} }, 1000),
 		eventChannel: make(chan *RiskEvent, 10000), // High-capacity buffer
 		stopChannel:  make(chan struct{}),
 	}

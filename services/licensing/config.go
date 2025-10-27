@@ -305,12 +305,12 @@ func ExtendLicense(license *License, duration time.Duration) {
 
 // DeactivateLicense deactivates a license
 func DeactivateLicense(license *License) {
-	license.IsActive = false
+	license.Active = false
 }
 
 // ReactivateLicense reactivates a license
 func ReactivateLicense(license *License) {
-	license.IsActive = true
+	license.Active = true
 }
 
 // generateLicenseID generates a unique license ID
