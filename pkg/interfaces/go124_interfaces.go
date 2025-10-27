@@ -11,8 +11,8 @@ import (
 
 
 
-// MarketDataEvent represents a market data event
-type MarketDataEvent interface {
+// MarketDataEventInterface represents a market data event interface
+type MarketDataEventInterface interface {
 	GetSymbol() string
 	GetEventType() string
 	GetTimestamp() time.Time

@@ -80,7 +80,7 @@ func (s *TradeServiceUnified) CreateTrade(ctx context.Context, trade *types.Trad
 
 	// Publish trade event
 	if s.publisher != nil {
-		event := &interfaces.TradeEvent{
+		event := interfaces.TradeEvent{
 			Type:      interfaces.TradeEventExecuted,
 			Trade:     trade,
 			Timestamp: time.Now(),
@@ -105,6 +105,11 @@ func (s *TradeServiceUnified) CreateTrade(ctx context.Context, trade *types.Trad
 		"value", trade.Value)
 
 	return nil
+}
+
+// ExecuteTrade executes a trade (interface method)
+func (s *TradeServiceUnified) ExecuteTrade(ctx context.Context, trade *types.Trade) error {
+	return s.CreateTrade(ctx, trade)
 }
 
 // GetTrade retrieves a trade by ID
@@ -134,7 +139,14 @@ func (s *TradeServiceUnified) GetTrade(ctx context.Context, tradeID string) (*ty
 	}
 
 	s.metrics.IncrementCounter("trade_service.get_success", nil)
-	return trade, nil
+	
+	// Type assertion to convert interface{} to *types.Trade
+	typedTrade, ok := trade.(*types.Trade)
+	if !ok {
+		return nil, errors.New(errors.ErrInternalError, "invalid trade type returned from repository")
+	}
+	
+	return typedTrade, nil
 }
 
 // ListTrades lists trades with optional filters
@@ -168,16 +180,16 @@ func (s *TradeServiceUnified) ListTrades(ctx context.Context, filters *interface
 
 	// Choose appropriate repository method based on filters
 	if filters.Symbol != "" {
-		trades, err = s.repository.ListBySymbol(ctx, filters.Symbol, filters.Limit, filters.Offset)
+		trades, err = s.repository.GetTradesBySymbol(ctx, filters.Symbol)
 	} else if filters.UserID != "" {
-		trades, err = s.repository.ListByUser(ctx, filters.UserID, filters.Limit, filters.Offset)
-	} else if filters.StartTime != nil && filters.EndTime != nil {
-		trades, err = s.repository.ListByTimeRange(ctx, *filters.StartTime, *filters.EndTime, filters.Limit, filters.Offset)
+		trades, err = s.repository.GetTradesByUser(ctx, filters.UserID)
+	} else if filters.StartDate != nil && filters.EndDate != nil {
+		trades, err = s.repository.GetTradesByDateRange(ctx, *filters.StartDate, *filters.EndDate)
 	} else {
 		// Default to time-based query for recent trades
 		endTime := time.Now()
 		startTime := endTime.Add(-24 * time.Hour) // Last 24 hours
-		trades, err = s.repository.ListByTimeRange(ctx, startTime, endTime, filters.Limit, filters.Offset)
+		trades, err = s.repository.GetTradesByDateRange(ctx, startTime, endTime)
 	}
 
 	if err != nil {
@@ -233,8 +245,8 @@ func (s *TradeServiceUnified) GetTradesByOrder(ctx context.Context, orderID stri
 	return orderTrades, nil
 }
 
-// GetTradesByUser gets all trades for a user
-func (s *TradeServiceUnified) GetTradesByUser(ctx context.Context, userID string, limit, offset int) ([]*types.Trade, error) {
+// GetTradesByUserWithPagination gets all trades for a user with pagination
+func (s *TradeServiceUnified) GetTradesByUserWithPagination(ctx context.Context, userID string, limit, offset int) ([]*types.Trade, error) {
 	start := time.Now()
 	defer func() {
 		s.metrics.RecordTimer("trade_service.get_trades_by_user.duration", time.Since(start), nil)
@@ -244,7 +256,7 @@ func (s *TradeServiceUnified) GetTradesByUser(ctx context.Context, userID string
 		return nil, errors.New(errors.ErrInvalidInput, "user ID cannot be empty")
 	}
 
-	trades, err := s.repository.ListByUser(ctx, userID, limit, offset)
+	trades, err := s.repository.GetTradesByUser(ctx, userID)
 	if err != nil {
 		s.metrics.IncrementCounter("trade_service.get_by_user_failed", map[string]string{
 			"error": "repository_error",
@@ -260,6 +272,12 @@ func (s *TradeServiceUnified) GetTradesByUser(ctx context.Context, userID string
 	})
 
 	return trades, nil
+}
+
+// GetTradesByUser gets all trades for a user (interface method)
+func (s *TradeServiceUnified) GetTradesByUser(ctx context.Context, userID string) ([]*types.Trade, error) {
+	// Use default pagination values
+	return s.GetTradesByUserWithPagination(ctx, userID, 1000, 0)
 }
 
 // GetTradeStatistics returns statistics about trades
@@ -464,10 +482,10 @@ func (s *TradeServiceUnified) applyTradeFilters(trades []*types.Trade, filters *
 		}
 
 		// Filter by time range (already handled in repository query, but double-check)
-		if filters.StartTime != nil && trade.Timestamp.Before(*filters.StartTime) {
+		if filters.StartDate != nil && trade.Timestamp.Before(*filters.StartDate) {
 			continue
 		}
-		if filters.EndTime != nil && trade.Timestamp.After(*filters.EndTime) {
+		if filters.EndDate != nil && trade.Timestamp.After(*filters.EndDate) {
 			continue
 		}
 

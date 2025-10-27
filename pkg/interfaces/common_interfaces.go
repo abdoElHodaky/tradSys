@@ -38,6 +38,45 @@ type Repository interface {
 	List(ctx context.Context, offset, limit int) ([]interface{}, error)
 }
 
+// OrderRepository defines the interface for order data operations
+type OrderRepository interface {
+	Repository
+	// GetOrdersByUser retrieves orders for a specific user
+	GetOrdersByUser(ctx context.Context, userID string) ([]*types.Order, error)
+	// GetOrdersBySymbol retrieves orders for a specific symbol
+	GetOrdersBySymbol(ctx context.Context, symbol string) ([]*types.Order, error)
+	// GetOrdersByStatus retrieves orders by status
+	GetOrdersByStatus(ctx context.Context, status string) ([]*types.Order, error)
+	// GetActiveOrders retrieves all active orders
+	GetActiveOrders(ctx context.Context) ([]*types.Order, error)
+}
+
+// TradeRepository defines the interface for trade data operations
+type TradeRepository interface {
+	Repository
+	// GetTradesByUser retrieves trades for a specific user
+	GetTradesByUser(ctx context.Context, userID string) ([]*types.Trade, error)
+	// GetTradesBySymbol retrieves trades for a specific symbol
+	GetTradesBySymbol(ctx context.Context, symbol string) ([]*types.Trade, error)
+	// GetTradesByDateRange retrieves trades within a date range
+	GetTradesByDateRange(ctx context.Context, start, end time.Time) ([]*types.Trade, error)
+	// GetTradesWithFilters retrieves trades with custom filters
+	GetTradesWithFilters(ctx context.Context, filters *TradeFilters) ([]*types.Trade, error)
+}
+
+// TradeFilters defines filters for trade queries
+type TradeFilters struct {
+	UserID    string     `json:"user_id,omitempty"`
+	Symbol    string     `json:"symbol,omitempty"`
+	StartDate *time.Time `json:"start_date,omitempty"`
+	EndDate   *time.Time `json:"end_date,omitempty"`
+	MinAmount *float64   `json:"min_amount,omitempty"`
+	MaxAmount *float64   `json:"max_amount,omitempty"`
+	Status    string     `json:"status,omitempty"`
+	Limit     int        `json:"limit,omitempty"`
+	Offset    int        `json:"offset,omitempty"`
+}
+
 // EventStore defines an interface for event storage
 type EventStore interface {
 	// SaveEvent saves an event to the store
@@ -100,6 +139,10 @@ type RiskService interface {
 
 // MatchingEngine defines the interface for order matching
 type MatchingEngine interface {
+	// Start starts the matching engine
+	Start(ctx context.Context) error
+	// Stop stops the matching engine
+	Stop(ctx context.Context) error
 	// ProcessOrder processes an order
 	ProcessOrder(ctx context.Context, order *types.Order) ([]*types.Trade, error)
 	// GetOrderBook retrieves the order book for a symbol
@@ -136,6 +179,8 @@ type EventPublisher interface {
 	PublishOrderEvent(ctx context.Context, event OrderEvent) error
 	// PublishTradeEvent publishes a trade event
 	PublishTradeEvent(ctx context.Context, event TradeEvent) error
+	// PublishMarketDataEvent publishes a market data event
+	PublishMarketDataEvent(ctx context.Context, event MarketDataEvent) error
 }
 
 // OrderEvent represents an order-related event
@@ -152,6 +197,22 @@ type TradeEvent struct {
 	Trade     *types.Trade `json:"trade"`
 	Timestamp time.Time    `json:"timestamp"`
 }
+
+// MarketDataEvent represents a market data event
+type MarketDataEvent struct {
+	Type       string                 `json:"type"`
+	Symbol     string                 `json:"symbol"`
+	MarketData *types.MarketData      `json:"market_data"`
+	Timestamp  time.Time              `json:"timestamp"`
+	Metadata   map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// Market data event types
+const (
+	MarketDataEventTick  = "market_data.tick"
+	MarketDataEventOHLCV = "market_data.ohlcv"
+	MarketDataEventDepth = "market_data.depth"
+)
 
 // Event represents a domain event
 type Event interface {
@@ -259,6 +320,18 @@ type Validator interface {
 	Validate(ctx context.Context, obj interface{}) error
 	// ValidateField validates a specific field
 	ValidateField(ctx context.Context, field string, value interface{}) error
+}
+
+// OrderValidator defines the interface for order validation
+type OrderValidator interface {
+	// ValidateOrder validates an order
+	ValidateOrder(ctx context.Context, order *types.Order) error
+	// ValidateOrderRequest validates an order request
+	ValidateOrderRequest(ctx context.Context, req interface{}) error
+	// ValidateOrderUpdate validates an order update
+	ValidateOrderUpdate(ctx context.Context, order *types.Order, req interface{}) error
+	// ValidateOrderCancellation validates an order cancellation
+	ValidateOrderCancellation(ctx context.Context, order *types.Order, req interface{}) error
 }
 
 // Serializer defines a serialization interface

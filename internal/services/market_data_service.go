@@ -235,6 +235,11 @@ func (s *MarketDataService) SubscribeMarketData(symbol string, callback func(*ty
 	return nil
 }
 
+// SubscribeToMarketData subscribes to market data updates (interface method)
+func (s *MarketDataService) SubscribeToMarketData(ctx context.Context, symbol string, handler func(*types.MarketData)) error {
+	return s.SubscribeMarketData(symbol, handler)
+}
+
 // SubscribeOHLCV subscribes to OHLCV updates
 func (s *MarketDataService) SubscribeOHLCV(symbol string, interval string, callback func(*types.OHLCV)) error {
 	if symbol == "" {
@@ -322,7 +327,7 @@ func (s *MarketDataService) UpdateMarketData(symbol string, data *types.MarketDa
 
 	// Publish event
 	if s.publisher != nil {
-		event := &interfaces.MarketDataEvent{
+		event := interfaces.MarketDataEvent{
 			Type:       interfaces.MarketDataEventTick,
 			Symbol:     symbol,
 			MarketData: data,
@@ -378,10 +383,17 @@ func (s *MarketDataService) UpdateOHLCV(symbol string, interval string, ohlcv *t
 
 	// Publish event
 	if s.publisher != nil {
-		event := &interfaces.MarketDataEvent{
-			Type:      interfaces.MarketDataEventOHLCV,
-			Symbol:    symbol,
-			OHLCV:     ohlcv,
+		event := interfaces.MarketDataEvent{
+			Type:   interfaces.MarketDataEventOHLCV,
+			Symbol: symbol,
+			MarketData: &types.MarketData{
+				Symbol:    symbol,
+				LastPrice: ohlcv.Close,
+				High24h:   ohlcv.High,
+				Low24h:    ohlcv.Low,
+				Volume:    ohlcv.Volume,
+				Timestamp: time.Now(),
+			},
 			Timestamp: time.Now(),
 		}
 		if err := s.publisher.PublishMarketDataEvent(context.Background(), event); err != nil {

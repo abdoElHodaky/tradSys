@@ -9,6 +9,7 @@ import (
 	"github.com/abdoElHodaky/tradSys/pkg/config"
 	"github.com/abdoElHodaky/tradSys/pkg/errors"
 	"github.com/abdoElHodaky/tradSys/pkg/interfaces"
+	"github.com/abdoElHodaky/tradSys/pkg/types"
 )
 
 // ServiceRegistry manages all services in the trading system
@@ -198,7 +199,7 @@ func (r *ServiceRegistry) GetHealthStatus(ctx context.Context) *RegistryHealthSt
 
 	status := &RegistryHealthStatus{
 		Overall:  interfaces.HealthStatusHealthy,
-		Services: make(map[string]*interfaces.HealthStatus),
+		Services: make(map[string]*types.HealthStatus),
 	}
 
 	// Check each service if it implements HealthChecker
@@ -214,10 +215,10 @@ func (r *ServiceRegistry) GetHealthStatus(ctx context.Context) *RegistryHealthSt
 	unhealthyCount := 0
 	for name, service := range services {
 		if service == nil {
-			status.Services[name] = &interfaces.HealthStatus{
-				Status:    interfaces.HealthStatusUnhealthy,
+			status.Services[name] = &types.HealthStatus{
+				Status:    string(interfaces.HealthStatusUnhealthy),
 				Message:   "Service not initialized",
-				Timestamp: ctx.Value("timestamp").(time.Time),
+				Timestamp: time.Now(),
 			}
 			unhealthyCount++
 			continue
@@ -225,25 +226,25 @@ func (r *ServiceRegistry) GetHealthStatus(ctx context.Context) *RegistryHealthSt
 
 		if healthChecker, ok := service.(interfaces.HealthChecker); ok {
 			if err := healthChecker.Check(ctx); err != nil {
-				status.Services[name] = &interfaces.HealthStatus{
-					Status:    interfaces.HealthStatusUnhealthy,
+				status.Services[name] = &types.HealthStatus{
+					Status:    string(interfaces.HealthStatusUnhealthy),
 					Message:   err.Error(),
-					Timestamp: ctx.Value("timestamp").(time.Time),
+					Timestamp: time.Now(),
 				}
 				unhealthyCount++
 			} else {
-				status.Services[name] = &interfaces.HealthStatus{
-					Status:    interfaces.HealthStatusHealthy,
+				status.Services[name] = &types.HealthStatus{
+					Status:    string(interfaces.HealthStatusHealthy),
 					Message:   "Service is healthy",
-					Timestamp: ctx.Value("timestamp").(time.Time),
+					Timestamp: time.Now(),
 				}
 			}
 		} else {
 			// Service doesn't implement health checking, assume healthy if not nil
-			status.Services[name] = &interfaces.HealthStatus{
-				Status:    interfaces.HealthStatusHealthy,
+			status.Services[name] = &types.HealthStatus{
+				Status:    string(interfaces.HealthStatusHealthy),
 				Message:   "Service is running (no health check)",
-				Timestamp: ctx.Value("timestamp").(time.Time),
+				Timestamp: time.Now(),
 			}
 		}
 	}
@@ -289,7 +290,12 @@ func (r *ServiceRegistry) GetServiceStatistics() *ServiceStatistics {
 
 	// Get detailed statistics from services that support it
 	if r.matchingEngine != nil {
-		stats.ServiceDetails["matching_engine"] = r.matchingEngine.GetMetrics()
+		// Check if the matching engine supports metrics
+		if metricsProvider, ok := r.matchingEngine.(interface{ GetMetrics() interface{} }); ok {
+			stats.ServiceDetails["matching_engine"] = metricsProvider.GetMetrics()
+		} else {
+			stats.ServiceDetails["matching_engine"] = "metrics not available"
+		}
 	}
 
 	if mds, ok := r.marketDataService.(*MarketDataService); ok {
@@ -322,8 +328,8 @@ func (r *ServiceRegistry) RegisterRiskService(service interfaces.RiskService) {
 
 // RegistryHealthStatus represents the health status of the entire registry
 type RegistryHealthStatus struct {
-	Overall  string                              `json:"overall"`
-	Services map[string]*interfaces.HealthStatus `json:"services"`
+	Overall  interfaces.HealthStatus      `json:"overall"`
+	Services map[string]*types.HealthStatus `json:"services"`
 }
 
 // ServiceStatistics contains statistics about the service registry
