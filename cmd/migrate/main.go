@@ -98,9 +98,9 @@ func connectToDatabase(cfg *config.Config) (*sql.DB, error) {
 	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		cfg.Database.Host,
 		cfg.Database.Port,
-		cfg.Database.User,
+		cfg.Database.Username,
 		password,
-		cfg.Database.Name,
+		cfg.Database.Database,
 		cfg.Database.SSLMode,
 	)
 

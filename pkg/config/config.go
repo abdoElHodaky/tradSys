@@ -3,7 +3,9 @@ package config
 import (
 	"errors"
 	"fmt"
+	"os"
 	"time"
+	"gopkg.in/yaml.v2"
 )
 
 // Config represents the main application configuration
@@ -36,6 +38,7 @@ type ServerConfig struct {
 	CORSOrigins     []string      `json:"cors_origins" yaml:"cors_origins"`
 	RateLimitRPS    int           `json:"rate_limit_rps" yaml:"rate_limit_rps"`
 	RateLimitBurst  int           `json:"rate_limit_burst" yaml:"rate_limit_burst"`
+	ShutdownTimeout time.Duration `json:"shutdown_timeout" yaml:"shutdown_timeout"`
 }
 
 // DatabaseConfig contains database configuration
@@ -346,6 +349,7 @@ func DefaultConfig() *Config {
 			CORSOrigins:    []string{"*"},
 			RateLimitRPS:   1000,
 			RateLimitBurst: 2000,
+			ShutdownTimeout: 30 * time.Second,
 		},
 		Database: DatabaseConfig{
 			Driver:          "postgres",
@@ -458,4 +462,35 @@ func DefaultConfig() *Config {
 			EnableHealthCheck: true,
 		},
 	}
+}
+
+// LoadConfig loads configuration from a YAML file
+func LoadConfig(configPath string) (*Config, error) {
+	// If no config path provided, return default config
+	if configPath == "" {
+		return DefaultConfig(), nil
+	}
+
+	// Read config file
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		// If file doesn't exist, return default config
+		if os.IsNotExist(err) {
+			return DefaultConfig(), nil
+		}
+		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	// Parse YAML
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	}
+
+	// Validate configuration
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid configuration: %w", err)
+	}
+
+	return &cfg, nil
 }

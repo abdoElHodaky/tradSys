@@ -32,6 +32,7 @@ require (
 	golang.org/x/time v0.14.0
 	google.golang.org/grpc v1.67.3
 	google.golang.org/protobuf v1.36.10
+	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/driver/sqlite v1.6.0
