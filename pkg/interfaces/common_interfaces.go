@@ -122,6 +122,12 @@ type MetricsCollector interface {
 	Gauge(name string, value float64, tags map[string]string)
 	// Histogram records a histogram metric
 	Histogram(name string, value float64, tags map[string]string)
+	// RecordTimer records a timer metric
+	RecordTimer(name string, duration time.Duration, tags map[string]string)
+	// IncrementCounter increments a counter
+	IncrementCounter(name string, tags map[string]string)
+	// RecordGauge records a gauge metric
+	RecordGauge(name string, value float64, tags map[string]string)
 }
 
 // EventPublisher defines the interface for event publishing
@@ -429,5 +435,3 @@ type EngineMetrics struct {
 	ActiveOrders     int           `json:"active_orders"`
 	QueueDepth       int           `json:"queue_depth"`
 }
-
-

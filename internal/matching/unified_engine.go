@@ -9,7 +9,6 @@ import (
 	"github.com/abdoElHodaky/tradSys/pkg/errors"
 	"github.com/abdoElHodaky/tradSys/pkg/interfaces"
 	"github.com/abdoElHodaky/tradSys/pkg/types"
-	"go.uber.org/zap"
 )
 
 // UnifiedMatchingEngine implements the MatchingEngine interface
@@ -191,7 +190,7 @@ func (e *UnifiedMatchingEngine) CancelOrder(ctx context.Context, orderID string)
 }
 
 // GetOrderBook returns the current order book state
-func (e *UnifiedMatchingEngine) GetOrderBook(symbol string) (*types.OrderBook, error) {
+func (e *UnifiedMatchingEngine) GetOrderBook(ctx context.Context, symbol string) (*types.OrderBook, error) {
 	e.mu.RLock()
 	orderBook, exists := e.orderBooks[symbol]
 	e.mu.RUnlock()
