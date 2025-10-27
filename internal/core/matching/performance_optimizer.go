@@ -8,6 +8,7 @@ import (
 	"unsafe"
 
 	"github.com/abdoElHodaky/tradSys/internal/common/pool"
+	"github.com/abdoElHodaky/tradSys/pkg/interfaces"
 	"go.uber.org/zap"
 )
 
@@ -173,14 +174,14 @@ func (po *PerformanceOptimizer) initializePools() {
 	// Order pool
 	po.orderPool = sync.Pool{
 		New: func() interface{} {
-			return &Order{}
+			return &interfaces.Order{}
 		},
 	}
 	
 	// Trade pool
 	po.tradePool = sync.Pool{
 		New: func() interface{} {
-			return &Trade{}
+			return &interfaces.Trade{}
 		},
 	}
 	
@@ -195,30 +196,30 @@ func (po *PerformanceOptimizer) initializePools() {
 }
 
 // GetOrder gets an order from the pool
-func (po *PerformanceOptimizer) GetOrder() *Order {
-	order := po.orderPool.Get().(*Order)
+func (po *PerformanceOptimizer) GetOrder() *interfaces.Order {
+	order := po.orderPool.Get().(*interfaces.Order)
 	// Reset order fields
-	*order = Order{}
+	*order = interfaces.Order{}
 	return order
 }
 
 // PutOrder returns an order to the pool
-func (po *PerformanceOptimizer) PutOrder(order *Order) {
+func (po *PerformanceOptimizer) PutOrder(order *interfaces.Order) {
 	if order != nil {
 		po.orderPool.Put(order)
 	}
 }
 
 // GetTrade gets a trade from the pool
-func (po *PerformanceOptimizer) GetTrade() *Trade {
-	trade := po.tradePool.Get().(*Trade)
+func (po *PerformanceOptimizer) GetTrade() *interfaces.Trade {
+	trade := po.tradePool.Get().(*interfaces.Trade)
 	// Reset trade fields
-	*trade = Trade{}
+	*trade = interfaces.Trade{}
 	return trade
 }
 
 // PutTrade returns a trade to the pool
-func (po *PerformanceOptimizer) PutTrade(trade *Trade) {
+func (po *PerformanceOptimizer) PutTrade(trade *interfaces.Trade) {
 	if trade != nil {
 		po.tradePool.Put(trade)
 	}

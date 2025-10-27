@@ -7,23 +7,24 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // Entity Types
 
 // Order represents a trading order entity
 type Order struct {
-	ID               string    `db:"id" json:"id"`
-	Symbol           string    `db:"symbol" json:"symbol"`
-	Side             string    `db:"side" json:"side"`
-	Type             string    `db:"type" json:"type"`
-	Quantity         float64   `db:"quantity" json:"quantity"`
-	Price            float64   `db:"price" json:"price"`
-	RemainingQuantity float64  `db:"remaining_quantity" json:"remaining_quantity"`
-	Status           string    `db:"status" json:"status"`
-	UserID           string    `db:"user_id" json:"user_id"`
-	CreatedAt        time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt        time.Time `db:"updated_at" json:"updated_at"`
+	ID                string    `db:"id" json:"id"`
+	Symbol            string    `db:"symbol" json:"symbol"`
+	Side              string    `db:"side" json:"side"`
+	Type              string    `db:"type" json:"type"`
+	Quantity          float64   `db:"quantity" json:"quantity"`
+	Price             float64   `db:"price" json:"price"`
+	RemainingQuantity float64   `db:"remaining_quantity" json:"remaining_quantity"`
+	Status            string    `db:"status" json:"status"`
+	UserID            string    `db:"user_id" json:"user_id"`
+	CreatedAt         time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt         time.Time `db:"updated_at" json:"updated_at"`
 }
 
 // Trade represents a completed trade entity
@@ -40,16 +41,16 @@ type Trade struct {
 
 // Position represents a trading position entity
 type Position struct {
-	ID             string    `db:"id" json:"id"`
-	Symbol         string    `db:"symbol" json:"symbol"`
-	UserID         string    `db:"user_id" json:"user_id"`
-	Quantity       float64   `db:"quantity" json:"quantity"`
-	AveragePrice   float64   `db:"average_price" json:"average_price"`
-	MarketPrice    float64   `db:"market_price" json:"market_price"`
-	UnrealizedPnL  float64   `db:"unrealized_pnl" json:"unrealized_pnl"`
-	RealizedPnL    float64   `db:"realized_pnl" json:"realized_pnl"`
-	CreatedAt      time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt      time.Time `db:"updated_at" json:"updated_at"`
+	ID            string    `db:"id" json:"id"`
+	Symbol        string    `db:"symbol" json:"symbol"`
+	UserID        string    `db:"user_id" json:"user_id"`
+	Quantity      float64   `db:"quantity" json:"quantity"`
+	AveragePrice  float64   `db:"average_price" json:"average_price"`
+	MarketPrice   float64   `db:"market_price" json:"market_price"`
+	UnrealizedPnL float64   `db:"unrealized_pnl" json:"unrealized_pnl"`
+	RealizedPnL   float64   `db:"realized_pnl" json:"realized_pnl"`
+	CreatedAt     time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt     time.Time `db:"updated_at" json:"updated_at"`
 }
 
 // User represents a user entity
@@ -86,14 +87,14 @@ type Strategy struct {
 
 // RiskMetric represents a risk metric entity
 type RiskMetric struct {
-	ID               string    `db:"id" json:"id"`
-	UserID           string    `db:"user_id" json:"user_id"`
-	Symbol           string    `db:"symbol" json:"symbol"`
-	VaR              float64   `db:"var" json:"var"`
-	ExpectedShortfall float64  `db:"expected_shortfall" json:"expected_shortfall"`
-	MaxDrawdown      float64   `db:"max_drawdown" json:"max_drawdown"`
-	Timestamp        time.Time `db:"timestamp" json:"timestamp"`
-	CreatedAt        time.Time `db:"created_at" json:"created_at"`
+	ID                string    `db:"id" json:"id"`
+	UserID            string    `db:"user_id" json:"user_id"`
+	Symbol            string    `db:"symbol" json:"symbol"`
+	VaR               float64   `db:"var" json:"var"`
+	ExpectedShortfall float64   `db:"expected_shortfall" json:"expected_shortfall"`
+	MaxDrawdown       float64   `db:"max_drawdown" json:"max_drawdown"`
+	Timestamp         time.Time `db:"timestamp" json:"timestamp"`
+	CreatedAt         time.Time `db:"created_at" json:"created_at"`
 }
 
 // Pair represents a trading pair entity
@@ -111,21 +112,17 @@ type Pair struct {
 
 // Optimized Repository Implementations
 
-// OrderRepository provides optimized order data access
+// OrderRepository provides optimized order operations
 type OrderRepository struct {
 	*OptimizedRepository[Order]
 }
 
-// NewOrderRepository creates a new order repository
-func NewOrderRepository(db *sql.DB, logger *zap.Logger) *OrderRepository {
+// NewOrderRepository creates a new optimized order repository
+func NewOrderRepository(db *gorm.DB, logger *zap.Logger) *OrderRepository {
+	sqlDB, _ := db.DB()
 	return &OrderRepository{
-		OptimizedRepository: NewOptimizedRepository[Order](db, logger, "orders"),
+		OptimizedRepository: NewOptimizedRepository[Order](sqlDB, logger, "orders"),
 	}
-}
-
-// FindBySymbol finds orders by symbol
-func (r *OrderRepository) FindBySymbol(ctx context.Context, symbol string, limit int) ([]*Order, error) {
-	return r.FindByField(ctx, "symbol", symbol, limit)
 }
 
 // FindByStatus finds orders by status
@@ -144,9 +141,10 @@ type TradeRepository struct {
 }
 
 // NewTradeRepository creates a new trade repository
-func NewTradeRepository(db *sql.DB, logger *zap.Logger) *TradeRepository {
+func NewTradeRepository(db *gorm.DB, logger *zap.Logger) *TradeRepository {
+	sqlDB, _ := db.DB()
 	return &TradeRepository{
-		OptimizedRepository: NewOptimizedRepository[Trade](db, logger, "trades"),
+		OptimizedRepository: NewOptimizedRepository[Trade](sqlDB, logger, "trades"),
 	}
 }
 
@@ -158,7 +156,7 @@ func (r *TradeRepository) FindBySymbol(ctx context.Context, symbol string, limit
 // FindByOrderID finds trades by order ID
 func (r *TradeRepository) FindByOrderID(ctx context.Context, orderID string) ([]*Trade, error) {
 	query := `SELECT * FROM trades WHERE buy_order_id = $1 OR sell_order_id = $1 ORDER BY created_at DESC`
-	
+
 	rows, err := r.GetDB().QueryContext(ctx, query, orderID)
 	if err != nil {
 		return nil, err
@@ -178,15 +176,16 @@ func (r *TradeRepository) FindByOrderID(ctx context.Context, orderID string) ([]
 	return trades, nil
 }
 
-// PositionRepository provides optimized position data access
+// PositionRepository provides optimized position operations
 type PositionRepository struct {
 	*OptimizedRepository[Position]
 }
 
-// NewPositionRepository creates a new position repository
-func NewPositionRepository(db *sql.DB, logger *zap.Logger) *PositionRepository {
+// NewPositionRepository creates a new optimized position repository
+func NewPositionRepository(db *gorm.DB, logger *zap.Logger) *PositionRepository {
+	sqlDB, _ := db.DB()
 	return &PositionRepository{
-		OptimizedRepository: NewOptimizedRepository[Position](db, logger, "positions"),
+		OptimizedRepository: NewOptimizedRepository[Position](sqlDB, logger, "positions"),
 	}
 }
 
@@ -213,9 +212,10 @@ type UserRepository struct {
 }
 
 // NewUserRepository creates a new user repository
-func NewUserRepository(db *sql.DB, logger *zap.Logger) *UserRepository {
+func NewUserRepository(db *gorm.DB, logger *zap.Logger) *UserRepository {
+	sqlDB, _ := db.DB()
 	return &UserRepository{
-		OptimizedRepository: NewOptimizedRepository[User](db, logger, "users"),
+		OptimizedRepository: NewOptimizedRepository[User](sqlDB, logger, "users"),
 	}
 }
 
@@ -243,15 +243,16 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*User, 
 	return users[0], nil
 }
 
-// MarketDataRepository provides optimized market data access
+// MarketDataRepository provides optimized market data operations
 type MarketDataRepository struct {
 	*OptimizedRepository[MarketData]
 }
 
-// NewMarketDataRepository creates a new market data repository
-func NewMarketDataRepository(db *sql.DB, logger *zap.Logger) *MarketDataRepository {
+// NewMarketDataRepository creates a new optimized market data repository
+func NewMarketDataRepository(db *gorm.DB, logger *zap.Logger) *MarketDataRepository {
+	sqlDB, _ := db.DB()
 	return &MarketDataRepository{
-		OptimizedRepository: NewOptimizedRepository[MarketData](db, logger, "market_data"),
+		OptimizedRepository: NewOptimizedRepository[MarketData](sqlDB, logger, "market_data"),
 	}
 }
 
@@ -263,9 +264,9 @@ func (r *MarketDataRepository) FindBySymbol(ctx context.Context, symbol string, 
 // FindLatestBySymbol finds the latest market data for a symbol
 func (r *MarketDataRepository) FindLatestBySymbol(ctx context.Context, symbol string) (*MarketData, error) {
 	query := `SELECT * FROM market_data WHERE symbol = $1 ORDER BY timestamp DESC LIMIT 1`
-	
+
 	row := r.GetDB().QueryRowContext(ctx, query, symbol)
-	
+
 	marketData := new(MarketData)
 	err := r.scanRowIntoEntity(row, marketData)
 	if err != nil {
@@ -284,9 +285,10 @@ type StrategyRepository struct {
 }
 
 // NewStrategyRepository creates a new strategy repository
-func NewStrategyRepository(db *sql.DB, logger *zap.Logger) *StrategyRepository {
+func NewStrategyRepository(db *gorm.DB, logger *zap.Logger) *StrategyRepository {
+	sqlDB, _ := db.DB()
 	return &StrategyRepository{
-		OptimizedRepository: NewOptimizedRepository[Strategy](db, logger, "strategies"),
+		OptimizedRepository: NewOptimizedRepository[Strategy](sqlDB, logger, "strategies"),
 	}
 }
 
@@ -300,15 +302,16 @@ func (r *StrategyRepository) FindByStatus(ctx context.Context, status string, li
 	return r.FindByField(ctx, "status", status, limit)
 }
 
-// RiskRepository provides optimized risk data access
+// RiskRepository provides optimized risk operations
 type RiskRepository struct {
 	*OptimizedRepository[RiskMetric]
 }
 
-// NewRiskRepository creates a new risk repository
-func NewRiskRepository(db *sql.DB, logger *zap.Logger) *RiskRepository {
+// NewRiskRepository creates a new optimized risk repository
+func NewRiskRepository(db *gorm.DB, logger *zap.Logger) *RiskRepository {
+	sqlDB, _ := db.DB()
 	return &RiskRepository{
-		OptimizedRepository: NewOptimizedRepository[RiskMetric](db, logger, "risk_metrics"),
+		OptimizedRepository: NewOptimizedRepository[RiskMetric](sqlDB, logger, "risk_metrics"),
 	}
 }
 
@@ -322,15 +325,16 @@ func (r *RiskRepository) FindBySymbol(ctx context.Context, symbol string, limit 
 	return r.FindByField(ctx, "symbol", symbol, limit)
 }
 
-// PairRepository provides optimized pair data access
+// PairRepository provides optimized pair operations
 type PairRepository struct {
 	*OptimizedRepository[Pair]
 }
 
-// NewPairRepository creates a new pair repository
-func NewPairRepository(db *sql.DB, logger *zap.Logger) *PairRepository {
+// NewPairRepository creates a new optimized pair repository
+func NewPairRepository(db *gorm.DB, logger *zap.Logger) *PairRepository {
+	sqlDB, _ := db.DB()
 	return &PairRepository{
-		OptimizedRepository: NewOptimizedRepository[Pair](db, logger, "pairs"),
+		OptimizedRepository: NewOptimizedRepository[Pair](sqlDB, logger, "pairs"),
 	}
 }
 
@@ -351,6 +355,11 @@ func (r *PairRepository) FindByStatus(ctx context.Context, status string, limit 
 	return r.FindByField(ctx, "status", status, limit)
 }
 
+// Count returns the total number of pairs
+func (r *PairRepository) Count(ctx context.Context) (int64, error) {
+	return r.OptimizedRepository.Count(ctx)
+}
+
 // Repository Manager
 
 // RepositoryManager manages all repositories
@@ -366,7 +375,7 @@ type RepositoryManager struct {
 }
 
 // NewRepositoryManager creates a new repository manager
-func NewRepositoryManager(db *sql.DB, logger *zap.Logger) *RepositoryManager {
+func NewRepositoryManager(db *gorm.DB, logger *zap.Logger) *RepositoryManager {
 	return &RepositoryManager{
 		Order:      NewOrderRepository(db, logger),
 		Trade:      NewTradeRepository(db, logger),
@@ -385,14 +394,14 @@ func (rm *RepositoryManager) HealthCheck(ctx context.Context) error {
 	repositories := map[string]interface {
 		Count(context.Context) (int64, error)
 	}{
-		"orders":      rm.Order,
-		"trades":      rm.Trade,
-		"positions":   rm.Position,
-		"users":       rm.User,
-		"market_data": rm.MarketData,
-		"strategies":  rm.Strategy,
+		"orders":       rm.Order,
+		"trades":       rm.Trade,
+		"positions":    rm.Position,
+		"users":        rm.User,
+		"market_data":  rm.MarketData,
+		"strategies":   rm.Strategy,
 		"risk_metrics": rm.Risk,
-		"pairs":       rm.Pair,
+		"pairs":        rm.Pair,
 	}
 
 	for name, repo := range repositories {

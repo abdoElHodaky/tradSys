@@ -45,16 +45,7 @@ type TradingConfig struct {
 	MaxOrderSize       float64       `yaml:"max_order_size" json:"max_order_size"`
 }
 
-// RiskConfig contains risk management settings
-type RiskConfig struct {
-	MaxPositionSize    float64       `yaml:"max_position_size" json:"max_position_size"`
-	MaxDailyLoss       float64       `yaml:"max_daily_loss" json:"max_daily_loss"`
-	VaRConfidenceLevel float64       `yaml:"var_confidence_level" json:"var_confidence_level"`
-	VaRTimeHorizon     time.Duration `yaml:"var_time_horizon" json:"var_time_horizon"`
-	RiskCheckLatency   time.Duration `yaml:"risk_check_latency" json:"risk_check_latency"`
-	EnableCircuitBreaker bool        `yaml:"enable_circuit_breaker" json:"enable_circuit_breaker"`
-	EnableVaRCalculation bool        `yaml:"enable_var_calculation" json:"enable_var_calculation"`
-}
+
 
 // NetworkConfig contains network settings
 type NetworkConfig struct {
@@ -69,18 +60,7 @@ type NetworkConfig struct {
 	WriteTimeout       time.Duration `yaml:"write_timeout" json:"write_timeout"`
 }
 
-// DatabaseConfig contains database settings
-type DatabaseConfig struct {
-	Host            string        `yaml:"host" json:"host"`
-	Port            int           `yaml:"port" json:"port"`
-	Database        string        `yaml:"database" json:"database"`
-	Username        string        `yaml:"username" json:"username"`
-	Password        string        `yaml:"password" json:"password"`
-	MaxConnections  int           `yaml:"max_connections" json:"max_connections"`
-	MaxIdleConns    int           `yaml:"max_idle_conns" json:"max_idle_conns"`
-	ConnMaxLifetime time.Duration `yaml:"conn_max_lifetime" json:"conn_max_lifetime"`
-	SSLMode         string        `yaml:"ssl_mode" json:"ssl_mode"`
-}
+
 
 // PerformanceConfig contains performance optimization settings
 type PerformanceConfig struct {
@@ -137,13 +117,16 @@ func NewOptimizedConfig() *OptimizedConfig {
 			MaxOrderSize:       1000000.0,
 		},
 		Risk: RiskConfig{
-			MaxPositionSize:      1000000.0,
-			MaxDailyLoss:         100000.0,
-			VaRConfidenceLevel:   0.95,
-			VaRTimeHorizon:       24 * time.Hour,
-			RiskCheckLatency:     10 * time.Microsecond,
-			EnableCircuitBreaker: true,
-			EnableVaRCalculation: true,
+			EnableRiskCheck:     true,
+			MaxPositionSize:     1000000.0,
+			MaxDailyVolume:      10000000.0,
+			MaxLeverage:         10.0,
+			MarginRequirement:   0.1,
+			StopLossThreshold:   0.05,
+			MaxDrawdown:         0.2,
+			RiskCheckTimeout:    10 * time.Millisecond,
+			EnablePositionLimit: true,
+			EnableVolumeLimit:   true,
 		},
 		Network: NetworkConfig{
 			HTTPPort:           8080,
@@ -157,15 +140,19 @@ func NewOptimizedConfig() *OptimizedConfig {
 			WriteTimeout:       5 * time.Second,
 		},
 		Database: DatabaseConfig{
+			Driver:          "postgres",
 			Host:            "localhost",
 			Port:            5432,
 			Database:        "tradSys",
 			Username:        "postgres",
 			Password:        "",
-			MaxConnections:  100,
+			SSLMode:         "disable",
+			MaxOpenConns:    100,
 			MaxIdleConns:    10,
 			ConnMaxLifetime: time.Hour,
-			SSLMode:         "disable",
+			ConnMaxIdleTime: 30 * time.Minute,
+			EnableMigration: true,
+			MigrationPath:   "./migrations",
 		},
 		Performance: PerformanceConfig{
 			BufferSize:         8192,
@@ -220,16 +207,16 @@ func (c *OptimizedConfig) Validate() error {
 		return fmt.Errorf("risk.max_position_size must be positive")
 	}
 	
-	if c.Risk.VaRConfidenceLevel <= 0 || c.Risk.VaRConfidenceLevel >= 1 {
-		return fmt.Errorf("risk.var_confidence_level must be between 0 and 1")
+	if c.Risk.MaxLeverage <= 0 {
+		return fmt.Errorf("risk.max_leverage must be positive")
 	}
 	
 	if c.Network.HTTPPort <= 0 || c.Network.HTTPPort > 65535 {
 		return fmt.Errorf("network.http_port must be between 1 and 65535")
 	}
 	
-	if c.Database.MaxConnections <= 0 {
-		return fmt.Errorf("database.max_connections must be positive")
+	if c.Database.MaxOpenConns <= 0 {
+		return fmt.Errorf("database.max_open_conns must be positive")
 	}
 	
 	return nil
@@ -298,4 +285,3 @@ func (c *OptimizedConfig) GetLogger() (*zap.Logger, error) {
 	
 	return config.Build()
 }
-

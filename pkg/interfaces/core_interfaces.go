@@ -220,23 +220,7 @@ type ConfigManager interface {
 	SaveConfig(destination string) error
 }
 
-// Logger defines the interface for logging
-type Logger interface {
-	// Debug logs a debug message
-	Debug(msg string, fields ...interface{})
-	
-	// Info logs an info message
-	Info(msg string, fields ...interface{})
-	
-	// Warn logs a warning message
-	Warn(msg string, fields ...interface{})
-	
-	// Error logs an error message
-	Error(msg string, fields ...interface{})
-	
-	// Fatal logs a fatal message and exits
-	Fatal(msg string, fields ...interface{})
-}
+
 
 // MetricsCollector defines the interface for metrics collection
 type MetricsCollector interface {
@@ -253,14 +237,7 @@ type MetricsCollector interface {
 	RecordTimer(name string, duration time.Duration, tags map[string]string)
 }
 
-// HealthChecker defines the interface for health checking
-type HealthChecker interface {
-	// CheckHealth checks the health of a component
-	CheckHealth(ctx context.Context) error
-	
-	// GetHealthStatus gets the current health status
-	GetHealthStatus() HealthStatus
-}
+
 
 // Supporting types and structures
 

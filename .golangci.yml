@@ -158,9 +158,6 @@ linters:
     - staticcheck
     - typecheck
     - unused
-    - deadcode
-    - varcheck
-    - structcheck
 
     # Style
     - gofmt
@@ -181,7 +178,6 @@ linters:
     # Performance
     - bodyclose
     - gocritic
-    - maligned
 
     # Bugs
     - rowserrcheck

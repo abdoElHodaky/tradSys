@@ -29,8 +29,8 @@ type ServiceInterface interface {
 	Version() string
 }
 
-// HealthStatus represents the health status of a service
-type HealthStatus struct {
+// ServiceHealthStatus represents the health status of a service
+type ServiceHealthStatus struct {
 	Status    string            `json:"status"`    // "healthy", "degraded", "unhealthy"
 	Message   string            `json:"message"`   // Human-readable status message
 	Timestamp time.Time         `json:"timestamp"` // When the status was last updated
@@ -81,7 +81,7 @@ type BaseService struct {
 	cancel context.CancelFunc
 	
 	// Health monitoring
-	health     HealthStatus
+	health     ServiceHealthStatus
 	healthMu   sync.RWMutex
 	
 	// Lifecycle hooks
@@ -99,7 +99,7 @@ func NewBaseService(name, version string, logger *zap.Logger) *BaseService {
 		version: version,
 		logger:  logger,
 		state:   ServiceStateStopped,
-		health: HealthStatus{
+		health: ServiceHealthStatus{
 			Status:    "healthy",
 			Message:   "Service initialized",
 			Timestamp: time.Now(),

@@ -11,23 +11,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// StrategyRepository handles database operations for trading strategies
-type StrategyRepository struct {
-	db        *gorm.DB
-	logger    *zap.Logger
-	optimizer *queries.Optimizer
-}
 
-// NewStrategyRepository creates a new strategy repository
-func NewStrategyRepository(db *gorm.DB, logger *zap.Logger) *StrategyRepository {
-	repo := &StrategyRepository{
-		db:        db,
-		logger:    logger,
-		optimizer: queries.NewOptimizer(db, logger),
-	}
-
-	return repo
-}
 
 // GetStrategy retrieves a strategy by name
 func (r *StrategyRepository) GetStrategy(ctx context.Context, name string) (*models.Strategy, error) {

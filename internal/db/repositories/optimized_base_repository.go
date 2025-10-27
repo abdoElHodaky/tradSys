@@ -63,7 +63,7 @@ func (r *OptimizedRepository[T]) Create(ctx context.Context, entity *T) error {
 	}()
 
 	fields, values, placeholders := r.extractFieldsAndValues(entity, false)
-	
+
 	query := fmt.Sprintf(
 		"INSERT INTO %s (%s) VALUES (%s)",
 		r.table,
@@ -93,9 +93,9 @@ func (r *OptimizedRepository[T]) GetByID(ctx context.Context, id string) (*T, er
 	}()
 
 	query := fmt.Sprintf("SELECT * FROM %s WHERE id = $1", r.table)
-	
+
 	row := r.db.QueryRowContext(ctx, query, id)
-	
+
 	entity := new(T)
 	err := r.scanRowIntoEntity(row, entity)
 	if err != nil {
@@ -123,13 +123,13 @@ func (r *OptimizedRepository[T]) Update(ctx context.Context, entity *T) error {
 	}()
 
 	fields, values, _ := r.extractFieldsAndValues(entity, true)
-	
+
 	// Build SET clause
 	setClauses := make([]string, len(fields))
 	for i, field := range fields {
 		setClauses[i] = fmt.Sprintf("%s = $%d", field, i+1)
 	}
-	
+
 	// Assume ID is the last value for WHERE clause
 	query := fmt.Sprintf(
 		"UPDATE %s SET %s WHERE id = $%d",
@@ -169,7 +169,7 @@ func (r *OptimizedRepository[T]) Delete(ctx context.Context, id string) error {
 	}()
 
 	query := fmt.Sprintf("DELETE FROM %s WHERE id = $1", r.table)
-	
+
 	result, err := r.db.ExecContext(ctx, query, id)
 	if err != nil {
 		r.logger.Error("Failed to delete entity",
@@ -202,7 +202,7 @@ func (r *OptimizedRepository[T]) List(ctx context.Context, limit, offset int) ([
 	}()
 
 	query := fmt.Sprintf("SELECT * FROM %s ORDER BY created_at DESC LIMIT $1 OFFSET $2", r.table)
-	
+
 	rows, err := r.db.QueryContext(ctx, query, limit, offset)
 	if err != nil {
 		r.logger.Error("Failed to list entities",
@@ -243,7 +243,7 @@ func (r *OptimizedRepository[T]) Count(ctx context.Context) (int64, error) {
 	}()
 
 	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", r.table)
-	
+
 	var count int64
 	err := r.db.QueryRowContext(ctx, query).Scan(&count)
 	if err != nil {
@@ -268,7 +268,7 @@ func (r *OptimizedRepository[T]) FindByField(ctx context.Context, field string, 
 	}()
 
 	query := fmt.Sprintf("SELECT * FROM %s WHERE %s = $1 ORDER BY created_at DESC LIMIT $2", r.table, field)
-	
+
 	rows, err := r.db.QueryContext(ctx, query, value, limit)
 	if err != nil {
 		r.logger.Error("Failed to find entities by field",
@@ -307,7 +307,7 @@ func (r *OptimizedRepository[T]) FindByTimeRange(ctx context.Context, timeField 
 	}()
 
 	query := fmt.Sprintf("SELECT * FROM %s WHERE %s BETWEEN $1 AND $2 ORDER BY %s DESC LIMIT $3", r.table, timeField, timeField)
-	
+
 	rows, err := r.db.QueryContext(ctx, query, from, to, limit)
 	if err != nil {
 		r.logger.Error("Failed to find entities by time range",
@@ -356,7 +356,7 @@ func (r *OptimizedRepository[T]) BatchCreate(ctx context.Context, entities []*T)
 	defer tx.Rollback()
 
 	fields, _, placeholders := r.extractFieldsAndValues(entities[0], false)
-	
+
 	query := fmt.Sprintf(
 		"INSERT INTO %s (%s) VALUES (%s)",
 		r.table,
@@ -423,7 +423,6 @@ func (r *OptimizedRepository[T]) extractFieldsAndValues(entity *T, includeID boo
 // scanRowIntoEntity scans a database row into an entity using reflection
 func (r *OptimizedRepository[T]) scanRowIntoEntity(scanner interface{ Scan(...interface{}) error }, entity *T) error {
 	v := reflect.ValueOf(entity).Elem()
-	t := v.Type()
 
 	var scanArgs []interface{}
 	for i := 0; i < v.NumField(); i++ {
@@ -465,4 +464,3 @@ func (r *BaseRepository) GetLogger() *zap.Logger {
 func (r *BaseRepository) GetTable() string {
 	return r.table
 }
-

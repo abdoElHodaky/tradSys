@@ -10,19 +10,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// TradeRepository represents a repository for trades
-type TradeRepository struct {
-	db     *gorm.DB
-	logger *zap.Logger
-}
 
-// NewTradeRepository creates a new trade repository
-func NewTradeRepository(db *gorm.DB, logger *zap.Logger) *TradeRepository {
-	return &TradeRepository{
-		db:     db,
-		logger: logger,
-	}
-}
 
 // Create creates a new trade
 func (r *TradeRepository) Create(ctx context.Context, trade *db.Trade) error {
