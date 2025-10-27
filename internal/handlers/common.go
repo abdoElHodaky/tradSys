@@ -108,6 +108,53 @@ func convertTradesToResponse(trades []*types.Trade) []TradeResponse {
 	return responses
 }
 
+// CreateOrderRequest represents a request to create an order.
+type CreateOrderRequest struct {
+	ClientOrderID string  `json:"client_order_id"`
+	UserID        string  `json:"user_id"`
+	Symbol        string  `json:"symbol"`
+	Side          string  `json:"side"`
+	Type          string  `json:"type"`
+	Price         float64 `json:"price"`
+	Quantity      float64 `json:"quantity"`
+	TimeInForce   string  `json:"time_in_force"`
+	StopPrice     *float64 `json:"stop_price,omitempty"`
+}
+
+// CreateOrderResponse represents a response to creating an order.
+type CreateOrderResponse struct {
+	Order  OrderResponse   `json:"order"`
+	Trades []TradeResponse `json:"trades"`
+}
+
+// OrderResponse represents an order in API responses.
+type OrderResponse struct {
+	ID                string     `json:"id"`
+	ClientOrderID     string     `json:"client_order_id"`
+	UserID            string     `json:"user_id"`
+	Symbol            string     `json:"symbol"`
+	Side              string     `json:"side"`
+	Type              string     `json:"type"`
+	Price             float64    `json:"price"`
+	Quantity          float64    `json:"quantity"`
+	FilledQuantity    float64    `json:"filled_quantity"`
+	RemainingQuantity float64    `json:"remaining_quantity"`
+	Status            string     `json:"status"`
+	TimeInForce       string     `json:"time_in_force"`
+	StopPrice         *float64   `json:"stop_price,omitempty"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+	ExpiresAt         *time.Time `json:"expires_at,omitempty"`
+}
+
+// ListOrdersResponse represents a list of orders in API responses.
+type ListOrdersResponse struct {
+	Orders []OrderResponse `json:"orders"`
+	Total  int             `json:"total"`
+	Limit  int             `json:"limit"`
+	Offset int             `json:"offset"`
+}
+
 // TradeResponse represents a trade in API responses.
 type TradeResponse struct {
 	ID           string    `json:"id"`
@@ -220,10 +267,8 @@ var (
 	ValidOrderTypes = []string{
 		string(types.OrderTypeMarket),
 		string(types.OrderTypeLimit),
-		string(types.OrderTypeStopLoss),
-		string(types.OrderTypeStopLossLimit),
-		string(types.OrderTypeTakeProfit),
-		string(types.OrderTypeTakeProfitLimit),
+		string(types.OrderTypeStop),
+		string(types.OrderTypeStopLimit),
 	}
 	
 	ValidTimeInForce = []string{

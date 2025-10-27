@@ -105,12 +105,12 @@ func (et ExchangeType) IsMarketOpen() bool {
 	now := time.Now().In(location)
 	
 	// Parse open and close times
-	openTime, err := time.Parse("15:04", hours.Open)
+	_, err = time.Parse("15:04", hours.Open)
 	if err != nil {
 		return false
 	}
 	
-	closeTime, err := time.Parse("15:04", hours.Close)
+	_, err = time.Parse("15:04", hours.Close)
 	if err != nil {
 		return false
 	}

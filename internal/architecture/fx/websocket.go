@@ -14,33 +14,43 @@ import (
 
 // WebSocketModule provides the WebSocket components
 var WebSocketModule = fx.Options(
-	// Provide the WebSocket hub
-	fx.Provide(NewWebSocketHub),
+	// Provide the WebSocket gateway
+	fx.Provide(NewWebSocketGateway),
 
 	// Provide the WebSocket handler
-	fx.Provide(NewWebSocketHandler),
+	fx.Provide(NewWebSocketMessageHandler),
 
 	// Register lifecycle hooks
 	fx.Invoke(registerWebSocketHooks),
 )
 
-// NewWebSocketHub creates a new WebSocket hub
-func NewWebSocketHub(logger *zap.Logger) *websocket.Hub {
-	return websocket.NewHub(logger)
+// NewWebSocketGateway creates a new WebSocket gateway
+func NewWebSocketGateway(logger *zap.Logger) *websocket.Gateway {
+	config := &websocket.GatewayConfig{
+		MaxConnections:    1000,
+		ReadBufferSize:    1024,
+		WriteBufferSize:   1024,
+		HandshakeTimeout:  time.Second * 10,
+		ReadTimeout:       time.Second * 60,
+		WriteTimeout:      time.Second * 10,
+		PingPeriod:        time.Second * 54,
+		MaxMessageSize:    512,
+		EnableCompression: true,
+	}
+	return websocket.NewGateway(config, logger)
 }
 
-// NewWebSocketHandler creates a new WebSocket handler
-func NewWebSocketHandler(hub *websocket.Hub, logger *zap.Logger) *websocket.WebSocketHandler {
-	config := websocket.DefaultWebSocketHandlerConfig()
-	return websocket.NewWebSocketHandler(hub, logger, config)
+// NewWebSocketMessageHandler creates a new WebSocket message handler
+func NewWebSocketMessageHandler(gateway *websocket.Gateway, logger *zap.Logger) *websocket.MessageHandler {
+	return websocket.NewMessageHandler(gateway, logger)
 }
 
 // registerWebSocketHooks registers lifecycle hooks for the WebSocket components
 func registerWebSocketHooks(
 	lc fx.Lifecycle,
 	logger *zap.Logger,
-	hub *websocket.Hub,
-	handler *websocket.WebSocketHandler,
+	gateway *websocket.Gateway,
+	handler *websocket.MessageHandler,
 	router *gin.Engine,
 ) {
 	lc.Append(fx.Hook{
@@ -48,15 +58,23 @@ func registerWebSocketHooks(
 			logger.Info("Starting WebSocket components")
 
 			// Register the WebSocket routes
-			handler.RegisterRoutes(router)
+			router.GET("/ws", func(c *gin.Context) {
+				// Handle WebSocket upgrade
+				gateway.HandleWebSocket(c.Writer, c.Request)
+			})
 
-			// Start the hub in a goroutine
-			go hub.Run()
+			// Start the gateway in a goroutine
+			go func() {
+				if err := gateway.Start(); err != nil {
+					logger.Error("Failed to start WebSocket gateway", zap.Error(err))
+				}
+			}()
 
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
 			logger.Info("Stopping WebSocket components")
+			gateway.Stop()
 			return nil
 		},
 	})

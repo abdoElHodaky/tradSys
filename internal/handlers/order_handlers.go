@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -233,46 +232,4 @@ func (h *OrderHandlers) validateOrderRequest(req *CreateOrderRequest) error {
 	return nil
 }
 
-// Request/Response types for orders
-type CreateOrderRequest struct {
-	ClientOrderID string   `json:"client_order_id"`
-	UserID        string   `json:"user_id"`
-	Symbol        string   `json:"symbol"`
-	Side          string   `json:"side"`
-	Type          string   `json:"type"`
-	Price         float64  `json:"price"`
-	Quantity      float64  `json:"quantity"`
-	TimeInForce   string   `json:"time_in_force"`
-	StopPrice     *float64 `json:"stop_price,omitempty"`
-}
-
-type CreateOrderResponse struct {
-	Order  OrderResponse   `json:"order"`
-	Trades []TradeResponse `json:"trades"`
-}
-
-type OrderResponse struct {
-	ID                string     `json:"id"`
-	ClientOrderID     string     `json:"client_order_id"`
-	UserID            string     `json:"user_id"`
-	Symbol            string     `json:"symbol"`
-	Side              string     `json:"side"`
-	Type              string     `json:"type"`
-	Price             float64    `json:"price"`
-	Quantity          float64    `json:"quantity"`
-	FilledQuantity    float64    `json:"filled_quantity"`
-	RemainingQuantity float64    `json:"remaining_quantity"`
-	Status            string     `json:"status"`
-	TimeInForce       string     `json:"time_in_force"`
-	StopPrice         *float64   `json:"stop_price,omitempty"`
-	CreatedAt         time.Time  `json:"created_at"`
-	UpdatedAt         time.Time  `json:"updated_at"`
-	ExpiresAt         *time.Time `json:"expires_at,omitempty"`
-}
-
-type ListOrdersResponse struct {
-	Orders []OrderResponse `json:"orders"`
-	Total  int             `json:"total"`
-	Limit  int             `json:"limit"`
-	Offset int             `json:"offset"`
-}
+// Note: Request/Response types moved to common.go to avoid duplication

@@ -90,6 +90,9 @@ type Order struct {
 	LastTradePrice   float64 `json:"last_trade_price"`
 	LastTradeTime    *time.Time `json:"last_trade_time,omitempty"`
 	
+	// Trades associated with this order
+	Trades []*Trade `json:"trades,omitempty"`
+	
 	// Metadata
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
@@ -107,12 +110,22 @@ type Trade struct {
 	Timestamp    time.Time `json:"timestamp"`
 	IsMaker      bool      `json:"is_maker"`
 	
+	// Execution information
+	ExecutedAt time.Time `json:"executed_at"`
+	
+	// Fee information
+	FeeCurrency string `json:"fee_currency"`
+	
 	// Counterparty information
-	CounterOrderID string `json:"counter_order_id,omitempty"`
+	CounterOrderID      string `json:"counter_order_id,omitempty"`
+	CounterPartyOrderID string `json:"counter_party_order_id,omitempty"`
 	
 	// Settlement information
 	SettlementStatus string `json:"settlement_status"`
 	SettledAt        *time.Time `json:"settled_at,omitempty"`
+	
+	// Metadata
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // OrderFilter represents filters for querying orders
@@ -162,9 +175,11 @@ type OrderUpdateRequest struct {
 	ClientOrderID string  `json:"client_order_id,omitempty"`
 	UserID        string  `json:"user_id" validate:"required"`
 	AccountID     string  `json:"account_id" validate:"required"`
-	Quantity      float64 `json:"quantity,omitempty"`
-	Price         float64 `json:"price,omitempty"`
-	StopPrice     float64 `json:"stop_price,omitempty"`
+	Quantity      float64     `json:"quantity,omitempty"`
+	Price         float64     `json:"price,omitempty"`
+	StopPrice     float64     `json:"stop_price,omitempty"`
+	TimeInForce   TimeInForce `json:"time_in_force,omitempty"`
+	ExpiresAt     *time.Time  `json:"expires_at,omitempty"`
 	
 	// Metadata updates
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
