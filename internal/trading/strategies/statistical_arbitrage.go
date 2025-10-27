@@ -3,6 +3,7 @@ package strategies
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
@@ -371,26 +372,26 @@ func (s *StatisticalArbitrageStrategy) enterLongPosition(ctx context.Context) er
 
 	// Create buy order for symbol1
 	buyOrder := &models.Order{
-		OrderID:   uuid.New().String(),
-		Symbol:    s.symbol1,
-		Side:      models.OrderSideBuy,
-		Type:      models.OrderTypeMarket,
-		Quantity:  qty1,
-		Price:     s.prices1[len(s.prices1)-1],
-		Strategy:  s.name,
-		Timestamp: time.Now(),
+		ID:            uuid.New().String(),
+		Symbol:        s.symbol1,
+		Side:          models.OrderSideBuy,
+		Type:          models.OrderTypeMarket,
+		Quantity:      qty1,
+		Price:         s.prices1[len(s.prices1)-1],
+		ClientOrderID: s.name + "_buy_" + uuid.New().String()[:8],
+		CreatedAt:     time.Now(),
 	}
 
 	// Create sell order for symbol2
 	sellOrder := &models.Order{
-		OrderID:   uuid.New().String(),
-		Symbol:    s.symbol2,
-		Side:      models.OrderSideSell,
-		Type:      models.OrderTypeMarket,
-		Quantity:  qty2,
-		Price:     s.prices2[len(s.prices2)-1],
-		Strategy:  s.name,
-		Timestamp: time.Now(),
+		ID:            uuid.New().String(),
+		Symbol:        s.symbol2,
+		Side:          models.OrderSideSell,
+		Type:          models.OrderTypeMarket,
+		Quantity:      qty2,
+		Price:         s.prices2[len(s.prices2)-1],
+		ClientOrderID: s.name + "_sell_" + uuid.New().String()[:8],
+		CreatedAt:     time.Now(),
 	}
 
 	// Submit orders
@@ -448,26 +449,26 @@ func (s *StatisticalArbitrageStrategy) enterShortPosition(ctx context.Context) e
 
 	// Create sell order for symbol1
 	sellOrder := &models.Order{
-		OrderID:   uuid.New().String(),
-		Symbol:    s.symbol1,
-		Side:      models.OrderSideSell,
-		Type:      models.OrderTypeMarket,
-		Quantity:  qty1,
-		Price:     s.prices1[len(s.prices1)-1],
-		Strategy:  s.name,
-		Timestamp: time.Now(),
+		ID:            uuid.New().String(),
+		Symbol:        s.symbol1,
+		Side:          models.OrderSideSell,
+		Type:          models.OrderTypeMarket,
+		Quantity:      qty1,
+		Price:         s.prices1[len(s.prices1)-1],
+		ClientOrderID: s.name + "_sell_" + uuid.New().String()[:8],
+		CreatedAt:     time.Now(),
 	}
 
 	// Create buy order for symbol2
 	buyOrder := &models.Order{
-		OrderID:   uuid.New().String(),
-		Symbol:    s.symbol2,
-		Side:      models.OrderSideBuy,
-		Type:      models.OrderTypeMarket,
-		Quantity:  qty2,
-		Price:     s.prices2[len(s.prices2)-1],
-		Strategy:  s.name,
-		Timestamp: time.Now(),
+		ID:            uuid.New().String(),
+		Symbol:        s.symbol2,
+		Side:          models.OrderSideBuy,
+		Type:          models.OrderTypeMarket,
+		Quantity:      qty2,
+		Price:         s.prices2[len(s.prices2)-1],
+		ClientOrderID: s.name + "_buy_" + uuid.New().String()[:8],
+		CreatedAt:     time.Now(),
 	}
 
 	// Submit orders
@@ -525,52 +526,52 @@ func (s *StatisticalArbitrageStrategy) exitPosition(ctx context.Context, id stri
 	if position.Quantity1 > 0 {
 		// Long position in symbol1, need to sell
 		order1 = &models.Order{
-			OrderID:   uuid.New().String(),
-			Symbol:    position.Symbol1,
-			Side:      models.OrderSideSell,
-			Type:      models.OrderTypeMarket,
-			Quantity:  math.Abs(position.Quantity1),
-			Price:     s.prices1[len(s.prices1)-1],
-			Strategy:  s.name,
-			Timestamp: time.Now(),
+			ID:            uuid.New().String(),
+			Symbol:        position.Symbol1,
+			Side:          models.OrderSideSell,
+			Type:          models.OrderTypeMarket,
+			Quantity:      math.Abs(position.Quantity1),
+			Price:         s.prices1[len(s.prices1)-1],
+			ClientOrderID: s.name + "_exit_sell_" + uuid.New().String()[:8],
+			CreatedAt:     time.Now(),
 		}
 	} else {
 		// Short position in symbol1, need to buy
 		order1 = &models.Order{
-			OrderID:   uuid.New().String(),
-			Symbol:    position.Symbol1,
-			Side:      models.OrderSideBuy,
-			Type:      models.OrderTypeMarket,
-			Quantity:  math.Abs(position.Quantity1),
-			Price:     s.prices1[len(s.prices1)-1],
-			Strategy:  s.name,
-			Timestamp: time.Now(),
+			ID:            uuid.New().String(),
+			Symbol:        position.Symbol1,
+			Side:          models.OrderSideBuy,
+			Type:          models.OrderTypeMarket,
+			Quantity:      math.Abs(position.Quantity1),
+			Price:         s.prices1[len(s.prices1)-1],
+			ClientOrderID: s.name + "_exit_buy_" + uuid.New().String()[:8],
+			CreatedAt:     time.Now(),
 		}
 	}
 
 	if position.Quantity2 > 0 {
 		// Long position in symbol2, need to sell
 		order2 = &models.Order{
-			OrderID:   uuid.New().String(),
-			Symbol:    position.Symbol2,
-			Side:      models.OrderSideSell,
-			Type:      models.OrderTypeMarket,
-			Quantity:  math.Abs(position.Quantity2),
-			Price:     s.prices2[len(s.prices2)-1],
-			Strategy:  s.name,
-			Timestamp: time.Now(),
+			ID:            uuid.New().String(),
+			Symbol:        position.Symbol2,
+			Side:          models.OrderSideSell,
+			Type:          models.OrderTypeMarket,
+			Quantity:      math.Abs(position.Quantity2),
+			Price:         s.prices2[len(s.prices2)-1],
+			ClientOrderID: s.name + "_exit_sell_" + uuid.New().String()[:8],
+			CreatedAt:     time.Now(),
 		}
 	} else {
 		// Short position in symbol2, need to buy
 		order2 = &models.Order{
-			OrderID:   uuid.New().String(),
-			Symbol:    position.Symbol2,
-			Side:      models.OrderSideBuy,
-			Type:      models.OrderTypeMarket,
-			Quantity:  math.Abs(position.Quantity2),
-			Price:     s.prices2[len(s.prices2)-1],
-			Strategy:  s.name,
-			Timestamp: time.Now(),
+			ID:            uuid.New().String(),
+			Symbol:        position.Symbol2,
+			Side:          models.OrderSideBuy,
+			Type:          models.OrderTypeMarket,
+			Quantity:      math.Abs(position.Quantity2),
+			Price:         s.prices2[len(s.prices2)-1],
+			ClientOrderID: s.name + "_exit_buy_" + uuid.New().String()[:8],
+			CreatedAt:     time.Now(),
 		}
 	}
 

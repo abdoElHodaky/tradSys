@@ -278,15 +278,7 @@ type OrderManagementService interface {
 
 // Supporting Types
 
-// HealthStatus represents the health status of a service
-type HealthStatus struct {
-	Service   string                 `json:"service"`
-	Version   string                 `json:"version"`
-	Status    string                 `json:"status"`
-	Uptime    time.Duration          `json:"uptime"`
-	Timestamp time.Time              `json:"timestamp"`
-	Details   map[string]interface{} `json:"details,omitempty"`
-}
+// Note: HealthStatus is defined as a type alias above to maintain compatibility
 
 // ServiceStatus represents the detailed status of a service
 type ServiceStatus struct {

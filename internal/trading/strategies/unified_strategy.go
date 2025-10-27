@@ -237,6 +237,7 @@ func (e *UnifiedStrategyEngine) registerDefaultStrategies() {
 		enabled:   true,
 		lookback:  20,
 		threshold: 2.0,
+		prices:    make([]float64, 0),
 		metrics:   &StrategyMetrics{LastUpdateTime: time.Now()},
 		logger:    e.logger.Named("mean_reversion"),
 	}
@@ -248,6 +249,7 @@ func (e *UnifiedStrategyEngine) registerDefaultStrategies() {
 		enabled:   true,
 		period:    10,
 		threshold: 0.02,
+		prices:    make([]float64, 0),
 		metrics:   &StrategyMetrics{LastUpdateTime: time.Now()},
 		logger:    e.logger.Named("momentum"),
 	}

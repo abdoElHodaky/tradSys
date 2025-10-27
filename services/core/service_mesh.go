@@ -19,6 +19,26 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+// ServiceDiscovery handles service discovery
+type ServiceDiscovery struct {
+	logger interface{} // Using interface{} to avoid import issues
+}
+
+// LoadBalancer handles load balancing
+type LoadBalancer struct {
+	logger interface{}
+}
+
+// HealthChecker handles health checking
+type HealthChecker struct {
+	logger interface{}
+}
+
+// MetricsCollector handles metrics collection
+type MetricsCollector struct {
+	logger interface{}
+}
+
 // ServiceMesh represents the unified service mesh for TradSys v3
 type ServiceMesh struct {
 	services         map[string]*ServiceNode
@@ -229,4 +249,32 @@ func (sm *ServiceMesh) Shutdown(ctx context.Context) error {
 
 	log.Println("Service mesh shutdown complete")
 	return nil
+}
+
+// NewServiceDiscovery creates a new service discovery instance
+func NewServiceDiscovery() *ServiceDiscovery {
+	return &ServiceDiscovery{
+		logger: nil, // Will be set later when proper logger is available
+	}
+}
+
+// NewLoadBalancer creates a new load balancer instance
+func NewLoadBalancer() *LoadBalancer {
+	return &LoadBalancer{
+		logger: nil,
+	}
+}
+
+// NewHealthChecker creates a new health checker instance
+func NewHealthChecker() *HealthChecker {
+	return &HealthChecker{
+		logger: nil,
+	}
+}
+
+// NewMetricsCollector creates a new metrics collector instance
+func NewMetricsCollector() *MetricsCollector {
+	return &MetricsCollector{
+		logger: nil,
+	}
 }
