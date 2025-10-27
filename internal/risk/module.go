@@ -2,7 +2,7 @@ package risk
 
 import (
 	"context"
-	"github.com/abdoElHodaky/tradSys/internal/core/matching"
+	"github.com/abdoElHodaky/tradSys/pkg/matching"
 	"github.com/abdoElHodaky/tradSys/internal/orders"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -17,7 +17,7 @@ var RiskManagementModule = fx.Options(
 func NewFxService(
 	lifecycle fx.Lifecycle,
 	logger *zap.Logger,
-	orderEngine *order_matching.Engine,
+	orderEngine *matching.Engine,
 	orderService *orders.Service,
 ) *Service {
 	service := NewService(orderEngine, orderService, logger)

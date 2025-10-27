@@ -5,52 +5,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/core/matching"
+	"github.com/abdoElHodaky/tradSys/pkg/matching"
 	"github.com/abdoElHodaky/tradSys/internal/orders"
 	riskengine "github.com/abdoElHodaky/tradSys/internal/risk/engine"
 	"github.com/patrickmn/go-cache"
 	"go.uber.org/zap"
 )
 
-// RiskLevel represents the risk level of an operation
-type RiskLevel string
-
-const (
-	RiskLevelLow      RiskLevel = "low"
-	RiskLevelMedium   RiskLevel = "medium"
-	RiskLevelHigh     RiskLevel = "high"
-	RiskLevelCritical RiskLevel = "critical"
-)
-
-// RiskLimitType represents the type of risk limit
-type RiskLimitType string
-
-const (
-	// RiskLimitTypePosition represents a position limit
-	RiskLimitTypePosition RiskLimitType = "position"
-	// RiskLimitTypeOrderSize represents an order size limit
-	RiskLimitTypeOrderSize RiskLimitType = "order_size"
-	// RiskLimitTypeExposure represents an exposure limit
-	RiskLimitTypeExposure RiskLimitType = "exposure"
-	// RiskLimitTypeDrawdown represents a drawdown limit
-	RiskLimitTypeDrawdown RiskLimitType = "drawdown"
-	// RiskLimitTypeTradeFrequency represents a trade frequency limit
-	RiskLimitTypeTradeFrequency RiskLimitType = "trade_frequency"
-	// RiskLimitTypeConcentration represents a concentration limit
-	RiskLimitTypeConcentration RiskLimitType = "concentration"
-	// RiskLimitTypeVaR represents a Value at Risk limit
-	RiskLimitTypeVaR RiskLimitType = "var"
-)
-
-// RiskCheckResult represents the result of a risk check
-type RiskCheckResult struct {
-	Passed     bool      `json:"passed"`
-	RiskLevel  RiskLevel `json:"risk_level"`
-	Violations []string  `json:"violations"`
-	Warnings   []string  `json:"warnings"`
-	CheckedAt  time.Time `json:"checked_at"`
-	Details    string    `json:"details,omitempty"`
-}
+// Note: Type definitions moved to risk_types.go to avoid duplicates
 
 // RiskLimit represents a risk limit
 type RiskLimit struct {
@@ -99,7 +61,7 @@ type RiskOperationResult struct {
 // Service represents a risk management service
 type Service struct {
 	// OrderEngine is the order matching engine
-	OrderEngine *order_matching.Engine
+	OrderEngine *matching.Engine
 	// OrderService is the order management service
 	OrderService *orders.Service
 	// Positions is a map of user ID and symbol to position

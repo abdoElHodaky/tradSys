@@ -2,6 +2,7 @@ package risk
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -55,13 +56,13 @@ func (bp *BatchProcessor) SubmitOperation(op RiskOperation) {
 		// Processor is shutting down
 		op.ResultCh <- RiskOperationResult{
 			Success: false,
-			Error:   "Batch processor is shutting down",
+			Error:   errors.New("batch processor is shutting down"),
 		}
 	default:
 		// Channel is full, reject operation
 		op.ResultCh <- RiskOperationResult{
 			Success: false,
-			Error:   "Batch processor queue is full",
+			Error:   errors.New("batch processor queue is full"),
 		}
 	}
 }
@@ -128,7 +129,7 @@ func (bp *BatchProcessor) processBatch(batch []RiskOperation) {
 			// Unknown operation type
 			op.ResultCh <- RiskOperationResult{
 				Success: false,
-				Error:   "Unknown operation type: " + op.OpType,
+				Error:   errors.New("unknown operation type: " + op.OpType),
 			}
 		}
 	}
@@ -153,7 +154,7 @@ func (bp *BatchProcessor) processUpdatePositionBatch(ops []RiskOperation) {
 		if !ok {
 			op.ResultCh <- RiskOperationResult{
 				Success: false,
-				Error:   "Invalid position update data",
+				Error:   errors.New("invalid position update data"),
 			}
 			continue
 		}
@@ -162,7 +163,7 @@ func (bp *BatchProcessor) processUpdatePositionBatch(ops []RiskOperation) {
 		if !ok {
 			op.ResultCh <- RiskOperationResult{
 				Success: false,
-				Error:   "Invalid quantity delta",
+				Error:   errors.New("invalid quantity delta"),
 			}
 			continue
 		}
@@ -171,7 +172,7 @@ func (bp *BatchProcessor) processUpdatePositionBatch(ops []RiskOperation) {
 		if !ok {
 			op.ResultCh <- RiskOperationResult{
 				Success: false,
-				Error:   "Invalid price",
+				Error:   errors.New("invalid price"),
 			}
 			continue
 		}
@@ -195,7 +196,7 @@ func (bp *BatchProcessor) processCheckLimitBatch(ops []RiskOperation) {
 		if !ok {
 			op.ResultCh <- RiskOperationResult{
 				Success: false,
-				Error:   "Invalid limit check data",
+				Error:   errors.New("invalid limit check data"),
 			}
 			continue
 		}
@@ -204,7 +205,7 @@ func (bp *BatchProcessor) processCheckLimitBatch(ops []RiskOperation) {
 		if !ok {
 			op.ResultCh <- RiskOperationResult{
 				Success: false,
-				Error:   "Invalid order size",
+				Error:   errors.New("invalid order size"),
 			}
 			continue
 		}
@@ -213,7 +214,7 @@ func (bp *BatchProcessor) processCheckLimitBatch(ops []RiskOperation) {
 		if !ok {
 			op.ResultCh <- RiskOperationResult{
 				Success: false,
-				Error:   "Invalid current price",
+				Error:   errors.New("invalid current price"),
 			}
 			continue
 		}
@@ -249,7 +250,7 @@ func (bp *BatchProcessor) processAddLimitBatch(ops []RiskOperation) {
 		if !ok {
 			op.ResultCh <- RiskOperationResult{
 				Success: false,
-				Error:   "Invalid risk limit data",
+				Error:   errors.New("invalid risk limit data"),
 			}
 			continue
 		}

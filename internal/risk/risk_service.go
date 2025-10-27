@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/core/matching"
+	"github.com/abdoElHodaky/tradSys/pkg/matching"
 	"github.com/abdoElHodaky/tradSys/internal/orders"
 	riskengine "github.com/abdoElHodaky/tradSys/internal/risk/engine"
 	"github.com/google/uuid"
@@ -63,7 +63,7 @@ type RiskOperationResult struct {
 // Service represents a risk management service
 type Service struct {
 	// OrderEngine is the order matching engine
-	OrderEngine *order_matching.Engine
+	OrderEngine *matching.Engine
 	// OrderService is the order management service
 	OrderService *orders.Service
 	// Positions is a map of user ID and symbol to position
@@ -101,7 +101,7 @@ type MarketDataUpdate struct {
 }
 
 // NewService creates a new risk management service
-func NewService(orderEngine *order_matching.Engine, orderService *orders.Service, logger *zap.Logger) *Service {
+func NewService(orderEngine *matching.Engine, orderService *orders.Service, logger *zap.Logger) *Service {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	service := &Service{
@@ -577,7 +577,7 @@ func (s *Service) subscribeToTrades() {
 }
 
 // processTrade processes a trade for risk management
-func (s *Service) processTrade(trade *order_matching.Trade) {
+func (s *Service) processTrade(trade *matching.Trade) {
 	// Get buy order
 	buyOrder, err := s.OrderEngine.GetOrder(trade.Symbol, trade.BuyOrderID)
 	if err != nil {

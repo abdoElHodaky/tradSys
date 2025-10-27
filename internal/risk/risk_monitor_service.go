@@ -120,7 +120,7 @@ func (s *Service) subscribeToTrades() {
 }
 
 // processTrade processes a trade for risk management
-func (s *Service) processTrade(trade *order_matching.Trade) {
+func (s *Service) processTrade(trade *matching.Trade) {
 	// Get buy order
 	buyOrder, err := s.OrderEngine.GetOrder(trade.Symbol, trade.BuyOrderID)
 	if err != nil {
@@ -171,4 +171,3 @@ func (s *Service) updatePosition(userID, symbol string, quantityDelta, price flo
 	// Wait for result
 	<-resultCh
 }
-
