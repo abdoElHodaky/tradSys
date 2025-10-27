@@ -8,11 +8,7 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-// ADXConfig represents ADX configuration (mock for testing)
-type ADXConfig struct {
-	MaxConnections int
-	Timeout        time.Duration
-}
+// ADXConfig is already defined in adx_connection_manager.go
 
 func TestADXConnectionManager_NewADXConnectionManager(t *testing.T) {
 	logger := zaptest.NewLogger(t)

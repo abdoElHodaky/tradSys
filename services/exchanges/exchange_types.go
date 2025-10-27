@@ -3,6 +3,7 @@ package exchanges
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -192,19 +193,7 @@ type HealthChecker struct {
 	isHealthy     bool
 }
 
-// DataFeed represents a market data feed
-type DataFeed struct {
-	Symbol    string
-	AssetType AssetType
-	IsActive  bool
-	LastUpdate time.Time
-}
 
-// HistoricalDataStore manages historical data
-type HistoricalDataStore struct {
-	RetentionPeriod time.Duration
-	CompressionType string
-}
 
 // PriceEngine calculates prices
 type PriceEngine struct {
@@ -388,7 +377,7 @@ func (ec *EgyptianCompliance) ValidateOrder(order *Order) error {
 func NewEGXConnector() *EGXConnector {
 	return &EGXConnector{
 		endpoint:       "https://api.egx.com.eg",
-		connectionPool: &ConnectionPool{MaxConnections: 100, IdleTimeout: 5 * time.Minute},
+		connectionPool: &ConnectionPool{maxConnections: 100},
 		rateLimiter:    &RateLimiter{RequestsPerSecond: 100, BurstSize: 200},
 		retryPolicy:    &RetryPolicy{MaxRetries: 3, InitialDelay: time.Second, MaxDelay: 10 * time.Second, BackoffFactor: 2.0},
 		healthChecker:  &HealthChecker{CheckInterval: 30 * time.Second, Timeout: 5 * time.Second},
@@ -422,7 +411,7 @@ func (conn *EGXConnector) GetAssetInfo(symbol string) (*AssetInfo, error) {
 func NewEGXMarketData() *EGXMarketData {
 	return &EGXMarketData{
 		realTimeFeeds:   make(map[string]*DataFeed),
-		historicalData:  &HistoricalDataStore{RetentionPeriod: 365 * 24 * time.Hour},
+		historicalData:  &HistoricalDataStore{data: make(map[string][]HistoricalDataPoint)},
 		priceEngine:     &PriceEngine{PricingModel: "VWAP", UpdateFreq: time.Second},
 		indexCalculator: &IndexCalculator{Indices: make(map[string]float64)},
 	}
@@ -509,10 +498,7 @@ func (pm *PerformanceMonitor) Start() {
 	// Implement performance monitoring
 }
 
-// Stop stops performance monitoring
-func (pm *PerformanceMonitor) Stop() {
-	pm.isRunning = false
-}
+
 
 // RecordOrderLatency records order latency
 func (pm *PerformanceMonitor) RecordOrderLatency(latency time.Duration) {

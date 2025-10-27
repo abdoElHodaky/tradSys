@@ -8,6 +8,8 @@ import (
 	"log"
 	"sync"
 	"time"
+
+	"github.com/abdoElHodaky/tradSys/services/islamic"
 )
 
 // ADXService provides Abu Dhabi Exchange integration with Islamic finance focus
@@ -19,7 +21,7 @@ type ADXService struct {
 	islamicCompliance  *IslamicCompliance
 	uaeCompliance      *UAECompliance
 	shariaBoards       []*ShariaBoard
-	zakatCalculator    *ZakatCalculator
+	zakatCalculator    *islamic.ZakatCalculator
 	languageSupport    []string
 	connector          *ADXConnector
 	marketData         *ADXMarketData
@@ -34,8 +36,8 @@ type ADXService struct {
 // IslamicCompliance handles Sharia compliance for ADX
 type IslamicCompliance struct {
 	shariaRules     map[string]ShariaRule
-	screeningEngine *ScreeningEngine
-	complianceDB    *ComplianceDatabase
+	screeningEngine *islamic.ScreeningEngine
+	complianceDB    islamic.ComplianceDatabase
 	auditTrail      *IslamicAuditTrail
 	mu              sync.RWMutex
 }
@@ -97,11 +99,44 @@ type UAECompliance struct {
 	mu              sync.RWMutex
 }
 
+// ReportingRequirements defines regulatory reporting requirements
+type ReportingRequirements struct {
+	frequency    string
+	format       string
+	deadline     time.Duration
+	recipients   []string
+	mandatory    bool
+}
+
+// LicensingRequirements defines licensing requirements
+type LicensingRequirements struct {
+	licenseType  string
+	validUntil   time.Time
+	renewalDays  int
+	requirements []string
+}
+
 // SCACompliance handles SCA (Securities and Commodities Authority) compliance
 type SCACompliance struct {
 	rules       map[string]ComplianceRule
 	reportingReq ReportingRequirements
 	licensing   LicensingRequirements
+}
+
+// ADXOrderManager manages orders for ADX
+type ADXOrderManager struct {
+	orders      map[string]*Order
+	riskEngine  *ADXRiskEngine
+	connector   *ADXConnector
+	mu          sync.RWMutex
+}
+
+// ADXRiskEngine handles risk management for ADX
+type ADXRiskEngine struct {
+	riskLimits    map[string]float64
+	positionLimits map[string]int64
+	alertManager  *AlertManager
+	mu            sync.RWMutex
 }
 
 // ADXConnector handles connection to Abu Dhabi Exchange
@@ -114,6 +149,57 @@ type ADXConnector struct {
 	retryPolicy     *RetryPolicy
 	healthChecker   *HealthChecker
 	mu              sync.RWMutex
+}
+
+// DataFeed represents a market data feed
+type DataFeed struct {
+	Symbol      string
+	Price       float64
+	Volume      int64
+	Timestamp   time.Time
+	IsActive    bool
+}
+
+// IslamicIndexCalculator calculates Islamic indices
+type IslamicIndexCalculator struct {
+	indices     map[string]IslamicIndex
+	shariaRules []ShariaRule
+	mu          sync.RWMutex
+}
+
+// IslamicIndex represents an Islamic stock index
+type IslamicIndex struct {
+	Name        string
+	Value       float64
+	Components  []string
+	LastUpdated time.Time
+}
+
+// HistoricalDataStore stores historical market data
+type HistoricalDataStore struct {
+	data map[string][]HistoricalDataPoint
+	mu   sync.RWMutex
+}
+
+// HistoricalDataPoint represents a historical data point
+type HistoricalDataPoint struct {
+	Timestamp time.Time
+	Price     float64
+	Volume    int64
+}
+
+// ComplianceDataStore stores compliance-related data
+type ComplianceDataStore struct {
+	complianceData map[string]ComplianceData
+	mu             sync.RWMutex
+}
+
+// ComplianceData represents compliance information
+type ComplianceData struct {
+	Symbol      string
+	IsCompliant bool
+	Reason      string
+	LastChecked time.Time
 }
 
 // ADXMarketData handles Islamic-focused market data from ADX
@@ -137,6 +223,27 @@ type IslamicDataFeed struct {
 	IsActive         bool
 }
 
+// SukukPricingEngine handles Sukuk pricing calculations
+type SukukPricingEngine struct {
+	pricingModels map[string]PricingModel
+	marketData    *ADXMarketData
+	mu            sync.RWMutex
+}
+
+// IslamicYieldCalculator calculates Islamic-compliant yields
+type IslamicYieldCalculator struct {
+	yieldModels map[string]YieldModel
+	shariaRules []ShariaRule
+	mu          sync.RWMutex
+}
+
+// SukukRiskEngine handles Sukuk risk assessment
+type SukukRiskEngine struct {
+	riskModels map[string]RiskModel
+	limits     map[string]float64
+	mu         sync.RWMutex
+}
+
 // SukukService handles Sukuk (Islamic bonds) trading
 type SukukService struct {
 	sukukTypes      map[string]SukukType
@@ -155,6 +262,76 @@ type SukukType struct {
 	Maturity    time.Duration
 	MinInvest   float64
 	IsActive    bool
+}
+
+// PricingModel defines a pricing model interface
+type PricingModel interface {
+	CalculatePrice(asset string, data map[string]interface{}) (float64, error)
+}
+
+// YieldModel defines a yield calculation model
+type YieldModel interface {
+	CalculateYield(asset string, data map[string]interface{}) (float64, error)
+}
+
+// RiskModel defines a risk assessment model
+type RiskModel interface {
+	AssessRisk(asset string, data map[string]interface{}) (float64, error)
+}
+
+// ScreeningRule defines a screening rule for compliance
+type ScreeningRule interface {
+	Evaluate(asset string, data map[string]interface{}) (bool, error)
+}
+
+// Benchmark defines a performance benchmark
+type Benchmark struct {
+	Name        string
+	Value       float64
+	LastUpdated time.Time
+}
+
+// PerformanceMetric defines a performance metric
+type PerformanceMetric struct {
+	Name        string
+	Value       float64
+	Period      string
+	LastUpdated time.Time
+}
+
+// AlertManager handles system alerts
+type AlertManager struct {
+	alerts map[string]Alert
+	mu     sync.RWMutex
+}
+
+// Alert represents a system alert
+type Alert struct {
+	ID        string
+	Level     string
+	Message   string
+	Timestamp time.Time
+}
+
+// IslamicNAVCalculator calculates Net Asset Value for Islamic funds
+type IslamicNAVCalculator struct {
+	pricingModels map[string]PricingModel
+	shariaRules   []ShariaRule
+	mu            sync.RWMutex
+}
+
+// FundScreeningEngine screens funds for Sharia compliance
+type FundScreeningEngine struct {
+	screeningRules map[string]ScreeningRule
+	shariaBoard    *ShariaBoard
+	mu             sync.RWMutex
+}
+
+// IslamicPerformanceCalculator calculates Islamic fund performance
+type IslamicPerformanceCalculator struct {
+	benchmarks map[string]Benchmark
+	metrics    map[string]PerformanceMetric
+	mu         sync.RWMutex
 }
 
 // IslamicFundService handles Islamic mutual funds
@@ -190,7 +367,7 @@ func NewADXService() *ADXService {
 		islamicCompliance:  NewIslamicCompliance(),
 		uaeCompliance:      NewUAECompliance(),
 		shariaBoards:       createShariaBoards(),
-		zakatCalculator:    NewZakatCalculator(),
+		zakatCalculator:    islamic.NewZakatCalculator(&islamic.ZakatConfig{}),
 		languageSupport:    []string{"ar", "en"},
 		connector:          NewADXConnector(),
 		marketData:         NewADXMarketData(),
@@ -264,14 +441,20 @@ func (adx *ADXService) SubmitOrder(ctx context.Context, order *Order) (*OrderRes
 	}
 
 	// Submit to ADX
-	response, err := adx.orderManager.SubmitOrder(ctx, order)
-	if err != nil {
+	if err := adx.orderManager.SubmitOrder(order); err != nil {
 		return nil, fmt.Errorf("order submission failed: %w", err)
 	}
 
 	// Record performance metrics
 	latency := time.Since(startTime)
 	adx.performanceMonitor.RecordOrderLatency(latency)
+
+	// Create response
+	response := &OrderResponse{
+		OrderID:   order.ID,
+		Status:    OrderStatusPending,
+		Timestamp: time.Now(),
+	}
 
 	log.Printf("Order submitted to ADX: %s, Latency: %v", response.OrderID, latency)
 	return response, nil
@@ -306,13 +489,30 @@ func (adx *ADXService) GetIslamicFundData(ctx context.Context, fundID string) (*
 
 // CalculateZakat calculates Zakat for Islamic investments
 func (adx *ADXService) CalculateZakat(ctx context.Context, portfolio *IslamicPortfolio) (*ZakatCalculation, error) {
+	// Convert to islamic package portfolio type
+	islamicPortfolio := &islamic.IslamicPortfolio{
+		UserID:     portfolio.UserID,
+		TotalValue: portfolio.TotalValue,
+		Currency:   portfolio.Currency,
+	}
+	
 	// Calculate Zakat
-	calculation, err := adx.zakatCalculator.Calculate(portfolio)
+	calculation, err := adx.zakatCalculator.Calculate(ctx, islamicPortfolio)
 	if err != nil {
 		return nil, fmt.Errorf("Zakat calculation failed: %w", err)
 	}
 
-	return calculation, nil
+	// Convert back to local type
+	result := &ZakatCalculation{
+		TotalValue:    islamicPortfolio.TotalValue,
+		ZakableAmount: islamicPortfolio.TotalValue,
+		ZakatDue:      calculation.ZakatDue,
+		Rate:          2.5, // Standard Zakat rate
+		Currency:      calculation.Currency,
+		CalculatedAt:  time.Now(),
+	}
+
+	return result, nil
 }
 
 // GetShariaCompliance checks Sharia compliance for an asset
@@ -575,7 +775,7 @@ func getADXHolidays(year int) []time.Time {
 	return []time.Time{
 		time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC),   // New Year
 		time.Date(year, 12, 2, 0, 0, 0, 0, time.UTC),  // UAE National Day
-		time.Date(year, 12, 3, 0, 0, 0, 0, 0, time.UTC), // UAE National Day
+		time.Date(year, 12, 3, 0, 0, 0, 0, time.UTC), // UAE National Day
 		// Islamic holidays would be calculated based on lunar calendar
 	}
 }
@@ -721,4 +921,183 @@ type ScreeningResult struct {
 	Violations      []string
 	Recommendations []string
 	ScreenedAt      time.Time
+}
+
+// Stub implementations for missing constructor functions
+
+// NewADXOrderManager creates a new ADX order manager
+func NewADXOrderManager() *ADXOrderManager {
+	return &ADXOrderManager{}
+}
+
+// NewADXConnector creates a new ADX connector
+func NewADXConnector() *ADXConnector {
+	return &ADXConnector{}
+}
+
+// NewADXMarketData creates a new ADX market data handler
+func NewADXMarketData() *ADXMarketData {
+	return &ADXMarketData{}
+}
+
+// NewADXRiskEngine creates a new ADX risk engine
+func NewADXRiskEngine() *ADXRiskEngine {
+	return &ADXRiskEngine{}
+}
+
+// NewSukukService creates a new Sukuk service
+func NewSukukService() *SukukService {
+	return &SukukService{}
+}
+
+// NewIslamicFundService creates a new Islamic fund service
+func NewIslamicFundService() *IslamicFundService {
+	return &IslamicFundService{}
+}
+
+// IslamicAuditTrail handles audit trail for Islamic compliance
+type IslamicAuditTrail struct {
+	// TODO: Implement audit trail functionality
+}
+
+// NewIslamicAuditTrail creates a new Islamic audit trail
+func NewIslamicAuditTrail() *IslamicAuditTrail {
+	return &IslamicAuditTrail{}
+}
+
+// NewIslamicCompliance creates a new Islamic compliance handler
+func NewIslamicCompliance() *IslamicCompliance {
+	return &IslamicCompliance{
+		shariaRules:     make(map[string]ShariaRule),
+		screeningEngine: islamic.NewScreeningEngine([]islamic.ShariaRule{}),
+		auditTrail:      NewIslamicAuditTrail(),
+	}
+}
+
+// NewUAECompliance creates a new UAE compliance handler
+func NewUAECompliance() *UAECompliance {
+	return &UAECompliance{
+		regulatoryRules: make(map[string]ComplianceRule),
+		adgmRules:       make(map[string]ComplianceRule),
+		difcRules:       make(map[string]ComplianceRule),
+		sca:             &SCACompliance{},
+	}
+}
+
+// Connect establishes connection to ADX
+func (c *ADXConnector) Connect() error {
+	// TODO: Implement connection logic
+	return nil
+}
+
+// Disconnect closes connection to ADX
+func (c *ADXConnector) Disconnect() error {
+	// TODO: Implement disconnection logic
+	return nil
+}
+
+// StartIslamicFeeds starts Islamic data feeds
+func (m *ADXMarketData) StartIslamicFeeds() error {
+	// TODO: Implement Islamic feeds startup
+	return nil
+}
+
+// Stop stops market data feeds
+func (m *ADXMarketData) Stop() error {
+	// TODO: Implement market data stop
+	return nil
+}
+
+// LoadShariaRules loads Sharia compliance rules
+func (ic *IslamicCompliance) LoadShariaRules() error {
+	// TODO: Implement Sharia rules loading
+	return nil
+}
+
+// LoadRegulatoryRules loads UAE regulatory rules
+func (uc *UAECompliance) LoadRegulatoryRules() error {
+	// TODO: Implement regulatory rules loading
+	return nil
+}
+
+// Initialize initializes the Sukuk service
+func (s *SukukService) Initialize() error {
+	// TODO: Implement Sukuk service initialization
+	return nil
+}
+
+// Shutdown shuts down the Sukuk service
+func (s *SukukService) Shutdown() error {
+	// TODO: Implement Sukuk service shutdown
+	return nil
+}
+
+// Initialize initializes the Islamic fund service
+func (ifs *IslamicFundService) Initialize() error {
+	// TODO: Implement Islamic fund service initialization
+	return nil
+}
+
+// Shutdown shuts down the Islamic fund service
+func (ifs *IslamicFundService) Shutdown() error {
+	// TODO: Implement Islamic fund service shutdown
+	return nil
+}
+
+// Stop stops the performance monitor
+func (pm *PerformanceMonitor) Stop() error {
+	// TODO: Implement performance monitor stop
+	return nil
+}
+
+// ValidateOrder validates an order for Islamic compliance
+func (ic *IslamicCompliance) ValidateOrder(order *Order) error {
+	// TODO: Implement Islamic order validation
+	return nil
+}
+
+// ValidateOrder validates an order for UAE compliance
+func (uc *UAECompliance) ValidateOrder(order *Order) error {
+	// TODO: Implement UAE order validation
+	return nil
+}
+
+// AssessOrder assesses risk for an order
+func (re *ADXRiskEngine) AssessOrder(order *Order) error {
+	// TODO: Implement order risk assessment
+	return nil
+}
+
+// SubmitOrder submits an order to ADX
+func (om *ADXOrderManager) SubmitOrder(order *Order) error {
+	// TODO: Implement order submission
+	return nil
+}
+
+// GetSukukData retrieves Sukuk market data
+func (s *SukukService) GetSukukData(symbol string) (*SukukData, error) {
+	// TODO: Implement Sukuk data retrieval
+	return &SukukData{}, nil
+}
+
+// GetFundData retrieves Islamic fund data
+func (ifs *IslamicFundService) GetFundData(fundID string) (*IslamicFundData, error) {
+	// TODO: Implement fund data retrieval
+	return &IslamicFundData{}, nil
+}
+
+// GetComplianceReport gets compliance report for a symbol
+func (ic *IslamicCompliance) GetComplianceReport(symbol string) (*ShariaComplianceReport, error) {
+	// TODO: Implement compliance report generation
+	return &ShariaComplianceReport{}, nil
+}
+
+// ScreenAsset screens an asset for Sharia compliance
+func (ic *IslamicCompliance) ScreenAsset(symbol string) (*ScreeningResult, error) {
+	// TODO: Implement asset screening
+	return &ScreeningResult{
+		Symbol:      symbol,
+		IsCompliant: true,
+		ScreenedAt:  time.Now(),
+	}, nil
 }

@@ -9,6 +9,22 @@ import (
 	"go.uber.org/zap"
 )
 
+// ADXConfig represents ADX configuration
+type ADXConfig struct {
+	MaxConnections int
+	Timeout        time.Duration
+	Endpoints      map[string]string
+	RetryConfig    RetryConfig
+}
+
+// RetryConfig defines retry configuration
+type RetryConfig struct {
+	MaxRetries    int
+	BaseDelay     time.Duration
+	MaxDelay      time.Duration
+	BackoffFactor float64
+}
+
 // ADXConnectionManager handles connection management for ADX exchange
 type ADXConnectionManager struct {
 	config           *ADXConfig
