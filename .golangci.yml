@@ -2,16 +2,11 @@ run:
   timeout: 5m
   issues-exit-code: 1
   tests: true
-  skip-dirs:
-    - vendor
-    - github.com
-    - proto
-  skip-files:
-    - ".*\\.pb\\.go$"
-    - ".*_gen\\.go$"
+
 
 output:
-  format: colored-line-number
+  formats:
+    - format: colored-line-number
   print-issued-lines: true
   print-linter-name: true
 
@@ -85,22 +80,20 @@ linters-settings:
   goimports:
     local-prefixes: github.com/abdoElHodaky/tradSys
 
-  gomnd:
-    settings:
-      mnd:
-        checks:
-          - argument
-          - case
-          - condition
-          - operation
-          - return
-          - assign
-        ignored-numbers: 0,1,2,3,4,5,10,100,1000
-        ignored-functions:
-          - time.Duration
-          - math.Pow
-          - strconv.FormatFloat
-          - strconv.ParseFloat
+  mnd:
+    checks:
+      - argument
+      - case
+      - condition
+      - operation
+      - return
+      - assign
+    ignored-numbers: 0,1,2,3,4,5,10,100,1000
+    ignored-functions:
+      - time.Duration
+      - math.Pow
+      - strconv.FormatFloat
+      - strconv.ParseFloat
 
   godot:
     scope: declarations
@@ -158,9 +151,6 @@ linters:
     - staticcheck
     - typecheck
     - unused
-    - deadcode
-    - varcheck
-    - structcheck
 
     # Style
     - gofmt
@@ -181,7 +171,6 @@ linters:
     # Performance
     - bodyclose
     - gocritic
-    - maligned
 
     # Bugs
     - rowserrcheck
@@ -194,7 +183,7 @@ linters:
     # Code quality
     - dupl
     - goconst
-    - gomnd
+    - mnd
     - nestif
     - whitespace
     - wsl
@@ -207,6 +196,13 @@ linters:
     - varnamelen
 
 issues:
+  exclude-files:
+    - ".*\\.pb\\.go$"
+    - ".*_gen\\.go$"
+  exclude-dirs:
+    - vendor
+    - github.com
+    - proto
   exclude-rules:
     # Exclude some linters from running on tests files
     - path: _test\.go
@@ -217,7 +213,7 @@ issues:
         - gosec
         - funlen
         - goconst
-        - gomnd
+        - mnd
         - varnamelen
         - lll
 
@@ -261,7 +257,7 @@ severity:
     - linters:
         - dupl
         - goconst
-        - gomnd
+        - mnd
         - gocritic
       severity: warning
     - linters:
