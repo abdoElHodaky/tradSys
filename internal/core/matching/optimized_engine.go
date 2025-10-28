@@ -10,6 +10,20 @@ import (
 	"go.uber.org/zap"
 )
 
+// Order type aliases to avoid import cycle
+type Order = orders.Order
+type Trade = orders.Trade
+type OrderType = orders.OrderType
+type OrderStatus = orders.OrderStatus
+type OrderSide = orders.OrderSide
+
+// Order type constants
+const (
+	OrderTypeMarket = orders.OrderTypeMarket
+	OrderStatusFilled = orders.OrderStatusFilled
+	OrderStatusPartiallyFilled = orders.OrderStatusPartiallyFilled
+)
+
 // OptimizedEngine provides high-performance order matching with <100μs latency target
 type OptimizedEngine struct {
 	logger *zap.Logger
@@ -81,7 +95,7 @@ func NewOptimizedEngine(logger *zap.Logger) *OptimizedEngine {
 }
 
 // ProcessOrderFast processes an order with optimized fast path (<100μs target)
-func (e *OptimizedEngine) ProcessOrderFast(order *orders.Order) ([]*orders.Trade, error) {
+func (e *OptimizedEngine) ProcessOrderFast(order *Order) ([]*Trade, error) {
 	startTime := time.Now()
 
 	// Get or create lock-free order book
@@ -133,8 +147,8 @@ func (e *OptimizedEngine) ProcessOrderFast(order *orders.Order) ([]*orders.Trade
 }
 
 // processMarketOrderFast processes market orders with optimized path
-func (e *OptimizedEngine) processMarketOrderFast(book *LockFreeOrderBook, order *orders.Order) []*orders.Trade {
-	var trades []*orders.Trade
+func (e *OptimizedEngine) processMarketOrderFast(book *LockFreeOrderBook, order *Order) []*Trade {
+	var trades []*Trade
 
 	if order.Side == orders.OrderSideBuy {
 		// Buy market order - match against asks
@@ -148,8 +162,8 @@ func (e *OptimizedEngine) processMarketOrderFast(book *LockFreeOrderBook, order 
 }
 
 // processLimitOrderFast processes limit orders with optimized path
-func (e *OptimizedEngine) processLimitOrderFast(book *LockFreeOrderBook, order *orders.Order) []*orders.Trade {
-	var trades []*orders.Trade
+func (e *OptimizedEngine) processLimitOrderFast(book *LockFreeOrderBook, order *Order) []*Trade {
+	var trades []*Trade
 
 	if order.Side == orders.OrderSideBuy {
 		// Buy limit order - first try to match against asks
@@ -173,8 +187,8 @@ func (e *OptimizedEngine) processLimitOrderFast(book *LockFreeOrderBook, order *
 }
 
 // matchAgainstSide matches an order against one side of the book using lock-free operations
-func (e *OptimizedEngine) matchAgainstSide(book *LockFreeOrderBook, incomingOrder *orders.Order, headPtr *unsafe.Pointer, isBidSide bool) []*orders.Trade {
-	var trades []*orders.Trade
+func (e *OptimizedEngine) matchAgainstSide(book *LockFreeOrderBook, incomingOrder *Order, headPtr *unsafe.Pointer, isBidSide bool) []*Trade {
+	var trades []*Trade
 	incomingPriceFixed := int64(incomingOrder.Price * 1e8) // Convert to fixed-point
 
 	for incomingOrder.Quantity > incomingOrder.FilledQuantity {
@@ -244,7 +258,7 @@ func (e *OptimizedEngine) addOrderToSide(book *LockFreeOrderBook, order *Order, 
 }
 
 // executeTrade executes a trade between two orders with minimal allocations
-func (e *OptimizedEngine) executeTrade(incomingOrder, bookOrder *Order) *orders.Trade {
+func (e *OptimizedEngine) executeTrade(incomingOrder, bookOrder *Order) *Trade {
 	// Calculate trade quantity (minimum of remaining quantities)
 	tradeQuantity := incomingOrder.Quantity - incomingOrder.FilledQuantity
 	bookRemaining := bookOrder.Quantity - bookOrder.FilledQuantity
@@ -273,7 +287,7 @@ func (e *OptimizedEngine) executeTrade(incomingOrder, bookOrder *Order) *orders.
 	}
 
 	// Create trade
-	trade := &orders.Trade{
+	trade := &Trade{
 		ID:        generateTradeID(),
 		Symbol:    incomingOrder.Symbol,
 		Price:     tradePrice,

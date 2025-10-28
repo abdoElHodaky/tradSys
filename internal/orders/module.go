@@ -2,7 +2,6 @@ package orders
 
 import (
 	"context"
-	"github.com/abdoElHodaky/tradSys/internal/core/matching"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -16,9 +15,8 @@ var OrderManagementModule = fx.Options(
 func NewFxService(
 	lifecycle fx.Lifecycle,
 	logger *zap.Logger,
-	orderEngine *order_matching.Engine,
 ) *Service {
-	service := NewService(orderEngine, logger)
+	service := NewService(logger)
 
 	lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {

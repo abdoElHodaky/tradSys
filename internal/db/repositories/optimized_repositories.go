@@ -111,20 +111,20 @@ type Pair struct {
 
 // Optimized Repository Implementations
 
-// OrderRepository provides optimized order data access
-type OrderRepository struct {
+// OptimizedOrderRepository provides optimized order data access
+type OptimizedOrderRepository struct {
 	*OptimizedRepository[Order]
 }
 
-// NewOrderRepository creates a new order repository
-func NewOrderRepository(db *sql.DB, logger *zap.Logger) *OrderRepository {
-	return &OrderRepository{
+// NewOptimizedOrderRepository creates a new optimized order repository
+func NewOptimizedOrderRepository(db *sql.DB, logger *zap.Logger) *OptimizedOrderRepository {
+	return &OptimizedOrderRepository{
 		OptimizedRepository: NewOptimizedRepository[Order](db, logger, "orders"),
 	}
 }
 
 // FindBySymbol finds orders by symbol
-func (r *OrderRepository) FindBySymbol(ctx context.Context, symbol string, limit int) ([]*Order, error) {
+func (r *OptimizedOrderRepository) FindBySymbol(ctx context.Context, symbol string, limit int) ([]*Order, error) {
 	return r.FindByField(ctx, "symbol", symbol, limit)
 }
 
@@ -178,20 +178,20 @@ func (r *TradeRepository) FindByOrderID(ctx context.Context, orderID string) ([]
 	return trades, nil
 }
 
-// PositionRepository provides optimized position data access
-type PositionRepository struct {
+// OptimizedPositionRepository provides optimized position data access
+type OptimizedPositionRepository struct {
 	*OptimizedRepository[Position]
 }
 
-// NewPositionRepository creates a new position repository
-func NewPositionRepository(db *sql.DB, logger *zap.Logger) *PositionRepository {
-	return &PositionRepository{
+// NewOptimizedPositionRepository creates a new optimized position repository
+func NewOptimizedPositionRepository(db *sql.DB, logger *zap.Logger) *OptimizedPositionRepository {
+	return &OptimizedPositionRepository{
 		OptimizedRepository: NewOptimizedRepository[Position](db, logger, "positions"),
 	}
 }
 
 // FindBySymbol finds positions by symbol
-func (r *PositionRepository) FindBySymbol(ctx context.Context, symbol string) (*Position, error) {
+func (r *OptimizedPositionRepository) FindBySymbol(ctx context.Context, symbol string) (*Position, error) {
 	positions, err := r.FindByField(ctx, "symbol", symbol, 1)
 	if err != nil {
 		return nil, err
@@ -243,25 +243,25 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*User, 
 	return users[0], nil
 }
 
-// MarketDataRepository provides optimized market data access
-type MarketDataRepository struct {
+// OptimizedMarketDataRepository provides optimized market data access
+type OptimizedMarketDataRepository struct {
 	*OptimizedRepository[MarketData]
 }
 
-// NewMarketDataRepository creates a new market data repository
-func NewMarketDataRepository(db *sql.DB, logger *zap.Logger) *MarketDataRepository {
-	return &MarketDataRepository{
+// NewOptimizedMarketDataRepository creates a new optimized market data repository
+func NewOptimizedMarketDataRepository(db *sql.DB, logger *zap.Logger) *OptimizedMarketDataRepository {
+	return &OptimizedMarketDataRepository{
 		OptimizedRepository: NewOptimizedRepository[MarketData](db, logger, "market_data"),
 	}
 }
 
 // FindBySymbol finds market data by symbol
-func (r *MarketDataRepository) FindBySymbol(ctx context.Context, symbol string, limit int) ([]*MarketData, error) {
+func (r *OptimizedMarketDataRepository) FindBySymbol(ctx context.Context, symbol string, limit int) ([]*MarketData, error) {
 	return r.FindByField(ctx, "symbol", symbol, limit)
 }
 
 // FindLatestBySymbol finds the latest market data for a symbol
-func (r *MarketDataRepository) FindLatestBySymbol(ctx context.Context, symbol string) (*MarketData, error) {
+func (r *OptimizedMarketDataRepository) FindLatestBySymbol(ctx context.Context, symbol string) (*MarketData, error) {
 	query := `SELECT * FROM market_data WHERE symbol = $1 ORDER BY timestamp DESC LIMIT 1`
 	
 	row := r.GetDB().QueryRowContext(ctx, query, symbol)
@@ -300,42 +300,42 @@ func (r *StrategyRepository) FindByStatus(ctx context.Context, status string, li
 	return r.FindByField(ctx, "status", status, limit)
 }
 
-// RiskRepository provides optimized risk data access
-type RiskRepository struct {
+// OptimizedRiskRepository provides optimized risk data access
+type OptimizedRiskRepository struct {
 	*OptimizedRepository[RiskMetric]
 }
 
-// NewRiskRepository creates a new risk repository
-func NewRiskRepository(db *sql.DB, logger *zap.Logger) *RiskRepository {
-	return &RiskRepository{
+// NewOptimizedRiskRepository creates a new optimized risk repository
+func NewOptimizedRiskRepository(db *sql.DB, logger *zap.Logger) *OptimizedRiskRepository {
+	return &OptimizedRiskRepository{
 		OptimizedRepository: NewOptimizedRepository[RiskMetric](db, logger, "risk_metrics"),
 	}
 }
 
 // FindByUserID finds risk metrics by user ID
-func (r *RiskRepository) FindByUserID(ctx context.Context, userID string, limit int) ([]*RiskMetric, error) {
+func (r *OptimizedRiskRepository) FindByUserID(ctx context.Context, userID string, limit int) ([]*RiskMetric, error) {
 	return r.FindByField(ctx, "user_id", userID, limit)
 }
 
 // FindBySymbol finds risk metrics by symbol
-func (r *RiskRepository) FindBySymbol(ctx context.Context, symbol string, limit int) ([]*RiskMetric, error) {
+func (r *OptimizedRiskRepository) FindBySymbol(ctx context.Context, symbol string, limit int) ([]*RiskMetric, error) {
 	return r.FindByField(ctx, "symbol", symbol, limit)
 }
 
-// PairRepository provides optimized pair data access
-type PairRepository struct {
+// OptimizedPairRepository provides optimized pair data access
+type OptimizedPairRepository struct {
 	*OptimizedRepository[Pair]
 }
 
-// NewPairRepository creates a new pair repository
-func NewPairRepository(db *sql.DB, logger *zap.Logger) *PairRepository {
-	return &PairRepository{
+// NewOptimizedPairRepository creates a new optimized pair repository
+func NewOptimizedPairRepository(db *sql.DB, logger *zap.Logger) *OptimizedPairRepository {
+	return &OptimizedPairRepository{
 		OptimizedRepository: NewOptimizedRepository[Pair](db, logger, "pairs"),
 	}
 }
 
 // FindBySymbol finds pair by symbol
-func (r *PairRepository) FindBySymbol(ctx context.Context, symbol string) (*Pair, error) {
+func (r *OptimizedPairRepository) FindBySymbol(ctx context.Context, symbol string) (*Pair, error) {
 	pairs, err := r.FindByField(ctx, "symbol", symbol, 1)
 	if err != nil {
 		return nil, err

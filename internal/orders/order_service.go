@@ -11,6 +11,9 @@ import (
 	"go.uber.org/zap"
 )
 
+// Service is an alias for OrderService to maintain compatibility
+type Service = OrderService
+
 // OrderService handles core order management operations
 type OrderService struct {
 	// MatchingEngine is the order matching engine
@@ -37,6 +40,29 @@ type OrderService struct {
 	lifecycle *OrderLifecycle
 	// Order validator
 	validator *OrderValidator
+}
+
+// NewService creates a new order service without matching engine dependency
+func NewService(logger *zap.Logger) *Service {
+	ctx, cancel := context.WithCancel(context.Background())
+	
+	service := &OrderService{
+		MatchingEngine: nil, // Will be injected later if needed
+		Orders:         make(map[string]*Order),
+		UserOrders:     make(map[string][]string),
+		SymbolOrders:   make(map[string][]string),
+		OrderCache:     cache.New(5*time.Minute, 10*time.Minute),
+		TradeCache:     cache.New(5*time.Minute, 10*time.Minute),
+		logger:         logger,
+		ctx:            ctx,
+		cancel:         cancel,
+	}
+	
+	// Initialize components
+	service.lifecycle = NewOrderLifecycle(service, logger)
+	service.validator = NewOrderValidator(logger)
+	
+	return service
 }
 
 // NewOrderService creates a new order service
