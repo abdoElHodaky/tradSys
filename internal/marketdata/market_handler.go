@@ -94,7 +94,7 @@ type OHLCVUpdate struct {
 // Handler represents a market data handler
 type Handler struct {
 	// Engine is the order matching engine
-	Engine *order_matching.Engine
+	Engine order_matching.Engine
 	// Subscriptions is a map of subscription ID to subscription
 	Subscriptions map[string]*Subscription
 	// SymbolSubscriptions is a map of symbol to subscriptions
@@ -116,7 +116,7 @@ type Handler struct {
 }
 
 // NewHandler creates a new market data handler
-func NewHandler(engine *order_matching.Engine, logger *zap.Logger) *Handler {
+func NewHandler(engine order_matching.Engine, logger *zap.Logger) *Handler {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	handler := &Handler{
@@ -211,6 +211,19 @@ func (h *Handler) Unsubscribe(subscriptionID string) error {
 
 // processTrades processes trades from the order matching engine
 func (h *Handler) processTrades() {
+	// TODO: Implement trade processing when TradeChannel is available in Engine interface
+	for {
+		select {
+		case <-h.ctx.Done():
+			return
+		default:
+			// For now, just wait and check context
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+	
+	// Original implementation (commented out until TradeChannel is available):
+	/*
 	for {
 		select {
 		case <-h.ctx.Done():
@@ -252,6 +265,7 @@ func (h *Handler) processTrades() {
 			h.mu.RUnlock()
 		}
 	}
+	*/
 }
 
 // processOrderBooks processes order books
@@ -269,9 +283,20 @@ func (h *Handler) processOrderBooks() {
 			// Process each symbol
 			for symbol := range h.SymbolSubscriptions {
 				// Get order book
-				bids, asks, _, err := h.Engine.GetMarketData(symbol, 10)
+				snapshot, err := h.Engine.GetOrderBook(symbol)
 				if err != nil {
 					continue
+				}
+
+				// Convert order book levels to float64 arrays
+				bids := make([][]float64, len(snapshot.Bids))
+				for i, bid := range snapshot.Bids {
+					bids[i] = []float64{bid.Price, bid.Quantity}
+				}
+				
+				asks := make([][]float64, len(snapshot.Asks))
+				for i, ask := range snapshot.Asks {
+					asks[i] = []float64{ask.Price, ask.Quantity}
 				}
 
 				// Create order book update

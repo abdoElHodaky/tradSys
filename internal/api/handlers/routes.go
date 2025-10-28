@@ -12,7 +12,7 @@ import (
 
 // TradingSystemInterface defines the interface for the trading system
 type TradingSystemInterface interface {
-	GetMatchingEngine() *order_matching.Engine
+	GetMatchingEngine() order_matching.Engine
 	GetPerformanceMetrics() map[string]interface{}
 }
 
@@ -124,7 +124,7 @@ func createOrderHandler(ts TradingSystemInterface) gin.HandlerFunc {
 
 		// Process order through matching engine
 		engine := ts.GetMatchingEngine()
-		trades, err := engine.PlaceOrder(order)
+		trades, err := engine.ProcessOrder(order)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

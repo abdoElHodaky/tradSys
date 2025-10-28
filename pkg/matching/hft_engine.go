@@ -8,7 +8,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/abdoElHodaky/tradSys/internal/common/pool"
+	"github.com/abdoElHodaky/tradSys/internal/common/pool/performance"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -22,8 +22,8 @@ type HFTEngine struct {
 	TradeChannel chan *Trade
 
 	// Order pools for zero-allocation order processing
-	fastOrderPool *pool.FastOrderPool
-	tradePool     *pool.TradePool
+	fastOrderPool *performance.FastOrderPool
+	tradePool     *performance.TradePool
 
 	// Performance metrics
 	ordersProcessed uint64
@@ -126,8 +126,8 @@ func NewHFTEngine(logger *zap.Logger, workerCount int) *HFTEngine {
 	engine := &HFTEngine{
 		orderBooks:    unsafe.Pointer(&map[string]*HFTOrderBook{}),
 		TradeChannel:  make(chan *Trade, 10000), // High-capacity buffer
-		fastOrderPool: pool.NewFastOrderPool(),
-		tradePool:     pool.NewTradePool(1000),
+		fastOrderPool: performance.NewFastOrderPool(),
+		tradePool:     performance.NewTradePool(),
 		logger:        logger,
 		ctx:           ctx,
 		cancel:        cancel,

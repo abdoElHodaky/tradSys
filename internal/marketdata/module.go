@@ -16,7 +16,7 @@ var TradingMarketDataModule = fx.Options(
 func NewFxHandler(
 	lifecycle fx.Lifecycle,
 	logger *zap.Logger,
-	orderEngine *order_matching.Engine,
+	orderEngine order_matching.Engine,
 ) *Handler {
 	handler := NewHandler(orderEngine, logger)
 

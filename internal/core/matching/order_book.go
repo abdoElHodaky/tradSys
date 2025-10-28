@@ -158,9 +158,9 @@ func (ob *OrderBook) AddOrder(order *Order) ([]*Trade, error) {
 		return nil, ErrInvalidOrder
 	}
 	
-	// Set remaining quantity if not set
-	if order.RemainingQuantity == 0 {
-		order.RemainingQuantity = order.Quantity
+	// Validate remaining quantity
+	if order.RemainingQuantity() == 0 && order.FilledQuantity == 0 {
+		// Order is new, no need to set anything as RemainingQuantity() is calculated
 	}
 	
 	// Store order
@@ -174,7 +174,7 @@ func (ob *OrderBook) AddOrder(order *Order) ([]*Trade, error) {
 	}
 	
 	// Add remaining order to book if not fully filled
-	if order.RemainingQuantity > 0 {
+	if order.RemainingQuantity() > 0 {
 		if order.Side == OrderSideBuy {
 			heap.Push(ob.Bids, order)
 		} else {
@@ -206,7 +206,7 @@ func (ob *OrderBook) AddOrder(order *Order) ([]*Trade, error) {
 func (ob *OrderBook) matchBuyOrder(buyOrder *Order) []*Trade {
 	trades := make([]*Trade, 0)
 	
-	for buyOrder.RemainingQuantity > 0 && ob.Asks.Len() > 0 {
+	for buyOrder.RemainingQuantity() > 0 && ob.Asks.Len() > 0 {
 		bestAsk := ob.Asks.Peek()
 		if bestAsk == nil || bestAsk.Price > buyOrder.Price {
 			break // No more matching orders
@@ -216,7 +216,7 @@ func (ob *OrderBook) matchBuyOrder(buyOrder *Order) []*Trade {
 		sellOrder := heap.Pop(ob.Asks).(*Order)
 		
 		// Calculate trade quantity
-		tradeQuantity := min(buyOrder.RemainingQuantity, sellOrder.RemainingQuantity)
+		tradeQuantity := min(buyOrder.RemainingQuantity(), sellOrder.RemainingQuantity())
 		
 		// Create trade
 		trade := NewTrade(
@@ -232,17 +232,17 @@ func (ob *OrderBook) matchBuyOrder(buyOrder *Order) []*Trade {
 		trades = append(trades, trade)
 		
 		// Update order quantities
-		buyOrder.RemainingQuantity -= tradeQuantity
-		sellOrder.RemainingQuantity -= tradeQuantity
+		buyOrder.FilledQuantity += tradeQuantity
+		sellOrder.FilledQuantity += tradeQuantity
 		
 		// Update order statuses
-		if buyOrder.RemainingQuantity == 0 {
+		if buyOrder.RemainingQuantity() == 0 {
 			buyOrder.Status = OrderStatusFilled
 		} else {
 			buyOrder.Status = OrderStatusPartiallyFilled
 		}
 		
-		if sellOrder.RemainingQuantity == 0 {
+		if sellOrder.RemainingQuantity() == 0 {
 			sellOrder.Status = OrderStatusFilled
 		} else {
 			sellOrder.Status = OrderStatusPartiallyFilled
@@ -258,7 +258,7 @@ func (ob *OrderBook) matchBuyOrder(buyOrder *Order) []*Trade {
 func (ob *OrderBook) matchSellOrder(sellOrder *Order) []*Trade {
 	trades := make([]*Trade, 0)
 	
-	for sellOrder.RemainingQuantity > 0 && ob.Bids.Len() > 0 {
+	for sellOrder.RemainingQuantity() > 0 && ob.Bids.Len() > 0 {
 		bestBid := ob.Bids.Peek()
 		if bestBid == nil || bestBid.Price < sellOrder.Price {
 			break // No more matching orders
@@ -268,7 +268,7 @@ func (ob *OrderBook) matchSellOrder(sellOrder *Order) []*Trade {
 		buyOrder := heap.Pop(ob.Bids).(*Order)
 		
 		// Calculate trade quantity
-		tradeQuantity := min(sellOrder.RemainingQuantity, buyOrder.RemainingQuantity)
+		tradeQuantity := min(sellOrder.RemainingQuantity(), buyOrder.RemainingQuantity())
 		
 		// Create trade
 		trade := NewTrade(
@@ -284,17 +284,17 @@ func (ob *OrderBook) matchSellOrder(sellOrder *Order) []*Trade {
 		trades = append(trades, trade)
 		
 		// Update order quantities
-		sellOrder.RemainingQuantity -= tradeQuantity
-		buyOrder.RemainingQuantity -= tradeQuantity
+		sellOrder.FilledQuantity += tradeQuantity
+		buyOrder.FilledQuantity += tradeQuantity
 		
 		// Update order statuses
-		if sellOrder.RemainingQuantity == 0 {
+		if sellOrder.RemainingQuantity() == 0 {
 			sellOrder.Status = OrderStatusFilled
 		} else {
 			sellOrder.Status = OrderStatusPartiallyFilled
 		}
 		
-		if buyOrder.RemainingQuantity == 0 {
+		if buyOrder.RemainingQuantity() == 0 {
 			buyOrder.Status = OrderStatusFilled
 		} else {
 			buyOrder.Status = OrderStatusPartiallyFilled
@@ -419,12 +419,12 @@ func (ob *OrderBook) getHeapLevels(heap *OrderHeap, maxLevels int) []OrderBookLe
 	// Aggregate orders by price level
 	for _, order := range heap.Orders {
 		if level, exists := levelMap[order.Price]; exists {
-			level.Quantity += order.RemainingQuantity
+			level.Quantity += order.RemainingQuantity()
 			level.Count++
 		} else {
 			levelMap[order.Price] = &OrderBookLevel{
 				Price:    order.Price,
-				Quantity: order.RemainingQuantity,
+				Quantity: order.RemainingQuantity(),
 				Count:    1,
 			}
 		}

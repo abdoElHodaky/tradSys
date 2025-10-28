@@ -2,10 +2,10 @@ package core
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/segmentio/ksuid"
-	"github.com/thefabric-io/eventsourcing"
 )
 
 // Event represents a domain event in the CQRS pattern
@@ -93,81 +93,61 @@ type EventStore interface {
 	GetEventsByType(ctx context.Context, eventType string) ([]Event, error)
 }
 
-// PostgresEventStore implements the EventStore interface using PostgreSQL
-type PostgresEventStore struct {
-	store *eventsourcing.EventStore
+// InMemoryEventStore implements the EventStore interface using in-memory storage
+type InMemoryEventStore struct {
+	events map[string][]Event
+	mu     sync.RWMutex
 }
 
-// NewPostgresEventStore creates a new PostgreSQL event store
-func NewPostgresEventStore(store *eventsourcing.EventStore) *PostgresEventStore {
-	return &PostgresEventStore{
-		store: store,
+// NewInMemoryEventStore creates a new in-memory event store
+func NewInMemoryEventStore() *InMemoryEventStore {
+	return &InMemoryEventStore{
+		events: make(map[string][]Event),
 	}
 }
 
-// SaveEvents saves events to the PostgreSQL event store
-func (s *PostgresEventStore) SaveEvents(ctx context.Context, events []Event) error {
-	// Convert our events to thefabric-io/eventsourcing events
-	esEvents := make([]eventsourcing.Event, len(events))
-	for i, event := range events {
-		esEvents[i] = eventsourcing.Event{
-			ID:          event.EventID(),
-			AggregateID: event.AggregateID(),
-			Type:        event.EventName(),
-			Version:     event.EventVersion(),
-			Payload:     event.EventData(),
-			CreatedAt:   event.EventTimestamp(),
+// SaveEvents saves events to the in-memory event store
+func (s *InMemoryEventStore) SaveEvents(ctx context.Context, events []Event) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, event := range events {
+		aggregateID := event.AggregateID()
+		s.events[aggregateID] = append(s.events[aggregateID], event)
+	}
+
+	return nil
+}
+
+// GetEvents retrieves events for an aggregate from the in-memory event store
+func (s *InMemoryEventStore) GetEvents(ctx context.Context, aggregateID string) ([]Event, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	events, exists := s.events[aggregateID]
+	if !exists {
+		return []Event{}, nil
+	}
+
+	// Return a copy to avoid race conditions
+	result := make([]Event, len(events))
+	copy(result, events)
+	return result, nil
+}
+
+// GetEventsByType retrieves events of a specific type from the in-memory event store
+func (s *InMemoryEventStore) GetEventsByType(ctx context.Context, eventType string) ([]Event, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var result []Event
+	for _, aggregateEvents := range s.events {
+		for _, event := range aggregateEvents {
+			if event.EventName() == eventType {
+				result = append(result, event)
+			}
 		}
 	}
 
-	// Save events to the event store
-	return s.store.Save(ctx, esEvents)
-}
-
-// GetEvents retrieves events for an aggregate from the PostgreSQL event store
-func (s *PostgresEventStore) GetEvents(ctx context.Context, aggregateID string) ([]Event, error) {
-	// Get events from the event store
-	esEvents, err := s.store.GetByAggregateID(ctx, aggregateID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Convert thefabric-io/eventsourcing events to our events
-	events := make([]Event, len(esEvents))
-	for i, esEvent := range esEvents {
-		events[i] = BaseEvent{
-			ID:        esEvent.ID,
-			Name:      esEvent.Type,
-			Aggregate: esEvent.AggregateID,
-			Timestamp: esEvent.CreatedAt,
-			Version:   esEvent.Version,
-			Data:      esEvent.Payload,
-		}
-	}
-
-	return events, nil
-}
-
-// GetEventsByType retrieves events of a specific type from the PostgreSQL event store
-func (s *PostgresEventStore) GetEventsByType(ctx context.Context, eventType string) ([]Event, error) {
-	// Get events from the event store
-	esEvents, err := s.store.GetByType(ctx, eventType)
-	if err != nil {
-		return nil, err
-	}
-
-	// Convert thefabric-io/eventsourcing events to our events
-	events := make([]Event, len(esEvents))
-	for i, esEvent := range esEvents {
-		events[i] = BaseEvent{
-			ID:        esEvent.ID,
-			Name:      esEvent.Type,
-			Aggregate: esEvent.AggregateID,
-			Timestamp: esEvent.CreatedAt,
-			Version:   esEvent.Version,
-			Data:      esEvent.Payload,
-		}
-	}
-
-	return events, nil
+	return result, nil
 }

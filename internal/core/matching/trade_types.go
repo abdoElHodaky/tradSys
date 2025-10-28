@@ -178,7 +178,7 @@ func (mr *MatchResult) AddTrade(trade *Trade) {
 // SetRemainingOrder sets the remaining order after matching
 func (mr *MatchResult) SetRemainingOrder(order *Order) {
 	mr.RemainingOrder = order
-	mr.FullyMatched = order == nil || order.RemainingQuantity == 0
+	mr.FullyMatched = order == nil || order.RemainingQuantity() == 0
 	mr.PartiallyMatched = !mr.FullyMatched && len(mr.Trades) > 0
 }
 

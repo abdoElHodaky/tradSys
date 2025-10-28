@@ -1,7 +1,6 @@
 package order_matching
 
 import (
-	"context"
 	"runtime"
 	"sync"
 	"sync/atomic"

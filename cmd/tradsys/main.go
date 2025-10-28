@@ -444,7 +444,7 @@ func initializeTradingSystem(cfg *config.Config) (*TradingSystem, error) {
 
 // TradingSystem represents the unified trading system
 type TradingSystem struct {
-	MatchingEngine      *order_matching.Engine
+	MatchingEngine      order_matching.Engine
 	RiskEngine          *risk.RiskEngine
 	SettlementProcessor *settlement.Processor
 	ConnectivityManager *connectivity.Manager
@@ -454,7 +454,7 @@ type TradingSystem struct {
 }
 
 // GetMatchingEngine returns the matching engine (implements TradingSystemInterface)
-func (ts *TradingSystem) GetMatchingEngine() *order_matching.Engine {
+func (ts *TradingSystem) GetMatchingEngine() order_matching.Engine {
 	return ts.MatchingEngine
 }
 

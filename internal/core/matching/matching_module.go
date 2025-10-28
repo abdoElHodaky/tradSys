@@ -15,7 +15,7 @@ var OrderMatchingModule = fx.Options(
 func NewFxEngine(
 	lifecycle fx.Lifecycle,
 	logger *zap.Logger,
-) *Engine {
+) Engine {
 	engine := NewEngine(logger)
 
 	lifecycle.Append(fx.Hook{

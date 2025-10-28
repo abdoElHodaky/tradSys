@@ -6,36 +6,41 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
 	"go.uber.org/zap"
 )
+
+// Repository interface defines the contract for aggregate repositories
+type Repository interface {
+	Save(ctx context.Context, aggregate Aggregate) error
+	Load(ctx context.Context, id string) (Aggregate, error)
+	Delete(ctx context.Context, id string) error
+}
 
 // EventSourcedHandler represents a command handler that uses event sourcing
 type EventSourcedHandler interface {
 	// Handle handles a command and returns events
-	Handle(ctx context.Context, command Command) ([]*eventsourcing.Event, error)
+	Handle(ctx context.Context, command Command) ([]Event, error)
 }
 
 // EventSourcedHandlerFunc is a function that implements the EventSourcedHandler interface
-type EventSourcedHandlerFunc func(ctx context.Context, command Command) ([]*eventsourcing.Event, error)
+type EventSourcedHandlerFunc func(ctx context.Context, command Command) ([]Event, error)
 
 // Handle handles a command and returns events
-func (f EventSourcedHandlerFunc) Handle(ctx context.Context, command Command) ([]*eventsourcing.Event, error) {
+func (f EventSourcedHandlerFunc) Handle(ctx context.Context, command Command) ([]Event, error) {
 	return f(ctx, command)
 }
 
 // EventSourcedCommandBus represents a command bus that uses event sourcing
 type EventSourcedCommandBus struct {
 	handlers      map[string]EventSourcedHandler
-	eventBus      eventbus.EventBus
-	aggregateRepo aggregate.Repository
+	eventBus      EventBus
+	aggregateRepo Repository
 	logger        *zap.Logger
 	mu            sync.RWMutex
 }
 
 // NewEventSourcedCommandBus creates a new event-sourced command bus
-func NewEventSourcedCommandBus(eventBus eventbus.EventBus, aggregateRepo aggregate.Repository, logger *zap.Logger) *EventSourcedCommandBus {
+func NewEventSourcedCommandBus(eventBus EventBus, aggregateRepo Repository, logger *zap.Logger) *EventSourcedCommandBus {
 	return &EventSourcedCommandBus{
 		handlers:      make(map[string]EventSourcedHandler),
 		eventBus:      eventBus,
@@ -76,7 +81,7 @@ func (b *EventSourcedCommandBus) Register(commandType reflect.Type, handler Even
 }
 
 // RegisterFunc registers a handler function for a command
-func (b *EventSourcedCommandBus) RegisterFunc(commandType reflect.Type, handler func(ctx context.Context, command Command) ([]*eventsourcing.Event, error)) error {
+func (b *EventSourcedCommandBus) RegisterFunc(commandType reflect.Type, handler func(ctx context.Context, command Command) ([]Event, error)) error {
 	return b.Register(commandType, EventSourcedHandlerFunc(handler))
 }
 
@@ -114,12 +119,12 @@ func (b *EventSourcedCommandBus) Dispatch(ctx context.Context, command Command) 
 // AggregateCommandHandler represents a command handler that operates on an aggregate
 type AggregateCommandHandler struct {
 	aggregateType string
-	aggregateRepo aggregate.Repository
+	aggregateRepo Repository
 	logger        *zap.Logger
 }
 
 // NewAggregateCommandHandler creates a new aggregate command handler
-func NewAggregateCommandHandler(aggregateType string, aggregateRepo aggregate.Repository, logger *zap.Logger) *AggregateCommandHandler {
+func NewAggregateCommandHandler(aggregateType string, aggregateRepo Repository, logger *zap.Logger) *AggregateCommandHandler {
 	return &AggregateCommandHandler{
 		aggregateType: aggregateType,
 		aggregateRepo: aggregateRepo,
@@ -128,7 +133,7 @@ func NewAggregateCommandHandler(aggregateType string, aggregateRepo aggregate.Re
 }
 
 // HandleCreate handles a create command
-func (h *AggregateCommandHandler) HandleCreate(ctx context.Context, command Command, createAggregate func(command Command) (aggregate.Aggregate, error)) ([]*eventsourcing.Event, error) {
+func (h *AggregateCommandHandler) HandleCreate(ctx context.Context, command Command, createAggregate func(command Command) (Aggregate, error)) ([]Event, error) {
 	// Create the aggregate
 	agg, err := createAggregate(command)
 	if err != nil {
@@ -146,7 +151,7 @@ func (h *AggregateCommandHandler) HandleCreate(ctx context.Context, command Comm
 }
 
 // HandleUpdate handles an update command
-func (h *AggregateCommandHandler) HandleUpdate(ctx context.Context, command Command, aggregateID string, updateAggregate func(agg aggregate.Aggregate, command Command) error) ([]*eventsourcing.Event, error) {
+func (h *AggregateCommandHandler) HandleUpdate(ctx context.Context, command Command, aggregateID string, updateAggregate func(agg Aggregate, command Command) error) ([]Event, error) {
 	// Create a new aggregate instance
 	agg, err := h.createEmptyAggregate(aggregateID)
 	if err != nil {
@@ -154,7 +159,7 @@ func (h *AggregateCommandHandler) HandleUpdate(ctx context.Context, command Comm
 	}
 
 	// Load the aggregate
-	err = h.aggregateRepo.Load(ctx, aggregateID, agg)
+	agg, err = h.aggregateRepo.Load(ctx, aggregateID)
 	if err != nil {
 		return nil, err
 	}
@@ -176,10 +181,10 @@ func (h *AggregateCommandHandler) HandleUpdate(ctx context.Context, command Comm
 }
 
 // createEmptyAggregate creates an empty aggregate
-func (h *AggregateCommandHandler) createEmptyAggregate(aggregateID string) (aggregate.Aggregate, error) {
+func (h *AggregateCommandHandler) createEmptyAggregate(aggregateID string) (Aggregate, error) {
 	// Check if the aggregate repository supports creating aggregates
 	if creator, ok := h.aggregateRepo.(interface {
-		CreateAggregate(aggregateType string, aggregateID string) (aggregate.Aggregate, error)
+		CreateAggregate(aggregateType string, aggregateID string) (Aggregate, error)
 	}); ok {
 		return creator.CreateAggregate(h.aggregateType, aggregateID)
 	}
