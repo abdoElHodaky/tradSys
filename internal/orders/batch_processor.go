@@ -231,15 +231,35 @@ func (bp *BatchProcessor) processAddBatch(ops []orderOperation, workerID int) {
 
 		// Update user orders index
 		if bp.service.UserOrders[order.UserID] == nil {
-			bp.service.UserOrders[order.UserID] = make(map[string]bool)
+			bp.service.UserOrders[order.UserID] = []string{}
 		}
-		bp.service.UserOrders[order.UserID][order.ID] = true
+		// Check if order ID already exists to avoid duplicates
+		found := false
+		for _, existingID := range bp.service.UserOrders[order.UserID] {
+			if existingID == order.ID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			bp.service.UserOrders[order.UserID] = append(bp.service.UserOrders[order.UserID], order.ID)
+		}
 
 		// Update symbol orders index
 		if bp.service.SymbolOrders[order.Symbol] == nil {
-			bp.service.SymbolOrders[order.Symbol] = make(map[string]bool)
+			bp.service.SymbolOrders[order.Symbol] = []string{}
 		}
-		bp.service.SymbolOrders[order.Symbol][order.ID] = true
+		// Check if order ID already exists to avoid duplicates
+		found = false
+		for _, existingID := range bp.service.SymbolOrders[order.Symbol] {
+			if existingID == order.ID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			bp.service.SymbolOrders[order.Symbol] = append(bp.service.SymbolOrders[order.Symbol], order.ID)
+		}
 
 		// Update client order ID mapping
 		if order.ClientOrderID != "" {

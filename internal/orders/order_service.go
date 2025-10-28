@@ -24,6 +24,8 @@ type OrderService struct {
 	UserOrders map[string][]string
 	// SymbolOrders is a map of symbol to order IDs
 	SymbolOrders map[string][]string
+	// ClientOrderIDs is a map of client order ID to internal order ID
+	ClientOrderIDs map[string]string
 	// OrderCache is a cache for frequently accessed orders
 	OrderCache *cache.Cache
 	// TradeCache is a cache for frequently accessed trades
@@ -51,6 +53,7 @@ func NewService(logger *zap.Logger) *Service {
 		Orders:         make(map[string]*Order),
 		UserOrders:     make(map[string][]string),
 		SymbolOrders:   make(map[string][]string),
+		ClientOrderIDs: make(map[string]string),
 		OrderCache:     cache.New(5*time.Minute, 10*time.Minute),
 		TradeCache:     cache.New(5*time.Minute, 10*time.Minute),
 		logger:         logger,
@@ -74,6 +77,7 @@ func NewOrderService(matchingEngine *matching.MatchingEngine, logger *zap.Logger
 		Orders:         make(map[string]*Order),
 		UserOrders:     make(map[string][]string),
 		SymbolOrders:   make(map[string][]string),
+		ClientOrderIDs: make(map[string]string),
 		OrderCache:     cache.New(5*time.Minute, 10*time.Minute),
 		TradeCache:     cache.New(5*time.Minute, 10*time.Minute),
 		logger:         logger,
