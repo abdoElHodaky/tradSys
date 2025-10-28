@@ -91,8 +91,8 @@ func NewEventProcessor(config *RiskEngineConfig, logger *zap.Logger) *EventProce
 	return &EventProcessor{
 		config:       config,
 		logger:       logger,
-		eventPool:    pool.NewObjectPool(1000, func() interface{} { return &RiskEvent{} }),
-		checkPool:    pool.NewObjectPool(1000, func() interface{} { return &RiskCheckResult{} }),
+		eventPool:    pool.NewObjectPool(func() interface{} { return &RiskEvent{} }, 1000),
+		checkPool:    pool.NewObjectPool(func() interface{} { return &RiskCheckResult{} }, 1000),
 		eventChannel: make(chan *RiskEvent, 10000), // High-capacity buffer
 		stopChannel:  make(chan struct{}),
 	}

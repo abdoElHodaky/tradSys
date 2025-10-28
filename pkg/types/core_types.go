@@ -62,6 +62,14 @@ type Order struct {
 	CreatedAt      time.Time   `json:"created_at" db:"created_at"`
 	UpdatedAt      time.Time   `json:"updated_at" db:"updated_at"`
 	ExpiresAt      *time.Time  `json:"expires_at,omitempty" db:"expires_at"`
+	
+	// Advanced order features
+	IsIceberg        bool    `json:"is_iceberg" db:"is_iceberg"`
+	IsHidden         bool    `json:"is_hidden" db:"is_hidden"`
+	DisplayQuantity  float64 `json:"display_quantity" db:"display_quantity"`
+	EstimatedImpact  float64 `json:"estimated_impact" db:"estimated_impact"`
+	ParentOrderID    string  `json:"parent_order_id" db:"parent_order_id"`
+	IsIcebergChild   bool    `json:"is_iceberg_child" db:"is_iceberg_child"`
 }
 
 // Trade represents a completed trade between two orders
@@ -79,6 +87,18 @@ type Trade struct {
 	TakerSide    OrderSide `json:"taker_side" db:"taker_side"`
 	MakerOrderID string    `json:"maker_order_id" db:"maker_order_id"`
 	TakerOrderID string    `json:"taker_order_id" db:"taker_order_id"`
+}
+
+// IsPriceImproved checks if the order price is improved compared to market
+func (o *Order) IsPriceImproved() bool {
+	// This is a placeholder implementation
+	// In a real system, this would compare against current market prices
+	return false
+}
+
+// RemainingQuantity returns the remaining quantity to be filled
+func (o *Order) RemainingQuantity() float64 {
+	return o.Quantity - o.FilledQuantity
 }
 
 // Position represents a user's position in a symbol

@@ -6,6 +6,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/abdoElHodaky/tradSys/pkg/types"
 	"go.uber.org/zap"
 )
 
@@ -36,8 +37,8 @@ type LockFreeOrderBook struct {
 	symbol string
 
 	// Atomic pointers to order lists (lock-free)
-	bidHead unsafe.Pointer // *OrderNode
-	askHead unsafe.Pointer // *OrderNode
+	bidHead unsafe.Pointer // *types.OrderNode
+	askHead unsafe.Pointer // *types.OrderNode
 
 	// Atomic counters
 	bidCount  int64
@@ -50,8 +51,8 @@ type LockFreeOrderBook struct {
 
 // OrderNode represents a node in the lock-free linked list
 type OrderNode struct {
-	order *Order
-	next  unsafe.Pointer // *OrderNode
+	order *types.Order
+	next  unsafe.Pointer // *types.OrderNode
 	price int64          // Fixed-point price for atomic operations
 }
 
@@ -66,13 +67,13 @@ func NewOptimizedEngine(logger *zap.Logger) *OptimizedEngine {
 	// Initialize memory pools
 	engine.orderPool = sync.Pool{
 		New: func() interface{} {
-			return &Order{}
+			return &types.Order{}
 		},
 	}
 
 	engine.tradePool = sync.Pool{
 		New: func() interface{} {
-			return &Trade{}
+			return &types.Trade{}
 		},
 	}
 
@@ -80,17 +81,17 @@ func NewOptimizedEngine(logger *zap.Logger) *OptimizedEngine {
 }
 
 // ProcessOrderFast processes an order with optimized fast path (<100μs target)
-func (e *OptimizedEngine) ProcessOrderFast(order *Order) ([]*Trade, error) {
+func (e *OptimizedEngine) ProcessOrderFast(order *types.Order) ([]*types.Trade, error) {
 	startTime := time.Now()
 
 	// Get or create lock-free order book
 	bookInterface, _ := e.orderBooks.LoadOrStore(order.Symbol, e.createLockFreeOrderBook(order.Symbol))
 	book := bookInterface.(*LockFreeOrderBook)
 
-	var trades []*Trade
+	var trades []*types.Trade
 
 	// Fast path for market orders (most common case)
-	if order.Type == OrderTypeMarket && e.enableFastPath {
+	if order.Type == types.types.OrderTypeMarket && e.enableFastPath {
 		trades = e.processMarketOrderFast(book, order)
 	} else {
 		trades = e.processLimitOrderFast(book, order)
@@ -132,10 +133,10 @@ func (e *OptimizedEngine) ProcessOrderFast(order *Order) ([]*Trade, error) {
 }
 
 // processMarketOrderFast processes market orders with optimized path
-func (e *OptimizedEngine) processMarketOrderFast(book *LockFreeOrderBook, order *Order) []*Trade {
-	var trades []*Trade
+func (e *OptimizedEngine) processMarketOrderFast(book *LockFreeOrderBook, order *types.Order) []*types.Trade {
+	var trades []*types.Trade
 
-	if order.Side == OrderSideBuy {
+	if order.Side == types.types.OrderSideBuy {
 		// Buy market order - match against asks
 		trades = e.matchAgainstSide(book, order, &book.askHead, false)
 	} else {
@@ -147,10 +148,10 @@ func (e *OptimizedEngine) processMarketOrderFast(book *LockFreeOrderBook, order 
 }
 
 // processLimitOrderFast processes limit orders with optimized path
-func (e *OptimizedEngine) processLimitOrderFast(book *LockFreeOrderBook, order *Order) []*Trade {
-	var trades []*Trade
+func (e *OptimizedEngine) processLimitOrderFast(book *LockFreeOrderBook, order *types.Order) []*types.Trade {
+	var trades []*types.Trade
 
-	if order.Side == OrderSideBuy {
+	if order.Side == types.types.OrderSideBuy {
 		// Buy limit order - first try to match against asks
 		trades = e.matchAgainstSide(book, order, &book.askHead, false)
 
@@ -172,13 +173,13 @@ func (e *OptimizedEngine) processLimitOrderFast(book *LockFreeOrderBook, order *
 }
 
 // matchAgainstSide matches an order against one side of the book using lock-free operations
-func (e *OptimizedEngine) matchAgainstSide(book *LockFreeOrderBook, incomingOrder *Order, headPtr *unsafe.Pointer, isBidSide bool) []*Trade {
-	var trades []*Trade
+func (e *OptimizedEngine) matchAgainstSide(book *LockFreeOrderBook, incomingOrder *types.Order, headPtr *unsafe.Pointer, isBidSide bool) []*types.Trade {
+	var trades []*types.Trade
 	incomingPriceFixed := int64(incomingOrder.Price * 1e8) // Convert to fixed-point
 
 	for incomingOrder.Quantity > incomingOrder.FilledQuantity {
 		// Atomically load the head of the order list
-		head := (*OrderNode)(atomic.LoadPointer(headPtr))
+		head := (*types.OrderNode)(atomic.LoadPointer(headPtr))
 		if head == nil {
 			break // No orders on this side
 		}
@@ -187,10 +188,10 @@ func (e *OptimizedEngine) matchAgainstSide(book *LockFreeOrderBook, incomingOrde
 		canMatch := false
 		if isBidSide {
 			// Matching against bids (for sell orders)
-			canMatch = head.price >= incomingPriceFixed || incomingOrder.Type == OrderTypeMarket
+			canMatch = head.price >= incomingPriceFixed || incomingOrder.Type == types.OrderTypeMarket
 		} else {
 			// Matching against asks (for buy orders)
-			canMatch = head.price <= incomingPriceFixed || incomingOrder.Type == OrderTypeMarket
+			canMatch = head.price <= incomingPriceFixed || incomingOrder.Type == types.OrderTypeMarket
 		}
 
 		if !canMatch {
@@ -198,7 +199,7 @@ func (e *OptimizedEngine) matchAgainstSide(book *LockFreeOrderBook, incomingOrde
 		}
 
 		// Try to atomically remove the head order
-		next := (*OrderNode)(atomic.LoadPointer(&head.next))
+		next := (*types.OrderNode)(atomic.LoadPointer(&head.next))
 		if !atomic.CompareAndSwapPointer(headPtr, unsafe.Pointer(head), unsafe.Pointer(next)) {
 			continue // Another thread modified the list, retry
 		}
@@ -227,7 +228,7 @@ func (e *OptimizedEngine) matchAgainstSide(book *LockFreeOrderBook, incomingOrde
 }
 
 // addOrderToSide adds an order to one side of the book using lock-free insertion
-func (e *OptimizedEngine) addOrderToSide(book *LockFreeOrderBook, order *Order, headPtr *unsafe.Pointer, countPtr *int64) {
+func (e *OptimizedEngine) addOrderToSide(book *LockFreeOrderBook, order *types.Order, headPtr *unsafe.Pointer, countPtr *int64) {
 	// Get order node from pool
 	node := e.getOrderNode(book, order)
 
@@ -243,7 +244,7 @@ func (e *OptimizedEngine) addOrderToSide(book *LockFreeOrderBook, order *Order, 
 }
 
 // executeTrade executes a trade between two orders with minimal allocations
-func (e *OptimizedEngine) executeTrade(incomingOrder, bookOrder *Order) *Trade {
+func (e *OptimizedEngine) executeTrade(incomingOrder, bookOrder *types.Order) *Trade {
 	// Calculate trade quantity (minimum of remaining quantities)
 	tradeQuantity := incomingOrder.Quantity - incomingOrder.FilledQuantity
 	bookRemaining := bookOrder.Quantity - bookOrder.FilledQuantity
@@ -260,15 +261,15 @@ func (e *OptimizedEngine) executeTrade(incomingOrder, bookOrder *Order) *Trade {
 
 	// Update order statuses
 	if incomingOrder.FilledQuantity >= incomingOrder.Quantity {
-		incomingOrder.Status = OrderStatusFilled
+		incomingOrder.Status = types.OrderStatusFilled
 	} else {
-		incomingOrder.Status = OrderStatusPartiallyFilled
+		incomingOrder.Status = types.OrderStatusPartiallyFilled
 	}
 
 	if bookOrder.FilledQuantity >= bookOrder.Quantity {
-		bookOrder.Status = OrderStatusFilled
+		bookOrder.Status = types.OrderStatusFilled
 	} else {
-		bookOrder.Status = OrderStatusPartiallyFilled
+		bookOrder.Status = types.OrderStatusPartiallyFilled
 	}
 
 	// Create trade from pool
@@ -282,7 +283,7 @@ func (e *OptimizedEngine) executeTrade(incomingOrder, bookOrder *Order) *Trade {
 	trade.Timestamp = time.Now()
 
 	// Set order IDs based on sides
-	if incomingOrder.Side == OrderSideBuy {
+	if incomingOrder.Side == types.OrderSideBuy {
 		trade.BuyOrderID = incomingOrder.ID
 		trade.SellOrderID = bookOrder.ID
 	} else {
@@ -310,8 +311,8 @@ func (e *OptimizedEngine) createLockFreeOrderBook(symbol string) *LockFreeOrderB
 }
 
 // getOrderNode gets an order node from the pool
-func (e *OptimizedEngine) getOrderNode(book *LockFreeOrderBook, order *Order) *OrderNode {
-	node := book.nodePool.Get().(*OrderNode)
+func (e *OptimizedEngine) getOrderNode(book *LockFreeOrderBook, order *types.Order) *types.OrderNode {
+	node := book.nodePool.Get().(*types.OrderNode)
 	node.order = order
 	node.price = int64(order.Price * 1e8) // Convert to fixed-point
 	atomic.StorePointer(&node.next, nil)
@@ -319,7 +320,7 @@ func (e *OptimizedEngine) getOrderNode(book *LockFreeOrderBook, order *Order) *O
 }
 
 // returnOrderNode returns an order node to the pool
-func (e *OptimizedEngine) returnOrderNode(book *LockFreeOrderBook, node *OrderNode) {
+func (e *OptimizedEngine) returnOrderNode(book *LockFreeOrderBook, node *types.OrderNode) {
 	// Clear the node
 	node.order = nil
 	atomic.StorePointer(&node.next, nil)

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/pkg/common/pool"
-	"github.com/abdoElHodaky/tradSys/internal/trading/types"
+	"github.com/abdoElHodaky/tradSys/pkg/types"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -142,11 +142,11 @@ func NewAdvancedOrderMatchingEngine(config *EngineConfig, logger *zap.Logger) *A
 	// Initialize object pools for performance
 	engine.tradePool = pool.NewObjectPool(func() interface{} {
 		return &Trade{}
-	})
+	}, 1000)
 
 	engine.orderPool = pool.NewObjectPool(func() interface{} {
 		return &types.Order{}
-	})
+	}, 1000)
 
 	return engine
 }

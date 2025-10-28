@@ -2,21 +2,22 @@ package order_matching
 
 import (
 	"context"
+	"github.com/abdoElHodaky/tradSys/pkg/matching"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
 // OrderMatchingModule provides the order matching module for the fx application
 var OrderMatchingModule = fx.Options(
-	fx.Provide(NewEngine),
+	fx.Provide(NewFxEngine),
 )
 
 // NewFxEngine creates a new order matching engine for the fx application
 func NewFxEngine(
 	lifecycle fx.Lifecycle,
 	logger *zap.Logger,
-) *Engine {
-	engine := NewEngine(logger)
+) *matching.Engine {
+	engine := matching.NewEngine(logger)
 
 	lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
