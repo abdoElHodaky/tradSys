@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -9,6 +10,11 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/orders"
 	cache "github.com/patrickmn/go-cache"
 	"go.uber.org/zap"
+)
+
+var (
+	ErrPositionNotFound = errors.New("position not found")
+	ErrInvalidData      = errors.New("invalid data")
 )
 
 // Service represents a risk management service
@@ -131,11 +137,11 @@ func (s *Service) UpdatePosition(userID, symbol string, quantityDelta, price flo
 	position, exists := s.Positions[userID][symbol]
 	if !exists {
 		position = &Position{
-			UserID:    userID,
-			Symbol:    symbol,
-			Quantity:  0,
-			AvgPrice:  0,
-			UpdatedAt: time.Now(),
+			UserID:       userID,
+			Symbol:       symbol,
+			Quantity:     0,
+			AveragePrice: 0,
+			UpdatedAt:    time.Now(),
 		}
 		s.Positions[userID][symbol] = position
 	}
@@ -146,8 +152,8 @@ func (s *Service) UpdatePosition(userID, symbol string, quantityDelta, price flo
 	
 	// Update average price
 	if quantityDelta > 0 {
-		totalValue := (oldQuantity * position.AvgPrice) + (quantityDelta * price)
-		position.AvgPrice = totalValue / position.Quantity
+		totalValue := (oldQuantity * position.AveragePrice) + (quantityDelta * price)
+		position.AveragePrice = totalValue / position.Quantity
 	}
 	
 	position.UpdatedAt = time.Now()
@@ -175,7 +181,7 @@ func (s *Service) CalculatePortfolioRisk(userID string) (*RiskCheckResult, error
 	// Convert positions to value map
 	positions := make(map[string]float64)
 	for symbol, position := range userPositions {
-		positions[symbol] = position.Quantity * position.AvgPrice
+		positions[symbol] = position.Quantity * position.AveragePrice
 	}
 	s.mu.RUnlock()
 	
@@ -261,13 +267,19 @@ func (s *Service) processBatch(batch []RiskOperation) {
 
 // processUpdatePosition processes a position update
 func (s *Service) processUpdatePosition(op RiskOperation) {
-	quantityDelta, ok := op.Data["quantity_delta"].(float64)
+	data, ok := op.Data.(map[string]interface{})
 	if !ok {
 		op.ResultCh <- RiskOperationResult{Success: false, Error: ErrInvalidData}
 		return
 	}
 	
-	price, ok := op.Data["price"].(float64)
+	quantityDelta, ok := data["quantity_delta"].(float64)
+	if !ok {
+		op.ResultCh <- RiskOperationResult{Success: false, Error: ErrInvalidData}
+		return
+	}
+	
+	price, ok := data["price"].(float64)
 	if !ok {
 		op.ResultCh <- RiskOperationResult{Success: false, Error: ErrInvalidData}
 		return
@@ -279,13 +291,19 @@ func (s *Service) processUpdatePosition(op RiskOperation) {
 
 // processCheckLimit processes a limit check
 func (s *Service) processCheckLimit(op RiskOperation) {
-	orderSize, ok := op.Data["order_size"].(float64)
+	data, ok := op.Data.(map[string]interface{})
 	if !ok {
 		op.ResultCh <- RiskOperationResult{Success: false, Error: ErrInvalidData}
 		return
 	}
 	
-	currentPrice, ok := op.Data["current_price"].(float64)
+	orderSize, ok := data["order_size"].(float64)
+	if !ok {
+		op.ResultCh <- RiskOperationResult{Success: false, Error: ErrInvalidData}
+		return
+	}
+	
+	currentPrice, ok := data["current_price"].(float64)
 	if !ok {
 		op.ResultCh <- RiskOperationResult{Success: false, Error: ErrInvalidData}
 		return
@@ -295,7 +313,7 @@ func (s *Service) processCheckLimit(op RiskOperation) {
 	op.ResultCh <- RiskOperationResult{
 		Success: err == nil,
 		Error:   err,
-		Data:    result,
+		Result:    result,
 	}
 }
 

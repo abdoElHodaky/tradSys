@@ -8,19 +8,19 @@ import (
 	"go.uber.org/zap"
 )
 
-// HealthStatus represents the health status of a service
-type HealthStatus string
+// HealthStatusType represents the health status of a service
+type HealthStatusType string
 
 const (
-	HealthStatusHealthy   HealthStatus = "healthy"
-	HealthStatusUnhealthy HealthStatus = "unhealthy"
-	HealthStatusDegraded  HealthStatus = "degraded"
+	HealthStatusHealthy   HealthStatusType = "healthy"
+	HealthStatusUnhealthy HealthStatusType = "unhealthy"
+	HealthStatusDegraded  HealthStatusType = "degraded"
 )
 
 // HealthCheck represents a health check result
 type HealthCheck struct {
 	Name        string                 `json:"name"`
-	Status      HealthStatus           `json:"status"`
+	Status      HealthStatusType       `json:"status"`
 	Message     string                 `json:"message,omitempty"`
 	LastChecked time.Time              `json:"last_checked"`
 	Duration    time.Duration          `json:"duration"`
@@ -29,7 +29,7 @@ type HealthCheck struct {
 
 // HealthResponse represents the overall health response
 type HealthResponse struct {
-	Status    HealthStatus  `json:"status"`
+	Status    HealthStatusType  `json:"status"`
 	Timestamp time.Time     `json:"timestamp"`
 	Service   string        `json:"service"`
 	Version   string        `json:"version"`

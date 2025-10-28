@@ -154,7 +154,9 @@ func (o *WebSocketOptimizer) NewBatchedWriter(conn *websocket.Conn) *BatchedWrit
 	}
 
 	// Start the timer
-	writer.timer = time.AfterFunc(o.batchInterval, writer.Flush)
+	writer.timer = time.AfterFunc(o.batchInterval, func() {
+		writer.Flush()
+	})
 
 	return writer
 }

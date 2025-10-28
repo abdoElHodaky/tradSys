@@ -150,11 +150,11 @@ func NewRealTimeRiskEngine(config *RiskEngineConfig, logger *zap.Logger) *RealTi
 	// Initialize object pools for performance
 	engine.eventPool = pool.NewObjectPool(func() interface{} {
 		return &RiskEvent{}
-	}, 1000)
+	})
 
 	engine.checkPool = pool.NewObjectPool(func() interface{} {
 		return &RiskCheck{}
-	}, 1000)
+	})
 
 	return engine
 }

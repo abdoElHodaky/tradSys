@@ -130,7 +130,7 @@ var BillingPlans = map[LicenseTier]*BillingPlan{
 		},
 		Features: LicenseConfigs[BASIC].Features,
 		Quotas:   LicenseConfigs[BASIC].Quotas,
-		IsActive: true,
+		Active: true,
 	},
 	PROFESSIONAL: {
 		TierID:      "professional",
@@ -153,7 +153,7 @@ var BillingPlans = map[LicenseTier]*BillingPlan{
 		},
 		Features: LicenseConfigs[PROFESSIONAL].Features,
 		Quotas:   LicenseConfigs[PROFESSIONAL].Quotas,
-		IsActive: true,
+		Active: true,
 	},
 	ENTERPRISE: {
 		TierID:      "enterprise",
@@ -166,7 +166,7 @@ var BillingPlans = map[LicenseTier]*BillingPlan{
 		OverageRates: map[string]float64{}, // No overage rates - unlimited
 		Features:    LicenseConfigs[ENTERPRISE].Features,
 		Quotas:      LicenseConfigs[ENTERPRISE].Quotas,
-		IsActive:    true,
+		Active:    true,
 	},
 	ISLAMIC: {
 		TierID:      "islamic",
@@ -191,7 +191,7 @@ var BillingPlans = map[LicenseTier]*BillingPlan{
 		},
 		Features: LicenseConfigs[ISLAMIC].Features,
 		Quotas:   LicenseConfigs[ISLAMIC].Quotas,
-		IsActive: true,
+		Active: true,
 	},
 }
 
@@ -269,7 +269,7 @@ func CreateLicense(userID, organizationID string, tier LicenseTier, duration tim
 		RateLimits:     config.RateLimits,
 		IssuedAt:       now,
 		ExpiresAt:      now.Add(duration),
-		IsActive:       true,
+		Active:       true,
 		MaxUsers:       config.MaxUsers,
 		MaxAssets:      config.MaxAssets,
 		MaxOrders:      config.MaxOrders,
@@ -305,12 +305,12 @@ func ExtendLicense(license *License, duration time.Duration) {
 
 // DeactivateLicense deactivates a license
 func DeactivateLicense(license *License) {
-	license.IsActive = false
+	license.Active = false
 }
 
 // ReactivateLicense reactivates a license
 func ReactivateLicense(license *License) {
-	license.IsActive = true
+	license.Active = true
 }
 
 // generateLicenseID generates a unique license ID

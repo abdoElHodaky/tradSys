@@ -246,7 +246,7 @@ func (v *Validator) GetUsageStats(ctx context.Context, userID, usageType string)
 // validateLicense performs the actual license validation
 func (v *Validator) validateLicense(ctx context.Context, license *License, feature LicenseFeature) *ValidationResult {
 	// Check if license is active
-	if !license.IsActive {
+	if !license.Active {
 		return &ValidationResult{
 			Valid:     false,
 			Reason:    "license_inactive",

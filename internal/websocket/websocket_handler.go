@@ -19,8 +19,8 @@ type HandlerParams struct {
 	Server *Server `optional:"true"`
 }
 
-// Subscription represents a WebSocket subscription
-type Subscription struct {
+// HandlerSubscription represents a WebSocket subscription
+type HandlerSubscription struct {
 	ID       string
 	ClientID string
 	Topic    string
@@ -40,7 +40,7 @@ type Handler struct {
 	UnimplementedWebSocketServiceServer
 	logger        *zap.Logger
 	server        *Server
-	subscriptions sync.Map // map[string]*Subscription
+	subscriptions sync.Map // map[string]*HandlerSubscription
 }
 
 // NewHandler creates a new WebSocket handler with fx dependency injection
@@ -69,7 +69,7 @@ func (h *Handler) Subscribe(ctx context.Context, req *SubscribeRequest, rsp *Sub
 	subscriptionID := uuid.New().String()
 
 	// Store subscription (in production, use Redis or database)
-	h.subscriptions.Store(subscriptionID, &Subscription{
+	h.subscriptions.Store(subscriptionID, &HandlerSubscription{
 		ID:       subscriptionID,
 		ClientID: req.ClientId,
 		Topic:    req.Topic,

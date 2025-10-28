@@ -9,14 +9,14 @@ import (
 	"go.uber.org/zap"
 )
 
-// MessageHandler handles WebSocket message processing
-type MessageHandler struct {
+// HandlerMessageProcessor handles WebSocket message processing
+type HandlerMessageProcessor struct {
 	gateway *Gateway
 	logger  *zap.Logger
 }
 
-// Message represents a WebSocket message
-type Message struct {
+// HandlerMessage represents a WebSocket message
+type HandlerMessage struct {
 	Type      MessageType            `json:"type"`
 	Channel   string                 `json:"channel,omitempty"`
 	Symbol    string                 `json:"symbol,omitempty"`
@@ -26,30 +26,30 @@ type Message struct {
 	Metadata  map[string]interface{} `json:"metadata,omitempty"`
 }
 
-// SubscribeRequest represents a subscription request
-type SubscribeRequest struct {
+// HandlerSubscribeRequest represents a subscription request
+type HandlerSubscribeRequest struct {
 	Channel string                 `json:"channel"`
 	Symbol  string                 `json:"symbol,omitempty"`
 	Type    SubscriptionType       `json:"type"`
 	Filters map[string]interface{} `json:"filters,omitempty"`
 }
 
-// UnsubscribeRequest represents an unsubscription request
-type UnsubscribeRequest struct {
+// HandlerUnsubscribeRequest represents an unsubscription request
+type HandlerUnsubscribeRequest struct {
 	SubscriptionID string `json:"subscription_id"`
 }
 
 // NewMessageHandler creates a new message handler
-func NewMessageHandler(gateway *Gateway, logger *zap.Logger) *MessageHandler {
-	return &MessageHandler{
+func NewMessageHandler(gateway *Gateway, logger *zap.Logger) *HandlerMessageProcessor {
+	return &HandlerMessageProcessor{
 		gateway: gateway,
 		logger:  logger,
 	}
 }
 
 // ProcessMessage processes an incoming WebSocket message
-func (h *MessageHandler) ProcessMessage(conn *Connection, messageBytes []byte) error {
-	var message Message
+func (h *HandlerMessageProcessor) ProcessMessage(conn *Connection, messageBytes []byte) error {
+	var message HandlerMessage
 	if err := json.Unmarshal(messageBytes, &message); err != nil {
 		h.logger.Error("Failed to unmarshal message",
 			zap.String("connection_id", conn.ID),
@@ -79,24 +79,24 @@ func (h *MessageHandler) ProcessMessage(conn *Connection, messageBytes []byte) e
 }
 
 // CreateMessage creates a new message
-func (h *MessageHandler) CreateMessage(messageType MessageType, channel string, data interface{}) (*Message, error) {
-	return &Message{
+func (h *HandlerMessageProcessor) CreateMessage(messageType MessageType, channel string, data interface{}) (*HandlerMessage, error) {
+	return &HandlerMessage{
 		Type:      messageType,
 		Channel:   channel,
 		Data:      data,
 		Timestamp: time.Now(),
-		MessageID: generateMessageID(),
+		MessageID: generateHandlerMessageID(),
 	}, nil
 }
 
 // SerializeMessage serializes a message to JSON bytes
-func (h *MessageHandler) SerializeMessage(message *Message) ([]byte, error) {
+func (h *HandlerMessageProcessor) SerializeMessage(message *HandlerMessage) ([]byte, error) {
 	return json.Marshal(message)
 }
 
 // handleSubscribe handles subscription requests
-func (h *MessageHandler) handleSubscribe(conn *Connection, message *Message) error {
-	var subReq SubscribeRequest
+func (h *HandlerMessageProcessor) handleSubscribe(conn *Connection, message *HandlerMessage) error {
+	var subReq HandlerSubscribeRequest
 	
 	// Parse subscription request from message data
 	dataBytes, err := json.Marshal(message.Data)
@@ -130,8 +130,8 @@ func (h *MessageHandler) handleSubscribe(conn *Connection, message *Message) err
 }
 
 // handleUnsubscribe handles unsubscription requests
-func (h *MessageHandler) handleUnsubscribe(conn *Connection, message *Message) error {
-	var unsubReq UnsubscribeRequest
+func (h *HandlerMessageProcessor) handleUnsubscribe(conn *Connection, message *HandlerMessage) error {
+	var unsubReq HandlerUnsubscribeRequest
 	
 	// Parse unsubscription request from message data
 	dataBytes, err := json.Marshal(message.Data)
@@ -158,7 +158,7 @@ func (h *MessageHandler) handleUnsubscribe(conn *Connection, message *Message) e
 }
 
 // handleHeartbeat handles heartbeat messages
-func (h *MessageHandler) handleHeartbeat(conn *Connection, message *Message) error {
+func (h *HandlerMessageProcessor) handleHeartbeat(conn *Connection, message *HandlerMessage) error {
 	response := map[string]interface{}{
 		"status":    "alive",
 		"timestamp": time.Now(),
@@ -168,7 +168,7 @@ func (h *MessageHandler) handleHeartbeat(conn *Connection, message *Message) err
 }
 
 // validateSubscriptionRequest validates a subscription request
-func (h *MessageHandler) validateSubscriptionRequest(req *SubscribeRequest) error {
+func (h *MessageHandler) validateSubscriptionRequest(req *HandlerSubscribeRequest) error {
 	if req.Channel == "" {
 		return errors.New("channel is required")
 	}
@@ -210,13 +210,13 @@ func (h *MessageHandler) validateSubscriptionRequest(req *SubscribeRequest) erro
 }
 
 // sendMessage sends a message to a connection
-func (h *MessageHandler) sendMessage(conn *Connection, messageType MessageType, channel string, data interface{}) error {
-	message := &Message{
+func (h *HandlerMessageProcessor) sendMessage(conn *Connection, messageType MessageType, channel string, data interface{}) error {
+	message := &HandlerMessage{
 		Type:      messageType,
 		Channel:   channel,
 		Data:      data,
 		Timestamp: time.Now(),
-		MessageID: generateMessageID(),
+		MessageID: generateHandlerMessageID(),
 	}
 
 	messageBytes, err := json.Marshal(message)
@@ -238,7 +238,7 @@ func (h *MessageHandler) sendMessage(conn *Connection, messageType MessageType, 
 }
 
 // sendError sends an error message to a connection
-func (h *MessageHandler) sendError(conn *Connection, errorCode, errorMessage string) error {
+func (h *HandlerMessageProcessor) sendError(conn *Connection, errorCode, errorMessage string) error {
 	errorData := map[string]interface{}{
 		"code":    errorCode,
 		"message": errorMessage,
@@ -247,20 +247,20 @@ func (h *MessageHandler) sendError(conn *Connection, errorCode, errorMessage str
 	return h.sendMessage(conn, MessageTypeError, "", errorData)
 }
 
-// generateMessageID generates a unique message ID
-func generateMessageID() string {
+// generateHandlerMessageID generates a unique message ID
+func generateHandlerMessageID() string {
 	return fmt.Sprintf("msg_%d", time.Now().UnixNano())
 }
 
-// ConnectionManager manages WebSocket connections
-type ConnectionManager struct {
+// HandlerConnectionManager manages WebSocket connections
+type HandlerConnectionManager struct {
 	gateway *Gateway
 	logger  *zap.Logger
 }
 
-// NewConnectionManager creates a new connection manager
-func NewConnectionManager(gateway *Gateway, logger *zap.Logger) *ConnectionManager {
-	return &ConnectionManager{
+// NewHandlerConnectionManager creates a new connection manager
+func NewHandlerConnectionManager(gateway *Gateway, logger *zap.Logger) *HandlerConnectionManager {
+	return &HandlerConnectionManager{
 		gateway: gateway,
 		logger:  logger,
 	}

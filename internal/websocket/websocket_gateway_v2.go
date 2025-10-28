@@ -64,7 +64,7 @@ type V2Connection struct {
 	receive chan []byte
 	
 	// Subscriptions
-	subscriptions map[string]*Subscription
+	subscriptions map[string]*V2Subscription
 	subMu         sync.RWMutex
 	
 	// Performance tracking
@@ -82,8 +82,8 @@ type V2Connection struct {
 	cancel context.CancelFunc
 }
 
-// Subscription represents a channel subscription
-type Subscription struct {
+// V2Subscription represents a channel subscription
+type V2Subscription struct {
 	ID       string
 	Channel  string
 	Symbol   string
@@ -317,13 +317,13 @@ func (g *Gateway) createConnection(conn *websocket.Conn, userID, exchange string
 	ctx, cancel := context.WithCancel(g.ctx)
 	
 	connection := &V2Connection{
-		ID:            generateConnectionID(),
+		ID:            generateV2ConnectionID(),
 		UserID:        userID,
 		Exchange:      exchange,
 		conn:          conn,
 		send:          make(chan []byte, g.config.BufferSize),
 		receive:       make(chan []byte, g.config.BufferSize),
-		subscriptions: make(map[string]*Subscription),
+		subscriptions: make(map[string]*V2Subscription),
 		lastActivity:  time.Now(),
 		isActive:      true,
 		ctx:           ctx,
@@ -551,8 +551,8 @@ func (c *V2Connection) Subscribe(channel, symbol string, subType SubscriptionTyp
 		return ErrMaxSubscriptionsReached
 	}
 	
-	subscriptionID := generateSubscriptionID()
-	subscription := &Subscription{
+	subscriptionID := generateV2SubscriptionID()
+	subscription := &V2Subscription{
 		ID:      subscriptionID,
 		Channel: channel,
 		Symbol:  symbol,
@@ -605,17 +605,16 @@ func (c *V2Connection) Close() {
 }
 
 // Helper functions
-func generateConnectionID() string {
+func generateV2ConnectionID() string {
 	return fmt.Sprintf("conn_%d", time.Now().UnixNano())
 }
 
-func generateSubscriptionID() string {
+func generateV2SubscriptionID() string {
 	return fmt.Sprintf("sub_%d", time.Now().UnixNano())
 }
 
 // Error definitions
 var (
-	ErrConnectionNotFound        = errors.New("connection not found")
 	ErrMaxConnectionsReached     = errors.New("maximum connections reached")
 	ErrMaxSubscriptionsReached   = errors.New("maximum subscriptions reached")
 	ErrConnectionSendBufferFull  = errors.New("connection send buffer full")

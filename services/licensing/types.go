@@ -74,7 +74,7 @@ type License struct {
 	RateLimits      map[string]int64           `json:"rate_limits"`
 	IssuedAt        time.Time                  `json:"issued_at"`
 	ExpiresAt       time.Time                  `json:"expires_at"`
-	IsActive        bool                       `json:"is_active"`
+	Active          bool                       `json:"is_active"`
 	MaxUsers        int                        `json:"max_users"`
 	MaxAssets       int                        `json:"max_assets"`
 	MaxOrders       int64                      `json:"max_orders"`
@@ -114,7 +114,7 @@ type BillingPlan struct {
 	OverageRates    map[string]float64         `json:"overage_rates"`
 	Features        []LicenseFeature           `json:"features"`
 	Quotas          map[string]int64           `json:"quotas"`
-	IsActive        bool                       `json:"is_active"`
+	Active          bool                       `json:"is_active"`
 }
 
 // Bill represents a billing statement
@@ -226,5 +226,5 @@ func (l *License) GetRateLimit(usageType string) int64 {
 
 // IsActive checks if the license is active and not expired
 func (l *License) IsActive() bool {
-	return l.IsActive && !l.IsExpired()
+	return l.Active && !l.IsExpired()
 }
