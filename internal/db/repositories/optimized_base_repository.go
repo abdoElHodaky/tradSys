@@ -423,7 +423,7 @@ func (r *OptimizedRepository[T]) extractFieldsAndValues(entity *T, includeID boo
 // scanRowIntoEntity scans a database row into an entity using reflection
 func (r *OptimizedRepository[T]) scanRowIntoEntity(scanner interface{ Scan(...interface{}) error }, entity *T) error {
 	v := reflect.ValueOf(entity).Elem()
-	t := v.Type()
+	_ = v.Type() // Type information available if needed for debugging
 
 	var scanArgs []interface{}
 	for i := 0; i < v.NumField(); i++ {
@@ -465,4 +465,3 @@ func (r *BaseRepository) GetLogger() *zap.Logger {
 func (r *BaseRepository) GetTable() string {
 	return r.table
 }
-

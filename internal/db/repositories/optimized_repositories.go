@@ -129,34 +129,34 @@ func (r *OptimizedOrderRepository) FindBySymbol(ctx context.Context, symbol stri
 }
 
 // FindByStatus finds orders by status
-func (r *OrderRepository) FindByStatus(ctx context.Context, status string, limit int) ([]*Order, error) {
+func (r *OptimizedOrderRepository) FindByStatus(ctx context.Context, status string, limit int) ([]*Order, error) {
 	return r.FindByField(ctx, "status", status, limit)
 }
 
 // FindByUserID finds orders by user ID
-func (r *OrderRepository) FindByUserID(ctx context.Context, userID string, limit int) ([]*Order, error) {
+func (r *OptimizedOrderRepository) FindByUserID(ctx context.Context, userID string, limit int) ([]*Order, error) {
 	return r.FindByField(ctx, "user_id", userID, limit)
 }
 
-// TradeRepository provides optimized trade data access
-type TradeRepository struct {
+// OptimizedTradeRepository provides optimized trade data access
+type OptimizedTradeRepository struct {
 	*OptimizedRepository[Trade]
 }
 
-// NewTradeRepository creates a new trade repository
-func NewTradeRepository(db *sql.DB, logger *zap.Logger) *TradeRepository {
-	return &TradeRepository{
+// NewOptimizedTradeRepository creates a new optimized trade repository
+func NewOptimizedTradeRepository(db *sql.DB, logger *zap.Logger) *OptimizedTradeRepository {
+	return &OptimizedTradeRepository{
 		OptimizedRepository: NewOptimizedRepository[Trade](db, logger, "trades"),
 	}
 }
 
 // FindBySymbol finds trades by symbol
-func (r *TradeRepository) FindBySymbol(ctx context.Context, symbol string, limit int) ([]*Trade, error) {
+func (r *OptimizedTradeRepository) FindBySymbol(ctx context.Context, symbol string, limit int) ([]*Trade, error) {
 	return r.FindByField(ctx, "symbol", symbol, limit)
 }
 
 // FindByOrderID finds trades by order ID
-func (r *TradeRepository) FindByOrderID(ctx context.Context, orderID string) ([]*Trade, error) {
+func (r *OptimizedTradeRepository) FindByOrderID(ctx context.Context, orderID string) ([]*Trade, error) {
 	query := `SELECT * FROM trades WHERE buy_order_id = $1 OR sell_order_id = $1 ORDER BY created_at DESC`
 	
 	rows, err := r.GetDB().QueryContext(ctx, query, orderID)
@@ -203,24 +203,24 @@ func (r *OptimizedPositionRepository) FindBySymbol(ctx context.Context, symbol s
 }
 
 // FindByUserID finds positions by user ID
-func (r *PositionRepository) FindByUserID(ctx context.Context, userID string) ([]*Position, error) {
+func (r *OptimizedPositionRepository) FindByUserID(ctx context.Context, userID string) ([]*Position, error) {
 	return r.FindByField(ctx, "user_id", userID, 100)
 }
 
-// UserRepository provides optimized user data access
-type UserRepository struct {
+// OptimizedUserRepository provides optimized user data access
+type OptimizedUserRepository struct {
 	*OptimizedRepository[User]
 }
 
-// NewUserRepository creates a new user repository
-func NewUserRepository(db *sql.DB, logger *zap.Logger) *UserRepository {
-	return &UserRepository{
+// NewOptimizedUserRepository creates a new optimized user repository
+func NewOptimizedUserRepository(db *sql.DB, logger *zap.Logger) *OptimizedUserRepository {
+	return &OptimizedUserRepository{
 		OptimizedRepository: NewOptimizedRepository[User](db, logger, "users"),
 	}
 }
 
 // FindByUsername finds user by username
-func (r *UserRepository) FindByUsername(ctx context.Context, username string) (*User, error) {
+func (r *OptimizedUserRepository) FindByUsername(ctx context.Context, username string) (*User, error) {
 	users, err := r.FindByField(ctx, "username", username, 1)
 	if err != nil {
 		return nil, err
@@ -232,7 +232,7 @@ func (r *UserRepository) FindByUsername(ctx context.Context, username string) (*
 }
 
 // FindByEmail finds user by email
-func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*User, error) {
+func (r *OptimizedUserRepository) FindByEmail(ctx context.Context, email string) (*User, error) {
 	users, err := r.FindByField(ctx, "email", email, 1)
 	if err != nil {
 		return nil, err
@@ -278,25 +278,25 @@ func (r *OptimizedMarketDataRepository) FindLatestBySymbol(ctx context.Context, 
 	return marketData, nil
 }
 
-// StrategyRepository provides optimized strategy data access
-type StrategyRepository struct {
+// OptimizedStrategyRepository provides optimized strategy data access
+type OptimizedStrategyRepository struct {
 	*OptimizedRepository[Strategy]
 }
 
-// NewStrategyRepository creates a new strategy repository
-func NewStrategyRepository(db *sql.DB, logger *zap.Logger) *StrategyRepository {
-	return &StrategyRepository{
+// NewOptimizedStrategyRepository creates a new optimized strategy repository
+func NewOptimizedStrategyRepository(db *sql.DB, logger *zap.Logger) *OptimizedStrategyRepository {
+	return &OptimizedStrategyRepository{
 		OptimizedRepository: NewOptimizedRepository[Strategy](db, logger, "strategies"),
 	}
 }
 
 // FindByUserID finds strategies by user ID
-func (r *StrategyRepository) FindByUserID(ctx context.Context, userID string) ([]*Strategy, error) {
+func (r *OptimizedStrategyRepository) FindByUserID(ctx context.Context, userID string) ([]*Strategy, error) {
 	return r.FindByField(ctx, "user_id", userID, 100)
 }
 
 // FindByStatus finds strategies by status
-func (r *StrategyRepository) FindByStatus(ctx context.Context, status string, limit int) ([]*Strategy, error) {
+func (r *OptimizedStrategyRepository) FindByStatus(ctx context.Context, status string, limit int) ([]*Strategy, error) {
 	return r.FindByField(ctx, "status", status, limit)
 }
 
@@ -347,7 +347,7 @@ func (r *OptimizedPairRepository) FindBySymbol(ctx context.Context, symbol strin
 }
 
 // FindByStatus finds pairs by status
-func (r *PairRepository) FindByStatus(ctx context.Context, status string, limit int) ([]*Pair, error) {
+func (r *OptimizedPairRepository) FindByStatus(ctx context.Context, status string, limit int) ([]*Pair, error) {
 	return r.FindByField(ctx, "status", status, limit)
 }
 
@@ -355,27 +355,27 @@ func (r *PairRepository) FindByStatus(ctx context.Context, status string, limit 
 
 // RepositoryManager manages all repositories
 type RepositoryManager struct {
-	Order      *OrderRepository
-	Trade      *TradeRepository
-	Position   *PositionRepository
-	User       *UserRepository
-	MarketData *MarketDataRepository
-	Strategy   *StrategyRepository
-	Risk       *RiskRepository
-	Pair       *PairRepository
+	Order      *OptimizedOrderRepository
+	Trade      *OptimizedTradeRepository
+	Position   *OptimizedPositionRepository
+	User       *OptimizedUserRepository
+	MarketData *OptimizedMarketDataRepository
+	Strategy   *OptimizedStrategyRepository
+	Risk       *OptimizedRiskRepository
+	Pair       *OptimizedPairRepository
 }
 
 // NewRepositoryManager creates a new repository manager
 func NewRepositoryManager(db *sql.DB, logger *zap.Logger) *RepositoryManager {
 	return &RepositoryManager{
-		Order:      NewOrderRepository(db, logger),
-		Trade:      NewTradeRepository(db, logger),
-		Position:   NewPositionRepository(db, logger),
-		User:       NewUserRepository(db, logger),
-		MarketData: NewMarketDataRepository(db, logger),
-		Strategy:   NewStrategyRepository(db, logger),
-		Risk:       NewRiskRepository(db, logger),
-		Pair:       NewPairRepository(db, logger),
+		Order:      NewOptimizedOrderRepository(db, logger),
+		Trade:      NewOptimizedTradeRepository(db, logger),
+		Position:   NewOptimizedPositionRepository(db, logger),
+		User:       NewOptimizedUserRepository(db, logger),
+		MarketData: NewOptimizedMarketDataRepository(db, logger),
+		Strategy:   NewOptimizedStrategyRepository(db, logger),
+		Risk:       NewOptimizedRiskRepository(db, logger),
+		Pair:       NewOptimizedPairRepository(db, logger),
 	}
 }
 

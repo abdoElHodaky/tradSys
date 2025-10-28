@@ -127,7 +127,7 @@ func NewHFTEngine(logger *zap.Logger, workerCount int) *HFTEngine {
 		orderBooks:    unsafe.Pointer(&map[string]*HFTOrderBook{}),
 		TradeChannel:  make(chan *Trade, 10000), // High-capacity buffer
 		fastOrderPool: pool.NewFastOrderPool(),
-		tradePool:     pool.NewTradePool(),
+		tradePool:     pool.NewTradePool(100), // Initial pool size
 		logger:        logger,
 		ctx:           ctx,
 		cancel:        cancel,
