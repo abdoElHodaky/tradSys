@@ -224,7 +224,7 @@ func (l *License) GetRateLimit(usageType string) int64 {
 	return 0
 }
 
-// IsActive checks if the license is active and not expired
-func (l *License) IsActive() bool {
+// IsLicenseActive checks if the license is active and not expired
+func (l *License) IsLicenseActive() bool {
 	return l.IsActive && !l.IsExpired()
 }

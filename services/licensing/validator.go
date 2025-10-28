@@ -140,7 +140,7 @@ func (v *Validator) ValidateQuota(ctx context.Context, userID, usageType string,
 	}
 	
 	// Check if license is active
-	if !license.IsActive() {
+	if !license.IsLicenseActive() {
 		return &ValidationResult{Valid: false, Reason: "license_inactive"}, nil
 	}
 	
