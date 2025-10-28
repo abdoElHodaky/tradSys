@@ -1,0 +1,1864 @@
+From 710edb5b7bd5b3c31aad0d63eb20a99dbd1744da Mon Sep 17 00:00:00 2001
+From: "codegen-sh[bot]" <131295404+codegen-sh[bot]@users.noreply.github.com>
+Date: Tue, 28 Oct 2025 11:52:29 +0000
+Subject: [PATCH] Fix remaining validation errors and clean up imports
+
+- Added missing error definitions for order validation
+- Fixed TimeInForce constant reference (TimeInForceDAY vs TimeInForceDay)
+- Removed unused imports (errors, cache)
+- Simplified order update validation logic
+- All order package compilation errors resolved
+---
+ .../cqrs/handlers/circuit_breaker.go          |   6 +-
+ .../cqrs/handlers/compatibility.go            |  10 +-
+ .../cqrs/handlers/event_sharding.go           |   4 +-
+ .../architecture/cqrs/handlers/factory.go     |  10 +-
+ .../architecture/cqrs/handlers/nats_cqrs.go   |   4 +-
+ .../cqrs/handlers/watermill_cqrs.go           |   8 +-
+ internal/orders/batch_processor.go            |  45 +++--
+ internal/orders/errors.go                     | 113 ++++++++----
+ .../orders/matching/orders_matching_module.go |   2 +-
+ internal/orders/module.go                     |  10 +-
+ internal/orders/order_lifecycle.go            |  57 ++++---
+ internal/orders/order_service.go              | 161 +++++++++---------
+ internal/orders/order_types.go                |  76 ++++-----
+ ...lidators.go => order_validators_legacy.go} | 112 ++++--------
+ internal/orders/validator.go                  | 142 +++++++--------
+ 15 files changed, 383 insertions(+), 377 deletions(-)
+ rename internal/orders/{order_validators.go => order_validators_legacy.go} (65%)
+
+diff --git a/internal/architecture/cqrs/handlers/circuit_breaker.go b/internal/architecture/cqrs/handlers/circuit_breaker.go
+index 5feaff6..21fca04 100644
+--- a/internal/architecture/cqrs/handlers/circuit_breaker.go
++++ b/internal/architecture/cqrs/handlers/circuit_breaker.go
+@@ -6,7 +6,7 @@ import (
+ 	"sync"
+ 	"time"
+ 
+-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
++	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
+ 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
+ 	"go.uber.org/zap"
+ )
+@@ -263,14 +263,14 @@ func (cb *CircuitBreaker) stateToString() string {
+ 
+ // CircuitBreakerEventBusDecorator decorates an event bus with circuit breaking
+ type CircuitBreakerEventBusDecorator struct {
+-	eventBus eventbus.EventBus
++	eventBus cqrscore.EventBus
+ 	breaker  *CircuitBreaker
+ 	logger   *zap.Logger
+ }
+ 
+ // NewCircuitBreakerEventBusDecorator creates a new circuit breaker event bus decorator
+ func NewCircuitBreakerEventBusDecorator(
+-	eventBus eventbus.EventBus,
++	eventBus cqrscore.EventBus,
+ 	breaker *CircuitBreaker,
+ 	logger *zap.Logger,
+ ) *CircuitBreakerEventBusDecorator {
+diff --git a/internal/architecture/cqrs/handlers/compatibility.go b/internal/architecture/cqrs/handlers/compatibility.go
+index 88a1765..e0702c7 100644
+--- a/internal/architecture/cqrs/handlers/compatibility.go
++++ b/internal/architecture/cqrs/handlers/compatibility.go
+@@ -5,9 +5,9 @@ import (
+ 	"fmt"
+ 	"sync"
+ 
+-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
++	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
+ 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
+-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
++	escore "github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
+ 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
+ 	"go.uber.org/zap"
+ )
+@@ -23,9 +23,9 @@ type CompatibilityLayer struct {
+ 	cqrsAdapter *WatermillCQRSAdapter
+ 
+ 	// Event sourcing components
+-	eventStore    store.EventStore
+-	aggregateRepo aggregate.Repository
+-	eventBus      eventbus.EventBus
++	eventStore    escore.EventStore
++	aggregateRepo handlers.Repository
++	eventBus      cqrscore.EventBus
+ 
+ 	// Synchronization
+ 	mu sync.RWMutex
+diff --git a/internal/architecture/cqrs/handlers/event_sharding.go b/internal/architecture/cqrs/handlers/event_sharding.go
+index 2ba0a88..a0d9620 100644
+--- a/internal/architecture/cqrs/handlers/event_sharding.go
++++ b/internal/architecture/cqrs/handlers/event_sharding.go
+@@ -7,9 +7,9 @@ import (
+ 	"hash/fnv"
+ 	"sync"
+ 
+-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
++	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
+ 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
+-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
++	escore "github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
+ 	"github.com/nats-io/nats.go"
+ 	"go.uber.org/zap"
+ )
+diff --git a/internal/architecture/cqrs/handlers/factory.go b/internal/architecture/cqrs/handlers/factory.go
+index e2792af..c41efbe 100644
+--- a/internal/architecture/cqrs/handlers/factory.go
++++ b/internal/architecture/cqrs/handlers/factory.go
+@@ -1,8 +1,8 @@
+ package handlers
+ 
+ import (
+-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
+-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
++	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
++	escore "github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
+ 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
+ 	"go.uber.org/zap"
+ )
+@@ -10,9 +10,9 @@ import (
+ // CQRSSystem represents a complete CQRS system
+ type CQRSSystem struct {
+ 	// Core components
+-	EventStore    store.EventStore
+-	AggregateRepo aggregate.Repository
+-	EventBus      eventbus.EventBus
++	EventStore    escore.EventStore
++	AggregateRepo handlers.Repository
++	EventBus      cqrscore.EventBus
+ 
+ 	// Adapters
+ 	WatermillAdapter *WatermillCQRSAdapter
+diff --git a/internal/architecture/cqrs/handlers/nats_cqrs.go b/internal/architecture/cqrs/handlers/nats_cqrs.go
+index 58dcd08..30c5b14 100644
+--- a/internal/architecture/cqrs/handlers/nats_cqrs.go
++++ b/internal/architecture/cqrs/handlers/nats_cqrs.go
+@@ -8,9 +8,9 @@ import (
+ 	"sync"
+ 	"time"
+ 
+-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
++	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
+ 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
+-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
++	escore "github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
+ 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
+ 	"github.com/nats-io/nats.go"
+ 	"go.uber.org/zap"
+diff --git a/internal/architecture/cqrs/handlers/watermill_cqrs.go b/internal/architecture/cqrs/handlers/watermill_cqrs.go
+index 281e4ec..a2d3f18 100644
+--- a/internal/architecture/cqrs/handlers/watermill_cqrs.go
++++ b/internal/architecture/cqrs/handlers/watermill_cqrs.go
+@@ -10,9 +10,9 @@ import (
+ 	"github.com/ThreeDotsLabs/watermill"
+ 	"github.com/ThreeDotsLabs/watermill/message"
+ 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
+-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
++	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
+ 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
+-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
++	escore "github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
+ 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
+ 	"go.uber.org/zap"
+ )
+@@ -26,8 +26,8 @@ type WatermillCQRSAdapter struct {
+ 	router *message.Router
+ 
+ 	// Our components
+-	eventStore    store.EventStore
+-	aggregateRepo aggregate.Repository
++	eventStore    escore.EventStore
++	aggregateRepo handlers.Repository
+ 
+ 	// Publishers and subscribers
+ 	commandPublisher  message.Publisher
+diff --git a/internal/orders/batch_processor.go b/internal/orders/batch_processor.go
+index 14769f8..02b0904 100644
+--- a/internal/orders/batch_processor.go
++++ b/internal/orders/batch_processor.go
+@@ -24,23 +24,23 @@ type orderOperationResult struct {
+ 
+ // BatchProcessor handles batch processing of order operations
+ type BatchProcessor struct {
+-	service        *Service
++	service        *OrderService
+ 	logger         *zap.Logger
+ 	ctx            context.Context
+ 	cancel         context.CancelFunc
+ 	orderBatchChan chan orderOperation
+ 	wg             sync.WaitGroup
+-	
++
+ 	// Configuration
+-	batchSize     int
+-	batchTimeout  time.Duration
+-	workerCount   int
++	batchSize    int
++	batchTimeout time.Duration
++	workerCount  int
+ }
+ 
+ // NewBatchProcessor creates a new batch processor
+-func NewBatchProcessor(service *Service, logger *zap.Logger) *BatchProcessor {
++func NewBatchProcessor(service *OrderService, logger *zap.Logger) *BatchProcessor {
+ 	ctx, cancel := context.WithCancel(context.Background())
+-	
++
+ 	bp := &BatchProcessor{
+ 		service:        service,
+ 		logger:         logger,
+@@ -51,17 +51,17 @@ func NewBatchProcessor(service *Service, logger *zap.Logger) *BatchProcessor {
+ 		batchTimeout:   100 * time.Millisecond,
+ 		workerCount:    4,
+ 	}
+-	
++
+ 	return bp
+ }
+ 
+ // Start starts the batch processor
+ func (bp *BatchProcessor) Start() {
+-	bp.logger.Info("Starting batch processor", 
++	bp.logger.Info("Starting batch processor",
+ 		zap.Int("batch_size", bp.batchSize),
+ 		zap.Duration("batch_timeout", bp.batchTimeout),
+ 		zap.Int("worker_count", bp.workerCount))
+-	
++
+ 	// Start batch processing workers
+ 	for i := 0; i < bp.workerCount; i++ {
+ 		bp.wg.Add(1)
+@@ -108,9 +108,9 @@ func (bp *BatchProcessor) SubmitOperation(op orderOperation) {
+ // processBatchOperations processes batch operations for orders
+ func (bp *BatchProcessor) processBatchOperations(workerID int) {
+ 	defer bp.wg.Done()
+-	
++
+ 	bp.logger.Info("Starting batch processor worker", zap.Int("worker_id", workerID))
+-	
++
+ 	ticker := time.NewTicker(bp.batchTimeout)
+ 	defer ticker.Stop()
+ 
+@@ -175,7 +175,7 @@ func (bp *BatchProcessor) processBatch(batch []orderOperation, workerID int) {
+ 		case "cancel":
+ 			cancelOps = append(cancelOps, op)
+ 		default:
+-			bp.logger.Warn("Unknown operation type", 
++			bp.logger.Warn("Unknown operation type",
+ 				zap.String("op_type", op.opType),
+ 				zap.Int("worker_id", workerID))
+ 			if op.resultCh != nil {
+@@ -230,23 +230,18 @@ func (bp *BatchProcessor) processAddBatch(ops []orderOperation, workerID int) {
+ 
+ 		// Update user orders index
+ 		if bp.service.UserOrders[order.UserID] == nil {
+-			bp.service.UserOrders[order.UserID] = make(map[string]bool)
++			bp.service.UserOrders[order.UserID] = make([]string, 0)
+ 		}
+-		bp.service.UserOrders[order.UserID][order.ID] = true
++		bp.service.UserOrders[order.UserID] = append(bp.service.UserOrders[order.UserID], order.ID)
+ 
+ 		// Update symbol orders index
+ 		if bp.service.SymbolOrders[order.Symbol] == nil {
+-			bp.service.SymbolOrders[order.Symbol] = make(map[string]bool)
+-		}
+-		bp.service.SymbolOrders[order.Symbol][order.ID] = true
+-
+-		// Update client order ID mapping
+-		if order.ClientOrderID != "" {
+-			bp.service.ClientOrderIDs[order.ClientOrderID] = order.ID
++			bp.service.SymbolOrders[order.Symbol] = make([]string, 0)
+ 		}
++		bp.service.SymbolOrders[order.Symbol] = append(bp.service.SymbolOrders[order.Symbol], order.ID)
+ 
+ 		// Cache the order
+-		bp.service.OrderCache.Set(order.ID, order, cache.DefaultExpiration)
++		bp.service.OrderCache.Set(order.ID, order, 5*time.Minute)
+ 
+ 		if op.resultCh != nil {
+ 			op.resultCh <- orderOperationResult{
+@@ -295,7 +290,7 @@ func (bp *BatchProcessor) processUpdateBatch(ops []orderOperation, workerID int)
+ 		existingOrder.UpdatedAt = time.Now()
+ 
+ 		// Update cache
+-		bp.service.OrderCache.Set(order.ID, existingOrder, cache.DefaultExpiration)
++		bp.service.OrderCache.Set(order.ID, existingOrder, 5*time.Minute)
+ 
+ 		if op.resultCh != nil {
+ 			op.resultCh <- orderOperationResult{
+@@ -343,7 +338,7 @@ func (bp *BatchProcessor) processCancelBatch(ops []orderOperation, workerID int)
+ 		existingOrder.UpdateStatus(OrderStatusCancelled)
+ 
+ 		// Update cache
+-		bp.service.OrderCache.Set(order.ID, existingOrder, cache.DefaultExpiration)
++		bp.service.OrderCache.Set(order.ID, existingOrder, 5*time.Minute)
+ 
+ 		if op.resultCh != nil {
+ 			op.resultCh <- orderOperationResult{
+diff --git a/internal/orders/errors.go b/internal/orders/errors.go
+index d6de308..70659fc 100644
+--- a/internal/orders/errors.go
++++ b/internal/orders/errors.go
+@@ -6,71 +6,114 @@ import "errors"
+ var (
+ 	// ErrOrderNotFound is returned when an order is not found
+ 	ErrOrderNotFound = errors.New("order not found")
+-	
++
+ 	// ErrInvalidOrder is returned when an order is invalid
+ 	ErrInvalidOrder = errors.New("invalid order")
+-	
++
+ 	// ErrInvalidOrderRequest is returned when an order request is invalid
+ 	ErrInvalidOrderRequest = errors.New("invalid order request")
+-	
++
+ 	// ErrOrderAlreadyExists is returned when an order already exists
+ 	ErrOrderAlreadyExists = errors.New("order already exists")
+-	
++
+ 	// ErrOrderNotActive is returned when trying to modify an inactive order
+ 	ErrOrderNotActive = errors.New("order is not active")
+-	
++
+ 	// ErrOrderExpired is returned when an order has expired
+ 	ErrOrderExpired = errors.New("order has expired")
+-	
++
++	// ErrOrderCannotBeUpdated is returned when an order cannot be updated
++	ErrOrderCannotBeUpdated = errors.New("order cannot be updated")
++
++	// ErrOrderCannotBeCancelled is returned when an order cannot be cancelled
++	ErrOrderCannotBeCancelled = errors.New("order cannot be cancelled")
++
+ 	// ErrInsufficientQuantity is returned when there's insufficient quantity
+ 	ErrInsufficientQuantity = errors.New("insufficient quantity")
+-	
++
+ 	// ErrInvalidPrice is returned when the price is invalid
+ 	ErrInvalidPrice = errors.New("invalid price")
+-	
++
++	// ErrInvalidPricePrecision is returned when the price precision is invalid
++	ErrInvalidPricePrecision = errors.New("invalid price precision")
++
++	// ErrInvalidQuantity is returned when the quantity is invalid
++	ErrInvalidQuantity = errors.New("invalid quantity")
++
++	// ErrInvalidQuantityPrecision is returned when the quantity precision is invalid
++	ErrInvalidQuantityPrecision = errors.New("invalid quantity precision")
++
+ 	// ErrInvalidSymbol is returned when the symbol is invalid
+ 	ErrInvalidSymbol = errors.New("invalid symbol")
+-	
++
+ 	// ErrInvalidSide is returned when the order side is invalid
+ 	ErrInvalidSide = errors.New("invalid order side")
+-	
++
++	// ErrInvalidOrderSide is returned when the order side is invalid
++	ErrInvalidOrderSide = errors.New("invalid order side")
++
+ 	// ErrInvalidType is returned when the order type is invalid
+ 	ErrInvalidType = errors.New("invalid order type")
+-	
++
++	// ErrInvalidOrderType is returned when the order type is invalid
++	ErrInvalidOrderType = errors.New("invalid order type")
++
+ 	// ErrInvalidTimeInForce is returned when the time in force is invalid
+ 	ErrInvalidTimeInForce = errors.New("invalid time in force")
+-	
++
++	// ErrOrderSizeExceedsLimit is returned when order size exceeds limit
++	ErrOrderSizeExceedsLimit = errors.New("order size exceeds limit")
++
++	// ErrOrderSizeBelowMinimum is returned when order size is below minimum
++	ErrOrderSizeBelowMinimum = errors.New("order size below minimum")
++
++	// ErrOrderValueExceedsLimit is returned when order value exceeds limit
++	ErrOrderValueExceedsLimit = errors.New("order value exceeds limit")
++
+ 	// ErrClientOrderIDExists is returned when client order ID already exists
+ 	ErrClientOrderIDExists = errors.New("client order ID already exists")
+-	
++
+ 	// ErrUnauthorized is returned when user is not authorized
+ 	ErrUnauthorized = errors.New("unauthorized")
+-	
++
++	// ErrUnauthorizedOrderAccess is returned when user cannot access order
++	ErrUnauthorizedOrderAccess = errors.New("unauthorized order access")
++
+ 	// ErrRateLimitExceeded is returned when rate limit is exceeded
+ 	ErrRateLimitExceeded = errors.New("rate limit exceeded")
+-	
++
+ 	// ErrServiceUnavailable is returned when service is unavailable
+ 	ErrServiceUnavailable = errors.New("service unavailable")
+-	
++
+ 	// Batch processing errors
+-	ErrBatchChannelFull = errors.New("batch channel is full")
+-	ErrInvalidOperationType = errors.New("invalid operation type")
++	ErrBatchChannelFull      = errors.New("batch channel is full")
++	ErrInvalidOperationType  = errors.New("invalid operation type")
+ 	ErrBatchProcessingFailed = errors.New("batch processing failed")
+-	
++
+ 	// Validation errors
+-	ErrMissingUserID = errors.New("missing user ID")
+-	ErrMissingAccountID = errors.New("missing account ID")
+-	ErrMissingSymbol = errors.New("missing symbol")
+-	ErrMissingQuantity = errors.New("missing quantity")
+-	ErrMissingSide = errors.New("missing order side")
+-	ErrMissingType = errors.New("missing order type")
+-	
++	ErrMissingUserID        = errors.New("missing user ID")
++	ErrMissingAccountID     = errors.New("missing account ID")
++	ErrMissingSymbol        = errors.New("missing symbol")
++	ErrMissingQuantity      = errors.New("missing quantity")
++	ErrMissingSide          = errors.New("missing order side")
++	ErrMissingType          = errors.New("missing order type")
++	ErrMissingOrderType     = errors.New("missing order type")
++	ErrMissingPrice         = errors.New("missing price")
++	ErrMissingStopPrice     = errors.New("missing stop price")
++	ErrNoFieldsToUpdate     = errors.New("no fields to update")
++	ErrQuantityBelowFilled  = errors.New("quantity below filled")
++	ErrPriceBelowMinimum    = errors.New("price below minimum")
++	ErrPriceExceedsMaximum  = errors.New("price exceeds maximum")
++	ErrExpirationTimeInPast = errors.New("expiration time in past")
++	ErrExpirationTimeTooFar = errors.New("expiration time too far")
++	ErrMarketClosed         = errors.New("market closed")
++
+ 	// Market data errors
+ 	ErrMarketDataUnavailable = errors.New("market data unavailable")
+-	ErrInvalidMarketHours = errors.New("invalid market hours")
+-	
++	ErrInvalidMarketHours    = errors.New("invalid market hours")
++
+ 	// Risk management errors
+-	ErrRiskLimitExceeded = errors.New("risk limit exceeded")
++	ErrRiskLimitExceeded     = errors.New("risk limit exceeded")
+ 	ErrPositionLimitExceeded = errors.New("position limit exceeded")
+ 	ErrExposureLimitExceeded = errors.New("exposure limit exceeded")
+ )
+@@ -164,10 +207,10 @@ func IsRetryableError(err error) bool {
+ // IsValidationError returns true if the error is a validation error
+ func IsValidationError(err error) bool {
+ 	switch err {
+-	case ErrInvalidOrder, ErrInvalidOrderRequest, ErrInvalidPrice, 
+-		 ErrInvalidSymbol, ErrInvalidSide, ErrInvalidType, 
+-		 ErrInvalidTimeInForce, ErrMissingUserID, ErrMissingAccountID,
+-		 ErrMissingSymbol, ErrMissingQuantity, ErrMissingSide, ErrMissingType:
++	case ErrInvalidOrder, ErrInvalidOrderRequest, ErrInvalidPrice,
++		ErrInvalidSymbol, ErrInvalidSide, ErrInvalidType,
++		ErrInvalidTimeInForce, ErrMissingUserID, ErrMissingAccountID,
++		ErrMissingSymbol, ErrMissingQuantity, ErrMissingSide, ErrMissingType:
+ 		return true
+ 	default:
+ 		return false
+@@ -178,8 +221,8 @@ func IsValidationError(err error) bool {
+ func IsBusinessError(err error) bool {
+ 	switch err {
+ 	case ErrOrderNotActive, ErrOrderExpired, ErrInsufficientQuantity,
+-		 ErrClientOrderIDExists, ErrRiskLimitExceeded, 
+-		 ErrPositionLimitExceeded, ErrExposureLimitExceeded:
++		ErrClientOrderIDExists, ErrRiskLimitExceeded,
++		ErrPositionLimitExceeded, ErrExposureLimitExceeded:
+ 		return true
+ 	default:
+ 		return false
+diff --git a/internal/orders/matching/orders_matching_module.go b/internal/orders/matching/orders_matching_module.go
+index 484451d..2521ac6 100644
+--- a/internal/orders/matching/orders_matching_module.go
++++ b/internal/orders/matching/orders_matching_module.go
+@@ -4,7 +4,7 @@ import (
+ 	"context"
+ 	"go.uber.org/fx"
+ 	"go.uber.org/zap"
+-	
++
+ 	matching "github.com/abdoElHodaky/tradSys/internal/core/matching"
+ )
+ 
+diff --git a/internal/orders/module.go b/internal/orders/module.go
+index eee71a7..29d97aa 100644
+--- a/internal/orders/module.go
++++ b/internal/orders/module.go
+@@ -2,23 +2,23 @@ package orders
+ 
+ import (
+ 	"context"
+-	"github.com/abdoElHodaky/tradSys/internal/core/matching"
++	order_matching "github.com/abdoElHodaky/tradSys/internal/core/matching"
+ 	"go.uber.org/fx"
+ 	"go.uber.org/zap"
+ )
+ 
+ // OrderManagementModule provides the order management module for the fx application
+ var OrderManagementModule = fx.Options(
+-	fx.Provide(NewService),
++	fx.Provide(NewOrderService),
+ )
+ 
+ // NewFxService creates a new order management service for the fx application
+ func NewFxService(
+ 	lifecycle fx.Lifecycle,
+ 	logger *zap.Logger,
+-	orderEngine *order_matching.Engine,
+-) *Service {
+-	service := NewService(orderEngine, logger)
++	orderEngine order_matching.Engine,
++) *OrderService {
++	service := NewOrderService(orderEngine, logger)
+ 
+ 	lifecycle.Append(fx.Hook{
+ 		OnStart: func(ctx context.Context) error {
+diff --git a/internal/orders/order_lifecycle.go b/internal/orders/order_lifecycle.go
+index eaace34..35fb922 100644
+--- a/internal/orders/order_lifecycle.go
++++ b/internal/orders/order_lifecycle.go
+@@ -14,14 +14,14 @@ type OrderLifecycle struct {
+ 	orderService *OrderService
+ 	logger       *zap.Logger
+ 	mu           sync.RWMutex
+-	
++
+ 	// Lifecycle tracking
+ 	orderStates map[string]*OrderState
+-	
++
+ 	// Background processing
+ 	ctx    context.Context
+ 	cancel context.CancelFunc
+-	
++
+ 	// Channels for lifecycle events
+ 	stateChangeChan chan *OrderStateChange
+ 	expirationChan  chan *OrderExpiration
+@@ -29,22 +29,22 @@ type OrderLifecycle struct {
+ 
+ // OrderState represents the internal state of an order
+ type OrderState struct {
+-	OrderID       string
+-	CurrentStatus OrderStatus
++	OrderID        string
++	CurrentStatus  OrderStatus
+ 	PreviousStatus OrderStatus
+ 	StateChangedAt time.Time
+-	ExpiresAt     time.Time
+-	Metadata      map[string]interface{}
++	ExpiresAt      time.Time
++	Metadata       map[string]interface{}
+ }
+ 
+ // OrderStateChange represents a state change event
+ type OrderStateChange struct {
+-	OrderID       string
+-	FromStatus    OrderStatus
+-	ToStatus      OrderStatus
+-	Reason        string
+-	Timestamp     time.Time
+-	Metadata      map[string]interface{}
++	OrderID    string
++	FromStatus OrderStatus
++	ToStatus   OrderStatus
++	Reason     string
++	Timestamp  time.Time
++	Metadata   map[string]interface{}
+ }
+ 
+ // OrderExpiration represents an order expiration event
+@@ -56,7 +56,7 @@ type OrderExpiration struct {
+ // NewOrderLifecycle creates a new order lifecycle manager
+ func NewOrderLifecycle(orderService *OrderService, logger *zap.Logger) *OrderLifecycle {
+ 	ctx, cancel := context.WithCancel(context.Background())
+-	
++
+ 	return &OrderLifecycle{
+ 		orderService:    orderService,
+ 		logger:          logger,
+@@ -74,20 +74,25 @@ func (ol *OrderLifecycle) InitializeOrder(ctx context.Context, order *Order) err
+ 	defer ol.mu.Unlock()
+ 
+ 	// Create order state
++	var expiresAt time.Time
++	if order.ExpiresAt != nil {
++		expiresAt = *order.ExpiresAt
++	}
++
+ 	state := &OrderState{
+ 		OrderID:        order.ID,
+ 		CurrentStatus:  order.Status,
+ 		PreviousStatus: "",
+ 		StateChangedAt: time.Now(),
+-		ExpiresAt:      order.ExpiresAt,
++		ExpiresAt:      expiresAt,
+ 		Metadata:       make(map[string]interface{}),
+ 	}
+ 
+ 	ol.orderStates[order.ID] = state
+ 
+ 	// Schedule expiration if needed
+-	if !order.ExpiresAt.IsZero() {
+-		ol.scheduleExpiration(order.ID, order.ExpiresAt)
++	if order.ExpiresAt != nil && !order.ExpiresAt.IsZero() {
++		ol.scheduleExpiration(order.ID, *order.ExpiresAt)
+ 	}
+ 
+ 	// Emit state change event
+@@ -118,9 +123,9 @@ func (ol *OrderLifecycle) UpdateOrder(ctx context.Context, order *Order) error {
+ 	}
+ 
+ 	// Update expiration if changed
+-	if !order.ExpiresAt.IsZero() && !state.ExpiresAt.Equal(order.ExpiresAt) {
+-		state.ExpiresAt = order.ExpiresAt
+-		ol.scheduleExpiration(order.ID, order.ExpiresAt)
++	if order.ExpiresAt != nil && !order.ExpiresAt.IsZero() && !state.ExpiresAt.Equal(*order.ExpiresAt) {
++		state.ExpiresAt = *order.ExpiresAt
++		ol.scheduleExpiration(order.ID, *order.ExpiresAt)
+ 	}
+ 
+ 	ol.logger.Debug("Order lifecycle updated",
+@@ -272,9 +277,9 @@ func (ol *OrderLifecycle) isValidStatusTransition(from, to OrderStatus) bool {
+ 
+ // canOrderExpire checks if an order can expire
+ func (ol *OrderLifecycle) canOrderExpire(status OrderStatus) bool {
+-	return status == OrderStatusNew || 
+-		   status == OrderStatusPending || 
+-		   status == OrderStatusPartiallyFilled
++	return status == OrderStatusNew ||
++		status == OrderStatusPending ||
++		status == OrderStatusPartiallyFilled
+ }
+ 
+ // scheduleExpiration schedules an order for expiration
+@@ -478,9 +483,9 @@ func (ol *OrderLifecycle) GetStats() *LifecycleStats {
+ 
+ // LifecycleStats represents lifecycle statistics
+ type LifecycleStats struct {
+-	TotalOrders     int                    `json:"total_orders"`
+-	OrdersByStatus  map[OrderStatus]int    `json:"orders_by_status"`
+-	LastUpdateTime  time.Time              `json:"last_update_time"`
++	TotalOrders    int                 `json:"total_orders"`
++	OrdersByStatus map[OrderStatus]int `json:"orders_by_status"`
++	LastUpdateTime time.Time           `json:"last_update_time"`
+ }
+ 
+ // Error definitions for lifecycle
+diff --git a/internal/orders/order_service.go b/internal/orders/order_service.go
+index d34fb49..a543429 100644
+--- a/internal/orders/order_service.go
++++ b/internal/orders/order_service.go
+@@ -5,7 +5,7 @@ import (
+ 	"sync"
+ 	"time"
+ 
+-	"github.com/abdoElHodaky/tradSys/pkg/matching"
++	order_matching "github.com/abdoElHodaky/tradSys/internal/core/matching"
+ 	"github.com/google/uuid"
+ 	cache "github.com/patrickmn/go-cache"
+ 	"go.uber.org/zap"
+@@ -14,7 +14,7 @@ import (
+ // OrderService handles core order management operations
+ type OrderService struct {
+ 	// MatchingEngine is the order matching engine
+-	MatchingEngine *matching.MatchingEngine
++	MatchingEngine order_matching.Engine
+ 	// Orders is a map of order ID to order
+ 	Orders map[string]*Order
+ 	// UserOrders is a map of user ID to order IDs
+@@ -40,9 +40,9 @@ type OrderService struct {
+ }
+ 
+ // NewOrderService creates a new order service
+-func NewOrderService(matchingEngine *matching.MatchingEngine, logger *zap.Logger) *OrderService {
++func NewOrderService(matchingEngine order_matching.Engine, logger *zap.Logger) *OrderService {
+ 	ctx, cancel := context.WithCancel(context.Background())
+-	
++
+ 	service := &OrderService{
+ 		MatchingEngine: matchingEngine,
+ 		Orders:         make(map[string]*Order),
+@@ -54,11 +54,11 @@ func NewOrderService(matchingEngine *matching.MatchingEngine, logger *zap.Logger
+ 		ctx:            ctx,
+ 		cancel:         cancel,
+ 	}
+-	
++
+ 	// Initialize components
+ 	service.lifecycle = NewOrderLifecycle(service, logger)
+ 	service.validator = NewOrderValidator(logger)
+-	
++
+ 	return service
+ }
+ 
+@@ -68,33 +68,33 @@ func (s *OrderService) CreateOrder(ctx context.Context, req *OrderRequest) (*Ord
+ 	defer s.mu.Unlock()
+ 
+ 	// Validate order request
+-	if err := s.validator.ValidateOrderRequest(ctx, req); err != nil {
++	validationResult := s.validator.ValidateOrderRequest(ctx, req)
++	if !validationResult.Valid {
+ 		s.logger.Error("Order validation failed",
+ 			zap.String("user_id", req.UserID),
+ 			zap.String("symbol", req.Symbol),
+-			zap.Error(err))
+-		return nil, err
++			zap.Any("validation_errors", validationResult.Errors))
++		return nil, ErrInvalidOrderRequest
+ 	}
+ 
+ 	// Create order
+ 	order := &Order{
+-		ID:              uuid.New().String(),
+-		UserID:          req.UserID,
+-		ClientOrderID:   req.ClientOrderID,
+-		Symbol:          req.Symbol,
+-		Side:            req.Side,
+-		Type:            req.Type,
+-		Price:           req.Price,
+-		StopPrice:       req.StopPrice,
+-		Quantity:        req.Quantity,
+-		FilledQuantity:  0,
+-		Status:          OrderStatusNew,
+-		TimeInForce:     req.TimeInForce,
+-		CreatedAt:       time.Now(),
+-		UpdatedAt:       time.Now(),
+-		ExpiresAt:       req.ExpiresAt,
+-		Trades:          make([]*Trade, 0),
+-		Metadata:        make(map[string]interface{}),
++		ID:             uuid.New().String(),
++		UserID:         req.UserID,
++		ClientOrderID:  req.ClientOrderID,
++		Symbol:         req.Symbol,
++		Side:           req.Side,
++		Type:           req.Type,
++		Price:          req.Price,
++		StopPrice:      req.StopPrice,
++		Quantity:       req.Quantity,
++		FilledQuantity: 0,
++		Status:         OrderStatusNew,
++		TimeInForce:    req.TimeInForce,
++		CreatedAt:      time.Now(),
++		UpdatedAt:      time.Now(),
++		ExpiresAt:      req.ExpiresAt,
++		Metadata:       make(map[string]interface{}),
+ 	}
+ 
+ 	// Store order
+@@ -213,11 +213,12 @@ func (s *OrderService) UpdateOrder(ctx context.Context, req *OrderUpdateRequest)
+ 	}
+ 
+ 	// Validate update request
+-	if err := s.validator.ValidateOrderUpdate(ctx, order, req); err != nil {
++	validationResult := s.validator.ValidateOrderUpdate(ctx, req)
++	if !validationResult.Valid {
+ 		s.logger.Error("Order update validation failed",
+ 			zap.String("order_id", req.OrderID),
+-			zap.Error(err))
+-		return nil, err
++			zap.Any("validation_errors", validationResult.Errors))
++		return nil, ErrInvalidOrderRequest
+ 	}
+ 
+ 	// Update order fields
+@@ -230,13 +231,6 @@ func (s *OrderService) UpdateOrder(ctx context.Context, req *OrderUpdateRequest)
+ 	if req.StopPrice > 0 {
+ 		order.StopPrice = req.StopPrice
+ 	}
+-	if req.TimeInForce != "" {
+-		order.TimeInForce = req.TimeInForce
+-	}
+-	if !req.ExpiresAt.IsZero() {
+-		order.ExpiresAt = req.ExpiresAt
+-	}
+-
+ 
+ 	order.UpdatedAt = time.Now()
+ 
+@@ -269,19 +263,21 @@ func (s *OrderService) CancelOrder(ctx context.Context, req *OrderCancelRequest)
+ 	}
+ 
+ 	// Validate cancellation
+-	if err := s.validator.ValidateOrderCancellation(ctx, order, req); err != nil {
++	validationResult := s.validator.ValidateOrderCancel(ctx, req)
++	if !validationResult.Valid {
+ 		s.logger.Error("Order cancellation validation failed",
+ 			zap.String("order_id", req.OrderID),
+-			zap.Error(err))
+-		return nil, err
++			zap.Any("validation_errors", validationResult.Errors))
++		return nil, ErrInvalidOrderRequest
+ 	}
+ 
+ 	// Cancel order in matching engine
+ 	if order.Status == OrderStatusNew || order.Status == OrderStatusPending {
+-		success := s.MatchingEngine.CancelOrder(order.Symbol, order.ID)
+-		if !success {
++		err := s.MatchingEngine.CancelOrder(order.ID)
++		if err != nil {
+ 			s.logger.Warn("Failed to cancel order in matching engine",
+-				zap.String("order_id", order.ID))
++				zap.String("order_id", order.ID),
++				zap.Error(err))
+ 		}
+ 	}
+ 
+@@ -309,7 +305,13 @@ func (s *OrderService) SubmitOrder(ctx context.Context, order *Order) error {
+ 	matchingOrder := s.convertToMatchingOrder(order)
+ 
+ 	// Submit to matching engine
+-	trades := s.MatchingEngine.AddOrder(matchingOrder)
++	trades, err := s.MatchingEngine.ProcessOrder(matchingOrder)
++	if err != nil {
++		s.logger.Error("Failed to process order in matching engine",
++			zap.String("order_id", order.ID),
++			zap.Error(err))
++		return err
++	}
+ 
+ 	// Process resulting trades
+ 	for _, trade := range trades {
+@@ -333,23 +335,22 @@ func (s *OrderService) SubmitOrder(ctx context.Context, order *Order) error {
+ }
+ 
+ // processTrade processes a trade from the matching engine
+-func (s *OrderService) processTrade(ctx context.Context, matchingTrade *matching.Trade, order *Order) error {
++func (s *OrderService) processTrade(ctx context.Context, matchingTrade *order_matching.Trade, order *Order) error {
+ 	trade := &Trade{
+-		ID:                  matchingTrade.ID,
+-		OrderID:             order.ID,
+-		Symbol:              matchingTrade.Symbol,
+-		Side:                order.Side,
+-		Price:               matchingTrade.Price,
+-		Quantity:            matchingTrade.Quantity,
+-		ExecutedAt:          matchingTrade.Timestamp,
+-		Fee:                 matchingTrade.TakerFee,
+-		FeeCurrency:         "USD", // Default currency
+-		CounterPartyOrderID: s.getCounterPartyOrderID(matchingTrade, order),
+-		Metadata:            make(map[string]interface{}),
+-	}
+-
+-	// Add trade to order
+-	order.Trades = append(order.Trades, trade)
++		ID:             matchingTrade.ID,
++		OrderID:        order.ID,
++		Symbol:         matchingTrade.Symbol,
++		Side:           order.Side,
++		Price:          matchingTrade.Price,
++		Quantity:       matchingTrade.Quantity,
++		Timestamp:      matchingTrade.Timestamp,
++		Fee:            matchingTrade.TakerFee,
++		FeeAsset:       "USD", // Default currency
++		CounterOrderID: s.getCounterPartyOrderID(matchingTrade, order),
++		IsMaker:        matchingTrade.IsMaker,
++	}
++
++	// Update order with trade information
+ 	order.FilledQuantity += trade.Quantity
+ 	order.UpdatedAt = time.Now()
+ 
+@@ -366,12 +367,12 @@ func (s *OrderService) processTrade(ctx context.Context, matchingTrade *matching
+ }
+ 
+ // convertToMatchingOrder converts an order to matching engine format
+-func (s *OrderService) convertToMatchingOrder(order *Order) *matching.Order {
+-	return &matching.Order{
++func (s *OrderService) convertToMatchingOrder(order *Order) *order_matching.Order {
++	return &order_matching.Order{
+ 		ID:        order.ID,
+ 		Symbol:    order.Symbol,
+-		Side:      matching.OrderSide(order.Side),
+-		Type:      matching.OrderType(order.Type),
++		Side:      order_matching.OrderSide(order.Side),
++		Type:      order_matching.OrderType(order.Type),
+ 		Price:     order.Price,
+ 		Quantity:  order.Quantity,
+ 		CreatedAt: order.CreatedAt,
+@@ -380,7 +381,7 @@ func (s *OrderService) convertToMatchingOrder(order *Order) *matching.Order {
+ }
+ 
+ // getCounterPartyOrderID extracts counter party order ID from matching trade
+-func (s *OrderService) getCounterPartyOrderID(trade *matching.Trade, order *Order) string {
++func (s *OrderService) getCounterPartyOrderID(trade *order_matching.Trade, order *Order) string {
+ 	if order.Side == OrderSideBuy {
+ 		return trade.SellOrderID
+ 	}
+@@ -413,19 +414,19 @@ func (s *OrderService) matchesFilter(order *Order, filter *OrderFilter) bool {
+ 	if filter.Symbol != "" && order.Symbol != filter.Symbol {
+ 		return false
+ 	}
+-	if filter.Side != "" && order.Side != filter.Side {
++	if filter.Side != nil && order.Side != *filter.Side {
+ 		return false
+ 	}
+-	if filter.Type != "" && order.Type != filter.Type {
++	if filter.Type != nil && order.Type != *filter.Type {
+ 		return false
+ 	}
+-	if filter.Status != "" && order.Status != filter.Status {
++	if filter.Status != nil && order.Status != *filter.Status {
+ 		return false
+ 	}
+-	if !filter.StartTime.IsZero() && order.CreatedAt.Before(filter.StartTime) {
++	if filter.StartTime != nil && !filter.StartTime.IsZero() && order.CreatedAt.Before(*filter.StartTime) {
+ 		return false
+ 	}
+-	if !filter.EndTime.IsZero() && order.CreatedAt.After(filter.EndTime) {
++	if filter.EndTime != nil && !filter.EndTime.IsZero() && order.CreatedAt.After(*filter.EndTime) {
+ 		return false
+ 	}
+ 	return true
+@@ -434,26 +435,26 @@ func (s *OrderService) matchesFilter(order *Order, filter *OrderFilter) bool {
+ // Start starts the order service
+ func (s *OrderService) Start() error {
+ 	s.logger.Info("Starting order service")
+-	
++
+ 	// Start lifecycle manager
+ 	if err := s.lifecycle.Start(); err != nil {
+ 		return err
+ 	}
+-	
++
+ 	return nil
+ }
+ 
+ // Stop stops the order service
+ func (s *OrderService) Stop() error {
+ 	s.logger.Info("Stopping order service")
+-	
++
+ 	s.cancel()
+-	
++
+ 	// Stop lifecycle manager
+ 	if err := s.lifecycle.Stop(); err != nil {
+ 		return err
+ 	}
+-	
++
+ 	return nil
+ }
+ 
+@@ -488,10 +489,10 @@ func (s *OrderService) calculateCacheHitRate() float64 {
+ 
+ // OrderServiceStats represents order service statistics
+ type OrderServiceStats struct {
+-	TotalOrders     int                    `json:"total_orders"`
+-	TotalUsers      int                    `json:"total_users"`
+-	TotalSymbols    int                    `json:"total_symbols"`
+-	OrdersByStatus  map[OrderStatus]int    `json:"orders_by_status"`
+-	CacheHitRate    float64                `json:"cache_hit_rate"`
+-	LastUpdateTime  time.Time              `json:"last_update_time"`
++	TotalOrders    int                 `json:"total_orders"`
++	TotalUsers     int                 `json:"total_users"`
++	TotalSymbols   int                 `json:"total_symbols"`
++	OrdersByStatus map[OrderStatus]int `json:"orders_by_status"`
++	CacheHitRate   float64             `json:"cache_hit_rate"`
++	LastUpdateTime time.Time           `json:"last_update_time"`
+ }
+diff --git a/internal/orders/order_types.go b/internal/orders/order_types.go
+index 5520108..4a69c91 100644
+--- a/internal/orders/order_types.go
++++ b/internal/orders/order_types.go
+@@ -84,49 +84,49 @@ type Order struct {
+ 	ExpiresAt         *time.Time  `json:"expires_at,omitempty"`
+ 	UserID            string      `json:"user_id"`
+ 	AccountID         string      `json:"account_id"`
+-	
++
+ 	// Internal fields
+-	OriginalQuantity float64 `json:"original_quantity"`
+-	LastTradePrice   float64 `json:"last_trade_price"`
++	OriginalQuantity float64    `json:"original_quantity"`
++	LastTradePrice   float64    `json:"last_trade_price"`
+ 	LastTradeTime    *time.Time `json:"last_trade_time,omitempty"`
+-	
++
+ 	// Metadata
+ 	Metadata map[string]interface{} `json:"metadata,omitempty"`
+ }
+ 
+ // Trade represents a trade execution
+ type Trade struct {
+-	ID           string    `json:"id"`
+-	OrderID      string    `json:"order_id"`
+-	Symbol       string    `json:"symbol"`
+-	Side         OrderSide `json:"side"`
+-	Quantity     float64   `json:"quantity"`
+-	Price        float64   `json:"price"`
+-	Fee          float64   `json:"fee"`
+-	FeeAsset     string    `json:"fee_asset"`
+-	Timestamp    time.Time `json:"timestamp"`
+-	IsMaker      bool      `json:"is_maker"`
+-	
++	ID        string    `json:"id"`
++	OrderID   string    `json:"order_id"`
++	Symbol    string    `json:"symbol"`
++	Side      OrderSide `json:"side"`
++	Quantity  float64   `json:"quantity"`
++	Price     float64   `json:"price"`
++	Fee       float64   `json:"fee"`
++	FeeAsset  string    `json:"fee_asset"`
++	Timestamp time.Time `json:"timestamp"`
++	IsMaker   bool      `json:"is_maker"`
++
+ 	// Counterparty information
+ 	CounterOrderID string `json:"counter_order_id,omitempty"`
+-	
++
+ 	// Settlement information
+-	SettlementStatus string `json:"settlement_status"`
++	SettlementStatus string     `json:"settlement_status"`
+ 	SettledAt        *time.Time `json:"settled_at,omitempty"`
+ }
+ 
+ // OrderFilter represents filters for querying orders
+ type OrderFilter struct {
+-	UserID      string       `json:"user_id,omitempty"`
+-	AccountID   string       `json:"account_id,omitempty"`
+-	Symbol      string       `json:"symbol,omitempty"`
+-	Side        *OrderSide   `json:"side,omitempty"`
+-	Type        *OrderType   `json:"type,omitempty"`
+-	Status      *OrderStatus `json:"status,omitempty"`
+-	StartTime   *time.Time   `json:"start_time,omitempty"`
+-	EndTime     *time.Time   `json:"end_time,omitempty"`
+-	Limit       int          `json:"limit,omitempty"`
+-	Offset      int          `json:"offset,omitempty"`
++	UserID    string       `json:"user_id,omitempty"`
++	AccountID string       `json:"account_id,omitempty"`
++	Symbol    string       `json:"symbol,omitempty"`
++	Side      *OrderSide   `json:"side,omitempty"`
++	Type      *OrderType   `json:"type,omitempty"`
++	Status    *OrderStatus `json:"status,omitempty"`
++	StartTime *time.Time   `json:"start_time,omitempty"`
++	EndTime   *time.Time   `json:"end_time,omitempty"`
++	Limit     int          `json:"limit,omitempty"`
++	Offset    int          `json:"offset,omitempty"`
+ }
+ 
+ // OrderRequest represents a request to place an order
+@@ -142,7 +142,7 @@ type OrderRequest struct {
+ 	UserID        string      `json:"user_id" validate:"required"`
+ 	AccountID     string      `json:"account_id" validate:"required"`
+ 	ExpiresAt     *time.Time  `json:"expires_at,omitempty"`
+-	
++
+ 	// Metadata
+ 	Metadata map[string]interface{} `json:"metadata,omitempty"`
+ }
+@@ -165,7 +165,7 @@ type OrderUpdateRequest struct {
+ 	Quantity      float64 `json:"quantity,omitempty"`
+ 	Price         float64 `json:"price,omitempty"`
+ 	StopPrice     float64 `json:"stop_price,omitempty"`
+-	
++
+ 	// Metadata updates
+ 	Metadata map[string]interface{} `json:"metadata,omitempty"`
+ }
+@@ -183,17 +183,17 @@ func NewOrder() *Order {
+ 
+ // IsActive returns true if the order is in an active state
+ func (o *Order) IsActive() bool {
+-	return o.Status == OrderStatusNew || 
+-		   o.Status == OrderStatusPending || 
+-		   o.Status == OrderStatusPartiallyFilled
++	return o.Status == OrderStatusNew ||
++		o.Status == OrderStatusPending ||
++		o.Status == OrderStatusPartiallyFilled
+ }
+ 
+ // IsFinal returns true if the order is in a final state
+ func (o *Order) IsFinal() bool {
+-	return o.Status == OrderStatusFilled || 
+-		   o.Status == OrderStatusCancelled || 
+-		   o.Status == OrderStatusRejected || 
+-		   o.Status == OrderStatusExpired
++	return o.Status == OrderStatusFilled ||
++		o.Status == OrderStatusCancelled ||
++		o.Status == OrderStatusRejected ||
++		o.Status == OrderStatusExpired
+ }
+ 
+ // IsExpired returns true if the order has expired
+@@ -218,14 +218,14 @@ func (o *Order) AddTrade(trade *Trade) {
+ 	now := trade.Timestamp
+ 	o.LastTradeTime = &now
+ 	o.UpdatedAt = time.Now()
+-	
++
+ 	// Update average price
+ 	if o.FilledQuantity > 0 {
+ 		// Weighted average calculation would go here
+ 		// For simplicity, using last trade price
+ 		o.AveragePrice = trade.Price
+ 	}
+-	
++
+ 	// Update status based on fill
+ 	if o.RemainingQuantity <= 0 {
+ 		o.UpdateStatus(OrderStatusFilled)
+diff --git a/internal/orders/order_validators.go b/internal/orders/order_validators_legacy.go
+similarity index 65%
+rename from internal/orders/order_validators.go
+rename to internal/orders/order_validators_legacy.go
+index c78cd6a..9d082bf 100644
+--- a/internal/orders/order_validators.go
++++ b/internal/orders/order_validators_legacy.go
+@@ -2,27 +2,26 @@ package orders
+ 
+ import (
+ 	"context"
+-	"errors"
+ 	"strings"
+ 	"time"
+ 
+ 	"go.uber.org/zap"
+ )
+ 
+-// OrderValidator handles order validation logic
+-type OrderValidator struct {
++// LegacyOrderValidator handles order validation logic (legacy implementation)
++type LegacyOrderValidator struct {
+ 	logger *zap.Logger
+ }
+ 
+-// NewOrderValidator creates a new order validator
+-func NewOrderValidator(logger *zap.Logger) *OrderValidator {
+-	return &OrderValidator{
++// NewLegacyOrderValidator creates a new legacy order validator
++func NewLegacyOrderValidator(logger *zap.Logger) *LegacyOrderValidator {
++	return &LegacyOrderValidator{
+ 		logger: logger,
+ 	}
+ }
+ 
+ // ValidateOrderRequest validates an order request
+-func (v *OrderValidator) ValidateOrderRequest(ctx context.Context, req *OrderRequest) error {
++func (v *LegacyOrderValidator) ValidateOrderRequest(ctx context.Context, req *OrderRequest) error {
+ 	if req == nil {
+ 		return ErrInvalidOrderRequest
+ 	}
+@@ -52,7 +51,7 @@ func (v *OrderValidator) ValidateOrderRequest(ctx context.Context, req *OrderReq
+ }
+ 
+ // ValidateOrderUpdate validates an order update request
+-func (v *OrderValidator) ValidateOrderUpdate(ctx context.Context, order *Order, req *OrderUpdateRequest) error {
++func (v *LegacyOrderValidator) ValidateOrderUpdate(ctx context.Context, order *Order, req *OrderUpdateRequest) error {
+ 	if req == nil {
+ 		return ErrInvalidOrderRequest
+ 	}
+@@ -84,7 +83,7 @@ func (v *OrderValidator) ValidateOrderUpdate(ctx context.Context, order *Order,
+ }
+ 
+ // ValidateOrderCancellation validates an order cancellation request
+-func (v *OrderValidator) ValidateOrderCancellation(ctx context.Context, order *Order, req *OrderCancelRequest) error {
++func (v *LegacyOrderValidator) ValidateOrderCancellation(ctx context.Context, order *Order, req *OrderCancelRequest) error {
+ 	if req == nil {
+ 		return ErrInvalidOrderRequest
+ 	}
+@@ -111,7 +110,7 @@ func (v *OrderValidator) ValidateOrderCancellation(ctx context.Context, order *O
+ }
+ 
+ // validateRequiredFields validates required fields in order request
+-func (v *OrderValidator) validateRequiredFields(req *OrderRequest) error {
++func (v *LegacyOrderValidator) validateRequiredFields(req *OrderRequest) error {
+ 	if strings.TrimSpace(req.UserID) == "" {
+ 		return ErrMissingUserID
+ 	}
+@@ -146,7 +145,7 @@ func (v *OrderValidator) validateRequiredFields(req *OrderRequest) error {
+ }
+ 
+ // validateFieldValues validates field values in order request
+-func (v *OrderValidator) validateFieldValues(req *OrderRequest) error {
++func (v *LegacyOrderValidator) validateFieldValues(req *OrderRequest) error {
+ 	// Validate order side
+ 	if !v.isValidOrderSide(req.Side) {
+ 		return ErrInvalidOrderSide
+@@ -181,7 +180,7 @@ func (v *OrderValidator) validateFieldValues(req *OrderRequest) error {
+ }
+ 
+ // validateBusinessRules validates business rules for order request
+-func (v *OrderValidator) validateBusinessRules(ctx context.Context, req *OrderRequest) error {
++func (v *LegacyOrderValidator) validateBusinessRules(ctx context.Context, req *OrderRequest) error {
+ 	// Validate order size limits
+ 	if err := v.validateOrderSizeLimits(req); err != nil {
+ 		return err
+@@ -206,10 +205,9 @@ func (v *OrderValidator) validateBusinessRules(ctx context.Context, req *OrderRe
+ }
+ 
+ // validateUpdateFields validates fields in order update request
+-func (v *OrderValidator) validateUpdateFields(req *OrderUpdateRequest) error {
++func (v *LegacyOrderValidator) validateUpdateFields(req *OrderUpdateRequest) error {
+ 	// At least one field must be updated
+-	if req.Price <= 0 && req.Quantity <= 0 && req.StopPrice <= 0 && 
+-		req.TimeInForce == "" && req.ExpiresAt.IsZero() {
++	if req.Price <= 0 && req.Quantity <= 0 && req.StopPrice <= 0 {
+ 		return ErrNoFieldsToUpdate
+ 	}
+ 
+@@ -222,15 +220,11 @@ func (v *OrderValidator) validateUpdateFields(req *OrderUpdateRequest) error {
+ 		return ErrInvalidQuantityPrecision
+ 	}
+ 
+-	if req.TimeInForce != "" && !v.isValidTimeInForce(req.TimeInForce) {
+-		return ErrInvalidTimeInForce
+-	}
+-
+ 	return nil
+ }
+ 
+ // validateUpdateBusinessRules validates business rules for order updates
+-func (v *OrderValidator) validateUpdateBusinessRules(ctx context.Context, order *Order, req *OrderUpdateRequest) error {
++func (v *LegacyOrderValidator) validateUpdateBusinessRules(ctx context.Context, order *Order, req *OrderUpdateRequest) error {
+ 	// Cannot reduce quantity below filled quantity
+ 	if req.Quantity > 0 && req.Quantity < order.FilledQuantity {
+ 		return ErrQuantityBelowFilled
+@@ -263,26 +257,26 @@ func (v *OrderValidator) validateUpdateBusinessRules(ctx context.Context, order
+ }
+ 
+ // canOrderBeUpdated checks if an order can be updated
+-func (v *OrderValidator) canOrderBeUpdated(order *Order) bool {
++func (v *LegacyOrderValidator) canOrderBeUpdated(order *Order) bool {
+ 	// Only new and pending orders can be updated
+ 	return order.Status == OrderStatusNew || order.Status == OrderStatusPending
+ }
+ 
+ // canOrderBeCancelled checks if an order can be cancelled
+-func (v *OrderValidator) canOrderBeCancelled(order *Order) bool {
++func (v *LegacyOrderValidator) canOrderBeCancelled(order *Order) bool {
+ 	// Only new, pending, and partially filled orders can be cancelled
+-	return order.Status == OrderStatusNew || 
+-		   order.Status == OrderStatusPending || 
+-		   order.Status == OrderStatusPartiallyFilled
++	return order.Status == OrderStatusNew ||
++		order.Status == OrderStatusPending ||
++		order.Status == OrderStatusPartiallyFilled
+ }
+ 
+ // isValidOrderSide checks if order side is valid
+-func (v *OrderValidator) isValidOrderSide(side OrderSide) bool {
++func (v *LegacyOrderValidator) isValidOrderSide(side OrderSide) bool {
+ 	return side == OrderSideBuy || side == OrderSideSell
+ }
+ 
+ // isValidOrderType checks if order type is valid
+-func (v *OrderValidator) isValidOrderType(orderType OrderType) bool {
++func (v *LegacyOrderValidator) isValidOrderType(orderType OrderType) bool {
+ 	validTypes := []OrderType{
+ 		OrderTypeLimit,
+ 		OrderTypeMarket,
+@@ -299,12 +293,12 @@ func (v *OrderValidator) isValidOrderType(orderType OrderType) bool {
+ }
+ 
+ // isValidTimeInForce checks if time in force is valid
+-func (v *OrderValidator) isValidTimeInForce(tif TimeInForce) bool {
++func (v *LegacyOrderValidator) isValidTimeInForce(tif TimeInForce) bool {
+ 	validTifs := []TimeInForce{
+ 		TimeInForceGTC,
+ 		TimeInForceIOC,
+ 		TimeInForceFOK,
+-		TimeInForceDay,
++		TimeInForceDAY,
+ 	}
+ 
+ 	for _, validTif := range validTifs {
+@@ -316,7 +310,7 @@ func (v *OrderValidator) isValidTimeInForce(tif TimeInForce) bool {
+ }
+ 
+ // isValidSymbol checks if symbol format is valid
+-func (v *OrderValidator) isValidSymbol(symbol string) bool {
++func (v *LegacyOrderValidator) isValidSymbol(symbol string) bool {
+ 	// Basic symbol validation - should be 2-10 characters, alphanumeric
+ 	if len(symbol) < 2 || len(symbol) > 10 {
+ 		return false
+@@ -332,19 +326,19 @@ func (v *OrderValidator) isValidSymbol(symbol string) bool {
+ }
+ 
+ // isValidPricePrecision checks if price has valid precision
+-func (v *OrderValidator) isValidPricePrecision(price float64) bool {
++func (v *LegacyOrderValidator) isValidPricePrecision(price float64) bool {
+ 	// Allow up to 4 decimal places
+ 	return price > 0 && price < 1000000 // Basic range check
+ }
+ 
+ // isValidQuantityPrecision checks if quantity has valid precision
+-func (v *OrderValidator) isValidQuantityPrecision(quantity float64) bool {
++func (v *LegacyOrderValidator) isValidQuantityPrecision(quantity float64) bool {
+ 	// Allow up to 8 decimal places for crypto, 0 for stocks
+ 	return quantity > 0 && quantity < 1000000000 // Basic range check
+ }
+ 
+ // validateOrderSizeLimits validates order size limits
+-func (v *OrderValidator) validateOrderSizeLimits(req *OrderRequest) error {
++func (v *LegacyOrderValidator) validateOrderSizeLimits(req *OrderRequest) error {
+ 	// Maximum order size limits
+ 	maxOrderSize := v.getMaxOrderSize(req.Symbol)
+ 	if req.Quantity > maxOrderSize {
+@@ -370,7 +364,7 @@ func (v *OrderValidator) validateOrderSizeLimits(req *OrderRequest) error {
+ }
+ 
+ // validatePriceLimits validates price limits
+-func (v *OrderValidator) validatePriceLimits(req *OrderRequest) error {
++func (v *LegacyOrderValidator) validatePriceLimits(req *OrderRequest) error {
+ 	if req.Price <= 0 {
+ 		return nil // No price to validate
+ 	}
+@@ -391,7 +385,7 @@ func (v *OrderValidator) validatePriceLimits(req *OrderRequest) error {
+ }
+ 
+ // validateExpirationTime validates order expiration time
+-func (v *OrderValidator) validateExpirationTime(req *OrderRequest) error {
++func (v *LegacyOrderValidator) validateExpirationTime(req *OrderRequest) error {
+ 	if req.ExpiresAt.IsZero() {
+ 		return nil // No expiration time set
+ 	}
+@@ -411,7 +405,7 @@ func (v *OrderValidator) validateExpirationTime(req *OrderRequest) error {
+ }
+ 
+ // validateMarketHours validates if order can be placed during current market hours
+-func (v *OrderValidator) validateMarketHours(ctx context.Context, req *OrderRequest) error {
++func (v *LegacyOrderValidator) validateMarketHours(ctx context.Context, req *OrderRequest) error {
+ 	// For market orders, check if market is open
+ 	if req.Type == OrderTypeMarket {
+ 		if !v.isMarketOpen(req.Symbol) {
+@@ -423,68 +417,36 @@ func (v *OrderValidator) validateMarketHours(ctx context.Context, req *OrderRequ
+ }
+ 
+ // Helper methods to get limits (would be configurable in production)
+-func (v *OrderValidator) getMaxOrderSize(symbol string) float64 {
++func (v *LegacyOrderValidator) getMaxOrderSize(symbol string) float64 {
+ 	// Default max order size
+ 	return 1000000
+ }
+ 
+-func (v *OrderValidator) getMinOrderSize(symbol string) float64 {
++func (v *LegacyOrderValidator) getMinOrderSize(symbol string) float64 {
+ 	// Default min order size
+ 	return 0.001
+ }
+ 
+-func (v *OrderValidator) getMaxOrderValue(symbol string) float64 {
++func (v *LegacyOrderValidator) getMaxOrderValue(symbol string) float64 {
+ 	// Default max order value
+ 	return 10000000
+ }
+ 
+-func (v *OrderValidator) getMinPrice(symbol string) float64 {
++func (v *LegacyOrderValidator) getMinPrice(symbol string) float64 {
+ 	// Default min price
+ 	return 0.0001
+ }
+ 
+-func (v *OrderValidator) getMaxPrice(symbol string) float64 {
++func (v *LegacyOrderValidator) getMaxPrice(symbol string) float64 {
+ 	// Default max price
+ 	return 1000000
+ }
+ 
+-func (v *OrderValidator) isMarketOpen(symbol string) bool {
++func (v *LegacyOrderValidator) isMarketOpen(symbol string) bool {
+ 	// Simplified market hours check
+ 	now := time.Now()
+ 	hour := now.Hour()
+-	
++
+ 	// Assume market is open 9 AM to 4 PM
+ 	return hour >= 9 && hour < 16
+ }
+-
+-// Error definitions for validation
+-var (
+-	ErrInvalidOrderRequest      = errors.New("invalid order request")
+-	ErrMissingUserID           = errors.New("missing user ID")
+-	ErrMissingSymbol           = errors.New("missing symbol")
+-	ErrMissingSide             = errors.New("missing order side")
+-	ErrMissingOrderType        = errors.New("missing order type")
+-	ErrMissingPrice            = errors.New("missing price for limit order")
+-	ErrMissingStopPrice        = errors.New("missing stop price for stop order")
+-	ErrInvalidQuantity         = errors.New("invalid quantity")
+-	ErrInvalidOrderSide        = errors.New("invalid order side")
+-	ErrInvalidOrderType        = errors.New("invalid order type")
+-	ErrInvalidTimeInForce      = errors.New("invalid time in force")
+-	ErrInvalidSymbol           = errors.New("invalid symbol format")
+-	ErrInvalidPricePrecision   = errors.New("invalid price precision")
+-	ErrInvalidQuantityPrecision = errors.New("invalid quantity precision")
+-	ErrOrderSizeExceedsLimit   = errors.New("order size exceeds limit")
+-	ErrOrderSizeBelowMinimum   = errors.New("order size below minimum")
+-	ErrOrderValueExceedsLimit  = errors.New("order value exceeds limit")
+-	ErrPriceBelowMinimum       = errors.New("price below minimum")
+-	ErrPriceExceedsMaximum     = errors.New("price exceeds maximum")
+-	ErrExpirationTimeInPast    = errors.New("expiration time is in the past")
+-	ErrExpirationTimeTooFar    = errors.New("expiration time is too far in the future")
+-	ErrMarketClosed            = errors.New("market is closed")
+-	ErrOrderCannotBeUpdated    = errors.New("order cannot be updated")
+-	ErrOrderCannotBeCancelled  = errors.New("order cannot be cancelled")
+-	ErrUnauthorizedOrderAccess = errors.New("unauthorized order access")
+-	ErrNoFieldsToUpdate        = errors.New("no fields to update")
+-	ErrQuantityBelowFilled     = errors.New("quantity cannot be below filled quantity")
+-	ErrOrderNotFound           = errors.New("order not found")
+-)
+diff --git a/internal/orders/validator.go b/internal/orders/validator.go
+index 83babdb..b7e4c7a 100644
+--- a/internal/orders/validator.go
++++ b/internal/orders/validator.go
+@@ -13,15 +13,15 @@ import (
+ // OrderValidator handles validation of order requests
+ type OrderValidator struct {
+ 	logger *zap.Logger
+-	
++
+ 	// Configuration
+-	maxQuantity     float64
+-	maxPrice        float64
+-	minPrice        float64
+-	minQuantity     float64
+-	allowedSymbols  map[string]bool
+-	marketHours     map[string]MarketHours
+-	
++	maxQuantity    float64
++	maxPrice       float64
++	minPrice       float64
++	minQuantity    float64
++	allowedSymbols map[string]bool
++	marketHours    map[string]MarketHours
++
+ 	// Validation rules
+ 	symbolPattern   *regexp.Regexp
+ 	clientIDPattern *regexp.Regexp
+@@ -37,25 +37,25 @@ type MarketHours struct {
+ 
+ // ValidationResult represents the result of order validation
+ type ValidationResult struct {
+-	Valid   bool                   `json:"valid"`
+-	Errors  []ValidationError      `json:"errors,omitempty"`
+-	Warnings []ValidationWarning   `json:"warnings,omitempty"`
+-	Details map[string]interface{} `json:"details,omitempty"`
++	Valid    bool                   `json:"valid"`
++	Errors   []ValidationError      `json:"errors,omitempty"`
++	Warnings []ValidationWarning    `json:"warnings,omitempty"`
++	Details  map[string]interface{} `json:"details,omitempty"`
+ }
+ 
+ // ValidationError represents a validation error
+ type ValidationError struct {
+-	Field   string `json:"field"`
+-	Code    string `json:"code"`
+-	Message string `json:"message"`
++	Field   string      `json:"field"`
++	Code    string      `json:"code"`
++	Message string      `json:"message"`
+ 	Value   interface{} `json:"value,omitempty"`
+ }
+ 
+ // ValidationWarning represents a validation warning
+ type ValidationWarning struct {
+-	Field   string `json:"field"`
+-	Code    string `json:"code"`
+-	Message string `json:"message"`
++	Field   string      `json:"field"`
++	Code    string      `json:"code"`
++	Message string      `json:"message"`
+ 	Value   interface{} `json:"value,omitempty"`
+ }
+ 
+@@ -63,16 +63,16 @@ type ValidationWarning struct {
+ func NewOrderValidator(logger *zap.Logger) *OrderValidator {
+ 	// Default symbol pattern (e.g., BTC-USD, AAPL, etc.)
+ 	symbolPattern := regexp.MustCompile(`^[A-Z0-9]{1,10}(-[A-Z0-9]{1,10})?$`)
+-	
++
+ 	// Client order ID pattern (alphanumeric with hyphens/underscores)
+ 	clientIDPattern := regexp.MustCompile(`^[a-zA-Z0-9_-]{1,64}$`)
+-	
++
+ 	return &OrderValidator{
+ 		logger:          logger,
+-		maxQuantity:     1000000.0,  // Default max quantity
+-		maxPrice:        1000000.0,  // Default max price
+-		minPrice:        0.01,       // Default min price
+-		minQuantity:     0.001,      // Default min quantity
++		maxQuantity:     1000000.0, // Default max quantity
++		maxPrice:        1000000.0, // Default max price
++		minPrice:        0.01,      // Default min price
++		minQuantity:     0.001,     // Default min quantity
+ 		allowedSymbols:  make(map[string]bool),
+ 		marketHours:     make(map[string]MarketHours),
+ 		symbolPattern:   symbolPattern,
+@@ -106,25 +106,25 @@ func (v *OrderValidator) ValidateOrderRequest(ctx context.Context, request *Orde
+ 		Warnings: make([]ValidationWarning, 0),
+ 		Details:  make(map[string]interface{}),
+ 	}
+-	
++
+ 	// Validate required fields
+ 	v.validateRequiredFields(request, result)
+-	
++
+ 	// Validate field formats
+ 	v.validateFieldFormats(request, result)
+-	
++
+ 	// Validate business rules
+ 	v.validateBusinessRules(request, result)
+-	
++
+ 	// Validate market hours
+ 	v.validateMarketHours(request, result)
+-	
++
+ 	// Validate limits
+ 	v.validateLimits(request, result)
+-	
++
+ 	// Set overall validity
+ 	result.Valid = len(result.Errors) == 0
+-	
++
+ 	// Log validation result
+ 	if !result.Valid {
+ 		v.logger.Warn("Order validation failed",
+@@ -132,7 +132,7 @@ func (v *OrderValidator) ValidateOrderRequest(ctx context.Context, request *Orde
+ 			zap.String("symbol", request.Symbol),
+ 			zap.Int("error_count", len(result.Errors)))
+ 	}
+-	
++
+ 	return result
+ }
+ 
+@@ -145,7 +145,7 @@ func (v *OrderValidator) validateRequiredFields(request *OrderRequest, result *V
+ 			Message: "User ID is required",
+ 		})
+ 	}
+-	
++
+ 	if request.AccountID == "" {
+ 		result.Errors = append(result.Errors, ValidationError{
+ 			Field:   "account_id",
+@@ -153,7 +153,7 @@ func (v *OrderValidator) validateRequiredFields(request *OrderRequest, result *V
+ 			Message: "Account ID is required",
+ 		})
+ 	}
+-	
++
+ 	if request.Symbol == "" {
+ 		result.Errors = append(result.Errors, ValidationError{
+ 			Field:   "symbol",
+@@ -161,7 +161,7 @@ func (v *OrderValidator) validateRequiredFields(request *OrderRequest, result *V
+ 			Message: "Symbol is required",
+ 		})
+ 	}
+-	
++
+ 	if request.Side == "" {
+ 		result.Errors = append(result.Errors, ValidationError{
+ 			Field:   "side",
+@@ -169,7 +169,7 @@ func (v *OrderValidator) validateRequiredFields(request *OrderRequest, result *V
+ 			Message: "Order side is required",
+ 		})
+ 	}
+-	
++
+ 	if request.Type == "" {
+ 		result.Errors = append(result.Errors, ValidationError{
+ 			Field:   "type",
+@@ -177,7 +177,7 @@ func (v *OrderValidator) validateRequiredFields(request *OrderRequest, result *V
+ 			Message: "Order type is required",
+ 		})
+ 	}
+-	
++
+ 	if request.Quantity <= 0 {
+ 		result.Errors = append(result.Errors, ValidationError{
+ 			Field:   "quantity",
+@@ -199,7 +199,7 @@ func (v *OrderValidator) validateFieldFormats(request *OrderRequest, result *Val
+ 			Value:   request.Symbol,
+ 		})
+ 	}
+-	
++
+ 	// Validate client order ID format
+ 	if request.ClientOrderID != "" && !v.clientIDPattern.MatchString(request.ClientOrderID) {
+ 		result.Errors = append(result.Errors, ValidationError{
+@@ -209,7 +209,7 @@ func (v *OrderValidator) validateFieldFormats(request *OrderRequest, result *Val
+ 			Value:   request.ClientOrderID,
+ 		})
+ 	}
+-	
++
+ 	// Validate order side
+ 	if request.Side != "" && request.Side != OrderSideBuy && request.Side != OrderSideSell {
+ 		result.Errors = append(result.Errors, ValidationError{
+@@ -219,7 +219,7 @@ func (v *OrderValidator) validateFieldFormats(request *OrderRequest, result *Val
+ 			Value:   request.Side,
+ 		})
+ 	}
+-	
++
+ 	// Validate order type
+ 	validTypes := []OrderType{OrderTypeLimit, OrderTypeMarket, OrderTypeStopLimit, OrderTypeStopMarket}
+ 	if request.Type != "" {
+@@ -239,7 +239,7 @@ func (v *OrderValidator) validateFieldFormats(request *OrderRequest, result *Val
+ 			})
+ 		}
+ 	}
+-	
++
+ 	// Validate time in force
+ 	if request.TimeInForce != "" {
+ 		validTIF := []TimeInForce{TimeInForceGTC, TimeInForceIOC, TimeInForceFOK, TimeInForceDAY}
+@@ -272,7 +272,7 @@ func (v *OrderValidator) validateBusinessRules(request *OrderRequest, result *Va
+ 			Value:   request.Price,
+ 		})
+ 	}
+-	
++
+ 	// Check stop price for stop orders
+ 	if (request.Type == OrderTypeStopLimit || request.Type == OrderTypeStopMarket) && request.StopPrice <= 0 {
+ 		result.Errors = append(result.Errors, ValidationError{
+@@ -282,7 +282,7 @@ func (v *OrderValidator) validateBusinessRules(request *OrderRequest, result *Va
+ 			Value:   request.StopPrice,
+ 		})
+ 	}
+-	
++
+ 	// Validate stop limit order logic
+ 	if request.Type == OrderTypeStopLimit && request.Price > 0 && request.StopPrice > 0 {
+ 		if request.Side == OrderSideBuy && request.StopPrice <= request.Price {
+@@ -301,7 +301,7 @@ func (v *OrderValidator) validateBusinessRules(request *OrderRequest, result *Va
+ 			})
+ 		}
+ 	}
+-	
++
+ 	// Check allowed symbols
+ 	if len(v.allowedSymbols) > 0 && request.Symbol != "" {
+ 		if !v.allowedSymbols[strings.ToUpper(request.Symbol)] {
+@@ -313,7 +313,7 @@ func (v *OrderValidator) validateBusinessRules(request *OrderRequest, result *Va
+ 			})
+ 		}
+ 	}
+-	
++
+ 	// Validate expiration time
+ 	if request.ExpiresAt != nil && request.ExpiresAt.Before(time.Now()) {
+ 		result.Errors = append(result.Errors, ValidationError{
+@@ -330,15 +330,15 @@ func (v *OrderValidator) validateMarketHours(request *OrderRequest, result *Vali
+ 	if request.Symbol == "" {
+ 		return
+ 	}
+-	
++
+ 	hours, exists := v.marketHours[strings.ToUpper(request.Symbol)]
+ 	if !exists {
+ 		// No market hours configured, allow trading
+ 		return
+ 	}
+-	
++
+ 	now := time.Now()
+-	
++
+ 	// Check if current day is a trading day
+ 	validDay := false
+ 	for _, day := range hours.Days {
+@@ -347,31 +347,31 @@ func (v *OrderValidator) validateMarketHours(request *OrderRequest, result *Vali
+ 			break
+ 		}
+ 	}
+-	
++
+ 	if !validDay {
+ 		result.Warnings = append(result.Warnings, ValidationWarning{
+ 			Field:   "symbol",
+ 			Code:    "OUTSIDE_TRADING_DAYS",
+ 			Message: "Order placed outside of regular trading days",
+-			Value:   map[string]interface{}{
+-				"current_day": now.Weekday().String(),
++			Value: map[string]interface{}{
++				"current_day":  now.Weekday().String(),
+ 				"trading_days": hours.Days,
+ 			},
+ 		})
+ 		return
+ 	}
+-	
++
+ 	// Check trading hours (simplified - assumes same timezone)
+ 	currentTime := time.Date(0, 1, 1, now.Hour(), now.Minute(), now.Second(), 0, time.UTC)
+ 	openTime := time.Date(0, 1, 1, hours.Open.Hour(), hours.Open.Minute(), hours.Open.Second(), 0, time.UTC)
+ 	closeTime := time.Date(0, 1, 1, hours.Close.Hour(), hours.Close.Minute(), hours.Close.Second(), 0, time.UTC)
+-	
++
+ 	if currentTime.Before(openTime) || currentTime.After(closeTime) {
+ 		result.Warnings = append(result.Warnings, ValidationWarning{
+ 			Field:   "symbol",
+ 			Code:    "OUTSIDE_TRADING_HOURS",
+ 			Message: "Order placed outside of regular trading hours",
+-			Value:   map[string]interface{}{
++			Value: map[string]interface{}{
+ 				"current_time": now.Format("15:04:05"),
+ 				"market_open":  hours.Open.Format("15:04:05"),
+ 				"market_close": hours.Close.Format("15:04:05"),
+@@ -391,7 +391,7 @@ func (v *OrderValidator) validateLimits(request *OrderRequest, result *Validatio
+ 			Value:   request.Quantity,
+ 		})
+ 	}
+-	
++
+ 	if request.Quantity > v.maxQuantity {
+ 		result.Errors = append(result.Errors, ValidationError{
+ 			Field:   "quantity",
+@@ -400,7 +400,7 @@ func (v *OrderValidator) validateLimits(request *OrderRequest, result *Validatio
+ 			Value:   request.Quantity,
+ 		})
+ 	}
+-	
++
+ 	// Validate price limits
+ 	if request.Price > 0 {
+ 		if request.Price < v.minPrice {
+@@ -411,7 +411,7 @@ func (v *OrderValidator) validateLimits(request *OrderRequest, result *Validatio
+ 				Value:   request.Price,
+ 			})
+ 		}
+-		
++
+ 		if request.Price > v.maxPrice {
+ 			result.Errors = append(result.Errors, ValidationError{
+ 				Field:   "price",
+@@ -421,7 +421,7 @@ func (v *OrderValidator) validateLimits(request *OrderRequest, result *Validatio
+ 			})
+ 		}
+ 	}
+-	
++
+ 	// Validate stop price limits
+ 	if request.StopPrice > 0 {
+ 		if request.StopPrice < v.minPrice {
+@@ -432,7 +432,7 @@ func (v *OrderValidator) validateLimits(request *OrderRequest, result *Validatio
+ 				Value:   request.StopPrice,
+ 			})
+ 		}
+-		
++
+ 		if request.StopPrice > v.maxPrice {
+ 			result.Errors = append(result.Errors, ValidationError{
+ 				Field:   "stop_price",
+@@ -452,7 +452,7 @@ func (v *OrderValidator) ValidateOrderUpdate(ctx context.Context, request *Order
+ 		Warnings: make([]ValidationWarning, 0),
+ 		Details:  make(map[string]interface{}),
+ 	}
+-	
++
+ 	// Validate required fields
+ 	if request.UserID == "" {
+ 		result.Errors = append(result.Errors, ValidationError{
+@@ -461,7 +461,7 @@ func (v *OrderValidator) ValidateOrderUpdate(ctx context.Context, request *Order
+ 			Message: "User ID is required",
+ 		})
+ 	}
+-	
++
+ 	if request.AccountID == "" {
+ 		result.Errors = append(result.Errors, ValidationError{
+ 			Field:   "account_id",
+@@ -469,7 +469,7 @@ func (v *OrderValidator) ValidateOrderUpdate(ctx context.Context, request *Order
+ 			Message: "Account ID is required",
+ 		})
+ 	}
+-	
++
+ 	if request.OrderID == "" && request.ClientOrderID == "" {
+ 		result.Errors = append(result.Errors, ValidationError{
+ 			Field:   "order_id",
+@@ -477,7 +477,7 @@ func (v *OrderValidator) ValidateOrderUpdate(ctx context.Context, request *Order
+ 			Message: "Either order ID or client order ID is required",
+ 		})
+ 	}
+-	
++
+ 	// Validate update fields
+ 	if request.Quantity > 0 {
+ 		if request.Quantity < v.minQuantity {
+@@ -488,7 +488,7 @@ func (v *OrderValidator) ValidateOrderUpdate(ctx context.Context, request *Order
+ 				Value:   request.Quantity,
+ 			})
+ 		}
+-		
++
+ 		if request.Quantity > v.maxQuantity {
+ 			result.Errors = append(result.Errors, ValidationError{
+ 				Field:   "quantity",
+@@ -498,7 +498,7 @@ func (v *OrderValidator) ValidateOrderUpdate(ctx context.Context, request *Order
+ 			})
+ 		}
+ 	}
+-	
++
+ 	if request.Price > 0 {
+ 		if request.Price < v.minPrice || request.Price > v.maxPrice {
+ 			result.Errors = append(result.Errors, ValidationError{
+@@ -509,7 +509,7 @@ func (v *OrderValidator) ValidateOrderUpdate(ctx context.Context, request *Order
+ 			})
+ 		}
+ 	}
+-	
++
+ 	if request.StopPrice > 0 {
+ 		if request.StopPrice < v.minPrice || request.StopPrice > v.maxPrice {
+ 			result.Errors = append(result.Errors, ValidationError{
+@@ -520,7 +520,7 @@ func (v *OrderValidator) ValidateOrderUpdate(ctx context.Context, request *Order
+ 			})
+ 		}
+ 	}
+-	
++
+ 	result.Valid = len(result.Errors) == 0
+ 	return result
+ }
+@@ -533,7 +533,7 @@ func (v *OrderValidator) ValidateOrderCancel(ctx context.Context, request *Order
+ 		Warnings: make([]ValidationWarning, 0),
+ 		Details:  make(map[string]interface{}),
+ 	}
+-	
++
+ 	// Validate required fields
+ 	if request.UserID == "" {
+ 		result.Errors = append(result.Errors, ValidationError{
+@@ -542,7 +542,7 @@ func (v *OrderValidator) ValidateOrderCancel(ctx context.Context, request *Order
+ 			Message: "User ID is required",
+ 		})
+ 	}
+-	
++
+ 	if request.AccountID == "" {
+ 		result.Errors = append(result.Errors, ValidationError{
+ 			Field:   "account_id",
+@@ -550,7 +550,7 @@ func (v *OrderValidator) ValidateOrderCancel(ctx context.Context, request *Order
+ 			Message: "Account ID is required",
+ 		})
+ 	}
+-	
++
+ 	if request.OrderID == "" && request.ClientOrderID == "" {
+ 		result.Errors = append(result.Errors, ValidationError{
+ 			Field:   "order_id",
+@@ -558,7 +558,7 @@ func (v *OrderValidator) ValidateOrderCancel(ctx context.Context, request *Order
+ 			Message: "Either order ID or client order ID is required",
+ 		})
+ 	}
+-	
++
+ 	result.Valid = len(result.Errors) == 0
+ 	return result
+ }
+-- 
+2.39.5
