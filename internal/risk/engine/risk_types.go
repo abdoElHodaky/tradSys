@@ -30,6 +30,11 @@ const (
 	RiskEventVaRCalculation RiskEventType = "var_calculation"
 )
 
+// String returns the string representation of RiskEventType
+func (r RiskEventType) String() string {
+	return string(r)
+}
+
 // RiskSeverity represents the severity of a risk event
 type RiskSeverity string
 
@@ -120,6 +125,10 @@ const (
 	RiskLimitTypeExposure RiskLimitType = "exposure"
 	// RiskLimitTypeDrawdown represents a drawdown limit
 	RiskLimitTypeDrawdown RiskLimitType = "drawdown"
+	// RiskLimitTypeMaxDrawdown represents a maximum drawdown limit
+	RiskLimitTypeMaxDrawdown RiskLimitType = "max_drawdown"
+	// RiskLimitTypeDailyLoss represents a daily loss limit
+	RiskLimitTypeDailyLoss RiskLimitType = "daily_loss"
 	// RiskLimitTypeTradeFrequency represents a trade frequency limit
 	RiskLimitTypeTradeFrequency RiskLimitType = "trade_frequency"
 	// RiskLimitTypeVaR represents a Value at Risk limit

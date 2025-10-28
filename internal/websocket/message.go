@@ -90,48 +90,14 @@ func (c *Connection) SetSymbol(symbol string) {
 	c.symbol = symbol
 }
 
-// WebSocketMessage represents a message sent over WebSocket
-type WebSocketMessage struct {
-	// Type is the message type
-	Type string `json:"type"`
-
-	// Channel is the channel the message belongs to
-	Channel string `json:"channel,omitempty"`
-
-	// Symbol is the symbol the message is related to
-	Symbol string `json:"symbol,omitempty"`
-
-	// Data is the message data
-	Data json.RawMessage `json:"data"`
-
-	// ID is the message ID
-	ID string `json:"id,omitempty"`
-
-	// Timestamp is the message timestamp
-	Timestamp time.Time `json:"timestamp,omitempty"`
-
-	// Source is the message source
-	Source string `json:"source,omitempty"`
-
-	// Target is the message target
-	Target string `json:"target,omitempty"`
-
-	// Error is the error message if any
-	Error string `json:"error,omitempty"`
-}
+// Use WebSocketMessage from websocket_gateway.go to avoid duplication
 
 // NewWebSocketMessage creates a new WebSocket message
-func NewWebSocketMessage(messageType string, data interface{}) (*WebSocketMessage, error) {
-	// Marshal the data
-	dataBytes, err := json.Marshal(data)
-	if err != nil {
-		return nil, err
-	}
-
+func NewWebSocketMessage(messageType MessageType, data interface{}) (*WebSocketMessage, error) {
 	// Create the message
 	return &WebSocketMessage{
 		Type:      messageType,
-		Data:      dataBytes,
+		Data:      data,
 		Timestamp: time.Now(),
 	}, nil
 }

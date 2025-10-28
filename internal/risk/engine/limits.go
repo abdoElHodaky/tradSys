@@ -135,11 +135,11 @@ func (lm *LimitsManager) CheckPositionLimit(userID, symbol string, quantity, pri
 	if err == nil {
 		// In a real implementation, this would calculate actual daily P&L
 		// For now, we'll assume the position represents potential loss
-		if positionValue > dailyLossLimit.Value {
+		if positionValue > dailyLossLimit.Limit {
 			return &RiskCheckResult{
 				Passed:     false,
 				RiskLevel:  RiskLevelHigh,
-				Violations: []string{fmt.Sprintf("Potential daily loss %.2f exceeds limit %.2f", positionValue, dailyLossLimit.Value)},
+				Violations: []string{fmt.Sprintf("Potential daily loss %.2f exceeds limit %.2f", positionValue, dailyLossLimit.Limit)},
 				Warnings:   []string{},
 				CheckedAt:  time.Now(),
 			}, nil
@@ -162,23 +162,23 @@ func (lm *LimitsManager) CheckDrawdownLimit(userID string, currentValue, peakVal
 	// Check max drawdown limit
 	drawdownLimit, err := lm.GetLimit(userID, RiskLimitTypeMaxDrawdown)
 	if err == nil {
-		if drawdown > drawdownLimit.Value {
+		if drawdown > drawdownLimit.Limit {
 			return &RiskCheckResult{
 				Passed:     false,
 				RiskLevel:  RiskLevelHigh,
-				Violations: []string{fmt.Sprintf("Drawdown %.2f%% exceeds limit %.2f%%", drawdown*100, drawdownLimit.Value*100)},
+				Violations: []string{fmt.Sprintf("Drawdown %.2f%% exceeds limit %.2f%%", drawdown*100, drawdownLimit.Limit*100)},
 				Warnings:   []string{},
 				CheckedAt:  time.Now(),
 			}, nil
 		}
 		
 		// Warning at 80% of limit
-		if drawdown > drawdownLimit.Value*0.8 {
+		if drawdown > drawdownLimit.Limit*0.8 {
 			return &RiskCheckResult{
 				Passed:     true,
 				RiskLevel:  RiskLevelMedium,
 				Violations: []string{},
-				Warnings:   []string{fmt.Sprintf("Drawdown %.2f%% approaching limit %.2f%%", drawdown*100, drawdownLimit.Value*100)},
+				Warnings:   []string{fmt.Sprintf("Drawdown %.2f%% approaching limit %.2f%%", drawdown*100, drawdownLimit.Limit*100)},
 				CheckedAt:  time.Now(),
 			}, nil
 		}
@@ -211,23 +211,23 @@ func (lm *LimitsManager) CheckConcentrationLimit(userID, symbol string, position
 	concentrationLimit, err := lm.GetLimit(userID, RiskLimitTypeConcentration)
 	if err == nil {
 		if concentrationLimit.Symbol == "" || concentrationLimit.Symbol == symbol {
-			if concentration > concentrationLimit.Value {
+			if concentration > concentrationLimit.Limit {
 				return &RiskCheckResult{
 					Passed:     false,
 					RiskLevel:  RiskLevelHigh,
-					Violations: []string{fmt.Sprintf("Concentration %.2f%% exceeds limit %.2f%%", concentration*100, concentrationLimit.Value*100)},
+					Violations: []string{fmt.Sprintf("Concentration %.2f%% exceeds limit %.2f%%", concentration*100, concentrationLimit.Limit*100)},
 					Warnings:   []string{},
 					CheckedAt:  time.Now(),
 				}, nil
 			}
 			
 			// Warning at 80% of limit
-			if concentration > concentrationLimit.Value*0.8 {
+			if concentration > concentrationLimit.Limit*0.8 {
 				return &RiskCheckResult{
 					Passed:     true,
 					RiskLevel:  RiskLevelMedium,
 					Violations: []string{},
-					Warnings:   []string{fmt.Sprintf("Concentration %.2f%% approaching limit %.2f%%", concentration*100, concentrationLimit.Value*100)},
+					Warnings:   []string{fmt.Sprintf("Concentration %.2f%% approaching limit %.2f%%", concentration*100, concentrationLimit.Limit*100)},
 					CheckedAt:  time.Now(),
 				}, nil
 			}
@@ -282,28 +282,28 @@ func (lm *LimitsManager) SetDefaultLimits(userID string) error {
 	defaultLimits := []*RiskLimit{
 		{
 			Type:      RiskLimitTypePositionSize,
-			Value:     1000000, // $1M position limit
+			Limit:     1000000, // $1M position limit
 			Symbol:    "",      // Applies to all symbols
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		},
 		{
 			Type:      RiskLimitTypeMaxDrawdown,
-			Value:     0.20, // 20% max drawdown
+			Limit:     0.20, // 20% max drawdown
 			Symbol:    "",
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		},
 		{
 			Type:      RiskLimitTypeConcentration,
-			Value:     0.25, // 25% max concentration
+			Limit:     0.25, // 25% max concentration
 			Symbol:    "",
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		},
 		{
 			Type:      RiskLimitTypeDailyLoss,
-			Value:     100000, // $100K daily loss limit
+			Limit:     100000, // $100K daily loss limit
 			Symbol:    "",
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),

@@ -61,7 +61,7 @@ func (lm *LimitManager) AddRiskLimit(ctx context.Context, limit *RiskLimit) (*Ri
 		zap.String("userID", limit.UserID),
 		zap.String("symbol", limit.Symbol),
 		zap.String("type", string(limit.Type)),
-		zap.Float64("value", limit.Value),
+		zap.Float64("value", limit.Limit),
 	)
 
 	return limit, nil
@@ -105,26 +105,26 @@ func (lm *LimitManager) CheckRiskLimits(ctx context.Context, userID, symbol stri
 
 		switch limit.Type {
 		case RiskLimitTypeMaxOrderSize:
-			if orderSize > limit.Value {
+			if orderSize > limit.Limit {
 				violation = true
 				violationMsg = "Order size exceeds maximum allowed"
-				result.MaxOrderSize = limit.Value
+				result.MaxOrderSize = limit.Limit
 			}
 
 		case RiskLimitTypeMaxOrderValue:
-			if orderValue > limit.Value {
+			if orderValue > limit.Limit {
 				violation = true
 				violationMsg = "Order value exceeds maximum allowed"
 			}
 
 		case RiskLimitTypeMaxPositionSize:
-			if abs(newPosition) > limit.Value {
+			if abs(newPosition) > limit.Limit {
 				violation = true
 				violationMsg = "Position size would exceed maximum allowed"
 			}
 
 		case RiskLimitTypeMaxPositionValue:
-			if abs(newPositionValue) > limit.Value {
+			if abs(newPositionValue) > limit.Limit {
 				violation = true
 				violationMsg = "Position value would exceed maximum allowed"
 			}
@@ -147,7 +147,7 @@ func (lm *LimitManager) CheckRiskLimits(ctx context.Context, userID, symbol stri
 				zap.String("userID", userID),
 				zap.String("symbol", symbol),
 				zap.String("limitType", string(limit.Type)),
-				zap.Float64("limitValue", limit.Value),
+				zap.Float64("limitValue", limit.Limit),
 				zap.String("violation", violationMsg),
 			)
 		}
@@ -189,7 +189,7 @@ func (lm *LimitManager) UpdateRiskLimit(ctx context.Context, limitID string, new
 	for userID, userLimits := range lm.RiskLimits {
 		for _, limit := range userLimits {
 			if limit.ID == limitID {
-				limit.Value = newValue
+				limit.Limit = newValue
 				limit.UpdatedAt = time.Now()
 
 				// Update cache

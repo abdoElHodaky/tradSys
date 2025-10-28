@@ -11,19 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// MessageType defines WebSocket message types
-type MessageType string
-
-const (
-	MessageTypeSubscribe   MessageType = "subscribe"
-	MessageTypeUnsubscribe MessageType = "unsubscribe"
-	MessageTypeMarketData  MessageType = "market_data"
-	MessageTypeOrderUpdate MessageType = "order_update"
-	MessageTypePortfolio   MessageType = "portfolio"
-	MessageTypeAlert       MessageType = "alert"
-	MessageTypeHeartbeat   MessageType = "heartbeat"
-	MessageTypeError       MessageType = "error"
-)
+// Use MessageType from websocket_gateway.go to avoid duplication
 
 // Gateway manages WebSocket connections and routing for high-performance trading
 type Gateway struct {
@@ -37,7 +25,7 @@ type Gateway struct {
 	logger *zap.Logger
 	
 	// Connection tracking
-	connections map[string]*Connection
+	connections map[string]*V2Connection
 	mu          sync.RWMutex
 	
 	// Lifecycle management
@@ -62,8 +50,8 @@ type GatewayConfig struct {
 	RateLimitPerSecond int           `json:"rate_limit_per_second"`
 }
 
-// Connection represents a WebSocket connection optimized for trading
-type Connection struct {
+// V2Connection represents a WebSocket connection optimized for trading
+type V2Connection struct {
 	ID       string
 	UserID   string
 	Exchange string
@@ -136,7 +124,7 @@ func NewGateway(config *GatewayConfig, logger *zap.Logger) *Gateway {
 	gateway := &Gateway{
 		config:      config,
 		logger:      logger,
-		connections: make(map[string]*Connection),
+		connections: make(map[string]*V2Connection),
 		ctx:         ctx,
 		cancel:      cancel,
 		metrics:     &GatewayMetrics{LastUpdated: time.Now()},
@@ -181,7 +169,7 @@ func (g *Gateway) Stop() error {
 }
 
 // HandleConnection handles a new WebSocket connection
-func (g *Gateway) HandleConnection(conn *websocket.Conn, userID, exchange string) (*Connection, error) {
+func (g *Gateway) HandleConnection(conn *websocket.Conn, userID, exchange string) (*V2Connection, error) {
 	// Check connection limits
 	if err := g.checkConnectionLimits(); err != nil {
 		return nil, err
@@ -325,10 +313,10 @@ func (g *Gateway) GetMetrics() *GatewayMetrics {
 }
 
 // createConnection creates a new connection instance
-func (g *Gateway) createConnection(conn *websocket.Conn, userID, exchange string) *Connection {
+func (g *Gateway) createConnection(conn *websocket.Conn, userID, exchange string) *V2Connection {
 	ctx, cancel := context.WithCancel(g.ctx)
 	
-	connection := &Connection{
+	connection := &V2Connection{
 		ID:            generateConnectionID(),
 		UserID:        userID,
 		Exchange:      exchange,
@@ -359,7 +347,7 @@ func (g *Gateway) checkConnectionLimits() error {
 }
 
 // handleConnectionRead handles reading messages from a connection
-func (g *Gateway) handleConnectionRead(conn *Connection) {
+func (g *Gateway) handleConnectionRead(conn *V2Connection) {
 	defer func() {
 		conn.Close()
 		g.removeConnection(conn.ID)
@@ -405,7 +393,7 @@ func (g *Gateway) handleConnectionRead(conn *Connection) {
 }
 
 // handleConnectionWrite handles writing messages to a connection
-func (g *Gateway) handleConnectionWrite(conn *Connection) {
+func (g *Gateway) handleConnectionWrite(conn *V2Connection) {
 	ticker := time.NewTicker(g.config.PingInterval)
 	defer func() {
 		ticker.Stop()
@@ -446,7 +434,7 @@ func (g *Gateway) handleConnectionWrite(conn *Connection) {
 }
 
 // handleConnectionPing handles ping/pong for connection health
-func (g *Gateway) handleConnectionPing(conn *Connection) {
+func (g *Gateway) handleConnectionPing(conn *V2Connection) {
 	ticker := time.NewTicker(g.config.PingInterval)
 	defer ticker.Stop()
 	
@@ -555,7 +543,7 @@ func (g *Gateway) cleanInactiveConnections() {
 // Connection methods
 
 // Subscribe adds a subscription to the connection
-func (c *Connection) Subscribe(channel, symbol string, subType SubscriptionType, filters map[string]interface{}) error {
+func (c *V2Connection) Subscribe(channel, symbol string, subType SubscriptionType, filters map[string]interface{}) error {
 	c.subMu.Lock()
 	defer c.subMu.Unlock()
 	
@@ -579,7 +567,7 @@ func (c *Connection) Subscribe(channel, symbol string, subType SubscriptionType,
 }
 
 // Unsubscribe removes a subscription from the connection
-func (c *Connection) Unsubscribe(subscriptionID string) error {
+func (c *V2Connection) Unsubscribe(subscriptionID string) error {
 	c.subMu.Lock()
 	defer c.subMu.Unlock()
 	
@@ -588,7 +576,7 @@ func (c *Connection) Unsubscribe(subscriptionID string) error {
 }
 
 // IsSubscribedToChannel checks if connection is subscribed to a channel
-func (c *Connection) IsSubscribedToChannel(channel string) bool {
+func (c *V2Connection) IsSubscribedToChannel(channel string) bool {
 	c.subMu.RLock()
 	defer c.subMu.RUnlock()
 	
@@ -602,7 +590,7 @@ func (c *Connection) IsSubscribedToChannel(channel string) bool {
 }
 
 // Close closes the connection
-func (c *Connection) Close() {
+func (c *V2Connection) Close() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	

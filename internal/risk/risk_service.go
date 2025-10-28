@@ -331,7 +331,7 @@ func (s *Service) processCheckLimitBatch(ops []RiskOperation) {
 					position, exists := userPositions[symbol]
 					if exists {
 						currentValue := abs(position.Quantity)
-						if currentValue > limit.Value {
+						if currentValue > limit.Limit {
 							result.Passed = false
 							result.RiskLevel = RiskLevelHigh
 							result.Violations = append(result.Violations, "Position limit exceeded")
@@ -342,7 +342,7 @@ func (s *Service) processCheckLimitBatch(ops []RiskOperation) {
 				// Check order size limit
 				orderSize, ok := data["order_size"].(float64)
 				if ok {
-					if orderSize > limit.Value {
+					if orderSize > limit.Limit {
 						result.Passed = false
 						result.RiskLevel = RiskLevelHigh
 						result.Violations = append(result.Violations, "Order size limit exceeded")
@@ -360,7 +360,7 @@ func (s *Service) processCheckLimitBatch(ops []RiskOperation) {
 							totalExposure += abs(pos.Quantity) * price
 						}
 					}
-					if totalExposure > limit.Value {
+					if totalExposure > limit.Limit {
 						result.Passed = false
 						result.RiskLevel = RiskLevelHigh
 						result.Violations = append(result.Violations, "Exposure limit exceeded")
@@ -370,7 +370,7 @@ func (s *Service) processCheckLimitBatch(ops []RiskOperation) {
 				// Check drawdown limit
 				drawdown, ok := data["drawdown"].(float64)
 				if ok {
-					if drawdown > limit.Value {
+					if drawdown > limit.Limit {
 						result.Passed = false
 						result.RiskLevel = RiskLevelHigh
 						result.Violations = append(result.Violations, "Drawdown limit exceeded")
@@ -383,7 +383,7 @@ func (s *Service) processCheckLimitBatch(ops []RiskOperation) {
 					timeWindow, ok := data["time_window"].(time.Duration)
 					if ok {
 						tradesPerSecond := float64(tradeCount) / timeWindow.Seconds()
-						if tradesPerSecond > limit.Value {
+						if tradesPerSecond > limit.Limit {
 							result.Passed = false
 							result.RiskLevel = RiskLevelHigh
 							result.Violations = append(result.Violations, "Trade frequency limit exceeded")
