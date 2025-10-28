@@ -3,7 +3,7 @@ package engine
 import (
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/core/types"
+	"github.com/abdoElHodaky/tradSys/internal/trading/types"
 	"github.com/google/uuid"
 )
 
