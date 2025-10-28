@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/ws"
+	websocket "github.com/abdoElHodaky/tradSys/internal/ws"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -165,7 +165,7 @@ func RegisterOrderHandlers(hub *websocket.Hub, logger *zap.Logger) {
 			zap.String("client_id", client.ID),
 			zap.String("symbol", request.Symbol),
 			zap.String("side", request.Side),
-			zap.Float64("quantity", request.Quantity),
+			zap.Float64("size", request.Size),
 			zap.Float64("price", request.Price))
 
 		// Create order submission response
@@ -175,7 +175,7 @@ func RegisterOrderHandlers(hub *websocket.Hub, logger *zap.Logger) {
 			"order_id": orderID,
 			"symbol":   request.Symbol,
 			"side":     request.Side,
-			"quantity": request.Quantity,
+			"size":     request.Size,
 			"price":    request.Price,
 			"status":   "pending",
 			"message":  "Order submitted successfully",
