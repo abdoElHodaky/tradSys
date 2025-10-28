@@ -9,17 +9,18 @@ import (
 
 	"github.com/abdoElHodaky/tradSys/pkg/interfaces"
 	"github.com/abdoElHodaky/tradSys/pkg/types"
+	"github.com/abdoElHodaky/tradSys/services/exchanges"
 )
 
 // Client implements the ExchangeInterface for Abu Dhabi Exchange
 type Client struct {
 	config         *Config
-	connector      *Connector
-	marketData     *MarketDataService
-	orderManager   *OrderManager
-	assetManager   *AssetManager
-	compliance     *ComplianceService
-	islamicService *IslamicFinanceService
+	connector      exchanges.Connector
+	marketData     exchanges.MarketDataService
+	orderManager   exchanges.OrderManager
+	assetManager   exchanges.AssetManager
+	compliance     exchanges.ComplianceService
+	islamicService exchanges.IslamicFinanceService
 	mu             sync.RWMutex
 	connected      bool
 }
@@ -43,12 +44,12 @@ type Config struct {
 func NewClient(config *Config) *Client {
 	return &Client{
 		config:         config,
-		connector:      NewConnector(config),
-		marketData:     NewMarketDataService(config),
-		orderManager:   NewOrderManager(config),
-		assetManager:   NewAssetManager(config),
-		compliance:     NewComplianceService(config),
-		islamicService: NewIslamicFinanceService(config),
+		connector:      exchanges.NewConnector(config),
+		marketData:     exchanges.NewMarketDataService(nil),
+		orderManager:   exchanges.NewOrderManager(nil),
+		assetManager:   exchanges.NewAssetManager(nil),
+		compliance:     exchanges.NewComplianceService(config),
+		islamicService: exchanges.NewIslamicFinanceService(config),
 		connected:      false,
 	}
 }

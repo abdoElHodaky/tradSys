@@ -108,6 +108,9 @@ func (m *Manager) GetActiveStrategies() []string {
 	return active
 }
 
+// StrategyManager is an alias for Manager for backward compatibility
+type StrategyManager = Manager
+
 // Errors
 var (
 	ErrStrategyNotFound = fmt.Errorf("strategy not found")

@@ -7,7 +7,7 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"github.com/abdoElHodaky/tradSys/internal/statistics"
-	"github.com/abdoElHodaky/tradSys/internal/strategies"
+	strategy "github.com/abdoElHodaky/tradSys/internal/strategies"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"go.uber.org/zap"

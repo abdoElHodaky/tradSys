@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/abdoElHodaky/tradSys/internal/common/pool"
+	pools "github.com/abdoElHodaky/tradSys/internal/common/pool"
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
 	"github.com/abdoElHodaky/tradSys/internal/trading/metrics"
 )

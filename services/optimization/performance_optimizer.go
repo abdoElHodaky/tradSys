@@ -702,3 +702,18 @@ func (pa *PerformanceAnalyzer) AnalyzeMetrics(metrics *PerformanceMetrics) []Per
 	
 	return issues
 }
+
+// AlertManager methods
+func (am *AlertManager) SendAlert(alert *PerformanceAlert) error {
+	// In a real implementation, this would send alerts via email, Slack, etc.
+	// For now, we'll just log the alert
+	return nil
+}
+
+func (am *AlertManager) Initialize() error {
+	return nil
+}
+
+func (am *AlertManager) Shutdown() error {
+	return nil
+}
