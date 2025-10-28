@@ -112,6 +112,8 @@ type RiskLimitType string
 const (
 	// RiskLimitTypePosition represents a position limit
 	RiskLimitTypePosition RiskLimitType = "position"
+	// RiskLimitTypePositionSize represents a position size limit
+	RiskLimitTypePositionSize RiskLimitType = "position_size"
 	// RiskLimitTypeOrderSize represents an order size limit
 	RiskLimitTypeOrderSize RiskLimitType = "order_size"
 	// RiskLimitTypeExposure represents an exposure limit

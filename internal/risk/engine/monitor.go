@@ -13,13 +13,13 @@ type RiskMonitor struct {
 	logger           *zap.Logger
 	alertThresholds  map[string]float64
 	mu               sync.RWMutex
-	alertChan        chan RiskAlert
+	alertChan        chan MonitorAlert
 	ctx              context.Context
 	cancel           context.CancelFunc
 }
 
-// RiskAlert represents a risk alert
-type RiskAlert struct {
+// MonitorAlert represents a risk alert from the monitor
+type MonitorAlert struct {
 	UserID      string
 	Symbol      string
 	AlertType   string
@@ -36,7 +36,7 @@ func NewRiskMonitor(logger *zap.Logger) *RiskMonitor {
 	return &RiskMonitor{
 		logger:          logger,
 		alertThresholds: make(map[string]float64),
-		alertChan:       make(chan RiskAlert, 1000),
+		alertChan:       make(chan MonitorAlert, 1000),
 		ctx:             ctx,
 		cancel:          cancel,
 	}
@@ -71,7 +71,7 @@ func (rm *RiskMonitor) MonitorPosition(userID, symbol string, quantity, price fl
 	rm.mu.RUnlock()
 	
 	if exists && positionValue > threshold {
-		alert := RiskAlert{
+		alert := MonitorAlert{
 			UserID:    userID,
 			Symbol:    symbol,
 			AlertType: "position_size_exceeded",
@@ -113,7 +113,7 @@ func (rm *RiskMonitor) MonitorDrawdown(userID string, currentValue, peakValue fl
 	rm.mu.RUnlock()
 	
 	if exists && drawdown > threshold {
-		alert := RiskAlert{
+		alert := MonitorAlert{
 			UserID:    userID,
 			AlertType: "max_drawdown_exceeded",
 			Severity:  RiskLevelHigh,
@@ -150,7 +150,7 @@ func (rm *RiskMonitor) MonitorConcentration(userID, symbol string, positionValue
 	rm.mu.RUnlock()
 	
 	if exists && concentration > threshold {
-		alert := RiskAlert{
+		alert := MonitorAlert{
 			UserID:    userID,
 			Symbol:    symbol,
 			AlertType: "concentration_exceeded",
@@ -183,7 +183,7 @@ func (rm *RiskMonitor) MonitorVaR(userID string, var_ float64) {
 	rm.mu.RUnlock()
 	
 	if exists && var_ > threshold {
-		alert := RiskAlert{
+		alert := MonitorAlert{
 			UserID:    userID,
 			AlertType: "var_exceeded",
 			Severity:  RiskLevelHigh,
@@ -217,7 +217,7 @@ func (rm *RiskMonitor) processAlerts() {
 }
 
 // handleAlert handles a risk alert
-func (rm *RiskMonitor) handleAlert(alert RiskAlert) {
+func (rm *RiskMonitor) handleAlert(alert MonitorAlert) {
 	rm.logger.Warn("Risk alert triggered",
 		zap.String("user_id", alert.UserID),
 		zap.String("symbol", alert.Symbol),

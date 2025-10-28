@@ -20,7 +20,7 @@ type RealTimeRiskEngine struct {
 	positionManager *PositionManager
 	limitManager    *LimitManager
 	varCalculator   *VaRCalculator
-	circuitBreaker  *CircuitBreaker
+	circuitBreaker  *RealtimeCircuitBreaker
 	metrics         *PerformanceMetrics
 	eventPool       *pool.ObjectPool
 	checkPool       *pool.ObjectPool
@@ -102,8 +102,8 @@ type VaRCalculator struct {
 	mu                sync.RWMutex
 }
 
-// CircuitBreaker implements circuit breaker functionality
-type CircuitBreaker struct {
+// RealtimeCircuitBreaker implements circuit breaker functionality for real-time engine
+type RealtimeCircuitBreaker struct {
 	enabled              bool
 	volatilityThreshold  float64
 	priceChangeThreshold float64
@@ -138,7 +138,7 @@ func NewRealTimeRiskEngine(config *RiskEngineConfig, logger *zap.Logger) *RealTi
 			historicalReturns: make(map[string][]float64),
 			correlationMatrix: make(map[string]map[string]float64),
 		},
-		circuitBreaker: &CircuitBreaker{
+		circuitBreaker: &RealtimeCircuitBreaker{
 			enabled:              config.EnableCircuitBreaker,
 			volatilityThreshold:  0.05,    // 5% volatility threshold
 			priceChangeThreshold: 0.10,    // 10% price change threshold
@@ -562,28 +562,28 @@ func (e *RealTimeRiskEngine) checkCircuitBreakerConditions() {
 }
 
 // IsTripped returns whether the circuit breaker is currently tripped
-func (cb *CircuitBreaker) IsTripped() bool {
+func (cb *RealtimeCircuitBreaker) IsTripped() bool {
 	cb.mu.RLock()
 	defer cb.mu.RUnlock()
 	return cb.isTripped
 }
 
 // GetReferencePrice returns the reference price
-func (cb *CircuitBreaker) GetReferencePrice() float64 {
+func (cb *RealtimeCircuitBreaker) GetReferencePrice() float64 {
 	cb.mu.RLock()
 	defer cb.mu.RUnlock()
 	return cb.referencePrice
 }
 
 // SetReferencePrice sets the reference price
-func (cb *CircuitBreaker) SetReferencePrice(price float64) {
+func (cb *RealtimeCircuitBreaker) SetReferencePrice(price float64) {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
 	cb.referencePrice = price
 }
 
 // Trip triggers the circuit breaker
-func (cb *CircuitBreaker) Trip() {
+func (cb *RealtimeCircuitBreaker) Trip() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
 	cb.isTripped = true
@@ -591,36 +591,36 @@ func (cb *CircuitBreaker) Trip() {
 }
 
 // Reset resets the circuit breaker
-func (cb *CircuitBreaker) Reset() {
+func (cb *RealtimeCircuitBreaker) Reset() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
 	cb.isTripped = false
 }
 
 // GetLastTriggered returns the last time the circuit breaker was triggered
-func (cb *CircuitBreaker) GetLastTriggered() time.Time {
+func (cb *RealtimeCircuitBreaker) GetLastTriggered() time.Time {
 	cb.mu.RLock()
 	defer cb.mu.RUnlock()
 	return cb.tripTime
 }
 
 // GetCooldownPeriod returns the cooldown period
-func (cb *CircuitBreaker) GetCooldownPeriod() time.Duration {
+func (cb *RealtimeCircuitBreaker) GetCooldownPeriod() time.Duration {
 	cb.mu.RLock()
 	defer cb.mu.RUnlock()
 	return cb.cooldownPeriod
 }
 
 // GetPriceChangeThreshold returns the price change threshold
-func (cb *CircuitBreaker) GetPriceChangeThreshold() float64 {
+func (cb *RealtimeCircuitBreaker) GetPriceChangeThreshold() float64 {
 	cb.mu.RLock()
 	defer cb.mu.RUnlock()
 	return cb.priceChangeThreshold
 }
 
-// NewCircuitBreaker creates a new circuit breaker
-func NewCircuitBreaker(priceChangeThreshold float64, cooldownPeriod time.Duration) *CircuitBreaker {
-	return &CircuitBreaker{
+// NewRealtimeCircuitBreaker creates a new realtime circuit breaker
+func NewRealtimeCircuitBreaker(priceChangeThreshold float64, cooldownPeriod time.Duration) *RealtimeCircuitBreaker {
+	return &RealtimeCircuitBreaker{
 		enabled:              true,
 		priceChangeThreshold: priceChangeThreshold,
 		cooldownPeriod:       cooldownPeriod,

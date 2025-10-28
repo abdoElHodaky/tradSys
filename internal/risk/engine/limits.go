@@ -48,7 +48,7 @@ func (lm *LimitsManager) SetLimit(userID string, limit *RiskLimit) error {
 	lm.logger.Info("Risk limit set",
 		zap.String("user_id", userID),
 		zap.String("limit_type", string(limit.Type)),
-		zap.Float64("value", limit.Value),
+		zap.Float64("value", limit.Limit),
 		zap.String("symbol", limit.Symbol))
 	
 	return nil
@@ -118,11 +118,11 @@ func (lm *LimitsManager) CheckPositionLimit(userID, symbol string, quantity, pri
 	positionLimit, err := lm.GetLimit(userID, RiskLimitTypePositionSize)
 	if err == nil {
 		if positionLimit.Symbol == "" || positionLimit.Symbol == symbol {
-			if positionValue > positionLimit.Value {
+			if positionValue > positionLimit.Limit {
 				return &RiskCheckResult{
 					Passed:     false,
 					RiskLevel:  RiskLevelHigh,
-					Violations: []string{fmt.Sprintf("Position size %.2f exceeds limit %.2f", positionValue, positionLimit.Value)},
+					Violations: []string{fmt.Sprintf("Position size %.2f exceeds limit %.2f", positionValue, positionLimit.Limit)},
 					Warnings:   []string{},
 					CheckedAt:  time.Now(),
 				}, nil

@@ -20,7 +20,7 @@ type Service struct {
 	// Positions is a map of user ID and symbol to position
 	Positions map[string]map[string]*Position
 	// CircuitBreakers is a map of symbol to circuit breaker
-	CircuitBreakers map[string]*CircuitBreaker
+	CircuitBreakers map[string]*RealtimeCircuitBreaker
 	// PositionCache is a cache for frequently accessed positions
 	PositionCache *cache.Cache
 	// RiskLimitCache is a cache for frequently accessed risk limits
@@ -57,7 +57,7 @@ func NewService(orderEngine *order_matching.Engine, orderService *orders.OrderSe
 		OrderEngine:     orderEngine,
 		OrderService:    orderService,
 		Positions:       make(map[string]map[string]*Position),
-		CircuitBreakers: make(map[string]*CircuitBreaker),
+		CircuitBreakers: make(map[string]*RealtimeCircuitBreaker),
 		PositionCache:   cache.New(5*time.Minute, 10*time.Minute),
 		RiskLimitCache:  cache.New(5*time.Minute, 10*time.Minute),
 		logger:          logger,
