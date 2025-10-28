@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
+	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
+	escore "github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
 	"go.uber.org/zap"
 )
@@ -10,9 +10,9 @@ import (
 // CQRSSystem represents a complete CQRS system
 type CQRSSystem struct {
 	// Core components
-	EventStore    store.EventStore
-	AggregateRepo aggregate.Repository
-	EventBus      eventbus.EventBus
+	EventStore    escore.EventStore
+	AggregateRepo handlers.Repository
+	EventBus      cqrscore.EventBus
 
 	// Adapters
 	WatermillAdapter *WatermillCQRSAdapter

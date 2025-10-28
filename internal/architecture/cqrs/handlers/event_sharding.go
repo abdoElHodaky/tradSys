@@ -7,9 +7,9 @@ import (
 	"hash/fnv"
 	"sync"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
+	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
+	escore "github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 )

@@ -13,15 +13,15 @@ import (
 // OrderValidator handles validation of order requests
 type OrderValidator struct {
 	logger *zap.Logger
-	
+
 	// Configuration
-	maxQuantity     float64
-	maxPrice        float64
-	minPrice        float64
-	minQuantity     float64
-	allowedSymbols  map[string]bool
-	marketHours     map[string]MarketHours
-	
+	maxQuantity    float64
+	maxPrice       float64
+	minPrice       float64
+	minQuantity    float64
+	allowedSymbols map[string]bool
+	marketHours    map[string]MarketHours
+
 	// Validation rules
 	symbolPattern   *regexp.Regexp
 	clientIDPattern *regexp.Regexp
@@ -37,25 +37,25 @@ type MarketHours struct {
 
 // ValidationResult represents the result of order validation
 type ValidationResult struct {
-	Valid   bool                   `json:"valid"`
-	Errors  []ValidationError      `json:"errors,omitempty"`
-	Warnings []ValidationWarning   `json:"warnings,omitempty"`
-	Details map[string]interface{} `json:"details,omitempty"`
+	Valid    bool                   `json:"valid"`
+	Errors   []ValidationError      `json:"errors,omitempty"`
+	Warnings []ValidationWarning    `json:"warnings,omitempty"`
+	Details  map[string]interface{} `json:"details,omitempty"`
 }
 
 // ValidationError represents a validation error
 type ValidationError struct {
-	Field   string `json:"field"`
-	Code    string `json:"code"`
-	Message string `json:"message"`
+	Field   string      `json:"field"`
+	Code    string      `json:"code"`
+	Message string      `json:"message"`
 	Value   interface{} `json:"value,omitempty"`
 }
 
 // ValidationWarning represents a validation warning
 type ValidationWarning struct {
-	Field   string `json:"field"`
-	Code    string `json:"code"`
-	Message string `json:"message"`
+	Field   string      `json:"field"`
+	Code    string      `json:"code"`
+	Message string      `json:"message"`
 	Value   interface{} `json:"value,omitempty"`
 }
 
@@ -63,16 +63,16 @@ type ValidationWarning struct {
 func NewOrderValidator(logger *zap.Logger) *OrderValidator {
 	// Default symbol pattern (e.g., BTC-USD, AAPL, etc.)
 	symbolPattern := regexp.MustCompile(`^[A-Z0-9]{1,10}(-[A-Z0-9]{1,10})?$`)
-	
+
 	// Client order ID pattern (alphanumeric with hyphens/underscores)
 	clientIDPattern := regexp.MustCompile(`^[a-zA-Z0-9_-]{1,64}$`)
-	
+
 	return &OrderValidator{
 		logger:          logger,
-		maxQuantity:     1000000.0,  // Default max quantity
-		maxPrice:        1000000.0,  // Default max price
-		minPrice:        0.01,       // Default min price
-		minQuantity:     0.001,      // Default min quantity
+		maxQuantity:     1000000.0, // Default max quantity
+		maxPrice:        1000000.0, // Default max price
+		minPrice:        0.01,      // Default min price
+		minQuantity:     0.001,     // Default min quantity
 		allowedSymbols:  make(map[string]bool),
 		marketHours:     make(map[string]MarketHours),
 		symbolPattern:   symbolPattern,
@@ -106,25 +106,25 @@ func (v *OrderValidator) ValidateOrderRequest(ctx context.Context, request *Orde
 		Warnings: make([]ValidationWarning, 0),
 		Details:  make(map[string]interface{}),
 	}
-	
+
 	// Validate required fields
 	v.validateRequiredFields(request, result)
-	
+
 	// Validate field formats
 	v.validateFieldFormats(request, result)
-	
+
 	// Validate business rules
 	v.validateBusinessRules(request, result)
-	
+
 	// Validate market hours
 	v.validateMarketHours(request, result)
-	
+
 	// Validate limits
 	v.validateLimits(request, result)
-	
+
 	// Set overall validity
 	result.Valid = len(result.Errors) == 0
-	
+
 	// Log validation result
 	if !result.Valid {
 		v.logger.Warn("Order validation failed",
@@ -132,7 +132,7 @@ func (v *OrderValidator) ValidateOrderRequest(ctx context.Context, request *Orde
 			zap.String("symbol", request.Symbol),
 			zap.Int("error_count", len(result.Errors)))
 	}
-	
+
 	return result
 }
 
@@ -145,7 +145,7 @@ func (v *OrderValidator) validateRequiredFields(request *OrderRequest, result *V
 			Message: "User ID is required",
 		})
 	}
-	
+
 	if request.AccountID == "" {
 		result.Errors = append(result.Errors, ValidationError{
 			Field:   "account_id",
@@ -153,7 +153,7 @@ func (v *OrderValidator) validateRequiredFields(request *OrderRequest, result *V
 			Message: "Account ID is required",
 		})
 	}
-	
+
 	if request.Symbol == "" {
 		result.Errors = append(result.Errors, ValidationError{
 			Field:   "symbol",
@@ -161,7 +161,7 @@ func (v *OrderValidator) validateRequiredFields(request *OrderRequest, result *V
 			Message: "Symbol is required",
 		})
 	}
-	
+
 	if request.Side == "" {
 		result.Errors = append(result.Errors, ValidationError{
 			Field:   "side",
@@ -169,7 +169,7 @@ func (v *OrderValidator) validateRequiredFields(request *OrderRequest, result *V
 			Message: "Order side is required",
 		})
 	}
-	
+
 	if request.Type == "" {
 		result.Errors = append(result.Errors, ValidationError{
 			Field:   "type",
@@ -177,7 +177,7 @@ func (v *OrderValidator) validateRequiredFields(request *OrderRequest, result *V
 			Message: "Order type is required",
 		})
 	}
-	
+
 	if request.Quantity <= 0 {
 		result.Errors = append(result.Errors, ValidationError{
 			Field:   "quantity",
@@ -199,7 +199,7 @@ func (v *OrderValidator) validateFieldFormats(request *OrderRequest, result *Val
 			Value:   request.Symbol,
 		})
 	}
-	
+
 	// Validate client order ID format
 	if request.ClientOrderID != "" && !v.clientIDPattern.MatchString(request.ClientOrderID) {
 		result.Errors = append(result.Errors, ValidationError{
@@ -209,7 +209,7 @@ func (v *OrderValidator) validateFieldFormats(request *OrderRequest, result *Val
 			Value:   request.ClientOrderID,
 		})
 	}
-	
+
 	// Validate order side
 	if request.Side != "" && request.Side != OrderSideBuy && request.Side != OrderSideSell {
 		result.Errors = append(result.Errors, ValidationError{
@@ -219,7 +219,7 @@ func (v *OrderValidator) validateFieldFormats(request *OrderRequest, result *Val
 			Value:   request.Side,
 		})
 	}
-	
+
 	// Validate order type
 	validTypes := []OrderType{OrderTypeLimit, OrderTypeMarket, OrderTypeStopLimit, OrderTypeStopMarket}
 	if request.Type != "" {
@@ -239,7 +239,7 @@ func (v *OrderValidator) validateFieldFormats(request *OrderRequest, result *Val
 			})
 		}
 	}
-	
+
 	// Validate time in force
 	if request.TimeInForce != "" {
 		validTIF := []TimeInForce{TimeInForceGTC, TimeInForceIOC, TimeInForceFOK, TimeInForceDAY}
@@ -272,7 +272,7 @@ func (v *OrderValidator) validateBusinessRules(request *OrderRequest, result *Va
 			Value:   request.Price,
 		})
 	}
-	
+
 	// Check stop price for stop orders
 	if (request.Type == OrderTypeStopLimit || request.Type == OrderTypeStopMarket) && request.StopPrice <= 0 {
 		result.Errors = append(result.Errors, ValidationError{
@@ -282,7 +282,7 @@ func (v *OrderValidator) validateBusinessRules(request *OrderRequest, result *Va
 			Value:   request.StopPrice,
 		})
 	}
-	
+
 	// Validate stop limit order logic
 	if request.Type == OrderTypeStopLimit && request.Price > 0 && request.StopPrice > 0 {
 		if request.Side == OrderSideBuy && request.StopPrice <= request.Price {
@@ -301,7 +301,7 @@ func (v *OrderValidator) validateBusinessRules(request *OrderRequest, result *Va
 			})
 		}
 	}
-	
+
 	// Check allowed symbols
 	if len(v.allowedSymbols) > 0 && request.Symbol != "" {
 		if !v.allowedSymbols[strings.ToUpper(request.Symbol)] {
@@ -313,7 +313,7 @@ func (v *OrderValidator) validateBusinessRules(request *OrderRequest, result *Va
 			})
 		}
 	}
-	
+
 	// Validate expiration time
 	if request.ExpiresAt != nil && request.ExpiresAt.Before(time.Now()) {
 		result.Errors = append(result.Errors, ValidationError{
@@ -330,15 +330,15 @@ func (v *OrderValidator) validateMarketHours(request *OrderRequest, result *Vali
 	if request.Symbol == "" {
 		return
 	}
-	
+
 	hours, exists := v.marketHours[strings.ToUpper(request.Symbol)]
 	if !exists {
 		// No market hours configured, allow trading
 		return
 	}
-	
+
 	now := time.Now()
-	
+
 	// Check if current day is a trading day
 	validDay := false
 	for _, day := range hours.Days {
@@ -347,31 +347,31 @@ func (v *OrderValidator) validateMarketHours(request *OrderRequest, result *Vali
 			break
 		}
 	}
-	
+
 	if !validDay {
 		result.Warnings = append(result.Warnings, ValidationWarning{
 			Field:   "symbol",
 			Code:    "OUTSIDE_TRADING_DAYS",
 			Message: "Order placed outside of regular trading days",
-			Value:   map[string]interface{}{
-				"current_day": now.Weekday().String(),
+			Value: map[string]interface{}{
+				"current_day":  now.Weekday().String(),
 				"trading_days": hours.Days,
 			},
 		})
 		return
 	}
-	
+
 	// Check trading hours (simplified - assumes same timezone)
 	currentTime := time.Date(0, 1, 1, now.Hour(), now.Minute(), now.Second(), 0, time.UTC)
 	openTime := time.Date(0, 1, 1, hours.Open.Hour(), hours.Open.Minute(), hours.Open.Second(), 0, time.UTC)
 	closeTime := time.Date(0, 1, 1, hours.Close.Hour(), hours.Close.Minute(), hours.Close.Second(), 0, time.UTC)
-	
+
 	if currentTime.Before(openTime) || currentTime.After(closeTime) {
 		result.Warnings = append(result.Warnings, ValidationWarning{
 			Field:   "symbol",
 			Code:    "OUTSIDE_TRADING_HOURS",
 			Message: "Order placed outside of regular trading hours",
-			Value:   map[string]interface{}{
+			Value: map[string]interface{}{
 				"current_time": now.Format("15:04:05"),
 				"market_open":  hours.Open.Format("15:04:05"),
 				"market_close": hours.Close.Format("15:04:05"),
@@ -391,7 +391,7 @@ func (v *OrderValidator) validateLimits(request *OrderRequest, result *Validatio
 			Value:   request.Quantity,
 		})
 	}
-	
+
 	if request.Quantity > v.maxQuantity {
 		result.Errors = append(result.Errors, ValidationError{
 			Field:   "quantity",
@@ -400,7 +400,7 @@ func (v *OrderValidator) validateLimits(request *OrderRequest, result *Validatio
 			Value:   request.Quantity,
 		})
 	}
-	
+
 	// Validate price limits
 	if request.Price > 0 {
 		if request.Price < v.minPrice {
@@ -411,7 +411,7 @@ func (v *OrderValidator) validateLimits(request *OrderRequest, result *Validatio
 				Value:   request.Price,
 			})
 		}
-		
+
 		if request.Price > v.maxPrice {
 			result.Errors = append(result.Errors, ValidationError{
 				Field:   "price",
@@ -421,7 +421,7 @@ func (v *OrderValidator) validateLimits(request *OrderRequest, result *Validatio
 			})
 		}
 	}
-	
+
 	// Validate stop price limits
 	if request.StopPrice > 0 {
 		if request.StopPrice < v.minPrice {
@@ -432,7 +432,7 @@ func (v *OrderValidator) validateLimits(request *OrderRequest, result *Validatio
 				Value:   request.StopPrice,
 			})
 		}
-		
+
 		if request.StopPrice > v.maxPrice {
 			result.Errors = append(result.Errors, ValidationError{
 				Field:   "stop_price",
@@ -452,7 +452,7 @@ func (v *OrderValidator) ValidateOrderUpdate(ctx context.Context, request *Order
 		Warnings: make([]ValidationWarning, 0),
 		Details:  make(map[string]interface{}),
 	}
-	
+
 	// Validate required fields
 	if request.UserID == "" {
 		result.Errors = append(result.Errors, ValidationError{
@@ -461,7 +461,7 @@ func (v *OrderValidator) ValidateOrderUpdate(ctx context.Context, request *Order
 			Message: "User ID is required",
 		})
 	}
-	
+
 	if request.AccountID == "" {
 		result.Errors = append(result.Errors, ValidationError{
 			Field:   "account_id",
@@ -469,7 +469,7 @@ func (v *OrderValidator) ValidateOrderUpdate(ctx context.Context, request *Order
 			Message: "Account ID is required",
 		})
 	}
-	
+
 	if request.OrderID == "" && request.ClientOrderID == "" {
 		result.Errors = append(result.Errors, ValidationError{
 			Field:   "order_id",
@@ -477,7 +477,7 @@ func (v *OrderValidator) ValidateOrderUpdate(ctx context.Context, request *Order
 			Message: "Either order ID or client order ID is required",
 		})
 	}
-	
+
 	// Validate update fields
 	if request.Quantity > 0 {
 		if request.Quantity < v.minQuantity {
@@ -488,7 +488,7 @@ func (v *OrderValidator) ValidateOrderUpdate(ctx context.Context, request *Order
 				Value:   request.Quantity,
 			})
 		}
-		
+
 		if request.Quantity > v.maxQuantity {
 			result.Errors = append(result.Errors, ValidationError{
 				Field:   "quantity",
@@ -498,7 +498,7 @@ func (v *OrderValidator) ValidateOrderUpdate(ctx context.Context, request *Order
 			})
 		}
 	}
-	
+
 	if request.Price > 0 {
 		if request.Price < v.minPrice || request.Price > v.maxPrice {
 			result.Errors = append(result.Errors, ValidationError{
@@ -509,7 +509,7 @@ func (v *OrderValidator) ValidateOrderUpdate(ctx context.Context, request *Order
 			})
 		}
 	}
-	
+
 	if request.StopPrice > 0 {
 		if request.StopPrice < v.minPrice || request.StopPrice > v.maxPrice {
 			result.Errors = append(result.Errors, ValidationError{
@@ -520,7 +520,7 @@ func (v *OrderValidator) ValidateOrderUpdate(ctx context.Context, request *Order
 			})
 		}
 	}
-	
+
 	result.Valid = len(result.Errors) == 0
 	return result
 }
@@ -533,7 +533,7 @@ func (v *OrderValidator) ValidateOrderCancel(ctx context.Context, request *Order
 		Warnings: make([]ValidationWarning, 0),
 		Details:  make(map[string]interface{}),
 	}
-	
+
 	// Validate required fields
 	if request.UserID == "" {
 		result.Errors = append(result.Errors, ValidationError{
@@ -542,7 +542,7 @@ func (v *OrderValidator) ValidateOrderCancel(ctx context.Context, request *Order
 			Message: "User ID is required",
 		})
 	}
-	
+
 	if request.AccountID == "" {
 		result.Errors = append(result.Errors, ValidationError{
 			Field:   "account_id",
@@ -550,7 +550,7 @@ func (v *OrderValidator) ValidateOrderCancel(ctx context.Context, request *Order
 			Message: "Account ID is required",
 		})
 	}
-	
+
 	if request.OrderID == "" && request.ClientOrderID == "" {
 		result.Errors = append(result.Errors, ValidationError{
 			Field:   "order_id",
@@ -558,7 +558,7 @@ func (v *OrderValidator) ValidateOrderCancel(ctx context.Context, request *Order
 			Message: "Either order ID or client order ID is required",
 		})
 	}
-	
+
 	result.Valid = len(result.Errors) == 0
 	return result
 }

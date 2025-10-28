@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
+	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
 	"go.uber.org/zap"
 )
@@ -263,14 +263,14 @@ func (cb *CircuitBreaker) stateToString() string {
 
 // CircuitBreakerEventBusDecorator decorates an event bus with circuit breaking
 type CircuitBreakerEventBusDecorator struct {
-	eventBus eventbus.EventBus
+	eventBus cqrscore.EventBus
 	breaker  *CircuitBreaker
 	logger   *zap.Logger
 }
 
 // NewCircuitBreakerEventBusDecorator creates a new circuit breaker event bus decorator
 func NewCircuitBreakerEventBusDecorator(
-	eventBus eventbus.EventBus,
+	eventBus cqrscore.EventBus,
 	breaker *CircuitBreaker,
 	logger *zap.Logger,
 ) *CircuitBreakerEventBusDecorator {

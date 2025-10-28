@@ -2,27 +2,26 @@ package orders
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"time"
 
 	"go.uber.org/zap"
 )
 
-// OrderValidator handles order validation logic
-type OrderValidator struct {
+// LegacyOrderValidator handles order validation logic (legacy implementation)
+type LegacyOrderValidator struct {
 	logger *zap.Logger
 }
 
-// NewOrderValidator creates a new order validator
-func NewOrderValidator(logger *zap.Logger) *OrderValidator {
-	return &OrderValidator{
+// NewLegacyOrderValidator creates a new legacy order validator
+func NewLegacyOrderValidator(logger *zap.Logger) *LegacyOrderValidator {
+	return &LegacyOrderValidator{
 		logger: logger,
 	}
 }
 
 // ValidateOrderRequest validates an order request
-func (v *OrderValidator) ValidateOrderRequest(ctx context.Context, req *OrderRequest) error {
+func (v *LegacyOrderValidator) ValidateOrderRequest(ctx context.Context, req *OrderRequest) error {
 	if req == nil {
 		return ErrInvalidOrderRequest
 	}
@@ -52,7 +51,7 @@ func (v *OrderValidator) ValidateOrderRequest(ctx context.Context, req *OrderReq
 }
 
 // ValidateOrderUpdate validates an order update request
-func (v *OrderValidator) ValidateOrderUpdate(ctx context.Context, order *Order, req *OrderUpdateRequest) error {
+func (v *LegacyOrderValidator) ValidateOrderUpdate(ctx context.Context, order *Order, req *OrderUpdateRequest) error {
 	if req == nil {
 		return ErrInvalidOrderRequest
 	}
@@ -84,7 +83,7 @@ func (v *OrderValidator) ValidateOrderUpdate(ctx context.Context, order *Order, 
 }
 
 // ValidateOrderCancellation validates an order cancellation request
-func (v *OrderValidator) ValidateOrderCancellation(ctx context.Context, order *Order, req *OrderCancelRequest) error {
+func (v *LegacyOrderValidator) ValidateOrderCancellation(ctx context.Context, order *Order, req *OrderCancelRequest) error {
 	if req == nil {
 		return ErrInvalidOrderRequest
 	}
@@ -111,7 +110,7 @@ func (v *OrderValidator) ValidateOrderCancellation(ctx context.Context, order *O
 }
 
 // validateRequiredFields validates required fields in order request
-func (v *OrderValidator) validateRequiredFields(req *OrderRequest) error {
+func (v *LegacyOrderValidator) validateRequiredFields(req *OrderRequest) error {
 	if strings.TrimSpace(req.UserID) == "" {
 		return ErrMissingUserID
 	}
@@ -146,7 +145,7 @@ func (v *OrderValidator) validateRequiredFields(req *OrderRequest) error {
 }
 
 // validateFieldValues validates field values in order request
-func (v *OrderValidator) validateFieldValues(req *OrderRequest) error {
+func (v *LegacyOrderValidator) validateFieldValues(req *OrderRequest) error {
 	// Validate order side
 	if !v.isValidOrderSide(req.Side) {
 		return ErrInvalidOrderSide
@@ -181,7 +180,7 @@ func (v *OrderValidator) validateFieldValues(req *OrderRequest) error {
 }
 
 // validateBusinessRules validates business rules for order request
-func (v *OrderValidator) validateBusinessRules(ctx context.Context, req *OrderRequest) error {
+func (v *LegacyOrderValidator) validateBusinessRules(ctx context.Context, req *OrderRequest) error {
 	// Validate order size limits
 	if err := v.validateOrderSizeLimits(req); err != nil {
 		return err
@@ -206,10 +205,9 @@ func (v *OrderValidator) validateBusinessRules(ctx context.Context, req *OrderRe
 }
 
 // validateUpdateFields validates fields in order update request
-func (v *OrderValidator) validateUpdateFields(req *OrderUpdateRequest) error {
+func (v *LegacyOrderValidator) validateUpdateFields(req *OrderUpdateRequest) error {
 	// At least one field must be updated
-	if req.Price <= 0 && req.Quantity <= 0 && req.StopPrice <= 0 && 
-		req.TimeInForce == "" && req.ExpiresAt.IsZero() {
+	if req.Price <= 0 && req.Quantity <= 0 && req.StopPrice <= 0 {
 		return ErrNoFieldsToUpdate
 	}
 
@@ -222,15 +220,11 @@ func (v *OrderValidator) validateUpdateFields(req *OrderUpdateRequest) error {
 		return ErrInvalidQuantityPrecision
 	}
 
-	if req.TimeInForce != "" && !v.isValidTimeInForce(req.TimeInForce) {
-		return ErrInvalidTimeInForce
-	}
-
 	return nil
 }
 
 // validateUpdateBusinessRules validates business rules for order updates
-func (v *OrderValidator) validateUpdateBusinessRules(ctx context.Context, order *Order, req *OrderUpdateRequest) error {
+func (v *LegacyOrderValidator) validateUpdateBusinessRules(ctx context.Context, order *Order, req *OrderUpdateRequest) error {
 	// Cannot reduce quantity below filled quantity
 	if req.Quantity > 0 && req.Quantity < order.FilledQuantity {
 		return ErrQuantityBelowFilled
@@ -263,26 +257,26 @@ func (v *OrderValidator) validateUpdateBusinessRules(ctx context.Context, order 
 }
 
 // canOrderBeUpdated checks if an order can be updated
-func (v *OrderValidator) canOrderBeUpdated(order *Order) bool {
+func (v *LegacyOrderValidator) canOrderBeUpdated(order *Order) bool {
 	// Only new and pending orders can be updated
 	return order.Status == OrderStatusNew || order.Status == OrderStatusPending
 }
 
 // canOrderBeCancelled checks if an order can be cancelled
-func (v *OrderValidator) canOrderBeCancelled(order *Order) bool {
+func (v *LegacyOrderValidator) canOrderBeCancelled(order *Order) bool {
 	// Only new, pending, and partially filled orders can be cancelled
-	return order.Status == OrderStatusNew || 
-		   order.Status == OrderStatusPending || 
-		   order.Status == OrderStatusPartiallyFilled
+	return order.Status == OrderStatusNew ||
+		order.Status == OrderStatusPending ||
+		order.Status == OrderStatusPartiallyFilled
 }
 
 // isValidOrderSide checks if order side is valid
-func (v *OrderValidator) isValidOrderSide(side OrderSide) bool {
+func (v *LegacyOrderValidator) isValidOrderSide(side OrderSide) bool {
 	return side == OrderSideBuy || side == OrderSideSell
 }
 
 // isValidOrderType checks if order type is valid
-func (v *OrderValidator) isValidOrderType(orderType OrderType) bool {
+func (v *LegacyOrderValidator) isValidOrderType(orderType OrderType) bool {
 	validTypes := []OrderType{
 		OrderTypeLimit,
 		OrderTypeMarket,
@@ -299,12 +293,12 @@ func (v *OrderValidator) isValidOrderType(orderType OrderType) bool {
 }
 
 // isValidTimeInForce checks if time in force is valid
-func (v *OrderValidator) isValidTimeInForce(tif TimeInForce) bool {
+func (v *LegacyOrderValidator) isValidTimeInForce(tif TimeInForce) bool {
 	validTifs := []TimeInForce{
 		TimeInForceGTC,
 		TimeInForceIOC,
 		TimeInForceFOK,
-		TimeInForceDay,
+		TimeInForceDAY,
 	}
 
 	for _, validTif := range validTifs {
@@ -316,7 +310,7 @@ func (v *OrderValidator) isValidTimeInForce(tif TimeInForce) bool {
 }
 
 // isValidSymbol checks if symbol format is valid
-func (v *OrderValidator) isValidSymbol(symbol string) bool {
+func (v *LegacyOrderValidator) isValidSymbol(symbol string) bool {
 	// Basic symbol validation - should be 2-10 characters, alphanumeric
 	if len(symbol) < 2 || len(symbol) > 10 {
 		return false
@@ -332,19 +326,19 @@ func (v *OrderValidator) isValidSymbol(symbol string) bool {
 }
 
 // isValidPricePrecision checks if price has valid precision
-func (v *OrderValidator) isValidPricePrecision(price float64) bool {
+func (v *LegacyOrderValidator) isValidPricePrecision(price float64) bool {
 	// Allow up to 4 decimal places
 	return price > 0 && price < 1000000 // Basic range check
 }
 
 // isValidQuantityPrecision checks if quantity has valid precision
-func (v *OrderValidator) isValidQuantityPrecision(quantity float64) bool {
+func (v *LegacyOrderValidator) isValidQuantityPrecision(quantity float64) bool {
 	// Allow up to 8 decimal places for crypto, 0 for stocks
 	return quantity > 0 && quantity < 1000000000 // Basic range check
 }
 
 // validateOrderSizeLimits validates order size limits
-func (v *OrderValidator) validateOrderSizeLimits(req *OrderRequest) error {
+func (v *LegacyOrderValidator) validateOrderSizeLimits(req *OrderRequest) error {
 	// Maximum order size limits
 	maxOrderSize := v.getMaxOrderSize(req.Symbol)
 	if req.Quantity > maxOrderSize {
@@ -370,7 +364,7 @@ func (v *OrderValidator) validateOrderSizeLimits(req *OrderRequest) error {
 }
 
 // validatePriceLimits validates price limits
-func (v *OrderValidator) validatePriceLimits(req *OrderRequest) error {
+func (v *LegacyOrderValidator) validatePriceLimits(req *OrderRequest) error {
 	if req.Price <= 0 {
 		return nil // No price to validate
 	}
@@ -391,7 +385,7 @@ func (v *OrderValidator) validatePriceLimits(req *OrderRequest) error {
 }
 
 // validateExpirationTime validates order expiration time
-func (v *OrderValidator) validateExpirationTime(req *OrderRequest) error {
+func (v *LegacyOrderValidator) validateExpirationTime(req *OrderRequest) error {
 	if req.ExpiresAt.IsZero() {
 		return nil // No expiration time set
 	}
@@ -411,7 +405,7 @@ func (v *OrderValidator) validateExpirationTime(req *OrderRequest) error {
 }
 
 // validateMarketHours validates if order can be placed during current market hours
-func (v *OrderValidator) validateMarketHours(ctx context.Context, req *OrderRequest) error {
+func (v *LegacyOrderValidator) validateMarketHours(ctx context.Context, req *OrderRequest) error {
 	// For market orders, check if market is open
 	if req.Type == OrderTypeMarket {
 		if !v.isMarketOpen(req.Symbol) {
@@ -423,68 +417,36 @@ func (v *OrderValidator) validateMarketHours(ctx context.Context, req *OrderRequ
 }
 
 // Helper methods to get limits (would be configurable in production)
-func (v *OrderValidator) getMaxOrderSize(symbol string) float64 {
+func (v *LegacyOrderValidator) getMaxOrderSize(symbol string) float64 {
 	// Default max order size
 	return 1000000
 }
 
-func (v *OrderValidator) getMinOrderSize(symbol string) float64 {
+func (v *LegacyOrderValidator) getMinOrderSize(symbol string) float64 {
 	// Default min order size
 	return 0.001
 }
 
-func (v *OrderValidator) getMaxOrderValue(symbol string) float64 {
+func (v *LegacyOrderValidator) getMaxOrderValue(symbol string) float64 {
 	// Default max order value
 	return 10000000
 }
 
-func (v *OrderValidator) getMinPrice(symbol string) float64 {
+func (v *LegacyOrderValidator) getMinPrice(symbol string) float64 {
 	// Default min price
 	return 0.0001
 }
 
-func (v *OrderValidator) getMaxPrice(symbol string) float64 {
+func (v *LegacyOrderValidator) getMaxPrice(symbol string) float64 {
 	// Default max price
 	return 1000000
 }
 
-func (v *OrderValidator) isMarketOpen(symbol string) bool {
+func (v *LegacyOrderValidator) isMarketOpen(symbol string) bool {
 	// Simplified market hours check
 	now := time.Now()
 	hour := now.Hour()
-	
+
 	// Assume market is open 9 AM to 4 PM
 	return hour >= 9 && hour < 16
 }
-
-// Error definitions for validation
-var (
-	ErrInvalidOrderRequest      = errors.New("invalid order request")
-	ErrMissingUserID           = errors.New("missing user ID")
-	ErrMissingSymbol           = errors.New("missing symbol")
-	ErrMissingSide             = errors.New("missing order side")
-	ErrMissingOrderType        = errors.New("missing order type")
-	ErrMissingPrice            = errors.New("missing price for limit order")
-	ErrMissingStopPrice        = errors.New("missing stop price for stop order")
-	ErrInvalidQuantity         = errors.New("invalid quantity")
-	ErrInvalidOrderSide        = errors.New("invalid order side")
-	ErrInvalidOrderType        = errors.New("invalid order type")
-	ErrInvalidTimeInForce      = errors.New("invalid time in force")
-	ErrInvalidSymbol           = errors.New("invalid symbol format")
-	ErrInvalidPricePrecision   = errors.New("invalid price precision")
-	ErrInvalidQuantityPrecision = errors.New("invalid quantity precision")
-	ErrOrderSizeExceedsLimit   = errors.New("order size exceeds limit")
-	ErrOrderSizeBelowMinimum   = errors.New("order size below minimum")
-	ErrOrderValueExceedsLimit  = errors.New("order value exceeds limit")
-	ErrPriceBelowMinimum       = errors.New("price below minimum")
-	ErrPriceExceedsMaximum     = errors.New("price exceeds maximum")
-	ErrExpirationTimeInPast    = errors.New("expiration time is in the past")
-	ErrExpirationTimeTooFar    = errors.New("expiration time is too far in the future")
-	ErrMarketClosed            = errors.New("market is closed")
-	ErrOrderCannotBeUpdated    = errors.New("order cannot be updated")
-	ErrOrderCannotBeCancelled  = errors.New("order cannot be cancelled")
-	ErrUnauthorizedOrderAccess = errors.New("unauthorized order access")
-	ErrNoFieldsToUpdate        = errors.New("no fields to update")
-	ErrQuantityBelowFilled     = errors.New("quantity cannot be below filled quantity")
-	ErrOrderNotFound           = errors.New("order not found")
-)

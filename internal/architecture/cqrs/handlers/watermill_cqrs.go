@@ -10,9 +10,9 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
+	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
+	escore "github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
 	"go.uber.org/zap"
 )
@@ -26,8 +26,8 @@ type WatermillCQRSAdapter struct {
 	router *message.Router
 
 	// Our components
-	eventStore    store.EventStore
-	aggregateRepo aggregate.Repository
+	eventStore    escore.EventStore
+	aggregateRepo handlers.Repository
 
 	// Publishers and subscribers
 	commandPublisher  message.Publisher

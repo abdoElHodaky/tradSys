@@ -24,23 +24,23 @@ type orderOperationResult struct {
 
 // BatchProcessor handles batch processing of order operations
 type BatchProcessor struct {
-	service        *Service
+	service        *OrderService
 	logger         *zap.Logger
 	ctx            context.Context
 	cancel         context.CancelFunc
 	orderBatchChan chan orderOperation
 	wg             sync.WaitGroup
-	
+
 	// Configuration
-	batchSize     int
-	batchTimeout  time.Duration
-	workerCount   int
+	batchSize    int
+	batchTimeout time.Duration
+	workerCount  int
 }
 
 // NewBatchProcessor creates a new batch processor
-func NewBatchProcessor(service *Service, logger *zap.Logger) *BatchProcessor {
+func NewBatchProcessor(service *OrderService, logger *zap.Logger) *BatchProcessor {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	bp := &BatchProcessor{
 		service:        service,
 		logger:         logger,
@@ -51,17 +51,17 @@ func NewBatchProcessor(service *Service, logger *zap.Logger) *BatchProcessor {
 		batchTimeout:   100 * time.Millisecond,
 		workerCount:    4,
 	}
-	
+
 	return bp
 }
 
 // Start starts the batch processor
 func (bp *BatchProcessor) Start() {
-	bp.logger.Info("Starting batch processor", 
+	bp.logger.Info("Starting batch processor",
 		zap.Int("batch_size", bp.batchSize),
 		zap.Duration("batch_timeout", bp.batchTimeout),
 		zap.Int("worker_count", bp.workerCount))
-	
+
 	// Start batch processing workers
 	for i := 0; i < bp.workerCount; i++ {
 		bp.wg.Add(1)
@@ -108,9 +108,9 @@ func (bp *BatchProcessor) SubmitOperation(op orderOperation) {
 // processBatchOperations processes batch operations for orders
 func (bp *BatchProcessor) processBatchOperations(workerID int) {
 	defer bp.wg.Done()
-	
+
 	bp.logger.Info("Starting batch processor worker", zap.Int("worker_id", workerID))
-	
+
 	ticker := time.NewTicker(bp.batchTimeout)
 	defer ticker.Stop()
 
@@ -175,7 +175,7 @@ func (bp *BatchProcessor) processBatch(batch []orderOperation, workerID int) {
 		case "cancel":
 			cancelOps = append(cancelOps, op)
 		default:
-			bp.logger.Warn("Unknown operation type", 
+			bp.logger.Warn("Unknown operation type",
 				zap.String("op_type", op.opType),
 				zap.Int("worker_id", workerID))
 			if op.resultCh != nil {
@@ -230,23 +230,18 @@ func (bp *BatchProcessor) processAddBatch(ops []orderOperation, workerID int) {
 
 		// Update user orders index
 		if bp.service.UserOrders[order.UserID] == nil {
-			bp.service.UserOrders[order.UserID] = make(map[string]bool)
+			bp.service.UserOrders[order.UserID] = make([]string, 0)
 		}
-		bp.service.UserOrders[order.UserID][order.ID] = true
+		bp.service.UserOrders[order.UserID] = append(bp.service.UserOrders[order.UserID], order.ID)
 
 		// Update symbol orders index
 		if bp.service.SymbolOrders[order.Symbol] == nil {
-			bp.service.SymbolOrders[order.Symbol] = make(map[string]bool)
+			bp.service.SymbolOrders[order.Symbol] = make([]string, 0)
 		}
-		bp.service.SymbolOrders[order.Symbol][order.ID] = true
-
-		// Update client order ID mapping
-		if order.ClientOrderID != "" {
-			bp.service.ClientOrderIDs[order.ClientOrderID] = order.ID
-		}
+		bp.service.SymbolOrders[order.Symbol] = append(bp.service.SymbolOrders[order.Symbol], order.ID)
 
 		// Cache the order
-		bp.service.OrderCache.Set(order.ID, order, cache.DefaultExpiration)
+		bp.service.OrderCache.Set(order.ID, order, 5*time.Minute)
 
 		if op.resultCh != nil {
 			op.resultCh <- orderOperationResult{
@@ -295,7 +290,7 @@ func (bp *BatchProcessor) processUpdateBatch(ops []orderOperation, workerID int)
 		existingOrder.UpdatedAt = time.Now()
 
 		// Update cache
-		bp.service.OrderCache.Set(order.ID, existingOrder, cache.DefaultExpiration)
+		bp.service.OrderCache.Set(order.ID, existingOrder, 5*time.Minute)
 
 		if op.resultCh != nil {
 			op.resultCh <- orderOperationResult{
@@ -343,7 +338,7 @@ func (bp *BatchProcessor) processCancelBatch(ops []orderOperation, workerID int)
 		existingOrder.UpdateStatus(OrderStatusCancelled)
 
 		// Update cache
-		bp.service.OrderCache.Set(order.ID, existingOrder, cache.DefaultExpiration)
+		bp.service.OrderCache.Set(order.ID, existingOrder, 5*time.Minute)
 
 		if op.resultCh != nil {
 			op.resultCh <- orderOperationResult{
