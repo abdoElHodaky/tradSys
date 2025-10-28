@@ -95,15 +95,16 @@ func (bs *BaseService) Health(ctx context.Context) *HealthStatus {
 	}
 	
 	return &HealthStatus{
-		Service:   bs.name,
-		Version:   bs.version,
 		Status:    status,
-		Uptime:    time.Since(bs.startTime),
+		Message:   fmt.Sprintf("Service %s (v%s) is %s", bs.name, bs.version, status),
 		Timestamp: time.Now(),
-		Details: map[string]interface{}{
-			"is_running":  bs.isRunning,
-			"start_time":  bs.startTime,
-			"stop_time":   bs.stopTime,
+		Details: map[string]string{
+			"service":     bs.name,
+			"version":     bs.version,
+			"is_running":  fmt.Sprintf("%v", bs.isRunning),
+			"uptime":      time.Since(bs.startTime).String(),
+			"start_time":  bs.startTime.Format(time.RFC3339),
+			"stop_time":   bs.stopTime.Format(time.RFC3339),
 		},
 	}
 }
@@ -277,16 +278,6 @@ type OrderManagementService interface {
 }
 
 // Supporting Types
-
-// HealthStatus represents the health status of a service
-type HealthStatus struct {
-	Service   string                 `json:"service"`
-	Version   string                 `json:"version"`
-	Status    string                 `json:"status"`
-	Uptime    time.Duration          `json:"uptime"`
-	Timestamp time.Time              `json:"timestamp"`
-	Details   map[string]interface{} `json:"details,omitempty"`
-}
 
 // ServiceStatus represents the detailed status of a service
 type ServiceStatus struct {

@@ -47,20 +47,7 @@ type StatisticalArbitrageStrategy struct {
 	positionRepo *repositories.PairPositionRepository
 }
 
-// StatisticalArbitrageParams contains parameters for the statistical arbitrage strategy
-type StatisticalArbitrageParams struct {
-	Name           string
-	PairID         string
-	Symbol1        string
-	Symbol2        string
-	Ratio          float64
-	ZScoreEntry    float64
-	ZScoreExit     float64
-	PositionSize   float64
-	MaxPositions   int
-	LookbackPeriod int
-	UpdateInterval time.Duration
-}
+// Note: StatisticalArbitrageParams is defined in framework.go
 
 // NewStatisticalArbitrageStrategy creates a new statistical arbitrage strategy
 func NewStatisticalArbitrageStrategy(
