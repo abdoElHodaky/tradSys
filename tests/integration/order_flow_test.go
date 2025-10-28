@@ -15,7 +15,7 @@ import (
 
 type OrderFlowTestSuite struct {
 	suite.Suite
-	orderService   *orders.Service
+	orderService   *orders.OrderService
 	riskCalculator *risk.Calculator
 	matchingEngine *matching.Engine
 	ctx            context.Context

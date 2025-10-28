@@ -65,7 +65,7 @@ type Service struct {
 	// OrderEngine is the order matching engine
 	OrderEngine *order_matching.Engine
 	// OrderService is the order management service
-	OrderService *orders.Service
+	OrderService *orders.OrderService
 	// Positions is a map of user ID and symbol to position
 	Positions map[string]map[string]*riskengine.Position
 	// RiskLimits is a map of user ID to risk limits
@@ -101,7 +101,7 @@ type MarketDataUpdate struct {
 }
 
 // NewService creates a new risk management service
-func NewService(orderEngine *order_matching.Engine, orderService *orders.Service, logger *zap.Logger) *Service {
+func NewService(orderEngine *order_matching.Engine, orderService *orders.OrderService, logger *zap.Logger) *Service {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	service := &Service{

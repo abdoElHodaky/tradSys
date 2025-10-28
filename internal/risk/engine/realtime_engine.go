@@ -21,7 +21,7 @@ type RealTimeRiskEngine struct {
 	limitManager    *LimitManager
 	varCalculator   *VaRCalculator
 	circuitBreaker  *CircuitBreaker
-	metrics         *RiskMetrics
+	metrics         *PerformanceMetrics
 	eventPool       *pool.ObjectPool
 	checkPool       *pool.ObjectPool
 	isRunning       int32
@@ -45,8 +45,8 @@ type RiskEngineConfig struct {
 	StressTestEnabled     bool          `json:"stress_test_enabled"`
 }
 
-// RiskMetrics tracks risk engine performance
-type RiskMetrics struct {
+// PerformanceMetrics tracks risk engine performance
+type PerformanceMetrics struct {
 	ChecksPerSecond     float64       `json:"checks_per_second"`
 	AverageLatency      time.Duration `json:"average_latency"`
 	MaxLatency          time.Duration `json:"max_latency"`
@@ -58,7 +58,7 @@ type RiskMetrics struct {
 
 // PositionManager manages real-time positions
 type PositionManager struct {
-	positions     sync.Map // map[string]*Position
+	positions     sync.Map // map[string]*RealtimePosition
 	totalPnL      float64
 	dailyPnL      float64
 	unrealizedPnL float64
@@ -67,7 +67,7 @@ type PositionManager struct {
 }
 
 // Position represents a trading position
-type Position struct {
+type RealtimePosition struct {
 	Symbol         string    `json:"symbol"`
 	Quantity       float64   `json:"quantity"`
 	AveragePrice   float64   `json:"average_price"`
@@ -115,57 +115,14 @@ type CircuitBreaker struct {
 	mu                   sync.RWMutex
 }
 
-// RiskEvent represents a risk management event
-type RiskEvent struct {
-	Type      RiskEventType `json:"type"`
-	Symbol    string        `json:"symbol"`
-	Order     *types.Order  `json:"order,omitempty"`
-	Position  *Position     `json:"position,omitempty"`
-	RiskCheck *RiskCheck    `json:"risk_check,omitempty"`
-	Timestamp time.Time     `json:"timestamp"`
-	Severity  RiskSeverity  `json:"severity"`
-	Message   string        `json:"message"`
-}
 
-// RiskEventType defines types of risk events
-type RiskEventType string
-
-const (
-	EventPreTradeCheck  RiskEventType = "pre_trade_check"
-	EventPostTradeCheck RiskEventType = "post_trade_check"
-	EventLimitBreach    RiskEventType = "limit_breach"
-	EventCircuitBreaker RiskEventType = "circuit_breaker"
-	EventVaRCalculation RiskEventType = "var_calculation"
-	EventPositionUpdate RiskEventType = "position_update"
-)
-
-// RiskSeverity defines risk event severity levels
-type RiskSeverity string
-
-const (
-	SeverityInfo     RiskSeverity = "info"
-	SeverityWarning  RiskSeverity = "warning"
-	SeverityError    RiskSeverity = "error"
-	SeverityCritical RiskSeverity = "critical"
-)
-
-// RiskCheck represents a risk check result
-type RiskCheck struct {
-	CheckType    string        `json:"check_type"`
-	Passed       bool          `json:"passed"`
-	CurrentValue float64       `json:"current_value"`
-	LimitValue   float64       `json:"limit_value"`
-	Message      string        `json:"message"`
-	Latency      time.Duration `json:"latency"`
-	Timestamp    time.Time     `json:"timestamp"`
-}
 
 // NewRealTimeRiskEngine creates a new real-time risk engine
 func NewRealTimeRiskEngine(config *RiskEngineConfig, logger *zap.Logger) *RealTimeRiskEngine {
 	engine := &RealTimeRiskEngine{
 		config:          config,
 		logger:          logger,
-		metrics:         &RiskMetrics{LastUpdateTime: time.Now()},
+		metrics:         &PerformanceMetrics{LastUpdateTime: time.Now()},
 		stopChannel:     make(chan struct{}),
 		eventChannel:    make(chan *RiskEvent, 10000),
 		positionManager: &PositionManager{},
@@ -343,10 +300,10 @@ func (e *RealTimeRiskEngine) PostTradeCheck(order *types.Order, trades []*Trade)
 	// Check if any limits were breached after the trade
 	if err := e.checkPostTradeLimits(order); err != nil {
 		e.publishEvent(&RiskEvent{
-			Type:      EventLimitBreach,
+			Type:      RiskEventLimitBreach,
 			Symbol:    order.Symbol,
 			Order:     order,
-			Severity:  SeverityError,
+			Severity:  RiskSeverityHigh,
 			Message:   err.Error(),
 			Timestamp: time.Now(),
 		})
@@ -429,13 +386,13 @@ func (e *RealTimeRiskEngine) checkPostTradeLimits(order *types.Order) error {
 }
 
 // getPosition gets the current position for a symbol
-func (e *RealTimeRiskEngine) getPosition(symbol string) *Position {
+func (e *RealTimeRiskEngine) getPosition(symbol string) *RealtimePosition {
 	if pos, exists := e.positionManager.positions.Load(symbol); exists {
-		return pos.(*Position)
+		return pos.(*RealtimePosition)
 	}
 
 	// Return empty position if not found
-	return &Position{
+	return &RealtimePosition{
 		Symbol:         symbol,
 		Quantity:       0,
 		AveragePrice:   0,
@@ -501,11 +458,11 @@ func (e *RealTimeRiskEngine) processEvents(ctx context.Context) {
 // handleRiskEvent handles a risk event
 func (e *RealTimeRiskEngine) handleRiskEvent(event *RiskEvent) {
 	switch event.Type {
-	case EventLimitBreach:
+	case RiskEventLimitBreach:
 		e.logger.Error("Risk limit breach",
 			zap.String("symbol", event.Symbol),
 			zap.String("message", event.Message))
-	case EventCircuitBreaker:
+	case RiskEventCircuitBreaker:
 		e.logger.Warn("Circuit breaker event",
 			zap.String("symbol", event.Symbol),
 			zap.String("message", event.Message))
@@ -673,12 +630,12 @@ func NewCircuitBreaker(priceChangeThreshold float64, cooldownPeriod time.Duratio
 }
 
 // GetMetrics returns current risk metrics
-func (e *RealTimeRiskEngine) GetMetrics() *RiskMetrics {
+func (e *RealTimeRiskEngine) GetMetrics() *PerformanceMetrics {
 	return e.metrics
 }
 
 // GetPosition returns the current position for a symbol
-func (e *RealTimeRiskEngine) GetPosition(symbol string) *Position {
+func (e *RealTimeRiskEngine) GetPosition(symbol string) *RealtimePosition {
 	return e.getPosition(symbol)
 }
 
@@ -693,16 +650,16 @@ type Trade struct {
 }
 
 // getPortfolioPositions returns all current positions
-func (e *RealTimeRiskEngine) getPortfolioPositions() map[string]*Position {
+func (e *RealTimeRiskEngine) getPortfolioPositions() map[string]*RealtimePosition {
 	e.positionManager.mu.RLock()
 	defer e.positionManager.mu.RUnlock()
 
-	positions := make(map[string]*Position)
+	positions := make(map[string]*RealtimePosition)
 	e.positionManager.positions.Range(func(key, value interface{}) bool {
 		symbol := key.(string)
-		position := value.(*Position)
+		position := value.(*RealtimePosition)
 		if position.Quantity != 0 {
-			positions[symbol] = &Position{
+			positions[symbol] = &RealtimePosition{
 				Symbol:         position.Symbol,
 				Quantity:       position.Quantity,
 				AveragePrice:   position.AveragePrice,
@@ -716,7 +673,7 @@ func (e *RealTimeRiskEngine) getPortfolioPositions() map[string]*Position {
 }
 
 // calculatePortfolioValue calculates the total portfolio value
-func (e *RealTimeRiskEngine) calculatePortfolioValue(positions map[string]*Position) float64 {
+func (e *RealTimeRiskEngine) calculatePortfolioValue(positions map[string]*RealtimePosition) float64 {
 	totalValue := 0.0
 
 	for symbol, position := range positions {

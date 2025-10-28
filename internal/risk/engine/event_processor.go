@@ -29,62 +29,9 @@ type EventProcessor struct {
 	errorCount      int64
 }
 
-// RiskEvent represents a risk event that needs processing
-type RiskEvent struct {
-	Type        RiskEventType   `json:"type"`
-	OrderID     string          `json:"order_id"`
-	UserID      string          `json:"user_id"`
-	Symbol      string          `json:"symbol"`
-	Side        types.OrderSide `json:"side"`
-	Quantity    float64         `json:"quantity"`
-	Price       float64         `json:"price"`
-	Timestamp   time.Time       `json:"timestamp"`
-	Metadata    map[string]interface{} `json:"metadata"`
-	ResultChan  chan *RiskCheckResult  `json:"-"`
-}
 
-// RiskEventType defines the type of risk event
-type RiskEventType int
 
-const (
-	RiskEventPreTrade RiskEventType = iota
-	RiskEventPostTrade
-	RiskEventPositionUpdate
-	RiskEventMarketData
-	RiskEventLimitBreach
-	RiskEventCircuitBreaker
-)
 
-// String returns the string representation of the risk event type
-func (ret RiskEventType) String() string {
-	switch ret {
-	case RiskEventPreTrade:
-		return "pre_trade"
-	case RiskEventPostTrade:
-		return "post_trade"
-	case RiskEventPositionUpdate:
-		return "position_update"
-	case RiskEventMarketData:
-		return "market_data"
-	case RiskEventLimitBreach:
-		return "limit_breach"
-	case RiskEventCircuitBreaker:
-		return "circuit_breaker"
-	default:
-		return "unknown"
-	}
-}
-
-// RiskCheckResult contains the result of a risk check
-type RiskCheckResult struct {
-	Approved     bool              `json:"approved"`
-	Reason       string            `json:"reason"`
-	RiskScore    float64           `json:"risk_score"`
-	Violations   []string          `json:"violations"`
-	MaxOrderSize float64           `json:"max_order_size"`
-	Latency      time.Duration     `json:"latency"`
-	Metadata     map[string]interface{} `json:"metadata"`
-}
 
 // NewEventProcessor creates a new event processor
 func NewEventProcessor(config *RiskEngineConfig, logger *zap.Logger) *EventProcessor {

@@ -3,6 +3,7 @@ package engine
 import (
 	"time"
 
+	"github.com/abdoElHodaky/tradSys/internal/core/types"
 	"github.com/google/uuid"
 )
 
@@ -16,14 +17,93 @@ const (
 	RiskLevelCritical RiskLevel = "critical"
 )
 
+// RiskEventType defines the type of risk event
+type RiskEventType string
+
+const (
+	RiskEventPreTrade       RiskEventType = "pre_trade"
+	RiskEventPostTrade      RiskEventType = "post_trade"
+	RiskEventPositionUpdate RiskEventType = "position_update"
+	RiskEventMarketData     RiskEventType = "market_data"
+	RiskEventLimitBreach    RiskEventType = "limit_breach"
+	RiskEventCircuitBreaker RiskEventType = "circuit_breaker"
+	RiskEventVaRCalculation RiskEventType = "var_calculation"
+)
+
+// RiskSeverity represents the severity of a risk event
+type RiskSeverity string
+
+const (
+	RiskSeverityLow      RiskSeverity = "low"
+	RiskSeverityMedium   RiskSeverity = "medium"
+	RiskSeverityHigh     RiskSeverity = "high"
+	RiskSeverityCritical RiskSeverity = "critical"
+)
+
+// RiskEvent represents a comprehensive risk event that can handle both processing and monitoring
+type RiskEvent struct {
+	// Core identification
+	Type      RiskEventType `json:"type"`
+	OrderID   string        `json:"order_id,omitempty"`
+	UserID    string        `json:"user_id"`
+	Symbol    string        `json:"symbol"`
+	Timestamp time.Time     `json:"timestamp"`
+	
+	// Order-specific fields (for processing events)
+	Side     types.OrderSide `json:"side,omitempty"`
+	Quantity float64         `json:"quantity,omitempty"`
+	Price    float64         `json:"price,omitempty"`
+	
+	// Risk management fields (for monitoring events)
+	Order     *types.Order  `json:"order,omitempty"`
+	Position  *Position     `json:"position,omitempty"`
+	RiskCheck *RiskCheck    `json:"risk_check,omitempty"`
+	Severity  RiskSeverity  `json:"severity,omitempty"`
+	Message   string        `json:"message,omitempty"`
+	
+	// Common fields
+	Metadata   map[string]interface{} `json:"metadata,omitempty"`
+	ResultChan chan *RiskCheckResult  `json:"-"`
+}
+
+// RiskCheck represents a risk check operation
+type RiskCheck struct {
+	ID           string                 `json:"id"`
+	Type         string                 `json:"type"`
+	CheckType    string                 `json:"check_type"` // Alias for Type for backward compatibility
+	Status       string                 `json:"status"`
+	Passed       bool                   `json:"passed"`
+	CurrentValue float64                `json:"current_value"`
+	LimitValue   float64                `json:"limit_value"`
+	Message      string                 `json:"message"`
+	Latency      time.Duration          `json:"latency"`
+	Timestamp    time.Time              `json:"timestamp"`
+	Result       *RiskCheckResult       `json:"result,omitempty"`
+	Details      map[string]interface{} `json:"details,omitempty"`
+	CreatedAt    time.Time              `json:"created_at"`
+}
+
 // RiskCheckResult represents the result of a risk check
 type RiskCheckResult struct {
+	// Core result fields
 	Passed     bool      `json:"passed"`
+	Approved   bool      `json:"approved"` // Alias for Passed for backward compatibility
 	RiskLevel  RiskLevel `json:"risk_level"`
+	RiskScore  float64   `json:"risk_score"`
+	
+	// Violation and warning information
 	Violations []string  `json:"violations"`
 	Warnings   []string  `json:"warnings"`
-	CheckedAt  time.Time `json:"checked_at"`
-	Details    map[string]interface{} `json:"details,omitempty"`
+	Reason     string    `json:"reason"`
+	
+	// Timing information
+	CheckedAt  time.Time     `json:"checked_at"`
+	Latency    time.Duration `json:"latency"`
+	
+	// Additional constraints and metadata
+	MaxOrderSize float64                `json:"max_order_size,omitempty"`
+	Details      map[string]interface{} `json:"details,omitempty"`
+	Metadata     map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // RiskLimitType represents the type of risk limit

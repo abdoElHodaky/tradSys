@@ -18,7 +18,7 @@ func NewFxService(
 	lifecycle fx.Lifecycle,
 	logger *zap.Logger,
 	orderEngine *order_matching.Engine,
-	orderService *orders.Service,
+	orderService *orders.OrderService,
 ) *Service {
 	service := NewService(orderEngine, orderService, logger)
 

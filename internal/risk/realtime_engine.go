@@ -112,50 +112,7 @@ type CircuitBreaker struct {
 	mu                   sync.RWMutex
 }
 
-// RiskEvent represents a risk management event
-type RiskEvent struct {
-	Type      RiskEventType `json:"type"`
-	Symbol    string        `json:"symbol"`
-	Order     *types.Order  `json:"order,omitempty"`
-	Position  *RealtimePosition     `json:"position,omitempty"`
-	RiskCheck *RiskCheck    `json:"risk_check,omitempty"`
-	Timestamp time.Time     `json:"timestamp"`
-	Severity  RiskSeverity  `json:"severity"`
-	Message   string        `json:"message"`
-}
 
-// RiskEventType defines types of risk events
-type RiskEventType string
-
-const (
-	EventPreTradeCheck  RiskEventType = "pre_trade_check"
-	EventPostTradeCheck RiskEventType = "post_trade_check"
-	EventLimitBreach    RiskEventType = "limit_breach"
-	EventCircuitBreaker RiskEventType = "circuit_breaker"
-	EventVaRCalculation RiskEventType = "var_calculation"
-	EventPositionUpdate RiskEventType = "position_update"
-)
-
-// RiskSeverity defines risk event severity levels
-type RiskSeverity string
-
-const (
-	SeverityInfo     RiskSeverity = "info"
-	SeverityWarning  RiskSeverity = "warning"
-	SeverityError    RiskSeverity = "error"
-	SeverityCritical RiskSeverity = "critical"
-)
-
-// RiskCheck represents a risk check result
-type RiskCheck struct {
-	CheckType    string        `json:"check_type"`
-	Passed       bool          `json:"passed"`
-	CurrentValue float64       `json:"current_value"`
-	LimitValue   float64       `json:"limit_value"`
-	Message      string        `json:"message"`
-	Latency      time.Duration `json:"latency"`
-	Timestamp    time.Time     `json:"timestamp"`
-}
 
 // NewRealTimeRiskEngine creates a new real-time risk engine
 func NewRealTimeRiskEngine(config *RiskEngineConfig, logger *zap.Logger) *RealTimeRiskEngine {
@@ -340,10 +297,10 @@ func (e *RealTimeRiskEngine) PostTradeCheck(order *types.Order, trades []*Trade)
 	// Check if any limits were breached after the trade
 	if err := e.checkPostTradeLimits(order); err != nil {
 		e.publishEvent(&RiskEvent{
-			Type:      EventLimitBreach,
+			Type:      RiskEventLimitBreach,
 			Symbol:    order.Symbol,
 			Order:     order,
-			Severity:  SeverityError,
+			Severity:  RiskSeverityHigh,
 			Message:   err.Error(),
 			Timestamp: time.Now(),
 		})
@@ -498,11 +455,11 @@ func (e *RealTimeRiskEngine) processEvents(ctx context.Context) {
 // handleRiskEvent handles a risk event
 func (e *RealTimeRiskEngine) handleRiskEvent(event *RiskEvent) {
 	switch event.Type {
-	case EventLimitBreach:
+	case RiskEventLimitBreach:
 		e.logger.Error("Risk limit breach",
 			zap.String("symbol", event.Symbol),
 			zap.String("message", event.Message))
-	case EventCircuitBreaker:
+	case RiskEventCircuitBreaker:
 		e.logger.Warn("Circuit breaker event",
 			zap.String("symbol", event.Symbol),
 			zap.String("message", event.Message))
