@@ -1,11 +1,11 @@
-// Package licensing provides enterprise licensing system for TradSys v3
+// Package licensing provides enterprise licensing system for TradSys v3.
 package licensing
 
 import (
 	"time"
 )
 
-// LicenseTier represents different licensing tiers
+// LicenseTier represents different licensing tiers.
 type LicenseTier string
 
 const (
@@ -15,43 +15,43 @@ const (
 	ISLAMIC      LicenseTier = "ISLAMIC"
 )
 
-// LicenseFeature represents individual features that can be licensed
+// LicenseFeature represents individual features that can be licensed.
 type LicenseFeature string
 
 const (
-	// Trading Features
+	// Trading Features.
 	BASIC_TRADING    LicenseFeature = "BASIC_TRADING"
 	ADVANCED_TRADING LicenseFeature = "ADVANCED_TRADING"
 	HFT_TRADING      LicenseFeature = "HFT_TRADING"
 
-	// Exchange Access
+	// Exchange Access.
 	EGX_ACCESS     LicenseFeature = "EGX_ACCESS"
 	ADX_ACCESS     LicenseFeature = "ADX_ACCESS"
 	MULTI_EXCHANGE LicenseFeature = "MULTI_EXCHANGE"
 
-	// Asset Types
+	// Asset Types.
 	BASIC_ASSETS    LicenseFeature = "BASIC_ASSETS"
 	ADVANCED_ASSETS LicenseFeature = "ADVANCED_ASSETS"
 	ISLAMIC_ASSETS  LicenseFeature = "ISLAMIC_ASSETS"
 	CRYPTO_ASSETS   LicenseFeature = "CRYPTO_ASSETS"
 
-	// Analytics & Reporting
+	// Analytics & Reporting.
 	BASIC_ANALYTICS     LicenseFeature = "BASIC_ANALYTICS"
 	ADVANCED_ANALYTICS  LicenseFeature = "ADVANCED_ANALYTICS"
 	REAL_TIME_ANALYTICS LicenseFeature = "REAL_TIME_ANALYTICS"
 
-	// Islamic Finance
+	// Islamic Finance.
 	SHARIA_COMPLIANCE LicenseFeature = "SHARIA_COMPLIANCE"
 	ZAKAT_CALCULATION LicenseFeature = "ZAKAT_CALCULATION"
 	HALAL_SCREENING   LicenseFeature = "HALAL_SCREENING"
 
-	// API & Integration
+	// API & Integration.
 	REST_API        LicenseFeature = "REST_API"
 	WEBSOCKET_API   LicenseFeature = "WEBSOCKET_API"
 	THIRD_PARTY_API LicenseFeature = "THIRD_PARTY_API"
 )
 
-// LicenseConfig represents the configuration for a license tier
+// LicenseConfig represents the configuration for a license tier.
 type LicenseConfig struct {
 	Tier           LicenseTier      `json:"tier"`
 	Features       []LicenseFeature `json:"features"`
@@ -63,7 +63,7 @@ type LicenseConfig struct {
 	MaxOrders      int64            `json:"max_orders"`
 }
 
-// License represents a user's license
+// License represents a user's license.
 type License struct {
 	ID             string                 `json:"id"`
 	UserID         string                 `json:"user_id"`
@@ -81,7 +81,7 @@ type License struct {
 	Metadata       map[string]interface{} `json:"metadata"`
 }
 
-// ValidationResult represents the result of license validation
+// ValidationResult represents the result of license validation.
 type ValidationResult struct {
 	Valid         bool      `json:"valid"`
 	Reason        string    `json:"reason"`
@@ -91,7 +91,7 @@ type ValidationResult struct {
 	RemainingTime int64     `json:"remaining_time_seconds"`
 }
 
-// UsageStats represents usage statistics for a user
+// UsageStats represents usage statistics for a user.
 type UsageStats struct {
 	UserID      string    `json:"user_id"`
 	UsageType   string    `json:"usage_type"`
@@ -102,14 +102,14 @@ type UsageStats struct {
 	LastUpdated time.Time `json:"last_updated"`
 }
 
-// BillingPlan represents a billing plan for a license tier
+// BillingPlan represents a billing plan for a license tier.
 type BillingPlan struct {
 	TierID       string             `json:"tier_id"`
 	Name         string             `json:"name"`
 	Description  string             `json:"description"`
 	BaseFee      float64            `json:"base_fee"`
 	Currency     string             `json:"currency"`
-	BillingCycle string             `json:"billing_cycle"` // "monthly", "annual"
+	BillingCycle string             `json:"billing_cycle"` // "monthly", "annual".
 	UsageRates   map[string]float64 `json:"usage_rates"`
 	OverageRates map[string]float64 `json:"overage_rates"`
 	Features     []LicenseFeature   `json:"features"`
@@ -117,7 +117,7 @@ type BillingPlan struct {
 	IsActive     bool               `json:"is_active"`
 }
 
-// Bill represents a billing statement
+// Bill represents a billing statement.
 type Bill struct {
 	ID            string             `json:"id"`
 	UserID        string             `json:"user_id"`
@@ -129,13 +129,13 @@ type Bill struct {
 	OverageFees   map[string]float64 `json:"overage_fees"`
 	Total         float64            `json:"total"`
 	Currency      string             `json:"currency"`
-	Status        string             `json:"status"` // "pending", "paid", "overdue"
+	Status        string             `json:"status"` // "pending", "paid", "overdue".
 	DueDate       time.Time          `json:"due_date"`
 	CreatedAt     time.Time          `json:"created_at"`
 	PaidAt        *time.Time         `json:"paid_at,omitempty"`
 }
 
-// LicenseError represents licensing-related errors
+// LicenseError represents licensing-related errors.
 type LicenseError struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
@@ -147,7 +147,7 @@ func (e *LicenseError) Error() string {
 	return e.Message
 }
 
-// Common license errors
+// Common license errors.
 var (
 	ErrLicenseNotFound    = &LicenseError{Code: "LICENSE_NOT_FOUND", Message: "license not found"}
 	ErrLicenseExpired     = &LicenseError{Code: "LICENSE_EXPIRED", Message: "license has expired"}
@@ -158,7 +158,7 @@ var (
 	ErrInvalidLicenseTier = &LicenseError{Code: "INVALID_LICENSE_TIER", Message: "invalid license tier"}
 )
 
-// IsValid checks if a license tier is valid
+// IsValid checks if a license tier is valid.
 func (lt LicenseTier) IsValid() bool {
 	switch lt {
 	case BASIC, PROFESSIONAL, ENTERPRISE, ISLAMIC:
@@ -168,12 +168,12 @@ func (lt LicenseTier) IsValid() bool {
 	}
 }
 
-// String returns the string representation of LicenseTier
+// String returns the string representation of LicenseTier.
 func (lt LicenseTier) String() string {
 	return string(lt)
 }
 
-// IsValid checks if a license feature is valid
+// IsValid checks if a license feature is valid.
 func (lf LicenseFeature) IsValid() bool {
 	switch lf {
 	case BASIC_TRADING, ADVANCED_TRADING, HFT_TRADING,
@@ -188,43 +188,46 @@ func (lf LicenseFeature) IsValid() bool {
 	}
 }
 
-// String returns the string representation of LicenseFeature
+// String returns the string representation of LicenseFeature.
 func (lf LicenseFeature) String() string {
 	return string(lf)
 }
 
-// IsExpired checks if the license has expired
+// IsExpired checks if the license has expired.
 func (l *License) IsExpired() bool {
 	return time.Now().After(l.ExpiresAt)
 }
 
-// HasFeature checks if the license includes a specific feature
+// HasFeature checks if the license includes a specific feature.
 func (l *License) HasFeature(feature LicenseFeature) bool {
 	for _, f := range l.Features {
 		if f == feature {
 			return true
 		}
 	}
+
 	return false
 }
 
-// GetQuota returns the quota for a specific usage type
+// GetQuota returns the quota for a specific usage type.
 func (l *License) GetQuota(usageType string) int64 {
 	if quota, exists := l.Quotas[usageType]; exists {
 		return quota
 	}
+
 	return 0
 }
 
-// GetRateLimit returns the rate limit for a specific usage type
+// GetRateLimit returns the rate limit for a specific usage type.
 func (l *License) GetRateLimit(usageType string) int64 {
 	if limit, exists := l.RateLimits[usageType]; exists {
 		return limit
 	}
+
 	return 0
 }
 
-// IsLicenseActive checks if the license is active and not expired
+// IsLicenseActive checks if the license is active and not expired.
 func (l *License) IsLicenseActive() bool {
 	return l.IsActive && !l.IsExpired()
 }
