@@ -5,16 +5,27 @@ import (
 	"context"
 	"sync"
 	"time"
-
-	basecommon "github.com/abdoElHodaky/tradSys/pkg/common"
 )
 
-// ServiceInterface is an alias to the unified service interface
-// This maintains backward compatibility while using the new unified interface
-type ServiceInterface = basecommon.ServiceInterface
-
-// HealthStatus is an alias to the unified health status
-type HealthStatus = basecommon.HealthStatus
+// ServiceInterface defines the standard interface that all TradSys services must implement
+type ServiceInterface interface {
+	// Lifecycle management
+	Initialize(ctx context.Context) error
+	Start(ctx context.Context) error
+	Stop(ctx context.Context) error
+	
+	// Health and status
+	Health(ctx context.Context) *HealthStatus
+	Status(ctx context.Context) *ServiceStatus
+	
+	// Configuration
+	Configure(config interface{}) error
+	GetConfig() interface{}
+	
+	// Service information
+	Name() string
+	Version() string
+}
 
 // BaseService provides a standard implementation of ServiceInterface
 type BaseService struct {
