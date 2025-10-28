@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/core/matching"
+	"github.com/abdoElHodaky/tradSys/internal/orders"
 	"github.com/patrickmn/go-cache"
 	"go.uber.org/zap"
 )
@@ -120,23 +121,33 @@ func (s *Service) subscribeToTrades() {
 }
 
 // processTrade processes a trade for risk management
-func (s *Service) processTrade(trade *order_matching.Trade) {
-	// Get buy order
-	buyOrder, err := s.OrderEngine.GetOrder(trade.Symbol, trade.BuyOrderID)
+func (s *Service) processTrade(trade *orders.Trade) {
+	// Get the primary order (the one that initiated the trade)
+	primaryOrder, err := s.OrderEngine.GetOrder(trade.Symbol, trade.OrderID)
 	if err != nil {
-		s.logger.Error("Failed to get buy order",
-			zap.String("order_id", trade.BuyOrderID),
+		s.logger.Error("Failed to get primary order",
+			zap.String("order_id", trade.OrderID),
 			zap.Error(err))
 		return
 	}
 
-	// Get sell order
-	sellOrder, err := s.OrderEngine.GetOrder(trade.Symbol, trade.SellOrderID)
+	// Get the counter order (the one that was matched against)
+	counterOrder, err := s.OrderEngine.GetOrder(trade.Symbol, trade.CounterOrderID)
 	if err != nil {
-		s.logger.Error("Failed to get sell order",
-			zap.String("order_id", trade.SellOrderID),
+		s.logger.Error("Failed to get counter order",
+			zap.String("order_id", trade.CounterOrderID),
 			zap.Error(err))
 		return
+	}
+
+	// Determine buy and sell orders based on trade side
+	var buyOrder, sellOrder *orders.Order
+	if trade.Side == orders.OrderSideBuy {
+		buyOrder = primaryOrder
+		sellOrder = counterOrder
+	} else {
+		buyOrder = counterOrder
+		sellOrder = primaryOrder
 	}
 
 	// Update buy position
@@ -171,4 +182,3 @@ func (s *Service) updatePosition(userID, symbol string, quantityDelta, price flo
 	// Wait for result
 	<-resultCh
 }
-

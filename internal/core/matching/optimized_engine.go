@@ -6,6 +6,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/abdoElHodaky/tradSys/internal/orders"
 	"go.uber.org/zap"
 )
 
@@ -50,7 +51,7 @@ type LockFreeOrderBook struct {
 
 // OrderNode represents a node in the lock-free linked list
 type OrderNode struct {
-	order *Order
+	order *orders.Order
 	next  unsafe.Pointer // *OrderNode
 	price int64          // Fixed-point price for atomic operations
 }
@@ -80,7 +81,7 @@ func NewOptimizedEngine(logger *zap.Logger) *OptimizedEngine {
 }
 
 // ProcessOrderFast processes an order with optimized fast path (<100μs target)
-func (e *OptimizedEngine) ProcessOrderFast(order *Order) ([]*Trade, error) {
+func (e *OptimizedEngine) ProcessOrderFast(order *orders.Order) ([]*orders.Trade, error) {
 	startTime := time.Now()
 
 	// Get or create lock-free order book
@@ -132,10 +133,10 @@ func (e *OptimizedEngine) ProcessOrderFast(order *Order) ([]*Trade, error) {
 }
 
 // processMarketOrderFast processes market orders with optimized path
-func (e *OptimizedEngine) processMarketOrderFast(book *LockFreeOrderBook, order *Order) []*Trade {
-	var trades []*Trade
+func (e *OptimizedEngine) processMarketOrderFast(book *LockFreeOrderBook, order *orders.Order) []*orders.Trade {
+	var trades []*orders.Trade
 
-	if order.Side == OrderSideBuy {
+	if order.Side == orders.OrderSideBuy {
 		// Buy market order - match against asks
 		trades = e.matchAgainstSide(book, order, &book.askHead, false)
 	} else {
@@ -147,10 +148,10 @@ func (e *OptimizedEngine) processMarketOrderFast(book *LockFreeOrderBook, order 
 }
 
 // processLimitOrderFast processes limit orders with optimized path
-func (e *OptimizedEngine) processLimitOrderFast(book *LockFreeOrderBook, order *Order) []*Trade {
-	var trades []*Trade
+func (e *OptimizedEngine) processLimitOrderFast(book *LockFreeOrderBook, order *orders.Order) []*orders.Trade {
+	var trades []*orders.Trade
 
-	if order.Side == OrderSideBuy {
+	if order.Side == orders.OrderSideBuy {
 		// Buy limit order - first try to match against asks
 		trades = e.matchAgainstSide(book, order, &book.askHead, false)
 
@@ -172,8 +173,8 @@ func (e *OptimizedEngine) processLimitOrderFast(book *LockFreeOrderBook, order *
 }
 
 // matchAgainstSide matches an order against one side of the book using lock-free operations
-func (e *OptimizedEngine) matchAgainstSide(book *LockFreeOrderBook, incomingOrder *Order, headPtr *unsafe.Pointer, isBidSide bool) []*Trade {
-	var trades []*Trade
+func (e *OptimizedEngine) matchAgainstSide(book *LockFreeOrderBook, incomingOrder *orders.Order, headPtr *unsafe.Pointer, isBidSide bool) []*orders.Trade {
+	var trades []*orders.Trade
 	incomingPriceFixed := int64(incomingOrder.Price * 1e8) // Convert to fixed-point
 
 	for incomingOrder.Quantity > incomingOrder.FilledQuantity {
@@ -243,7 +244,7 @@ func (e *OptimizedEngine) addOrderToSide(book *LockFreeOrderBook, order *Order, 
 }
 
 // executeTrade executes a trade between two orders with minimal allocations
-func (e *OptimizedEngine) executeTrade(incomingOrder, bookOrder *Order) *Trade {
+func (e *OptimizedEngine) executeTrade(incomingOrder, bookOrder *Order) *orders.Trade {
 	// Calculate trade quantity (minimum of remaining quantities)
 	tradeQuantity := incomingOrder.Quantity - incomingOrder.FilledQuantity
 	bookRemaining := bookOrder.Quantity - bookOrder.FilledQuantity
@@ -271,23 +272,25 @@ func (e *OptimizedEngine) executeTrade(incomingOrder, bookOrder *Order) *Trade {
 		bookOrder.Status = OrderStatusPartiallyFilled
 	}
 
-	// Create trade from pool
-	trade := e.tradePool.Get().(*Trade)
-	trade.ID = generateTradeID()
-	trade.Symbol = incomingOrder.Symbol
-	trade.Price = tradePrice
-	trade.Quantity = tradeQuantity
-	trade.BuyOrderID = ""
-	trade.SellOrderID = ""
-	trade.Timestamp = time.Now()
+	// Create trade
+	trade := &orders.Trade{
+		ID:        generateTradeID(),
+		Symbol:    incomingOrder.Symbol,
+		Price:     tradePrice,
+		Quantity:  tradeQuantity,
+		Timestamp: time.Now(),
+		ExecutedAt: time.Now(),
+	}
 
 	// Set order IDs based on sides
-	if incomingOrder.Side == OrderSideBuy {
-		trade.BuyOrderID = incomingOrder.ID
-		trade.SellOrderID = bookOrder.ID
+	if incomingOrder.Side == orders.OrderSideBuy {
+		trade.OrderID = incomingOrder.ID
+		trade.CounterOrderID = bookOrder.ID
+		trade.Side = orders.OrderSideBuy
 	} else {
-		trade.BuyOrderID = bookOrder.ID
-		trade.SellOrderID = incomingOrder.ID
+		trade.OrderID = incomingOrder.ID
+		trade.CounterOrderID = bookOrder.ID
+		trade.Side = orders.OrderSideSell
 	}
 
 	return trade

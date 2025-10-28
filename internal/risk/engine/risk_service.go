@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/core/matching"
+	order_matching "github.com/abdoElHodaky/tradSys/internal/core/matching"
 	"github.com/abdoElHodaky/tradSys/internal/orders"
 	cache "github.com/patrickmn/go-cache"
 	"go.uber.org/zap"
@@ -14,7 +14,7 @@ import (
 // Service represents a risk management service
 type Service struct {
 	// OrderEngine is the order matching engine
-	OrderEngine *order_matching.Engine
+	OrderEngine *order_matching.OptimizedEngine
 	// OrderService is the order management service
 	OrderService *orders.Service
 	// Positions is a map of user ID and symbol to position
@@ -37,17 +37,17 @@ type Service struct {
 	riskBatchChan chan RiskOperation
 	// Market data channel for price updates
 	marketDataChan chan MarketDataUpdate
-	
+
 	// New components
-	calculator     *RiskCalculator
-	monitor        *RiskMonitor
-	limitsManager  *LimitsManager
+	calculator    *RiskCalculator
+	monitor       *RiskMonitor
+	limitsManager *LimitsManager
 }
 
 // NewService creates a new risk management service
-func NewService(orderEngine *order_matching.Engine, orderService *orders.Service, logger *zap.Logger) *Service {
+func NewService(orderEngine *order_matching.OptimizedEngine, orderService *orders.Service, logger *zap.Logger) *Service {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	// Create new components
 	calculator := NewRiskCalculator(logger)
 	monitor := NewRiskMonitor(logger)
@@ -74,7 +74,7 @@ func NewService(orderEngine *order_matching.Engine, orderService *orders.Service
 	go service.processBatchOperations()
 	go service.processMarketData()
 	go service.subscribeToTrades()
-	
+
 	// Start monitor
 	monitor.Start()
 
@@ -127,7 +127,7 @@ func (s *Service) UpdatePosition(userID, symbol string, quantityDelta, price flo
 	if s.Positions[userID] == nil {
 		s.Positions[userID] = make(map[string]*Position)
 	}
-	
+
 	position, exists := s.Positions[userID][symbol]
 	if !exists {
 		position = &Position{
@@ -139,20 +139,20 @@ func (s *Service) UpdatePosition(userID, symbol string, quantityDelta, price flo
 		}
 		s.Positions[userID][symbol] = position
 	}
-	
+
 	// Update position
 	oldQuantity := position.Quantity
 	position.Quantity += quantityDelta
-	
+
 	// Update average price
 	if quantityDelta > 0 {
 		totalValue := (oldQuantity * position.AvgPrice) + (quantityDelta * price)
 		position.AvgPrice = totalValue / position.Quantity
 	}
-	
+
 	position.UpdatedAt = time.Now()
 	s.mu.Unlock()
-	
+
 	// Trigger monitoring
 	s.monitor.MonitorPosition(userID, symbol, position.Quantity, price)
 }
@@ -171,14 +171,14 @@ func (s *Service) CalculatePortfolioRisk(userID string) (*RiskCheckResult, error
 			CheckedAt:  time.Now(),
 		}, nil
 	}
-	
+
 	// Convert positions to value map
 	positions := make(map[string]float64)
 	for symbol, position := range userPositions {
 		positions[symbol] = position.Quantity * position.AvgPrice
 	}
 	s.mu.RUnlock()
-	
+
 	return s.calculator.CalculatePortfolioRisk(userID, positions)
 }
 
@@ -186,17 +186,17 @@ func (s *Service) CalculatePortfolioRisk(userID string) (*RiskCheckResult, error
 func (s *Service) GetPosition(userID, symbol string) (*Position, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	userPositions, exists := s.Positions[userID]
 	if !exists {
 		return nil, ErrPositionNotFound
 	}
-	
+
 	position, exists := userPositions[symbol]
 	if !exists {
 		return nil, ErrPositionNotFound
 	}
-	
+
 	return position, nil
 }
 
@@ -204,18 +204,18 @@ func (s *Service) GetPosition(userID, symbol string) (*Position, error) {
 func (s *Service) GetAllPositions(userID string) (map[string]*Position, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	userPositions, exists := s.Positions[userID]
 	if !exists {
 		return make(map[string]*Position), nil
 	}
-	
+
 	// Return a copy to prevent external modification
 	result := make(map[string]*Position)
 	for k, v := range userPositions {
 		result[k] = v
 	}
-	
+
 	return result, nil
 }
 
@@ -223,9 +223,9 @@ func (s *Service) GetAllPositions(userID string) (map[string]*Position, error) {
 func (s *Service) processBatchOperations() {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
-	
+
 	batch := make([]RiskOperation, 0, 100)
-	
+
 	for {
 		select {
 		case <-s.ctx.Done():
@@ -266,13 +266,13 @@ func (s *Service) processUpdatePosition(op RiskOperation) {
 		op.ResultCh <- RiskOperationResult{Success: false, Error: ErrInvalidData}
 		return
 	}
-	
+
 	price, ok := op.Data["price"].(float64)
 	if !ok {
 		op.ResultCh <- RiskOperationResult{Success: false, Error: ErrInvalidData}
 		return
 	}
-	
+
 	s.UpdatePosition(op.UserID, op.Symbol, quantityDelta, price)
 	op.ResultCh <- RiskOperationResult{Success: true}
 }
@@ -284,13 +284,13 @@ func (s *Service) processCheckLimit(op RiskOperation) {
 		op.ResultCh <- RiskOperationResult{Success: false, Error: ErrInvalidData}
 		return
 	}
-	
+
 	currentPrice, ok := op.Data["current_price"].(float64)
 	if !ok {
 		op.ResultCh <- RiskOperationResult{Success: false, Error: ErrInvalidData}
 		return
 	}
-	
+
 	result, err := s.CheckRiskLimits(s.ctx, op.UserID, op.Symbol, orderSize, currentPrice)
 	op.ResultCh <- RiskOperationResult{
 		Success: err == nil,
@@ -316,7 +316,7 @@ func (s *Service) processMarketData() {
 func (s *Service) updateUnrealizedPnL(symbol string, price float64) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	for userID, userPositions := range s.Positions {
 		if position, exists := userPositions[symbol]; exists {
 			// Monitor the position with new price
@@ -344,24 +344,35 @@ func (s *Service) subscribeToTrades() {
 }
 
 // processTrade processes a trade for risk management
-func (s *Service) processTrade(trade *order_matching.Trade) {
-	// Get orders and update positions
-	buyOrder, err := s.OrderEngine.GetOrder(trade.Symbol, trade.BuyOrderID)
+func (s *Service) processTrade(trade *orders.Trade) {
+	// Get the primary order (the one that initiated the trade)
+	primaryOrder, err := s.OrderEngine.GetOrder(trade.Symbol, trade.OrderID)
 	if err != nil {
-		s.logger.Error("Failed to get buy order", zap.String("order_id", trade.BuyOrderID), zap.Error(err))
+		s.logger.Error("Failed to get primary order", zap.String("order_id", trade.OrderID), zap.Error(err))
 		return
 	}
-	
-	sellOrder, err := s.OrderEngine.GetOrder(trade.Symbol, trade.SellOrderID)
+
+	// Get the counter order (the one that was matched against)
+	counterOrder, err := s.OrderEngine.GetOrder(trade.Symbol, trade.CounterOrderID)
 	if err != nil {
-		s.logger.Error("Failed to get sell order", zap.String("order_id", trade.SellOrderID), zap.Error(err))
+		s.logger.Error("Failed to get counter order", zap.String("order_id", trade.CounterOrderID), zap.Error(err))
 		return
 	}
-	
+
+	// Determine buy and sell orders based on trade side
+	var buyOrder, sellOrder *orders.Order
+	if trade.Side == orders.OrderSideBuy {
+		buyOrder = primaryOrder
+		sellOrder = counterOrder
+	} else {
+		buyOrder = counterOrder
+		sellOrder = primaryOrder
+	}
+
 	// Update positions
 	s.UpdatePosition(buyOrder.UserID, trade.Symbol, trade.Quantity, trade.Price)
 	s.UpdatePosition(sellOrder.UserID, trade.Symbol, -trade.Quantity, trade.Price)
-	
+
 	// Send market data update
 	s.marketDataChan <- MarketDataUpdate{
 		Symbol:    trade.Symbol,
