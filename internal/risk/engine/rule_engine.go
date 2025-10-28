@@ -409,7 +409,7 @@ func (re *RuleEngine) getFieldValue(field string, evalCtx *RuleEvaluationContext
 	case "order.price":
 		return evalCtx.Event.Price, nil
 	case "order.side":
-		return evalCtx.Event.Side.String(), nil
+		return string(evalCtx.Event.Side), nil
 	case "user.id":
 		return evalCtx.UserID, nil
 	case "symbol":

@@ -355,7 +355,7 @@ func (s *Service) subscribeToTrades() {
 		select {
 		case <-s.ctx.Done():
 			return
-		case trade := <-s.OrderEngine.TradeChannel:
+		case trade := <-(*s.OrderEngine).TradeChannel:
 			s.processTrade(trade)
 		}
 	}
@@ -364,13 +364,13 @@ func (s *Service) subscribeToTrades() {
 // processTrade processes a trade for risk management
 func (s *Service) processTrade(trade *order_matching.Trade) {
 	// Get orders and update positions
-	buyOrder, err := s.OrderEngine.GetOrder(trade.Symbol, trade.BuyOrderID)
+	buyOrder, err := (*s.OrderEngine).GetOrder(trade.Symbol, trade.BuyOrderID)
 	if err != nil {
 		s.logger.Error("Failed to get buy order", zap.String("order_id", trade.BuyOrderID), zap.Error(err))
 		return
 	}
 	
-	sellOrder, err := s.OrderEngine.GetOrder(trade.Symbol, trade.SellOrderID)
+	sellOrder, err := (*s.OrderEngine).GetOrder(trade.Symbol, trade.SellOrderID)
 	if err != nil {
 		s.logger.Error("Failed to get sell order", zap.String("order_id", trade.SellOrderID), zap.Error(err))
 		return
