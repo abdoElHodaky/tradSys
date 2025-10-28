@@ -9,12 +9,21 @@ import (
 	"go.uber.org/zap"
 )
 
+// ADXConfig represents ADX exchange configuration
+type ADXConfig struct {
+	MaxConnections int
+	Timeout        time.Duration
+	APIKey         string
+	SecretKey      string
+	BaseURL        string
+}
+
 // ADXConnectionManager handles connection management for ADX exchange
 type ADXConnectionManager struct {
 	config           *ADXConfig
 	logger           *zap.Logger
 	connections      map[string]*ADXConnection
-	connectionPool   *ConnectionPool
+	connectionPool   *ADXConnectionPool
 	healthChecker    *ConnectionHealthChecker
 	reconnectManager *ReconnectManager
 	mu               sync.RWMutex
@@ -96,8 +105,8 @@ func (cs ConnectionStatus) String() string {
 	}
 }
 
-// ConnectionPool manages a pool of ADX connections
-type ConnectionPool struct {
+// ADXConnectionPool manages a pool of ADX connections
+type ADXConnectionPool struct {
 	maxConnections int
 	connections    chan *ADXConnection
 	factory        func() (*ADXConnection, error)
@@ -145,15 +154,15 @@ func NewADXConnectionManager(config *ADXConfig, logger *zap.Logger) *ADXConnecti
 		config:           config,
 		logger:           logger,
 		connections:      make(map[string]*ADXConnection),
-		connectionPool:   NewConnectionPool(config.MaxConnections),
+		connectionPool:   NewADXConnectionPool(config.MaxConnections),
 		healthChecker:    NewConnectionHealthChecker(30*time.Second, 5*time.Second, 3),
 		reconnectManager: NewReconnectManager(5, time.Second, 30*time.Second, 2.0),
 	}
 }
 
-// NewConnectionPool creates a new connection pool
-func NewConnectionPool(maxConnections int) *ConnectionPool {
-	return &ConnectionPool{
+// NewADXConnectionPool creates a new ADX connection pool
+func NewADXConnectionPool(maxConnections int) *ADXConnectionPool {
+	return &ADXConnectionPool{
 		maxConnections: maxConnections,
 		connections:    make(chan *ADXConnection, maxConnections),
 	}

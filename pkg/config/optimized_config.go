@@ -12,7 +12,7 @@ type OptimizedConfig struct {
 	// Core system configuration
 	System   SystemConfig   `yaml:"system" json:"system"`
 	Trading  TradingConfig  `yaml:"trading" json:"trading"`
-	Risk     RiskConfig     `yaml:"risk" json:"risk"`
+	Risk     OptimizedRiskConfig     `yaml:"risk" json:"risk"`
 	Network  NetworkConfig  `yaml:"network" json:"network"`
 	Database DatabaseConfig `yaml:"database" json:"database"`
 	
@@ -45,8 +45,8 @@ type TradingConfig struct {
 	MaxOrderSize       float64       `yaml:"max_order_size" json:"max_order_size"`
 }
 
-// RiskConfig contains risk management settings
-type RiskConfig struct {
+// OptimizedRiskConfig contains enhanced risk management settings
+type OptimizedRiskConfig struct {
 	MaxPositionSize    float64       `yaml:"max_position_size" json:"max_position_size"`
 	MaxDailyLoss       float64       `yaml:"max_daily_loss" json:"max_daily_loss"`
 	VaRConfidenceLevel float64       `yaml:"var_confidence_level" json:"var_confidence_level"`
@@ -136,7 +136,7 @@ func NewOptimizedConfig() *OptimizedConfig {
 			MinOrderSize:       1.0,
 			MaxOrderSize:       1000000.0,
 		},
-		Risk: RiskConfig{
+		Risk: OptimizedRiskConfig{
 			MaxPositionSize:      1000000.0,
 			MaxDailyLoss:         100000.0,
 			VaRConfidenceLevel:   0.95,
@@ -241,7 +241,7 @@ func (c *OptimizedConfig) GetTradingConfig() TradingConfig {
 }
 
 // GetRiskConfig returns the risk configuration
-func (c *OptimizedConfig) GetRiskConfig() RiskConfig {
+func (c *OptimizedConfig) GetRiskConfig() OptimizedRiskConfig {
 	return c.Risk
 }
 
@@ -298,4 +298,3 @@ func (c *OptimizedConfig) GetLogger() (*zap.Logger, error) {
 	
 	return config.Build()
 }
-

@@ -10,6 +10,48 @@ import (
 	"time"
 )
 
+// ScreeningEngine handles Islamic finance screening
+type ScreeningEngine struct {
+	rules map[string]interface{}
+}
+
+// ComplianceDatabase stores compliance data
+type ComplianceDatabase struct {
+	data map[string]interface{}
+}
+
+// IslamicAuditTrail tracks Islamic compliance audit trail
+type IslamicAuditTrail struct {
+	entries []interface{}
+}
+
+// ReportingRequirements defines reporting requirements
+type ReportingRequirements struct {
+	frequency string
+	format    string
+}
+
+// LicensingRequirements defines licensing requirements
+type LicensingRequirements struct {
+	license string
+	expiry  time.Time
+}
+
+// SukukPricingEngine handles Sukuk pricing
+type SukukPricingEngine struct {
+	models map[string]interface{}
+}
+
+// IslamicIndexCalculator calculates Islamic indices
+type IslamicIndexCalculator struct {
+	indices map[string]interface{}
+}
+
+// ComplianceDataStore stores compliance data
+type ComplianceDataStore struct {
+	store map[string]interface{}
+}
+
 // ADXService provides Abu Dhabi Exchange integration with Islamic finance focus
 type ADXService struct {
 	exchangeID         string
