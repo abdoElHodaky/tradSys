@@ -354,7 +354,13 @@ func (s *Service) checkSingleLimit(limit *RiskLimit, position *riskengine.Positi
 		}
 
 	case RiskLimitTypeExposure:
-		newExposure := abs((position.Quantity + orderSize) * currentPrice)
+		var newQuantity float64
+		if position != nil {
+			newQuantity = position.Quantity + orderSize
+		} else {
+			newQuantity = orderSize
+		}
+		newExposure := abs(newQuantity * currentPrice)
 		if newExposure > limit.Value {
 			return fmt.Sprintf("Exposure %.2f would exceed limit %.2f", newExposure, limit.Value)
 		}

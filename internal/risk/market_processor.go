@@ -121,11 +121,36 @@ func (s *Service) processTrade(trade *order_matching.Trade) {
 		return
 	}
 
+	// Get user IDs from the orders
+	buyOrder, err := s.OrderEngine.GetOrder(trade.Symbol, trade.BuyOrderID)
+	if err != nil {
+		s.logger.Warn("Could not find buy order for trade",
+			zap.String("trade_id", trade.ID),
+			zap.String("buy_order_id", trade.BuyOrderID),
+			zap.Error(err))
+		return
+	}
+	
+	sellOrder, err := s.OrderEngine.GetOrder(trade.Symbol, trade.SellOrderID)
+	if err != nil {
+		s.logger.Warn("Could not find sell order for trade",
+			zap.String("trade_id", trade.ID),
+			zap.String("sell_order_id", trade.SellOrderID),
+			zap.Error(err))
+		return
+	}
+	
+	if buyOrder == nil || sellOrder == nil {
+		s.logger.Warn("Could not find orders for trade",
+			zap.String("trade_id", trade.ID),
+			zap.String("buy_order_id", trade.BuyOrderID),
+			zap.String("sell_order_id", trade.SellOrderID))
+		return
+	}
+
 	// Update positions for both buyer and seller
-	// Note: Trade struct doesn't have BuyerUserID/SellerUserID fields
-	// Would need to look up user IDs from BuyOrderID/SellOrderID
-	// s.updatePosition(trade.BuyerUserID, trade.Symbol, trade.Quantity, trade.Price)
-	// s.updatePosition(trade.SellerUserID, trade.Symbol, -trade.Quantity, trade.Price)
+	s.updatePosition(buyOrder.UserID, trade.Symbol, trade.Quantity, trade.Price)
+	s.updatePosition(sellOrder.UserID, trade.Symbol, -trade.Quantity, trade.Price)
 
 	// Check circuit breakers
 	s.checkCircuitBreaker(trade.Symbol, trade.Price, trade.Timestamp)
@@ -134,8 +159,8 @@ func (s *Service) processTrade(trade *order_matching.Trade) {
 		zap.String("symbol", trade.Symbol),
 		zap.Float64("quantity", trade.Quantity),
 		zap.Float64("price", trade.Price),
-		zap.String("buy_order_id", trade.BuyOrderID),
-		zap.String("sell_order_id", trade.SellOrderID))
+		zap.String("buyer", buyOrder.UserID),
+		zap.String("seller", sellOrder.UserID))
 }
 
 // updatePosition updates a user's position (thread-safe wrapper)
