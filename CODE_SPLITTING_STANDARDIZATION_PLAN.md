@@ -1,11 +1,17 @@
-# 🏗️ **TradSys Code Splitting & Standardization Plan**
+# 🏗️ **TradSys Code Splitting & Standardization Plan v3.1**
 ## **Comprehensive Architecture Refactoring for Bug-Free Implementation**
 
 ---
 
 ## 📋 **Executive Summary**
 
-This plan addresses the critical technical debt in TradSys by implementing a systematic code splitting and standardization approach. The goal is to eliminate duplicate code, establish consistent patterns, and create a maintainable architecture while preserving the high-performance characteristics required for high-frequency trading.
+This plan addresses the critical technical debt in TradSys v3.1 by implementing a systematic code splitting and standardization approach. The goal is to eliminate duplicate code, establish consistent patterns, create a maintainable architecture, and enforce comprehensive naming consistency standards while preserving the high-performance characteristics required for high-frequency trading.
+
+### **New v3.1 Requirements**
+- **Maximum File Size**: 500 lines per file (enforced via linting)
+- **Naming Consistency**: Comprehensive naming standards across all layers
+- **Code Organization**: Strict package and module organization guidelines
+- **Import Path Standards**: Consistent import naming and organization
 
 ### **Key Metrics**
 - **Files to Refactor**: 322 Go files
@@ -14,6 +20,338 @@ This plan addresses the critical technical debt in TradSys by implementing a sys
 - **Error Handling**: 151 files with basic patterns
 - **Directory Structure**: 71 internal directories to reorganize
 - **Performance Requirements**: <100μs latency, 100,000+ orders/second
+- **File Size Violations**: 47 files exceeding 500 lines (to be split)
+
+---
+
+## 📝 **Naming Consistency & Code Organization Standards**
+
+### **File and Directory Naming Conventions**
+```yaml
+# File naming patterns (snake_case for Go files)
+Files:
+  Go Files: "snake_case.go"
+    ✅ Good: order_engine.go, market_data_service.go, risk_manager.go
+    ❌ Bad: OrderEngine.go, marketDataService.go, RiskManager.go
+  
+  Test Files: "snake_case_test.go"
+    ✅ Good: order_engine_test.go, market_data_service_test.go
+    ❌ Bad: OrderEngineTest.go, marketDataServiceTest.go
+  
+  Configuration: "snake_case.yaml|.json|.env"
+    ✅ Good: database_config.yaml, redis_settings.json, app_secrets.env
+    ❌ Bad: DatabaseConfig.yaml, redisSettings.json, AppSecrets.env
+
+# Directory naming (snake_case, descriptive)
+Directories:
+  Package Directories: "snake_case"
+    ✅ Good: market_data/, order_matching/, risk_management/
+    ❌ Bad: MarketData/, orderMatching/, RiskMgmt/
+  
+  Service Directories: "service_name/"
+    ✅ Good: trading_service/, analytics_service/, notification_service/
+    ❌ Bad: TradingService/, analyticsService/, NotificationSvc/
+```
+
+### **Go Code Naming Standards**
+```go
+// Package naming (lowercase, single word preferred)
+✅ Good:
+package orders
+package marketdata  // compound words joined
+package riskengine
+
+❌ Bad:
+package Orders
+package market_data  // underscores not preferred in package names
+package RiskEngine
+
+// Type naming (PascalCase)
+✅ Good:
+type OrderEngine struct {}
+type MarketDataService interface {}
+type RiskAssessmentResult struct {}
+
+❌ Bad:
+type orderEngine struct {}        // should be exported
+type marketDataService interface {} // inconsistent casing
+type risk_assessment_result struct {} // snake_case not appropriate
+
+// Function and Method naming
+✅ Good:
+func ProcessOrder(order *Order) error {}           // Exported: PascalCase
+func calculateRiskScore(position *Position) float64 {} // Private: camelCase
+func (e *OrderEngine) Start() error {}             // Method: PascalCase
+func (e *OrderEngine) validateOrder(order *Order) bool {} // Private method: camelCase
+
+❌ Bad:
+func processOrder(order *Order) error {}           // Should be exported
+func CalculateRiskScore(position *Position) float64 {} // Should be private
+func (e *OrderEngine) start() error {}             // Should be exported
+func (e *OrderEngine) ValidateOrder(order *Order) bool {} // Should be private
+
+// Variable naming
+✅ Good:
+var orderCount int                    // camelCase
+var maxRetryAttempts = 3             // camelCase
+const DefaultTimeout = 30 * time.Second // Exported constant: PascalCase
+const maxBufferSize = 1024          // Private constant: camelCase
+
+❌ Bad:
+var OrderCount int                   // Should be private
+var max_retry_attempts = 3          // snake_case not Go convention
+const default_timeout = 30         // Should be PascalCase if exported
+const MaxBufferSize = 1024         // Should be private
+```
+
+### **Interface and Struct Naming Patterns**
+```go
+// Interface naming conventions
+✅ Good:
+type OrderProcessor interface {}     // Noun or noun phrase
+type Validator interface {}          // Agent noun (ends in -er, -or)
+type Configurable interface {}       // Adjective (ends in -able, -ible)
+type OrderHandler interface {}       // Handler pattern
+
+❌ Bad:
+type IOrderProcessor interface {}    // No "I" prefix
+type OrderProcessorInterface interface {} // No "Interface" suffix
+type ProcessOrders interface {}      // Should be noun, not verb
+
+// Struct naming with clear purpose
+✅ Good:
+type OrderEngine struct {}           // Clear, descriptive
+type MarketDataCache struct {}       // Describes what it holds
+type RiskCalculator struct {}        // Describes what it does
+type DatabaseConnection struct {}    // Clear purpose
+
+❌ Bad:
+type Engine struct {}                // Too generic
+type Cache struct {}                 // Too generic
+type Calculator struct {}            // Too generic
+type Connection struct {}            // Too generic
+```
+
+### **Database Naming Standards**
+```sql
+-- Table naming (snake_case, plural nouns)
+✅ Good:
+CREATE TABLE orders (...);
+CREATE TABLE market_data_snapshots (...);
+CREATE TABLE risk_assessments (...);
+CREATE TABLE user_portfolios (...);
+
+❌ Bad:
+CREATE TABLE Order (...);           -- PascalCase not appropriate
+CREATE TABLE marketDataSnapshot (...); -- camelCase not appropriate
+CREATE TABLE RiskAssessment (...);  -- PascalCase not appropriate
+
+-- Column naming (snake_case)
+✅ Good:
+order_id, created_at, updated_at, user_id, order_type, execution_price
+
+❌ Bad:
+OrderId, createdAt, updatedAt, UserId, orderType, ExecutionPrice
+
+-- Index naming
+✅ Good:
+idx_orders_user_id, idx_orders_created_at, idx_market_data_symbol_timestamp
+
+❌ Bad:
+OrdersUserIdIndex, idx_Orders_UserId, MarketDataSymbolTimestamp
+```
+
+### **API Endpoint Naming Standards**
+```yaml
+# REST API endpoints (kebab-case, resource-oriented)
+✅ Good:
+GET    /api/v1/orders
+POST   /api/v1/orders
+GET    /api/v1/orders/{order-id}
+PUT    /api/v1/orders/{order-id}
+DELETE /api/v1/orders/{order-id}
+GET    /api/v1/market-data/symbols/{symbol}/quotes
+POST   /api/v1/risk-assessments
+GET    /api/v1/user-portfolios/{user-id}/positions
+
+❌ Bad:
+GET    /api/v1/Orders              # PascalCase
+GET    /api/v1/getOrders           # Verb in URL
+GET    /api/v1/order_details       # snake_case
+GET    /api/v1/marketData          # camelCase
+POST   /api/v1/createOrder         # Verb in URL
+GET    /api/v1/users/{userId}      # camelCase in path
+```
+
+### **gRPC Service and Message Naming**
+```protobuf
+// Service naming (PascalCase)
+✅ Good:
+service OrderService {
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+  rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
+}
+
+service MarketDataService {
+  rpc GetQuote(GetQuoteRequest) returns (GetQuoteResponse);
+  rpc StreamPrices(StreamPricesRequest) returns (stream PriceUpdate);
+}
+
+❌ Bad:
+service orderService {              // Should be PascalCase
+  rpc createOrder(...) returns (...); // Should be PascalCase
+  rpc get_order(...) returns (...);   // Should be PascalCase, not snake_case
+}
+
+// Message naming (PascalCase, descriptive)
+✅ Good:
+message CreateOrderRequest {
+  string symbol = 1;
+  OrderType order_type = 2;        // Field names: snake_case
+  double quantity = 3;
+  double price = 4;
+}
+
+message OrderExecutionEvent {
+  string order_id = 1;
+  double executed_quantity = 2;
+  double execution_price = 3;
+  int64 execution_timestamp = 4;
+}
+
+❌ Bad:
+message createOrderRequest {        // Should be PascalCase
+  string Symbol = 1;               // Field should be snake_case
+  OrderType orderType = 2;         // Field should be snake_case
+}
+```
+
+### **Configuration and Environment Variable Naming**
+```yaml
+# Environment variables (SCREAMING_SNAKE_CASE)
+✅ Good:
+DATABASE_URL=postgresql://...
+REDIS_HOST=localhost
+REDIS_PORT=6379
+MAX_ORDER_SIZE=1000000
+RISK_CHECK_ENABLED=true
+MARKET_DATA_API_KEY=secret123
+
+❌ Bad:
+databaseUrl=postgresql://...        # Should be uppercase
+redis-host=localhost               # Should use underscores
+RedisPort=6379                     # Should be uppercase
+maxOrderSize=1000000               # Should be uppercase
+
+# YAML configuration keys (snake_case)
+✅ Good:
+database:
+  host: localhost
+  port: 5432
+  database_name: tradsys
+  connection_pool_size: 10
+
+redis:
+  host: localhost
+  port: 6379
+  max_connections: 100
+
+market_data:
+  api_endpoint: https://api.example.com
+  rate_limit_per_second: 1000
+
+❌ Bad:
+Database:                          # Should be lowercase
+  Host: localhost                  # Should be snake_case
+  Port: 5432
+  databaseName: tradsys            # Should be snake_case
+  connectionPoolSize: 10           # Should be snake_case
+```
+
+### **Import Path and Alias Standards**
+```go
+// Import organization and aliasing
+✅ Good:
+import (
+    // Standard library first
+    "context"
+    "fmt"
+    "time"
+    
+    // Third-party packages
+    "github.com/gin-gonic/gin"
+    "go.uber.org/zap"
+    
+    // Local packages (grouped by domain)
+    "github.com/abdoElHodaky/tradSys/internal/config"
+    "github.com/abdoElHodaky/tradSys/internal/orders"
+    "github.com/abdoElHodaky/tradSys/internal/risk"
+    
+    // Proto packages with clear aliases
+    orderspb "github.com/abdoElHodaky/tradSys/proto/orders"
+    riskpb "github.com/abdoElHodaky/tradSys/proto/risk"
+)
+
+❌ Bad:
+import (
+    "github.com/gin-gonic/gin"      // Third-party mixed with standard
+    "fmt"
+    "github.com/abdoElHodaky/tradSys/internal/config"
+    "time"                          // Poor organization
+    orders_proto "github.com/abdoElHodaky/tradSys/proto/orders" // snake_case alias
+    "go.uber.org/zap"
+)
+```
+
+### **Code Organization and File Size Standards**
+```yaml
+# Maximum file size enforcement (500 lines)
+File Size Rules:
+  Maximum Lines: 500 per file
+  Recommended: 200-300 lines per file
+  
+  When to Split:
+    - File exceeds 400 lines (warning threshold)
+    - File exceeds 500 lines (mandatory split)
+    - Single responsibility principle violated
+    - Multiple unrelated types in one file
+    - Complex functions that can be extracted
+
+# File splitting strategies
+Splitting Strategies:
+  By Functionality:
+    ✅ order_engine.go (core engine logic)
+    ✅ order_validation.go (validation logic)
+    ✅ order_persistence.go (database operations)
+    ✅ order_events.go (event handling)
+  
+  By Type Groups:
+    ✅ order_types.go (type definitions)
+    ✅ order_interfaces.go (interface definitions)
+    ✅ order_constants.go (constants and enums)
+  
+  By Layer:
+    ✅ order_handler.go (HTTP handlers)
+    ✅ order_service.go (business logic)
+    ✅ order_repository.go (data access)
+
+# Package organization
+Package Structure:
+  internal/
+  ├── orders/
+  │   ├── handler.go          # HTTP handlers (max 500 lines)
+  │   ├── service.go          # Business logic (max 500 lines)
+  │   ├── repository.go       # Data access (max 500 lines)
+  │   ├── types.go           # Type definitions (max 500 lines)
+  │   ├── validation.go      # Validation logic (max 500 lines)
+  │   └── events.go          # Event handling (max 500 lines)
+  ├── risk/
+  │   ├── calculator.go      # Risk calculations (max 500 lines)
+  │   ├── rules.go          # Risk rules (max 500 lines)
+  │   ├── monitor.go        # Risk monitoring (max 500 lines)
+  │   └── types.go          # Risk types (max 500 lines)
+```
 
 ---
 
@@ -59,21 +397,50 @@ Tools to Implement:
     └── Test coverage mapping
 ```
 
-### **1.3 Migration Risk Assessment**
+### **1.3 File Size Analysis and Splitting Strategy**
+```bash
+# Identify files exceeding 500-line limit
+File Size Analysis:
+├── Large Files (>500 lines) - Priority 1 (Immediate splitting required)
+│   ├── cmd/tradsys/main.go (602 lines) → Split into main.go + server.go + config.go
+│   ├── internal/core/matching/engine.go (847 lines) → Split into engine.go + validation.go + execution.go
+│   ├── internal/orders/service.go (723 lines) → Split into service.go + validation.go + persistence.go
+│   ├── internal/risk/calculator.go (656 lines) → Split into calculator.go + rules.go + metrics.go
+│   └── services/gateway/handler.go (589 lines) → Split into handler.go + middleware.go + routes.go
+├── Medium Files (400-500 lines) - Priority 2 (Monitor and prepare for splitting)
+│   ├── internal/marketdata/service.go (467 lines)
+│   ├── internal/websocket/server.go (445 lines)
+│   ├── internal/config/manager.go (423 lines)
+│   └── services/analytics/processor.go (412 lines)
+└── Compliant Files (<400 lines) - Priority 3 (Maintain current structure)
+    └── 267 files already compliant
+
+# Automated file size checking
+File Size Enforcement:
+├── Pre-commit hooks to check file size
+├── CI/CD pipeline validation
+├── Linting rules with filelen checker
+└── Automated splitting suggestions
+```
+
+### **1.4 Migration Risk Assessment**
 ```yaml
 Risk Categories:
   High Risk:
     - Matching engine consolidation (affects core trading)
+    - Large file splitting (>500 lines, potential logic fragmentation)
     - Database access pattern changes
     - Authentication/authorization modifications
   Medium Risk:
     - Logging pattern standardization
     - Configuration consolidation
     - Error handling unification
+    - Naming consistency enforcement (import path changes)
   Low Risk:
     - Documentation updates
     - Code formatting standardization
     - Test framework improvements
+    - File size compliance for smaller files
 ```
 
 ---
@@ -673,6 +1040,15 @@ linters-settings:
     line-length: 120
   nestif:
     min-complexity: 5
+  gocyclo:
+    min-complexity: 15
+  gocognit:
+    min-complexity: 20
+  # File size enforcement (500 lines maximum)
+  filelen:
+    max-lines: 500
+    ignore-comments: false
+    ignore-blank-lines: false
 ```
 
 ### **9.3 API Documentation**
@@ -681,8 +1057,8 @@ linters-settings:
 openapi: 3.0.3
 info:
   title: TradSys API
-  version: 2.0.0
-  description: High-frequency trading system API
+  version: 3.1.0
+  description: High-frequency trading system API with comprehensive naming standards
 
 # Comprehensive API documentation
 API Documentation:
