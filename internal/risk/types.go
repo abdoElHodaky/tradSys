@@ -122,6 +122,69 @@ type OrderRiskMetrics struct {
 	CalculatedAt          time.Time `json:"calculated_at"`
 }
 
+// RiskLimit represents a risk limit
+type RiskLimit struct {
+	// ID is the unique identifier for the risk limit
+	ID string `json:"id"`
+	// UserID is the user ID
+	UserID string `json:"user_id"`
+	// Symbol is the trading symbol
+	Symbol string `json:"symbol"`
+	// Type is the type of risk limit
+	Type RiskLimitType `json:"type"`
+	// Value is the limit value
+	Value float64 `json:"value"`
+	// CreatedAt is the time the risk limit was created
+	CreatedAt time.Time `json:"created_at"`
+	// UpdatedAt is the time the risk limit was last updated
+	UpdatedAt time.Time `json:"updated_at"`
+	// Enabled indicates whether the risk limit is enabled
+	Enabled bool `json:"enabled"`
+}
+
+// RiskOperation represents a batch operation on risk data
+type RiskOperation struct {
+	// OpType is the operation type
+	OpType string
+	// UserID is the user ID
+	UserID string
+	// Symbol is the trading symbol
+	Symbol string
+	// Data is the operation data
+	Data interface{}
+	// ResultCh is the result channel
+	ResultCh chan RiskOperationResult
+}
+
+// RiskOperationResult represents the result of a risk operation
+type RiskOperationResult struct {
+	// Success indicates whether the operation was successful
+	Success bool
+	// Error is the error if the operation failed
+	Error error
+	// Data is the result data
+	Data interface{}
+}
+
+// MarketDataUpdate represents a market data update
+type MarketDataUpdate struct {
+	// Symbol is the trading symbol
+	Symbol string
+	// Price is the current price
+	Price float64
+	// Timestamp is the time of the update
+	Timestamp time.Time
+}
+
+// Operation types for batch processing
+const (
+	OpTypeUpdatePosition = "update_position"
+	OpTypeCheckLimit     = "check_limit"
+	OpTypeAddLimit       = "add_limit"
+	OpTypeRemoveLimit    = "remove_limit"
+	OpTypeGetPosition    = "get_position"
+)
+
 // Error definitions
 var (
 	ErrInvalidPosition     = errors.New("invalid position")
