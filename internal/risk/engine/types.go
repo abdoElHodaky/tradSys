@@ -71,10 +71,20 @@ type Position struct {
 	Quantity float64 `json:"quantity"`
 	// AveragePrice is the average price of the position
 	AveragePrice float64 `json:"average_price"`
+	// MarketPrice is the current market price
+	MarketPrice float64 `json:"market_price"`
 	// UnrealizedPnL is the unrealized profit and loss
 	UnrealizedPnL float64 `json:"unrealized_pnl"`
 	// RealizedPnL is the realized profit and loss
 	RealizedPnL float64 `json:"realized_pnl"`
+	// Delta is the option delta (for options positions)
+	Delta float64 `json:"delta"`
+	// Gamma is the option gamma (for options positions)
+	Gamma float64 `json:"gamma"`
+	// Vega is the option vega (for options positions)
+	Vega float64 `json:"vega"`
+	// Theta is the option theta (for options positions)
+	Theta float64 `json:"theta"`
 	// LastUpdated is the time the position was last updated
 	LastUpdated time.Time `json:"last_updated"`
 	// CreatedAt is the time the position was created
@@ -93,12 +103,22 @@ type CircuitBreaker struct {
 	CooldownPeriod time.Duration `json:"cooldown_period"`
 	// LastPrice is the last known price
 	LastPrice float64 `json:"last_price"`
-	// LastTriggered is the time the circuit breaker was last triggered
-	LastTriggered time.Time `json:"last_triggered"`
-	// IsTriggered indicates whether the circuit breaker is currently triggered
-	IsTriggered bool `json:"is_triggered"`
+	// LastTriggeredTime is the time the circuit breaker was last triggered
+	LastTriggeredTime time.Time `json:"last_triggered"`
+	// IsTriggeredFlag indicates whether the circuit breaker is currently triggered
+	IsTriggeredFlag bool `json:"is_triggered"`
 	// CreatedAt is the time the circuit breaker was created
 	CreatedAt time.Time `json:"created_at"`
+}
+
+// IsTriggered returns whether the circuit breaker is currently triggered
+func (cb *CircuitBreaker) IsTriggered() bool {
+	return cb.IsTriggeredFlag
+}
+
+// LastTriggered returns the time the circuit breaker was last triggered
+func (cb *CircuitBreaker) LastTriggered() time.Time {
+	return cb.LastTriggeredTime
 }
 
 // RiskOperation represents a batch operation on risk data

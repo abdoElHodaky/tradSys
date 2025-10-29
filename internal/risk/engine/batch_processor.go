@@ -1,7 +1,6 @@
 package risk_management
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -354,11 +353,11 @@ func (s *Service) checkSingleLimit(limit *RiskLimit, position *Position, orderSi
 		}
 
 	case RiskLimitTypeExposure:
-		currentExposure := float64(0)
+		currentQuantity := float64(0)
 		if position != nil {
-			currentExposure = abs(position.Quantity * currentPrice)
+			currentQuantity = position.Quantity
 		}
-		newExposure := abs((position.Quantity + orderSize) * currentPrice)
+		newExposure := abs((currentQuantity + orderSize) * currentPrice)
 		if newExposure > limit.Value {
 			return fmt.Sprintf("Exposure %.2f would exceed limit %.2f", newExposure, limit.Value)
 		}

@@ -66,20 +66,7 @@ type PositionManager struct {
 	mu            sync.RWMutex
 }
 
-// Position represents a trading position
-type Position struct {
-	Symbol         string    `json:"symbol"`
-	Quantity       float64   `json:"quantity"`
-	AveragePrice   float64   `json:"average_price"`
-	MarketPrice    float64   `json:"market_price"`
-	UnrealizedPnL  float64   `json:"unrealized_pnl"`
-	RealizedPnL    float64   `json:"realized_pnl"`
-	Delta          float64   `json:"delta"`
-	Gamma          float64   `json:"gamma"`
-	Vega           float64   `json:"vega"`
-	Theta          float64   `json:"theta"`
-	LastUpdateTime time.Time `json:"last_update_time"`
-}
+
 
 // LimitManager manages trading limits
 type LimitManager struct {
@@ -102,18 +89,7 @@ type VaRCalculator struct {
 	mu                sync.RWMutex
 }
 
-// CircuitBreaker implements circuit breaker functionality
-type CircuitBreaker struct {
-	enabled              bool
-	volatilityThreshold  float64
-	priceChangeThreshold float64
-	volumeThreshold      float64
-	isTripped            bool
-	tripTime             time.Time
-	cooldownPeriod       time.Duration
-	referencePrice       float64
-	mu                   sync.RWMutex
-}
+
 
 // RiskEvent represents a risk management event
 type RiskEvent struct {
@@ -182,11 +158,14 @@ func NewRealTimeRiskEngine(config *RiskEngineConfig, logger *zap.Logger) *RealTi
 			correlationMatrix: make(map[string]map[string]float64),
 		},
 		circuitBreaker: &CircuitBreaker{
-			enabled:              config.EnableCircuitBreaker,
-			volatilityThreshold:  0.05,    // 5% volatility threshold
-			priceChangeThreshold: 0.10,    // 10% price change threshold
-			volumeThreshold:      1000000, // Volume threshold
-			cooldownPeriod:       time.Minute * 5,
+			Symbol:              "DEFAULT",
+			PercentageThreshold: 0.10,    // 10% price change threshold
+			TimeWindow:          time.Minute * 1,
+			CooldownPeriod:      time.Minute * 5,
+			LastPrice:           0,
+			LastTriggeredTime:   time.Time{},
+			IsTriggeredFlag:     false,
+			CreatedAt:           time.Now(),
 		},
 	}
 
@@ -265,7 +244,7 @@ func (e *RealTimeRiskEngine) PreTradeCheck(order *types.Order) (*RiskCheck, erro
 	}
 
 	// Check circuit breaker first (fastest check)
-	if e.circuitBreaker.isTripped {
+	if e.circuitBreaker.IsTriggered() {
 		return &RiskCheck{
 			CheckType: "circuit_breaker",
 			Passed:    false,
@@ -440,7 +419,7 @@ func (e *RealTimeRiskEngine) getPosition(symbol string) *Position {
 		Quantity:       0,
 		AveragePrice:   0,
 		MarketPrice:    0,
-		LastUpdateTime: time.Now(),
+		LastUpdated: time.Now(),
 	}
 }
 
@@ -458,7 +437,7 @@ func (e *RealTimeRiskEngine) updatePosition(trade *Trade) {
 		position.Quantity -= trade.Quantity
 	}
 
-	position.LastUpdateTime = time.Now()
+	position.LastUpdated = time.Now()
 	e.positionManager.positions.Store(trade.Symbol, position)
 }
 
@@ -593,84 +572,16 @@ func (e *RealTimeRiskEngine) checkCircuitBreakerConditions() {
 	// This is a simplified implementation
 	// Real systems would monitor market conditions and trigger based on volatility, etc.
 
-	e.circuitBreaker.mu.Lock()
-	defer e.circuitBreaker.mu.Unlock()
-
 	// Check if circuit breaker should be reset
-	if e.circuitBreaker.isTripped &&
-		time.Since(e.circuitBreaker.tripTime) > e.circuitBreaker.cooldownPeriod {
-		e.circuitBreaker.isTripped = false
+	if e.circuitBreaker.IsTriggered() &&
+		time.Since(e.circuitBreaker.LastTriggered()) > e.circuitBreaker.CooldownPeriod {
+		e.circuitBreaker.IsTriggeredFlag = false
 		e.logger.Info("Circuit breaker reset after cooldown period")
 	}
 }
 
-// IsTripped returns whether the circuit breaker is currently tripped
-func (cb *CircuitBreaker) IsTripped() bool {
-	cb.mu.RLock()
-	defer cb.mu.RUnlock()
-	return cb.isTripped
-}
-
-// GetReferencePrice returns the reference price
-func (cb *CircuitBreaker) GetReferencePrice() float64 {
-	cb.mu.RLock()
-	defer cb.mu.RUnlock()
-	return cb.referencePrice
-}
-
-// SetReferencePrice sets the reference price
-func (cb *CircuitBreaker) SetReferencePrice(price float64) {
-	cb.mu.Lock()
-	defer cb.mu.Unlock()
-	cb.referencePrice = price
-}
-
-// Trip triggers the circuit breaker
-func (cb *CircuitBreaker) Trip() {
-	cb.mu.Lock()
-	defer cb.mu.Unlock()
-	cb.isTripped = true
-	cb.tripTime = time.Now()
-}
-
-// Reset resets the circuit breaker
-func (cb *CircuitBreaker) Reset() {
-	cb.mu.Lock()
-	defer cb.mu.Unlock()
-	cb.isTripped = false
-}
-
-// GetLastTriggered returns the last time the circuit breaker was triggered
-func (cb *CircuitBreaker) GetLastTriggered() time.Time {
-	cb.mu.RLock()
-	defer cb.mu.RUnlock()
-	return cb.tripTime
-}
-
-// GetCooldownPeriod returns the cooldown period
-func (cb *CircuitBreaker) GetCooldownPeriod() time.Duration {
-	cb.mu.RLock()
-	defer cb.mu.RUnlock()
-	return cb.cooldownPeriod
-}
-
-// GetPriceChangeThreshold returns the price change threshold
-func (cb *CircuitBreaker) GetPriceChangeThreshold() float64 {
-	cb.mu.RLock()
-	defer cb.mu.RUnlock()
-	return cb.priceChangeThreshold
-}
-
-// NewCircuitBreaker creates a new circuit breaker
-func NewCircuitBreaker(priceChangeThreshold float64, cooldownPeriod time.Duration) *CircuitBreaker {
-	return &CircuitBreaker{
-		enabled:              true,
-		priceChangeThreshold: priceChangeThreshold,
-		cooldownPeriod:       cooldownPeriod,
-		isTripped:            false,
-		referencePrice:       0,
-	}
-}
+// These methods have been removed as they conflict with the canonical CircuitBreaker
+// implementation in types.go. Use the methods defined there instead.
 
 // GetMetrics returns current risk metrics
 func (e *RealTimeRiskEngine) GetMetrics() *RiskMetrics {
@@ -703,10 +614,10 @@ func (e *RealTimeRiskEngine) getPortfolioPositions() map[string]*Position {
 		position := value.(*Position)
 		if position.Quantity != 0 {
 			positions[symbol] = &Position{
-				Symbol:         position.Symbol,
-				Quantity:       position.Quantity,
-				AveragePrice:   position.AveragePrice,
-				LastUpdateTime: position.LastUpdateTime,
+				Symbol:       position.Symbol,
+				Quantity:     position.Quantity,
+				AveragePrice: position.AveragePrice,
+				LastUpdated:  position.LastUpdated,
 			}
 		}
 		return true

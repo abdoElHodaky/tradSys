@@ -49,13 +49,13 @@ func (s *Service) checkCircuitBreakers() {
 		case <-ticker.C:
 			s.mu.RLock()
 			for symbol, breaker := range s.CircuitBreakers {
-				if breaker.IsTriggered {
+				if breaker.IsTriggered() {
 					// Check if cooldown period has passed
-					if time.Since(breaker.LastTriggered) > breaker.CooldownPeriod {
-						breaker.IsTriggered = false
+					if time.Since(breaker.LastTriggered()) > breaker.CooldownPeriod {
+						breaker.IsTriggeredFlag = false
 						s.logger.Info("Circuit breaker reset",
 							zap.String("symbol", symbol),
-							zap.Time("last_triggered", breaker.LastTriggered))
+							zap.Time("last_triggered", breaker.LastTriggered()))
 					}
 				}
 			}
@@ -70,7 +70,7 @@ func (s *Service) checkCircuitBreaker(symbol string, price float64, timestamp ti
 	defer s.mu.Unlock()
 
 	breaker, exists := s.CircuitBreakers[symbol]
-	if !exists || breaker.IsTriggered {
+	if !exists || breaker.IsTriggered() {
 		return
 	}
 
@@ -79,9 +79,9 @@ func (s *Service) checkCircuitBreaker(symbol string, price float64, timestamp ti
 		priceChange := abs(price-breaker.LastPrice) / breaker.LastPrice
 		if priceChange > breaker.PercentageThreshold {
 			// Check if within time window
-			if timestamp.Sub(breaker.LastTriggered) < breaker.TimeWindow {
-				breaker.IsTriggered = true
-				breaker.LastTriggered = timestamp
+			if timestamp.Sub(breaker.LastTriggered()) < breaker.TimeWindow {
+				breaker.IsTriggeredFlag = true
+				breaker.LastTriggeredTime = timestamp
 				
 				s.logger.Warn("Circuit breaker triggered",
 					zap.String("symbol", symbol),
@@ -120,9 +120,10 @@ func (s *Service) processTrade(trade *order_matching.Trade) {
 		return
 	}
 
-	// Update positions for both buyer and seller
-	s.updatePosition(trade.BuyerUserID, trade.Symbol, trade.Quantity, trade.Price)
-	s.updatePosition(trade.SellerUserID, trade.Symbol, -trade.Quantity, trade.Price)
+	// TODO: Need to look up orders by BuyOrderID and SellOrderID to get user IDs
+	// Trade type only has BuyOrderID and SellOrderID, not BuyerUserID and SellerUserID
+	// s.updatePosition(buyerUserID, trade.Symbol, trade.Quantity, trade.Price)
+	// s.updatePosition(sellerUserID, trade.Symbol, -trade.Quantity, trade.Price)
 
 	// Check circuit breakers
 	s.checkCircuitBreaker(trade.Symbol, trade.Price, trade.Timestamp)
@@ -131,8 +132,8 @@ func (s *Service) processTrade(trade *order_matching.Trade) {
 		zap.String("symbol", trade.Symbol),
 		zap.Float64("quantity", trade.Quantity),
 		zap.Float64("price", trade.Price),
-		zap.String("buyer", trade.BuyerUserID),
-		zap.String("seller", trade.SellerUserID))
+		zap.String("buy_order_id", trade.BuyOrderID),
+		zap.String("sell_order_id", trade.SellOrderID))
 }
 
 // updatePosition updates a user's position (thread-safe wrapper)
@@ -154,8 +155,8 @@ func (s *Service) AddCircuitBreaker(symbol string, percentageThreshold float64, 
 		TimeWindow:          timeWindow,
 		CooldownPeriod:      cooldownPeriod,
 		LastPrice:           0,
-		LastTriggered:       time.Time{},
-		IsTriggered:         false,
+		LastTriggeredTime:   time.Time{},
+		IsTriggeredFlag:     false,
 		CreatedAt:           time.Now(),
 	}
 
@@ -176,7 +177,7 @@ func (s *Service) IsCircuitBreakerTriggered(symbol string) bool {
 	defer s.mu.RUnlock()
 
 	if breaker, exists := s.CircuitBreakers[symbol]; exists {
-		return breaker.IsTriggered
+		return breaker.IsTriggered()
 	}
 	return false
 }
@@ -195,8 +196,8 @@ func (s *Service) GetCircuitBreakerStatus() map[string]*CircuitBreaker {
 			TimeWindow:          breaker.TimeWindow,
 			CooldownPeriod:      breaker.CooldownPeriod,
 			LastPrice:           breaker.LastPrice,
-			LastTriggered:       breaker.LastTriggered,
-			IsTriggered:         breaker.IsTriggered,
+			LastTriggeredTime:   breaker.LastTriggeredTime,
+			IsTriggeredFlag:     breaker.IsTriggeredFlag,
 			CreatedAt:           breaker.CreatedAt,
 		}
 	}
