@@ -35,7 +35,7 @@ import (
 const (
 	// Application metadata
 	AppName    = "TradSys - High-Frequency Trading System"
-	AppVersion = "2.0.0"
+	AppVersion = "3.1.0"
 	AppAuthor  = "TradSys Team"
 )
 
