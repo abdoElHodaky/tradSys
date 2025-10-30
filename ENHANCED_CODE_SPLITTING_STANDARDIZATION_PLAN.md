@@ -5,11 +5,11 @@
 
 ## 📋 **Executive Summary**
 
-This enhanced plan addresses critical technical debt in TradSys by implementing systematic code splitting, standardization, and control flow optimization. The plan enforces a **maximum file size of 410 lines** and optimizes if statements and switch blocks for better maintainability and performance.
+This enhanced plan addresses critical technical debt in TradSys by implementing systematic code splitting, standardization, and control flow optimization. The plan enforces a **maximum file size of 500 lines** and optimizes if statements and switch blocks for better maintainability and performance.
 
 ### **Key Constraints & Metrics** (Updated Analysis)
-- **Maximum File Size**: 410 lines per file (strict enforcement)
-- **Files Exceeding Limit**: 19+ critical files identified (need immediate splitting)
+- **Maximum File Size**: 500 lines per file (strict enforcement)
+- **Files Exceeding Limit**: 38 critical files identified (need immediate splitting)
 - **If Statements**: 4,441 instances (optimization targets)
 - **Switch Blocks**: 99 instances (optimization targets)
 - **Performance Requirements**: <100μs latency, 100,000+ orders/second
