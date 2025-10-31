@@ -200,8 +200,8 @@ type MarketData struct {
 	Timestamp time.Time
 }
 
-// EngineConfig represents configuration for the matching engine
-type EngineConfig struct {
+// MatchingEngineConfig represents configuration for the matching engine
+type MatchingEngineConfig struct {
 	// MaxOrdersPerSymbol is the maximum number of orders per symbol
 	MaxOrdersPerSymbol int
 	// MaxTradesHistory is the maximum number of trades to keep in history

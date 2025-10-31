@@ -163,7 +163,7 @@ func (e *HFTEngine) processOrder(orderBook *HFTOrderBook, order *HFTOrder) []*Tr
 	if order.Filled < order.Quantity {
 		order.Status = OrderStatusPartiallyFilled
 		if order.Filled == 0 {
-			order.Status = OrderStatusOpen
+			order.Status = OrderStatusNew
 		}
 		e.addOrderToBook(orderBook, order)
 		atomic.AddUint64(&e.stats.ActiveOrders, 1)

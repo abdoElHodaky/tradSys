@@ -150,7 +150,7 @@ func (m *UnifiedMonitor) TriggerAlert(alert *UnifiedAlert) {
 }
 
 // RegisterHealthCheck registers a health check
-func (m *UnifiedMonitor) RegisterHealthCheck(name string, check HealthCheck) {
+func (m *UnifiedMonitor) RegisterHealthCheck(name string, check UnifiedHealthCheck) {
 	m.healthChecker.RegisterCheck(name, check)
 }
 
@@ -402,7 +402,7 @@ func NewHealthChecker(config *MonitorConfig, logger *zap.Logger) *HealthChecker 
 	return &HealthChecker{
 		config: config,
 		logger: logger,
-		checks: make(map[string]HealthCheck),
+		checks: make(map[string]UnifiedHealthCheck),
 	}
 }
 
@@ -419,7 +419,7 @@ func (hc *HealthChecker) Stop() error {
 }
 
 // RegisterCheck registers a health check
-func (hc *HealthChecker) RegisterCheck(name string, check HealthCheck) {
+func (hc *HealthChecker) RegisterCheck(name string, check UnifiedHealthCheck) {
 	hc.mu.Lock()
 	defer hc.mu.Unlock()
 	

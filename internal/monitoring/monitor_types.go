@@ -164,13 +164,13 @@ type AlertRule struct {
 type HealthChecker struct {
 	config     *MonitorConfig
 	logger     *zap.Logger
-	checks     map[string]HealthCheck
+	checks     map[string]UnifiedHealthCheck
 	lastStatus *UnifiedHealthStatus
 	mu         sync.RWMutex
 }
 
-// HealthCheck represents a health check function
-type HealthCheck func() (HealthState, map[string]interface{}, error)
+// UnifiedHealthCheck represents a health check function for the unified monitor
+type UnifiedHealthCheck func() (HealthState, map[string]interface{}, error)
 
 // PerformanceTracker tracks performance metrics
 type PerformanceTracker struct {

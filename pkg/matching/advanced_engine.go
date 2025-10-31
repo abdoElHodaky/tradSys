@@ -294,7 +294,7 @@ func (e *AdvancedOrderMatchingEngine) processAdvancedOrder(book *AdvancedOrderBo
 	}
 
 	// Process the order using the basic engine
-	trades := book.AddOrder(order)
+	trades := book.processOrder(order)
 
 	// Update market impact calculator with new trades
 	if book.marketImpactCalc.enabled {
