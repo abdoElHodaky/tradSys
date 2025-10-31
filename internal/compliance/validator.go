@@ -196,18 +196,9 @@ func (v *Validator) ValidateCompliance(ctx context.Context, request *ValidationR
 			result.Passed = false
 			result.Violations = append(result.Violations, ruleResult.Violations...)
 			
-			// Adjust score based on severity
+			// Adjust score based on severity using lookup table
 			for _, violation := range ruleResult.Violations {
-				switch violation.Severity {
-				case SeverityCritical:
-					result.Score -= 50
-				case SeverityHigh:
-					result.Score -= 25
-				case SeverityMedium:
-					result.Score -= 10
-				case SeverityLow:
-					result.Score -= 5
-				}
+				result.Score -= GetSeverityScore(violation.Severity)
 			}
 		}
 		
