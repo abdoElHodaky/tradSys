@@ -107,8 +107,8 @@ func (p *BinanceProvider) GetExchangeInfo(ctx context.Context) (*BinanceExchange
 	return &exchangeInfo, nil
 }
 
-// GetTicker retrieves 24hr ticker price change statistics
-func (p *BinanceProvider) GetTicker(ctx context.Context, symbol string) (*BinanceTicker, error) {
+// GetBinanceTicker retrieves 24hr ticker price change statistics from Binance
+func (p *BinanceProvider) GetBinanceTicker(ctx context.Context, symbol string) (*BinanceTicker, error) {
 	params := url.Values{}
 	if symbol != "" {
 		params.Set("symbol", symbol)
@@ -272,8 +272,8 @@ func (p *BinanceProvider) GetKlines(ctx context.Context, symbol, interval string
 	return klines, nil
 }
 
-// GetOrderBook retrieves order book data
-func (p *BinanceProvider) GetOrderBook(ctx context.Context, symbol string, limit int) (*BinanceOrderBook, error) {
+// GetBinanceOrderBook retrieves order book data from Binance
+func (p *BinanceProvider) GetBinanceOrderBook(ctx context.Context, symbol string, limit int) (*BinanceOrderBook, error) {
 	params := url.Values{}
 	params.Set("symbol", symbol)
 	
@@ -315,8 +315,8 @@ func (p *BinanceProvider) GetOrderBook(ctx context.Context, symbol string, limit
 	return &orderBook, nil
 }
 
-// GetTrades retrieves recent trades
-func (p *BinanceProvider) GetTrades(ctx context.Context, symbol string, limit int) ([]BinanceTrade, error) {
+// GetBinanceTrades retrieves recent trades from Binance
+func (p *BinanceProvider) GetBinanceTrades(ctx context.Context, symbol string, limit int) ([]BinanceTrade, error) {
 	params := url.Values{}
 	params.Set("symbol", symbol)
 	
@@ -444,4 +444,153 @@ func (p *BinanceProvider) GetActiveSubscriptions() []string {
 	}
 	
 	return keys
+}
+
+// Name returns the name of the provider
+func (p *BinanceProvider) Name() string {
+	return "binance"
+}
+
+// Connect connects to the provider (initializes the provider)
+func (p *BinanceProvider) Connect(ctx context.Context) error {
+	// For Binance, connection is established per subscription
+	// This method can be used for any initialization logic
+	p.logger.Info("Binance provider connected")
+	return nil
+}
+
+// Disconnect disconnects from the provider
+func (p *BinanceProvider) Disconnect(ctx context.Context) error {
+	return p.Close()
+}
+
+// SubscribeTrades is an alias for SubscribeTrade to match the Provider interface
+func (p *BinanceProvider) SubscribeTrades(ctx context.Context, symbol string, callback MarketDataCallback) error {
+	return p.SubscribeTrade(ctx, symbol, callback)
+}
+
+// UnsubscribeTrades is an alias for UnsubscribeTrade to match the Provider interface
+func (p *BinanceProvider) UnsubscribeTrades(ctx context.Context, symbol string) error {
+	return p.UnsubscribeTrade(ctx, symbol)
+}
+
+// GetOHLCV gets OHLCV data from Binance
+func (p *BinanceProvider) GetOHLCV(ctx context.Context, symbol, interval string, limit int) ([]OHLCVData, error) {
+	// Get klines from Binance
+	klines, err := p.GetKlines(ctx, symbol, interval, limit, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Convert Binance klines to OHLCVData
+	ohlcvData := make([]OHLCVData, len(klines))
+	for i, kline := range klines {
+		open, _ := strconv.ParseFloat(kline.Open, 64)
+		high, _ := strconv.ParseFloat(kline.High, 64)
+		low, _ := strconv.ParseFloat(kline.Low, 64)
+		close, _ := strconv.ParseFloat(kline.Close, 64)
+		volume, _ := strconv.ParseFloat(kline.Volume, 64)
+		
+		ohlcvData[i] = OHLCVData{
+			Symbol:    symbol,
+			Timestamp: time.Unix(kline.OpenTime/1000, 0),
+			Open:      open,
+			High:      high,
+			Low:       low,
+			Close:     close,
+			Volume:    volume,
+		}
+	}
+	
+	return ohlcvData, nil
+}
+
+// GetOrderBook gets order book data (Provider interface implementation)
+func (p *BinanceProvider) GetOrderBook(ctx context.Context, symbol string) (*OrderBookData, error) {
+	// Get order book from Binance with default limit
+	binanceOrderBook, err := p.GetBinanceOrderBook(ctx, symbol, 100)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Convert BinanceOrderBook to OrderBookData
+	orderBookData := &OrderBookData{
+		Symbol:    symbol,
+		Timestamp: time.Now(), // Binance doesn't provide timestamp in order book response
+		Bids:      make([][]float64, len(binanceOrderBook.Bids)),
+		Asks:      make([][]float64, len(binanceOrderBook.Asks)),
+	}
+	
+	// Convert bids - Binance returns [][]string where each entry is [price, quantity]
+	for i, bid := range binanceOrderBook.Bids {
+		price, _ := strconv.ParseFloat(bid[0], 64)
+		quantity, _ := strconv.ParseFloat(bid[1], 64)
+		orderBookData.Bids[i] = []float64{price, quantity}
+	}
+	
+	// Convert asks - Binance returns [][]string where each entry is [price, quantity]
+	for i, ask := range binanceOrderBook.Asks {
+		price, _ := strconv.ParseFloat(ask[0], 64)
+		quantity, _ := strconv.ParseFloat(ask[1], 64)
+		orderBookData.Asks[i] = []float64{price, quantity}
+	}
+	
+	return orderBookData, nil
+}
+
+// GetTicker gets ticker data (Provider interface implementation)
+func (p *BinanceProvider) GetTicker(ctx context.Context, symbol string) (*TickerData, error) {
+	// Get ticker from Binance
+	binanceTicker, err := p.GetBinanceTicker(ctx, symbol)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Convert BinanceTicker to TickerData
+	price, _ := strconv.ParseFloat(binanceTicker.LastPrice, 64)
+	volume, _ := strconv.ParseFloat(binanceTicker.Volume, 64)
+	high, _ := strconv.ParseFloat(binanceTicker.HighPrice, 64)
+	low, _ := strconv.ParseFloat(binanceTicker.LowPrice, 64)
+	change, _ := strconv.ParseFloat(binanceTicker.PriceChange, 64)
+	changePercent, _ := strconv.ParseFloat(binanceTicker.PriceChangePercent, 64)
+	
+	tickerData := &TickerData{
+		Symbol:        symbol,
+		Price:         price,
+		Volume:        volume,
+		High:          high,
+		Low:           low,
+		Change:        change,
+		ChangePercent: changePercent,
+		Timestamp:     time.Now(), // Binance doesn't provide timestamp in ticker response
+	}
+	
+	return tickerData, nil
+}
+
+// GetTrades gets trades data (Provider interface implementation)
+func (p *BinanceProvider) GetTrades(ctx context.Context, symbol string, limit int) ([]TradeData, error) {
+	// Get trades from Binance
+	binanceTrades, err := p.GetBinanceTrades(ctx, symbol, limit)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Convert BinanceTrade to TradeData
+	tradeData := make([]TradeData, len(binanceTrades))
+	for i, trade := range binanceTrades {
+		price, _ := strconv.ParseFloat(trade.Price, 64)
+		quantity, _ := strconv.ParseFloat(trade.Qty, 64)
+		
+		tradeData[i] = TradeData{
+			Symbol:    symbol,
+			Price:     price,
+			Quantity:  quantity,
+			Side:      "", // Binance doesn't provide side in recent trades
+			Timestamp: time.Unix(trade.Time/1000, 0),
+			TradeID:   strconv.FormatInt(trade.Id, 10),
+		}
+	}
+	
+	return tradeData, nil
 }

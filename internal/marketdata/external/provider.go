@@ -87,8 +87,7 @@ type OHLCVData struct {
 	Timestamp time.Time
 }
 
-// MarketDataCallback is a callback function for market data
-type MarketDataCallback func(interface{})
+// MarketDataCallback is defined in binance_types.go
 
 // Provider represents a market data provider
 type Provider interface {

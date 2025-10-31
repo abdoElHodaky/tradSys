@@ -35,6 +35,7 @@ type EngineConfig struct {
 	EnableIcebergOrders    bool          `json:"enable_iceberg_orders"`
 	EnableHiddenOrders     bool          `json:"enable_hidden_orders"`
 	TickSize               float64       `json:"tick_size"`
+	TradeChannelBuffer     int           `json:"trade_channel_buffer"`
 }
 
 // MatchingMetrics tracks performance metrics
