@@ -7,6 +7,7 @@ import (
 
 	order_matching "github.com/abdoElHodaky/tradSys/internal/core/matching"
 	"github.com/abdoElHodaky/tradSys/internal/trading/types"
+	pkgTypes "github.com/abdoElHodaky/tradSys/pkg/types"
 	"github.com/gin-gonic/gin"
 )
 
@@ -85,29 +86,16 @@ func createOrderHandler(ts TradingSystemInterface) gin.HandlerFunc {
 			return
 		}
 
-		// Convert string types to internal types
-		var side types.OrderSide
-		var orderType types.OrderType
-
-		switch req.Side {
-		case "buy", "BUY":
-			side = types.OrderSideBuy
-		case "sell", "SELL":
-			side = types.OrderSideSell
-		default:
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid side"})
+		// Convert string types to internal types using centralized parsers
+		side, err := pkgTypes.ParseOrderSide(req.Side)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		switch req.Type {
-		case "market", "MARKET":
-			orderType = types.OrderTypeMarket
-		case "limit", "LIMIT":
-			orderType = types.OrderTypeLimit
-		case "stop", "STOP":
-			orderType = types.OrderTypeStop
-		default:
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order type"})
+		orderType, err := pkgTypes.ParseOrderType(req.Type)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
