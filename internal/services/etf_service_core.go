@@ -329,3 +329,27 @@ func (s *ETFService) CompareETFs(symbols []string) (*ETFComparisonResult, error)
 
 	return result, nil
 }
+
+// ValidateETFOrder validates an ETF order for basic requirements
+func (s *ETFService) ValidateETFOrder(symbol string, quantity, price float64) error {
+	// Basic validation
+	if symbol == "" {
+		return fmt.Errorf("symbol cannot be empty")
+	}
+	
+	if quantity <= 0 {
+		return fmt.Errorf("quantity must be positive")
+	}
+	
+	if price <= 0 {
+		return fmt.Errorf("price must be positive")
+	}
+	
+	// Check if ETF exists by trying to get its metrics
+	_, err := s.GetETFMetrics(symbol)
+	if err != nil {
+		return fmt.Errorf("ETF not found or invalid: %w", err)
+	}
+	
+	return nil
+}

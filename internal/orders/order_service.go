@@ -278,10 +278,15 @@ func (s *OrderService) CancelOrder(ctx context.Context, req *OrderCancelRequest)
 
 	// Cancel order in matching engine
 	if order.Status == OrderStatusNew || order.Status == OrderStatusPending {
-		success := s.MatchingEngine.CancelOrder(order.Symbol, order.ID)
-		if !success {
+		result, err := s.MatchingEngine.CancelOrder(order.ID)
+		if err != nil {
 			s.logger.Warn("Failed to cancel order in matching engine",
-				zap.String("order_id", order.ID))
+				zap.String("order_id", order.ID),
+				zap.Error(err))
+		} else if !result.Success {
+			s.logger.Warn("Order cancellation was not successful",
+				zap.String("order_id", order.ID),
+				zap.String("error", result.Error))
 		}
 	}
 
@@ -309,7 +314,13 @@ func (s *OrderService) SubmitOrder(ctx context.Context, order *Order) error {
 	matchingOrder := s.convertToMatchingOrder(order)
 
 	// Submit to matching engine
-	trades := s.MatchingEngine.AddOrder(matchingOrder)
+	trades, err := s.MatchingEngine.AddOrder(matchingOrder)
+	if err != nil {
+		s.logger.Error("Failed to add order to matching engine",
+			zap.String("order_id", order.ID),
+			zap.Error(err))
+		return err
+	}
 
 	// Process resulting trades
 	for _, trade := range trades {

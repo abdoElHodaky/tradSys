@@ -12,7 +12,6 @@ package orders
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/core/matching"
@@ -395,5 +394,3 @@ func (s *Service) Shutdown() error {
 	s.logger.Info("Order service shutdown complete")
 	return nil
 }
-
-

@@ -284,16 +284,19 @@ const (
 	DefaultMaxOrdersPerUser    = 1000
 )
 
-// Error definitions
+// Error definitions (non-validation errors)
 var (
-	ErrOrderNotFound        = errors.New("order not found")
-	ErrInvalidOrderRequest  = errors.New("invalid order request")
 	ErrOrderAlreadyExists   = errors.New("order already exists")
 	ErrOrderNotCancellable  = errors.New("order not cancellable")
 	ErrOrderExpired         = errors.New("order expired")
 	ErrInsufficientBalance  = errors.New("insufficient balance")
-	ErrInvalidSymbol        = errors.New("invalid symbol")
-	ErrInvalidQuantity      = errors.New("invalid quantity")
 	ErrInvalidPrice         = errors.New("invalid price")
 	ErrMaxOrdersExceeded    = errors.New("maximum orders per user exceeded")
 )
+
+// Stop stops the service and cancels all background operations
+func (s *Service) Stop() {
+	if s.cancel != nil {
+		s.cancel()
+	}
+}
