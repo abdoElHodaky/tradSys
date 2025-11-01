@@ -411,7 +411,7 @@ func (suite *OrderFlowTestSuite) TestOrderCancellationFlow() {
 
 	cancelledOrder, err := suite.orderService.CancelOrder(suite.ctx, cancelReq)
 	require.NoError(suite.T(), err)
-	assert.Equal(suite.T(), orders.StatusCancelled, cancelledOrder.Status)
+	assert.Equal(suite.T(), orders.OrderStatusCancelled, cancelledOrder.Status)
 
 	// Cancel in matching engine
 	err = suite.matchingEngine.CancelOrder(suite.ctx, order.ID, order.UserID)
@@ -439,7 +439,7 @@ func (suite *OrderFlowTestSuite) TestHighFrequencyOrderFlow() {
 
 	// Create alternating buy and sell orders rapidly
 	for i := 0; i < orderCount; i++ {
-		var side orders.Side
+		var side orders.OrderSide
 		var matchingSide matching.Side
 		var price float64
 
