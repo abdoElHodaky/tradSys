@@ -10,7 +10,6 @@
 package risk_management
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"sync/atomic"
@@ -231,7 +230,7 @@ func (e *RealTimeRiskEngine) GetCurrentVaR() float64 {
 func (e *RealTimeRiskEngine) IsCircuitBreakerTripped(symbol string) bool {
 	// For now, check the default circuit breaker
 	// In a full implementation, this would check symbol-specific breakers
-	return e.circuitBreaker.IsTripped
+	return e.circuitBreaker.IsTriggeredFlag
 }
 
 // processEvents processes risk events asynchronously

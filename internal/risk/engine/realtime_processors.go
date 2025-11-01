@@ -10,7 +10,6 @@
 package risk_management
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -53,7 +52,7 @@ func (e *RealTimeRiskEngine) performPreTradeCheck(req *RiskCheckRequest, respons
 	}
 
 	// Check circuit breaker
-	if e.circuitBreaker.IsTripped {
+	if e.circuitBreaker.IsTriggeredFlag {
 		response.Status = RiskCheckStatusRejected
 		response.Message = "circuit breaker is tripped"
 		response.Passed = false
@@ -239,10 +238,10 @@ func (e *RealTimeRiskEngine) updatePositionAfterTrade(order *types.Order) error 
 		position = pos.(*Position)
 	} else {
 		position = &Position{
-			Symbol:         order.Symbol,
-			Quantity:       0,
-			AveragePrice:   0,
-			LastUpdateTime: time.Now(),
+			Symbol:       order.Symbol,
+			Quantity:     0,
+			AveragePrice: 0,
+			LastUpdated:  time.Now(),
 		}
 	}
 
@@ -260,7 +259,7 @@ func (e *RealTimeRiskEngine) updatePositionAfterTrade(order *types.Order) error 
 		// For sells, we don't update average price
 	}
 
-	position.LastUpdateTime = time.Now()
+	position.LastUpdated = time.Now()
 
 	// Store updated position
 	e.positionManager.positions.Store(order.Symbol, position)
@@ -324,9 +323,9 @@ func (e *RealTimeRiskEngine) checkCircuitBreakerConditions() {
 
 	lossThreshold := e.config.MaxDailyLoss * 0.8 // Trip at 80% of daily loss limit
 
-	if currentDailyLoss > lossThreshold && !e.circuitBreaker.IsTripped {
-		e.circuitBreaker.IsTripped = true
-		e.circuitBreaker.TripTime = time.Now()
+	if currentDailyLoss > lossThreshold && !e.circuitBreaker.IsTriggeredFlag {
+		e.circuitBreaker.IsTriggeredFlag = true
+		e.circuitBreaker.LastTriggeredTime = time.Now()
 		e.metrics.CircuitBreakerTrips++
 
 		e.logger.Warn("Circuit breaker tripped",
@@ -348,8 +347,8 @@ func (e *RealTimeRiskEngine) checkCircuitBreakerConditions() {
 	}
 
 	// Check if circuit breaker should be reset
-	if e.circuitBreaker.IsTripped && time.Since(e.circuitBreaker.TripTime) > e.circuitBreaker.CooldownPeriod {
-		e.circuitBreaker.IsTripped = false
+	if e.circuitBreaker.IsTriggeredFlag && time.Since(e.circuitBreaker.LastTriggeredTime) > e.circuitBreaker.CooldownPeriod {
+		e.circuitBreaker.IsTriggeredFlag = false
 		e.logger.Info("Circuit breaker reset")
 	}
 }

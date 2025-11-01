@@ -114,16 +114,7 @@ type VaRCalculator struct {
 	mu                sync.RWMutex
 }
 
-// CircuitBreaker manages circuit breaker functionality
-type CircuitBreaker struct {
-	Symbol              string        `json:"symbol"`
-	PercentageThreshold float64       `json:"percentage_threshold"`
-	TimeWindow          time.Duration `json:"time_window"`
-	CooldownPeriod      time.Duration `json:"cooldown_period"`
-	IsTripped           bool          `json:"is_tripped"`
-	TripTime            time.Time     `json:"trip_time"`
-	CreatedAt           time.Time     `json:"created_at"`
-}
+// CircuitBreaker type is defined in types.go to avoid duplication
 
 // RiskEvent represents a risk management event
 type RiskEvent struct {
@@ -148,20 +139,7 @@ type RiskCheck struct {
 	Timestamp    time.Time       `json:"timestamp"`
 }
 
-// Position represents a trading position
-type Position struct {
-	Symbol         string    `json:"symbol"`
-	Quantity       float64   `json:"quantity"`
-	AveragePrice   float64   `json:"average_price"`
-	MarketPrice    float64   `json:"market_price"`
-	UnrealizedPnL  float64   `json:"unrealized_pnl"`
-	RealizedPnL    float64   `json:"realized_pnl"`
-	Delta          float64   `json:"delta"`
-	Gamma          float64   `json:"gamma"`
-	Theta          float64   `json:"theta"`
-	Vega           float64   `json:"vega"`
-	LastUpdateTime time.Time `json:"last_update_time"`
-}
+// Position type is defined in types.go to avoid duplication
 
 // RiskCheckRequest represents a risk check request
 type RiskCheckRequest struct {

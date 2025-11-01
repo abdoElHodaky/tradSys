@@ -13,12 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// ServiceParams contains parameters for creating a new service
-type ServiceParams struct {
-	Repository *repositories.MarketDataRepository
-	Logger     *zap.Logger
-	Config     *config.Config
-}
+// ServiceParams is defined in fx.go to avoid duplication
 
 // NewService creates a new market data service with fx dependency injection
 func NewService(p ServiceParams) *Service {
