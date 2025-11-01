@@ -31,7 +31,7 @@ func (e *UnifiedStrategyEngine) GetStrategyPerformance(strategyID string) (*Stra
 	}
 
 	metrics := strategy.GetMetrics()
-	
+
 	// Calculate additional performance metrics
 	winRate := float64(0)
 	if metrics.TotalOrders > 0 {
@@ -39,21 +39,21 @@ func (e *UnifiedStrategyEngine) GetStrategyPerformance(strategyID string) (*Stra
 	}
 
 	return &StrategyPerformance{
-		StrategyID:       strategyID,
-		Status:           StrategyStatusRunning, // Simplified
-		TotalTrades:      metrics.TotalOrders,
-		WinningTrades:    metrics.SuccessfulTrades,
-		LosingTrades:     metrics.TotalOrders - metrics.SuccessfulTrades,
-		WinRate:          winRate,
-		TotalPnL:         metrics.TotalPnL,
-		AverageWin:       metrics.AverageReturn,
-		AverageLoss:      0, // Would calculate from trade history
-		ProfitFactor:     0, // Would calculate from win/loss ratio
-		MaxDrawdown:      metrics.MaxDrawdown,
-		SharpeRatio:      metrics.SharpeRatio,
-		CalmarRatio:      0, // Would calculate Calmar ratio
-		LastTradeTime:    time.Now(), // Would track from actual trades
-		LastUpdateTime:   metrics.LastUpdateTime,
+		StrategyID:     strategyID,
+		Status:         StrategyStatusRunning, // Simplified
+		TotalTrades:    metrics.TotalOrders,
+		WinningTrades:  metrics.SuccessfulTrades,
+		LosingTrades:   metrics.TotalOrders - metrics.SuccessfulTrades,
+		WinRate:        winRate,
+		TotalPnL:       metrics.TotalPnL,
+		AverageWin:     metrics.AverageReturn,
+		AverageLoss:    0, // Would calculate from trade history
+		ProfitFactor:   0, // Would calculate from win/loss ratio
+		MaxDrawdown:    metrics.MaxDrawdown,
+		SharpeRatio:    metrics.SharpeRatio,
+		CalmarRatio:    0,          // Would calculate Calmar ratio
+		LastTradeTime:  time.Now(), // Would track from actual trades
+		LastUpdateTime: metrics.LastUpdateTime,
 	}, nil
 }
 
@@ -74,7 +74,7 @@ func (e *UnifiedStrategyEngine) GetAllStrategyPerformance() map[string]*Strategy
 // GetRiskMetrics returns risk-related metrics for the strategy engine
 func (e *UnifiedStrategyEngine) GetRiskMetrics() *RiskMetrics {
 	positions := e.monitor.GetAllPositions()
-	
+
 	var totalExposure float64
 	var totalPnL float64
 	var returns []float64
@@ -83,7 +83,7 @@ func (e *UnifiedStrategyEngine) GetRiskMetrics() *RiskMetrics {
 		exposure := math.Abs(position.Quantity * position.CurrentPrice)
 		totalExposure += exposure
 		totalPnL += position.UnrealizedPnL + position.RealizedPnL
-		
+
 		// Calculate return for this position
 		if position.AveragePrice > 0 {
 			returnPct := (position.CurrentPrice - position.AveragePrice) / position.AveragePrice
@@ -93,7 +93,7 @@ func (e *UnifiedStrategyEngine) GetRiskMetrics() *RiskMetrics {
 
 	// Calculate volatility
 	volatility := calculateVolatility(returns)
-	
+
 	// Calculate VaR (simplified)
 	var95 := calculateVaR(returns, 0.95)
 	var99 := calculateVaR(returns, 0.99)
@@ -101,11 +101,11 @@ func (e *UnifiedStrategyEngine) GetRiskMetrics() *RiskMetrics {
 	return &RiskMetrics{
 		CurrentExposure:   totalExposure,
 		MaxExposure:       e.config.RiskLimits.MaxPositionSize,
-		VaR95:            var95,
-		VaR99:            var99,
+		VaR95:             var95,
+		VaR99:             var99,
 		ExpectedShortfall: var99 * 1.2, // Simplified calculation
-		Beta:             1.0,          // Would calculate against benchmark
-		Volatility:       volatility,
+		Beta:              1.0,         // Would calculate against benchmark
+		Volatility:        volatility,
 	}
 }
 
@@ -113,20 +113,20 @@ func (e *UnifiedStrategyEngine) GetRiskMetrics() *RiskMetrics {
 func (e *UnifiedStrategyEngine) GetExecutionMetrics() *ExecutionMetrics {
 	totalOrders := atomic.LoadInt64(&e.metrics.TotalOrders)
 	successfulTrades := atomic.LoadInt64(&e.metrics.SuccessfulTrades)
-	
+
 	fillRate := float64(0)
 	if totalOrders > 0 {
 		fillRate = float64(successfulTrades) / float64(totalOrders) * 100
 	}
 
 	return &ExecutionMetrics{
-		OrdersSubmitted:   totalOrders,
-		OrdersFilled:      successfulTrades,
-		OrdersCancelled:   0, // Would track from order management
-		OrdersRejected:    totalOrders - successfulTrades,
-		FillRate:          fillRate,
-		AverageSlippage:   0.001, // Would calculate from execution data
-		AverageLatency:    50.0,  // Would measure actual latency
+		OrdersSubmitted: totalOrders,
+		OrdersFilled:    successfulTrades,
+		OrdersCancelled: 0, // Would track from order management
+		OrdersRejected:  totalOrders - successfulTrades,
+		FillRate:        fillRate,
+		AverageSlippage: 0.001, // Would calculate from execution data
+		AverageLatency:  50.0,  // Would measure actual latency
 	}
 }
 
@@ -155,11 +155,11 @@ func (e *UnifiedStrategyEngine) updateMetrics() {
 	// Update overall engine metrics
 	var totalPnL float64
 	var totalReturns []float64
-	
+
 	positions := e.monitor.GetAllPositions()
 	for _, position := range positions {
 		totalPnL += position.UnrealizedPnL + position.RealizedPnL
-		
+
 		if position.AveragePrice > 0 {
 			returnPct := (position.CurrentPrice - position.AveragePrice) / position.AveragePrice
 			totalReturns = append(totalReturns, returnPct)
@@ -192,7 +192,7 @@ func (e *UnifiedStrategyEngine) LogPerformanceSummary() {
 	metrics := e.GetMetrics()
 	riskMetrics := e.GetRiskMetrics()
 	executionMetrics := e.GetExecutionMetrics()
-	
+
 	e.logger.Info("Strategy Engine Performance Summary",
 		zap.Int64("total_orders", metrics.TotalOrders),
 		zap.Int64("successful_trades", metrics.SuccessfulTrades),
@@ -210,56 +210,56 @@ func (e *UnifiedStrategyEngine) LogPerformanceSummary() {
 // MonitorRiskLimits monitors and enforces risk limits
 func (e *UnifiedStrategyEngine) MonitorRiskLimits() error {
 	riskMetrics := e.GetRiskMetrics()
-	
+
 	// Check position size limit
 	if riskMetrics.CurrentExposure > e.config.RiskLimits.MaxPositionSize {
 		e.logger.Warn("Position size limit exceeded",
 			zap.Float64("current_exposure", riskMetrics.CurrentExposure),
 			zap.Float64("max_position_size", e.config.RiskLimits.MaxPositionSize))
-		
+
 		// In a real implementation, would take corrective action
 		return e.reduceExposure()
 	}
-	
+
 	// Check daily loss limit
 	if e.metrics.TotalPnL < -e.config.RiskLimits.MaxDailyLoss {
 		e.logger.Error("Daily loss limit exceeded",
 			zap.Float64("current_pnl", e.metrics.TotalPnL),
 			zap.Float64("max_daily_loss", e.config.RiskLimits.MaxDailyLoss))
-		
+
 		// Stop all strategies
 		return e.emergencyStop()
 	}
-	
+
 	// Check drawdown limit
 	if e.metrics.MaxDrawdown > e.config.RiskLimits.MaxDrawdown {
 		e.logger.Warn("Drawdown limit exceeded",
 			zap.Float64("current_drawdown", e.metrics.MaxDrawdown),
 			zap.Float64("max_drawdown", e.config.RiskLimits.MaxDrawdown))
-		
+
 		// Reduce position sizes
 		return e.reducePositionSizes()
 	}
-	
+
 	return nil
 }
 
 // reduceExposure reduces overall exposure when limits are exceeded
 func (e *UnifiedStrategyEngine) reduceExposure() error {
 	e.logger.Info("Reducing exposure due to risk limit breach")
-	
+
 	// In a real implementation, would:
 	// 1. Close largest positions first
 	// 2. Reduce position sizes proportionally
 	// 3. Temporarily disable high-risk strategies
-	
+
 	return nil
 }
 
 // emergencyStop stops all strategies in case of emergency
 func (e *UnifiedStrategyEngine) emergencyStop() error {
 	e.logger.Error("Emergency stop triggered - stopping all strategies")
-	
+
 	e.mu.RLock()
 	for _, strategy := range e.strategies {
 		if err := strategy.Stop(); err != nil {
@@ -269,14 +269,14 @@ func (e *UnifiedStrategyEngine) emergencyStop() error {
 		}
 	}
 	e.mu.RUnlock()
-	
+
 	return nil
 }
 
 // reducePositionSizes reduces position sizes when drawdown limits are exceeded
 func (e *UnifiedStrategyEngine) reducePositionSizes() error {
 	e.logger.Info("Reducing position sizes due to drawdown limit")
-	
+
 	// In a real implementation, would reduce position sizes by a percentage
 	return nil
 }
@@ -288,15 +288,15 @@ func calculateVolatility(returns []float64) float64 {
 	if len(returns) < 2 {
 		return 0
 	}
-	
+
 	mean := calculateMean(returns)
 	var sumSquaredDiffs float64
-	
+
 	for _, ret := range returns {
 		diff := ret - mean
 		sumSquaredDiffs += diff * diff
 	}
-	
+
 	variance := sumSquaredDiffs / float64(len(returns)-1)
 	return math.Sqrt(variance)
 }
@@ -306,12 +306,12 @@ func calculateMean(values []float64) float64 {
 	if len(values) == 0 {
 		return 0
 	}
-	
+
 	var sum float64
 	for _, value := range values {
 		sum += value
 	}
-	
+
 	return sum / float64(len(values))
 }
 
@@ -320,11 +320,11 @@ func calculateVaR(returns []float64, confidence float64) float64 {
 	if len(returns) == 0 {
 		return 0
 	}
-	
+
 	// Simplified VaR calculation using normal distribution assumption
 	mean := calculateMean(returns)
 	volatility := calculateVolatility(returns)
-	
+
 	// Z-score for confidence level (simplified)
 	var zScore float64
 	switch confidence {
@@ -335,7 +335,7 @@ func calculateVaR(returns []float64, confidence float64) float64 {
 	default:
 		zScore = 1.645
 	}
-	
+
 	return mean - zScore*volatility
 }
 
@@ -344,23 +344,23 @@ func calculateMaxDrawdown(returns []float64) float64 {
 	if len(returns) == 0 {
 		return 0
 	}
-	
+
 	var peak float64 = 1.0
 	var maxDrawdown float64
 	var cumulative float64 = 1.0
-	
+
 	for _, ret := range returns {
 		cumulative *= (1 + ret)
 		if cumulative > peak {
 			peak = cumulative
 		}
-		
+
 		drawdown := (peak - cumulative) / peak
 		if drawdown > maxDrawdown {
 			maxDrawdown = drawdown
 		}
 	}
-	
+
 	return maxDrawdown
 }
 
@@ -369,14 +369,14 @@ func calculateSharpeRatio(returns []float64) float64 {
 	if len(returns) == 0 {
 		return 0
 	}
-	
+
 	mean := calculateMean(returns)
 	volatility := calculateVolatility(returns)
-	
+
 	if volatility == 0 {
 		return 0
 	}
-	
+
 	// Assuming risk-free rate of 0 for simplicity
 	return mean / volatility
 }

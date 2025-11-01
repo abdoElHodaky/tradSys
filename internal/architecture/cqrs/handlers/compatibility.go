@@ -5,10 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
 	"go.uber.org/zap"
 )
 

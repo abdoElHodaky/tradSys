@@ -74,7 +74,7 @@ func NewBinanceProviderWithConfig(config *BinanceConfig, logger *zap.Logger) *Bi
 // GetExchangeInfo retrieves exchange information
 func (p *BinanceProvider) GetExchangeInfo(ctx context.Context) (*BinanceExchangeInfo, error) {
 	url := p.BaseURL + ExchangeInfoEndpoint
-	
+
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -203,15 +203,15 @@ func (p *BinanceProvider) GetKlines(ctx context.Context, symbol, interval string
 	params := url.Values{}
 	params.Set("symbol", symbol)
 	params.Set("interval", interval)
-	
+
 	if limit > 0 {
 		params.Set("limit", strconv.Itoa(limit))
 	}
-	
+
 	if startTime != nil {
 		params.Set("startTime", strconv.FormatInt(startTime.UnixMilli(), 10))
 	}
-	
+
 	if endTime != nil {
 		params.Set("endTime", strconv.FormatInt(endTime.UnixMilli(), 10))
 	}
@@ -276,7 +276,7 @@ func (p *BinanceProvider) GetKlines(ctx context.Context, symbol, interval string
 func (p *BinanceProvider) GetBinanceOrderBook(ctx context.Context, symbol string, limit int) (*BinanceOrderBook, error) {
 	params := url.Values{}
 	params.Set("symbol", symbol)
-	
+
 	if limit > 0 {
 		params.Set("limit", strconv.Itoa(limit))
 	}
@@ -319,7 +319,7 @@ func (p *BinanceProvider) GetBinanceOrderBook(ctx context.Context, symbol string
 func (p *BinanceProvider) GetBinanceTrades(ctx context.Context, symbol string, limit int) ([]BinanceTrade, error) {
 	params := url.Values{}
 	params.Set("symbol", symbol)
-	
+
 	if limit > 0 {
 		params.Set("limit", strconv.Itoa(limit))
 	}
@@ -362,15 +362,15 @@ func (p *BinanceProvider) GetBinanceTrades(ctx context.Context, symbol string, l
 func (p *BinanceProvider) GetAggTrades(ctx context.Context, symbol string, limit int, startTime, endTime *time.Time) ([]BinanceAggTrade, error) {
 	params := url.Values{}
 	params.Set("symbol", symbol)
-	
+
 	if limit > 0 {
 		params.Set("limit", strconv.Itoa(limit))
 	}
-	
+
 	if startTime != nil {
 		params.Set("startTime", strconv.FormatInt(startTime.UnixMilli(), 10))
 	}
-	
+
 	if endTime != nil {
 		params.Set("endTime", strconv.FormatInt(endTime.UnixMilli(), 10))
 	}
@@ -429,7 +429,7 @@ func (p *BinanceProvider) Close() error {
 func (p *BinanceProvider) IsConnected() bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	
+
 	return len(p.WebSocketConnections) > 0
 }
 
@@ -437,12 +437,12 @@ func (p *BinanceProvider) IsConnected() bool {
 func (p *BinanceProvider) GetActiveSubscriptions() []string {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	
+
 	keys := make([]string, 0, len(p.WebSocketConnections))
 	for key := range p.WebSocketConnections {
 		keys = append(keys, key)
 	}
-	
+
 	return keys
 }
 
@@ -481,7 +481,7 @@ func (p *BinanceProvider) GetOHLCV(ctx context.Context, symbol, interval string,
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Convert Binance klines to OHLCVData
 	ohlcvData := make([]OHLCVData, len(klines))
 	for i, kline := range klines {
@@ -490,7 +490,7 @@ func (p *BinanceProvider) GetOHLCV(ctx context.Context, symbol, interval string,
 		low, _ := strconv.ParseFloat(kline.Low, 64)
 		close, _ := strconv.ParseFloat(kline.Close, 64)
 		volume, _ := strconv.ParseFloat(kline.Volume, 64)
-		
+
 		ohlcvData[i] = OHLCVData{
 			Symbol:    symbol,
 			Timestamp: time.Unix(kline.OpenTime/1000, 0),
@@ -501,7 +501,7 @@ func (p *BinanceProvider) GetOHLCV(ctx context.Context, symbol, interval string,
 			Volume:    volume,
 		}
 	}
-	
+
 	return ohlcvData, nil
 }
 
@@ -512,7 +512,7 @@ func (p *BinanceProvider) GetOrderBook(ctx context.Context, symbol string) (*Ord
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Convert BinanceOrderBook to OrderBookData
 	orderBookData := &OrderBookData{
 		Symbol:    symbol,
@@ -520,21 +520,21 @@ func (p *BinanceProvider) GetOrderBook(ctx context.Context, symbol string) (*Ord
 		Bids:      make([][]float64, len(binanceOrderBook.Bids)),
 		Asks:      make([][]float64, len(binanceOrderBook.Asks)),
 	}
-	
+
 	// Convert bids - Binance returns [][]string where each entry is [price, quantity]
 	for i, bid := range binanceOrderBook.Bids {
 		price, _ := strconv.ParseFloat(bid[0], 64)
 		quantity, _ := strconv.ParseFloat(bid[1], 64)
 		orderBookData.Bids[i] = []float64{price, quantity}
 	}
-	
+
 	// Convert asks - Binance returns [][]string where each entry is [price, quantity]
 	for i, ask := range binanceOrderBook.Asks {
 		price, _ := strconv.ParseFloat(ask[0], 64)
 		quantity, _ := strconv.ParseFloat(ask[1], 64)
 		orderBookData.Asks[i] = []float64{price, quantity}
 	}
-	
+
 	return orderBookData, nil
 }
 
@@ -545,7 +545,7 @@ func (p *BinanceProvider) GetTicker(ctx context.Context, symbol string) (*Ticker
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Convert BinanceTicker to TickerData
 	price, _ := strconv.ParseFloat(binanceTicker.LastPrice, 64)
 	volume, _ := strconv.ParseFloat(binanceTicker.Volume, 64)
@@ -553,7 +553,7 @@ func (p *BinanceProvider) GetTicker(ctx context.Context, symbol string) (*Ticker
 	low, _ := strconv.ParseFloat(binanceTicker.LowPrice, 64)
 	change, _ := strconv.ParseFloat(binanceTicker.PriceChange, 64)
 	changePercent, _ := strconv.ParseFloat(binanceTicker.PriceChangePercent, 64)
-	
+
 	tickerData := &TickerData{
 		Symbol:        symbol,
 		Price:         price,
@@ -564,7 +564,7 @@ func (p *BinanceProvider) GetTicker(ctx context.Context, symbol string) (*Ticker
 		ChangePercent: changePercent,
 		Timestamp:     time.Now(), // Binance doesn't provide timestamp in ticker response
 	}
-	
+
 	return tickerData, nil
 }
 
@@ -575,13 +575,13 @@ func (p *BinanceProvider) GetTrades(ctx context.Context, symbol string, limit in
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Convert BinanceTrade to TradeData
 	tradeData := make([]TradeData, len(binanceTrades))
 	for i, trade := range binanceTrades {
 		price, _ := strconv.ParseFloat(trade.Price, 64)
 		quantity, _ := strconv.ParseFloat(trade.Qty, 64)
-		
+
 		tradeData[i] = TradeData{
 			Symbol:    symbol,
 			Price:     price,
@@ -591,6 +591,6 @@ func (p *BinanceProvider) GetTrades(ctx context.Context, symbol string, limit in
 			TradeID:   strconv.FormatInt(trade.Id, 10),
 		}
 	}
-	
+
 	return tradeData, nil
 }

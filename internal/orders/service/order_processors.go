@@ -20,11 +20,11 @@ func (p *MarketOrderProcessor) Validate(order *Order) error {
 	if order == nil {
 		return errors.New("order cannot be nil")
 	}
-	
+
 	if order.Quantity <= 0 {
 		return errors.New("quantity must be positive")
 	}
-	
+
 	// Market orders don't need price validation
 	return nil
 }
@@ -34,7 +34,7 @@ func (p *MarketOrderProcessor) Process(order *Order) error {
 	// Market orders execute immediately at current market price
 	order.Status = OrderStatusFilled
 	order.UpdatedAt = time.Now()
-	
+
 	// Create trade record
 	trade := &Trade{
 		ID:                  uuid.New().String(),
@@ -48,10 +48,10 @@ func (p *MarketOrderProcessor) Process(order *Order) error {
 		FeeCurrency:         "USD",
 		CounterPartyOrderID: "", // Set by matching engine
 	}
-	
+
 	order.Trades = append(order.Trades, trade)
 	order.FilledQuantity = order.Quantity
-	
+
 	return nil
 }
 
@@ -80,15 +80,15 @@ func (p *LimitOrderProcessor) Validate(order *Order) error {
 	if order == nil {
 		return errors.New("order cannot be nil")
 	}
-	
+
 	if order.Quantity <= 0 {
 		return errors.New("quantity must be positive")
 	}
-	
+
 	if order.Price <= 0 {
 		return errors.New("price must be positive for limit orders")
 	}
-	
+
 	return nil
 }
 
@@ -97,12 +97,12 @@ func (p *LimitOrderProcessor) Process(order *Order) error {
 	// Limit orders are placed in the order book
 	order.Status = OrderStatusPending
 	order.UpdatedAt = time.Now()
-	
+
 	// Check if order can be immediately filled
 	if p.canFillImmediately(order) {
 		return p.fillOrder(order)
 	}
-	
+
 	return nil
 }
 
@@ -132,7 +132,7 @@ func (p *LimitOrderProcessor) fillOrder(order *Order) error {
 	order.Status = OrderStatusFilled
 	order.FilledQuantity = order.Quantity
 	order.UpdatedAt = time.Now()
-	
+
 	trade := &Trade{
 		ID:          uuid.New().String(),
 		OrderID:     order.ID,
@@ -144,7 +144,7 @@ func (p *LimitOrderProcessor) fillOrder(order *Order) error {
 		Fee:         p.calculateFee(order),
 		FeeCurrency: "USD",
 	}
-	
+
 	order.Trades = append(order.Trades, trade)
 	return nil
 }

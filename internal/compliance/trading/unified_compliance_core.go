@@ -209,9 +209,9 @@ func (c *UnifiedComplianceEngine) generatePeriodicReports() {
 	c.logger.Info("Generating periodic compliance reports")
 
 	// Generate daily report
-	report := c.reportGenerator.GenerateReport(ReportTypeDaily, 
+	report := c.reportGenerator.GenerateReport(ReportTypeDaily,
 		time.Now().AddDate(0, 0, -1), time.Now())
-	
+
 	if report != nil {
 		atomic.AddInt64(&c.metrics.ReportsGenerated, 1)
 		c.logger.Info("Daily compliance report generated", zap.String("report_id", report.ID))

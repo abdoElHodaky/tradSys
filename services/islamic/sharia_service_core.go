@@ -23,11 +23,11 @@ func NewShariaService(config *ShariaConfig, db ComplianceDatabase) *ShariaServic
 		}),
 		complianceDB: db,
 	}
-	
+
 	if config.EnableShariaBoard {
 		service.shariaBoard = NewShariaBoard()
 	}
-	
+
 	return service
 }
 
@@ -37,7 +37,7 @@ func (s *ShariaService) IsShariahCompliant(ctx context.Context, symbol string) (
 	if err != nil {
 		return false, err
 	}
-	
+
 	return result.IsCompliant, nil
 }
 
@@ -54,19 +54,19 @@ func (s *ShariaService) GetHalalScreening(ctx context.Context, symbol string) (*
 			LastUpdated:     cached.LastUpdated,
 		}, nil
 	}
-	
+
 	// Perform screening
 	result, err := s.screeningEngine.PerformScreening(ctx, symbol)
 	if err != nil {
 		return nil, fmt.Errorf("screening failed: %w", err)
 	}
-	
+
 	// Save to database
 	if err := s.complianceDB.SaveScreeningResult(ctx, result); err != nil {
 		// Log error but don't fail the screening
 		fmt.Printf("Failed to save screening result: %v\n", err)
 	}
-	
+
 	return &interfaces.HalalScreening{
 		Symbol:          result.Symbol,
 		IsCompliant:     result.IsCompliant,
@@ -82,17 +82,17 @@ func (s *ShariaService) CalculateZakat(ctx context.Context, userID string, portf
 	if !s.config.EnableZakat {
 		return nil, fmt.Errorf("Zakat calculation is disabled")
 	}
-	
+
 	record, err := s.zakatCalculator.CalculateZakat(ctx, userID, portfolio)
 	if err != nil {
 		return nil, fmt.Errorf("Zakat calculation failed: %w", err)
 	}
-	
+
 	// Save to database
 	if err := s.complianceDB.SaveZakatRecord(ctx, record); err != nil {
 		fmt.Printf("Failed to save Zakat record: %v\n", err)
 	}
-	
+
 	return &interfaces.ZakatCalculation{
 		UserID:          record.UserID,
 		Year:            record.Year,
@@ -112,11 +112,11 @@ func (s *ShariaService) ValidateIslamicOrder(ctx context.Context, order *interfa
 	if err != nil {
 		return fmt.Errorf("compliance check failed: %w", err)
 	}
-	
+
 	if !isCompliant {
 		return fmt.Errorf("asset %s is not Sharia-compliant", order.Symbol)
 	}
-	
+
 	// Asset-specific validations
 	switch order.AssetType {
 	case types.SUKUK:
@@ -138,11 +138,11 @@ func (s *ShariaService) validateShariaStockOrder(order *interfaces.Order) error 
 	if order.Quantity <= 0 {
 		return fmt.Errorf("order quantity must be positive")
 	}
-	
+
 	if order.Price <= 0 && order.Type != interfaces.OrderTypeMarket {
 		return fmt.Errorf("price must be positive for non-market orders")
 	}
-	
+
 	return nil
 }
 
@@ -152,12 +152,12 @@ func (s *ShariaService) validateSukukOrder(order *interfaces.Order) error {
 	if order.Quantity < 1000 {
 		return fmt.Errorf("minimum Sukuk investment is 1000 units")
 	}
-	
+
 	// Check if it's a trading day (no trading on Fridays for some Sukuk)
 	if time.Now().Weekday() == time.Friday {
 		return fmt.Errorf("Sukuk trading not allowed on Fridays")
 	}
-	
+
 	return nil
 }
 
@@ -167,7 +167,7 @@ func (s *ShariaService) validateIslamicFundOrder(order *interfaces.Order) error 
 	if order.Quantity < 100 {
 		return fmt.Errorf("minimum Islamic fund investment is 100 units")
 	}
-	
+
 	return nil
 }
 
@@ -177,7 +177,7 @@ func (s *ShariaService) validateTakafulOrder(order *interfaces.Order) error {
 	if order.Quantity < 1 {
 		return fmt.Errorf("minimum Takaful investment is 1 unit")
 	}
-	
+
 	return nil
 }
 
@@ -186,7 +186,7 @@ func (s *ShariaService) GetShariaBoard(ctx context.Context) (*ShariaBoard, error
 	if !s.config.EnableShariaBoard || s.shariaBoard == nil {
 		return nil, fmt.Errorf("Sharia board information not available")
 	}
-	
+
 	return s.shariaBoard, nil
 }
 
@@ -197,11 +197,11 @@ func NewScreeningEngine(rules []ShariaRule) *ScreeningEngine {
 		cache:    make(map[string]*ScreeningResult),
 		cacheTTL: 24 * time.Hour, // Cache results for 24 hours
 	}
-	
+
 	for _, rule := range rules {
 		engine.rules[rule.ID] = rule
 	}
-	
+
 	return engine
 }
 
@@ -216,34 +216,34 @@ func (e *ScreeningEngine) PerformScreening(ctx context.Context, symbol string) (
 		LastUpdated:     time.Now(),
 		RulesApplied:    []string{},
 	}
-	
+
 	// Apply all active rules
 	for _, rule := range e.rules {
 		if !rule.IsActive {
 			continue
 		}
-		
+
 		result.RulesApplied = append(result.RulesApplied, rule.ID)
-		
+
 		// This would typically call external APIs or databases
 		// For now, we'll use simplified logic
 		if !e.applyRule(rule, symbol) {
 			result.IsCompliant = false
 			result.ComplianceScore -= 20.0 // Deduct points for violations
 			result.Violations = append(result.Violations, rule.Description)
-			result.Recommendations = append(result.Recommendations, 
+			result.Recommendations = append(result.Recommendations,
 				fmt.Sprintf("Address violation: %s", rule.Name))
 		}
 	}
-	
+
 	// Ensure score doesn't go below 0
 	if result.ComplianceScore < 0 {
 		result.ComplianceScore = 0
 	}
-	
+
 	// Cache the result
 	e.cacheResult(symbol, result)
-	
+
 	return result, nil
 }
 
@@ -251,7 +251,7 @@ func (e *ScreeningEngine) PerformScreening(ctx context.Context, symbol string) (
 func (e *ScreeningEngine) getCachedResult(symbol string) *ScreeningResult {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	
+
 	if result, exists := e.cache[symbol]; exists {
 		// Check if cache is still valid
 		if time.Since(result.LastUpdated) < e.cacheTTL {
@@ -260,7 +260,7 @@ func (e *ScreeningEngine) getCachedResult(symbol string) *ScreeningResult {
 		// Remove expired cache entry
 		delete(e.cache, symbol)
 	}
-	
+
 	return nil
 }
 
@@ -268,7 +268,7 @@ func (e *ScreeningEngine) getCachedResult(symbol string) *ScreeningResult {
 func (e *ScreeningEngine) cacheResult(symbol string, result *ScreeningResult) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	
+
 	e.cache[symbol] = result
 }
 
@@ -276,7 +276,7 @@ func (e *ScreeningEngine) cacheResult(symbol string, result *ScreeningResult) {
 func (e *ScreeningEngine) applyRule(rule ShariaRule, symbol string) bool {
 	// Simplified rule application logic
 	// In a real implementation, this would check against external data sources
-	
+
 	switch rule.ID {
 	case "interest_prohibition":
 		// Check if company is involved in interest-based activities
@@ -297,7 +297,7 @@ func (e *ScreeningEngine) applyRule(rule ShariaRule, symbol string) bool {
 func (e *ScreeningEngine) isInterestBased(symbol string) bool {
 	// Simplified logic - in reality, this would check against financial data
 	prohibitedSectors := []string{"BANK", "INSURANCE", "FINANCE"}
-	
+
 	// This would typically query external APIs or databases
 	// For demonstration, we'll use simplified logic
 	for _, sector := range prohibitedSectors {
@@ -305,7 +305,7 @@ func (e *ScreeningEngine) isInterestBased(symbol string) bool {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -313,13 +313,13 @@ func (e *ScreeningEngine) isInterestBased(symbol string) bool {
 func (e *ScreeningEngine) hasProhibitedActivities(symbol string) bool {
 	// Simplified logic - check against prohibited activities
 	prohibitedActivities := []string{"ALCOHOL", "GAMBLING", "PORK", "TOBACCO"}
-	
+
 	for _, activity := range prohibitedActivities {
 		if symbol == activity {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -327,7 +327,7 @@ func (e *ScreeningEngine) hasProhibitedActivities(symbol string) bool {
 func (e *ScreeningEngine) checkDebtRatio(symbol string) bool {
 	// Simplified logic - in reality, this would check financial ratios
 	// Assume acceptable debt ratio is below 33%
-	
+
 	// This would typically query financial data APIs
 	// For demonstration, we'll assume most companies pass this test
 	return true
@@ -340,17 +340,17 @@ func NewZakatCalculator(config *ZakatConfig) *ZakatCalculator {
 		rateTable:  make(map[types.AssetType]float64),
 		exemptions: make(map[types.AssetType]bool),
 	}
-	
+
 	// Set default rates for different asset types
 	calculator.rateTable[types.STOCK] = config.StandardRate
 	calculator.rateTable[types.SUKUK] = config.StandardRate
 	calculator.rateTable[types.ISLAMIC_FUND] = config.StandardRate
 	calculator.rateTable[types.SHARIA_STOCK] = config.StandardRate
 	calculator.rateTable[types.ISLAMIC_ETF] = config.StandardRate
-	
+
 	// Set exemptions
 	calculator.exemptions[types.TAKAFUL] = true // Takaful is typically exempt
-	
+
 	return calculator
 }
 
@@ -359,54 +359,54 @@ func (z *ZakatCalculator) CalculateZakat(ctx context.Context, userID string, por
 	totalWealth := 0.0
 	zakatableAmount := 0.0
 	exemptAssets := []string{}
-	
+
 	// Calculate total wealth and zakatable amount
 	for _, holding := range portfolio.Holdings {
 		assetValue := holding.Quantity * holding.CurrentPrice
 		totalWealth += assetValue
-		
+
 		// Check if asset is exempt from Zakat
 		if exempt, exists := z.exemptions[holding.AssetType]; exists && exempt {
 			exemptAssets = append(exemptAssets, holding.Symbol)
 			continue
 		}
-		
+
 		// Add to zakatable amount
 		zakatableAmount += assetValue
 	}
-	
+
 	// Check if wealth meets Nisab threshold
 	if totalWealth < z.config.NisabThreshold {
 		return &ZakatRecord{
-			UserID:            userID,
-			Year:              time.Now().Year(),
-			TotalWealth:       totalWealth,
-			ZakatableAmount:   0,
-			ZakatRate:         z.config.StandardRate,
-			ZakatDue:          0,
-			Currency:          z.config.Currency,
-			CalculationDate:   time.Now(),
-			NextDueDate:       time.Now().AddDate(1, 0, 0), // Next year
-			ExemptAssets:      exemptAssets,
+			UserID:          userID,
+			Year:            time.Now().Year(),
+			TotalWealth:     totalWealth,
+			ZakatableAmount: 0,
+			ZakatRate:       z.config.StandardRate,
+			ZakatDue:        0,
+			Currency:        z.config.Currency,
+			CalculationDate: time.Now(),
+			NextDueDate:     time.Now().AddDate(1, 0, 0), // Next year
+			ExemptAssets:    exemptAssets,
 		}, nil
 	}
-	
+
 	// Calculate Zakat due
 	zakatDue := zakatableAmount * z.config.StandardRate
-	
+
 	// Round to 2 decimal places
 	zakatDue = math.Round(zakatDue*100) / 100
-	
+
 	return &ZakatRecord{
-		UserID:            userID,
-		Year:              time.Now().Year(),
-		TotalWealth:       totalWealth,
-		ZakatableAmount:   zakatableAmount,
-		ZakatRate:         z.config.StandardRate,
-		ZakatDue:          zakatDue,
-		Currency:          z.config.Currency,
-		CalculationDate:   time.Now(),
-		NextDueDate:       time.Now().AddDate(1, 0, 0), // Next year
-		ExemptAssets:      exemptAssets,
+		UserID:          userID,
+		Year:            time.Now().Year(),
+		TotalWealth:     totalWealth,
+		ZakatableAmount: zakatableAmount,
+		ZakatRate:       z.config.StandardRate,
+		ZakatDue:        zakatDue,
+		Currency:        z.config.Currency,
+		CalculationDate: time.Now(),
+		NextDueDate:     time.Now().AddDate(1, 0, 0), // Next year
+		ExemptAssets:    exemptAssets,
 	}, nil
 }

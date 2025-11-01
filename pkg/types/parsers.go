@@ -4,7 +4,7 @@ package types
 import (
 	"fmt"
 	"strings"
-	
+
 	tradingTypes "github.com/abdoElHodaky/tradSys/internal/trading/types"
 )
 

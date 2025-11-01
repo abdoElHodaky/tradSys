@@ -171,14 +171,14 @@ func (s *StatisticalArbitrageStrategy) GetCurrentPositions() map[string]*models.
 // GetPairMetrics returns current pair metrics
 func (s *StatisticalArbitrageStrategy) GetPairMetrics() *PairMetrics {
 	return &PairMetrics{
-		PairID:         s.pairID,
-		Symbol1:        s.symbol1,
-		Symbol2:        s.symbol2,
-		SpreadMean:     s.spreadMean,
-		SpreadStdDev:   s.spreadStdDev,
-		CurrentZScore:  s.currentZScore,
-		LastUpdate:     s.lastUpdate,
-		SampleSize:     len(s.spread),
+		PairID:        s.pairID,
+		Symbol1:       s.symbol1,
+		Symbol2:       s.symbol2,
+		SpreadMean:    s.spreadMean,
+		SpreadStdDev:  s.spreadStdDev,
+		CurrentZScore: s.currentZScore,
+		LastUpdate:    s.lastUpdate,
+		SampleSize:    len(s.spread),
 	}
 }
 
@@ -200,7 +200,7 @@ func (s *StatisticalArbitrageStrategy) GetPerformanceMetrics(ctx context.Context
 
 	// Calculate basic metrics
 	metrics.TotalTrades = len(closedPositions)
-	
+
 	var totalPnL float64
 	var wins, losses []float64
 	var consecutiveWins, consecutiveLosses int
@@ -303,12 +303,12 @@ func (s *StatisticalArbitrageStrategy) GetRiskMetrics(ctx context.Context) (*Ris
 
 	for i, pos := range positions {
 		pnlSeries[i] = pos.RealizedPnL
-		
+
 		// Calculate current exposure (sum of absolute position values)
 		if pos.Status == "OPEN" {
 			exposure := pos.Quantity1*pos.EntryPrice1 + pos.Quantity2*pos.EntryPrice2
 			currentExposure += exposure
-			
+
 			// Calculate leverage (simplified)
 			if pos.InitialCapital > 0 {
 				leverage := exposure / pos.InitialCapital

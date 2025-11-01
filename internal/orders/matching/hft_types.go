@@ -1,6 +1,6 @@
 // 🎯 **HFT Engine Types**
 // Generated using TradSys Code Splitting Standards
-// 
+//
 // This file contains type definitions, constants, and data structures
 // for the High-Frequency Trading Engine component. All types follow the established
 // naming conventions and include comprehensive documentation for ultra-low latency operations.
@@ -126,22 +126,22 @@ type FastOrder = pool.FastOrder
 // HFTEngineConfig contains configuration for HFT engine
 type HFTEngineConfig struct {
 	// Performance settings
-	MaxLatencyNanos     uint64 `json:"max_latency_nanos"`     // Target: <100,000 (100μs)
-	TradeChannelBuffer  int    `json:"trade_channel_buffer"`  // Default: 10,000
-	WorkerPoolSize      int    `json:"worker_pool_size"`      // Default: 2x CPU cores
-	OrderPoolSize       int    `json:"order_pool_size"`       // Default: 10,000
-	TradePoolSize       int    `json:"trade_pool_size"`       // Default: 1,000
-	
+	MaxLatencyNanos    uint64 `json:"max_latency_nanos"`    // Target: <100,000 (100μs)
+	TradeChannelBuffer int    `json:"trade_channel_buffer"` // Default: 10,000
+	WorkerPoolSize     int    `json:"worker_pool_size"`     // Default: 2x CPU cores
+	OrderPoolSize      int    `json:"order_pool_size"`      // Default: 10,000
+	TradePoolSize      int    `json:"trade_pool_size"`      // Default: 1,000
+
 	// Order book settings
-	MaxPriceLevels      int     `json:"max_price_levels"`      // Default: 1,000
-	MaxOrdersPerLevel   int     `json:"max_orders_per_level"`  // Default: 100
-	PriceTickSize       float64 `json:"price_tick_size"`       // Minimum price increment
-	
+	MaxPriceLevels    int     `json:"max_price_levels"`     // Default: 1,000
+	MaxOrdersPerLevel int     `json:"max_orders_per_level"` // Default: 100
+	PriceTickSize     float64 `json:"price_tick_size"`      // Minimum price increment
+
 	// Monitoring settings
-	EnableMetrics       bool `json:"enable_metrics"`        // Default: true
-	MetricsInterval     int  `json:"metrics_interval_ms"`   // Default: 1000ms
-	EnableTradeLogging  bool `json:"enable_trade_logging"`  // Default: false (performance)
-	
+	EnableMetrics      bool `json:"enable_metrics"`       // Default: true
+	MetricsInterval    int  `json:"metrics_interval_ms"`  // Default: 1000ms
+	EnableTradeLogging bool `json:"enable_trade_logging"` // Default: false (performance)
+
 	// Memory management
 	EnableGCOptimization bool `json:"enable_gc_optimization"` // Default: true
 	PreallocateMemory    bool `json:"preallocate_memory"`     // Default: true
@@ -151,13 +151,13 @@ type HFTEngineConfig struct {
 type HFTPerformanceMetrics struct {
 	// Latency metrics (nanoseconds)
 	OrderProcessingLatency struct {
-		Min     uint64 `json:"min"`
-		Max     uint64 `json:"max"`
-		Avg     uint64 `json:"avg"`
-		P50     uint64 `json:"p50"`
-		P95     uint64 `json:"p95"`
-		P99     uint64 `json:"p99"`
-		P999    uint64 `json:"p999"`
+		Min  uint64 `json:"min"`
+		Max  uint64 `json:"max"`
+		Avg  uint64 `json:"avg"`
+		P50  uint64 `json:"p50"`
+		P95  uint64 `json:"p95"`
+		P99  uint64 `json:"p99"`
+		P999 uint64 `json:"p999"`
 	} `json:"order_processing_latency"`
 
 	// Throughput metrics
@@ -166,42 +166,42 @@ type HFTPerformanceMetrics struct {
 	MessagesPerSecond float64 `json:"messages_per_second"`
 
 	// Memory metrics
-	MemoryUsageBytes    uint64 `json:"memory_usage_bytes"`
-	PoolUtilization     float64 `json:"pool_utilization"`
-	GCPauseTimeNanos    uint64 `json:"gc_pause_time_nanos"`
-	
+	MemoryUsageBytes uint64  `json:"memory_usage_bytes"`
+	PoolUtilization  float64 `json:"pool_utilization"`
+	GCPauseTimeNanos uint64  `json:"gc_pause_time_nanos"`
+
 	// Order book metrics
-	AverageSpread       float64 `json:"average_spread"`
-	OrderBookDepth      int     `json:"order_book_depth"`
-	PriceLevelCount     int     `json:"price_level_count"`
-	
+	AverageSpread   float64 `json:"average_spread"`
+	OrderBookDepth  int     `json:"order_book_depth"`
+	PriceLevelCount int     `json:"price_level_count"`
+
 	// System metrics
 	CPUUtilization      float64 `json:"cpu_utilization"`
 	NetworkLatencyNanos uint64  `json:"network_latency_nanos"`
-	
+
 	// Error metrics
-	RejectedOrders      uint64 `json:"rejected_orders"`
-	FailedTrades        uint64 `json:"failed_trades"`
-	TimeoutCount        uint64 `json:"timeout_count"`
-	
+	RejectedOrders uint64 `json:"rejected_orders"`
+	FailedTrades   uint64 `json:"failed_trades"`
+	TimeoutCount   uint64 `json:"timeout_count"`
+
 	// Timestamp
-	LastUpdateTime      int64 `json:"last_update_time"`
+	LastUpdateTime int64 `json:"last_update_time"`
 }
 
 // HFTOrderBookSnapshot represents a point-in-time snapshot of the order book
 type HFTOrderBookSnapshot struct {
-	Symbol    string    `json:"symbol"`
-	Timestamp int64     `json:"timestamp"`
-	
+	Symbol    string `json:"symbol"`
+	Timestamp int64  `json:"timestamp"`
+
 	// Best bid/ask
-	BestBid   float64 `json:"best_bid"`
-	BestAsk   float64 `json:"best_ask"`
-	Spread    float64 `json:"spread"`
-	
+	BestBid float64 `json:"best_bid"`
+	BestAsk float64 `json:"best_ask"`
+	Spread  float64 `json:"spread"`
+
 	// Depth
 	BidLevels []PriceLevel `json:"bid_levels"`
 	AskLevels []PriceLevel `json:"ask_levels"`
-	
+
 	// Statistics
 	TotalBidQuantity float64 `json:"total_bid_quantity"`
 	TotalAskQuantity float64 `json:"total_ask_quantity"`
@@ -231,14 +231,14 @@ type HFTTradeExecution struct {
 
 // HFTEngineState represents the current state of the HFT engine
 type HFTEngineState struct {
-	IsRunning       bool   `json:"is_running"`
-	StartTime       int64  `json:"start_time"`
-	UptimeSeconds   int64  `json:"uptime_seconds"`
-	ActiveSymbols   int    `json:"active_symbols"`
-	TotalOrders     uint64 `json:"total_orders"`
-	TotalTrades     uint64 `json:"total_trades"`
-	CurrentLatency  uint64 `json:"current_latency_nanos"`
-	HealthStatus    string `json:"health_status"`
+	IsRunning      bool   `json:"is_running"`
+	StartTime      int64  `json:"start_time"`
+	UptimeSeconds  int64  `json:"uptime_seconds"`
+	ActiveSymbols  int    `json:"active_symbols"`
+	TotalOrders    uint64 `json:"total_orders"`
+	TotalTrades    uint64 `json:"total_trades"`
+	CurrentLatency uint64 `json:"current_latency_nanos"`
+	HealthStatus   string `json:"health_status"`
 }
 
 // Constants for HFT engine operation
@@ -247,16 +247,16 @@ const (
 	MaxTargetLatencyNanos = 100000 // 100 microseconds
 	MaxOrderBookDepth     = 1000   // Maximum price levels
 	MaxOrdersPerLevel     = 100    // Maximum orders per price level
-	
+
 	// Buffer sizes
 	DefaultTradeChannelBuffer = 10000
 	DefaultOrderPoolSize      = 10000
 	DefaultTradePoolSize      = 1000
-	
+
 	// Monitoring intervals
 	DefaultMetricsIntervalMs = 1000
 	DefaultHealthCheckMs     = 100
-	
+
 	// Memory optimization
 	DefaultGCTargetPercent = 50 // Lower GC pressure for HFT
 )

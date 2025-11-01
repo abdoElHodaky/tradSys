@@ -18,7 +18,7 @@ type Logger interface {
 	Warn(msg string, fields ...interface{})
 	Error(msg string, fields ...interface{})
 	Fatal(msg string, fields ...interface{})
-	
+
 	With(fields ...interface{}) Logger
 	WithContext(ctx context.Context) Logger
 	WithService(service string) Logger
@@ -33,7 +33,7 @@ type StructuredLogger struct {
 // NewStructuredLogger creates a new structured logger for a service
 func NewStructuredLogger(serviceName string, level string) *StructuredLogger {
 	config := zap.NewProductionConfig()
-	
+
 	// Set log level
 	switch level {
 	case "debug":
@@ -47,7 +47,7 @@ func NewStructuredLogger(serviceName string, level string) *StructuredLogger {
 	default:
 		config.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
 	}
-	
+
 	// Configure output format
 	config.Encoding = "json"
 	config.EncoderConfig = zapcore.EncoderConfig{
@@ -63,20 +63,20 @@ func NewStructuredLogger(serviceName string, level string) *StructuredLogger {
 		EncodeDuration: zapcore.SecondsDurationEncoder,
 		EncodeCaller:   zapcore.ShortCallerEncoder,
 	}
-	
+
 	// Set initial fields
 	config.InitialFields = map[string]interface{}{
 		"service": serviceName,
 		"version": "v3.0.0",
 		"pid":     os.Getpid(),
 	}
-	
+
 	logger, err := config.Build()
 	if err != nil {
 		// Fallback to development logger if production config fails
 		logger, _ = zap.NewDevelopment()
 	}
-	
+
 	return &StructuredLogger{
 		logger: logger,
 		fields: []zap.Field{},
@@ -134,50 +134,50 @@ func (sl *StructuredLogger) convertFields(fields ...interface{}) []zap.Field {
 		// If odd number of fields, add the last one as a generic field
 		fields = append(fields, "")
 	}
-	
+
 	zapFields := make([]zap.Field, 0, len(fields)/2+len(sl.fields))
-	
+
 	// Add existing fields
 	zapFields = append(zapFields, sl.fields...)
-	
+
 	// Convert new fields
 	for i := 0; i < len(fields); i += 2 {
 		key, ok := fields[i].(string)
 		if !ok {
 			key = fmt.Sprintf("field_%d", i/2)
 		}
-		
+
 		value := fields[i+1]
 		zapFields = append(zapFields, zap.Any(key, value))
 	}
-	
+
 	return zapFields
 }
 
 // extractContextFields extracts logging fields from context
 func (sl *StructuredLogger) extractContextFields(ctx context.Context) []interface{} {
 	var fields []interface{}
-	
+
 	// Extract request ID if present
 	if requestID := ctx.Value("request_id"); requestID != nil {
 		fields = append(fields, "request_id", requestID)
 	}
-	
+
 	// Extract user ID if present
 	if userID := ctx.Value("user_id"); userID != nil {
 		fields = append(fields, "user_id", userID)
 	}
-	
+
 	// Extract trace ID if present
 	if traceID := ctx.Value("trace_id"); traceID != nil {
 		fields = append(fields, "trace_id", traceID)
 	}
-	
+
 	// Extract span ID if present
 	if spanID := ctx.Value("span_id"); spanID != nil {
 		fields = append(fields, "span_id", spanID)
 	}
-	
+
 	return fields
 }
 
@@ -355,7 +355,7 @@ func (lm *LogMiddleware) LogServiceCall(ctx context.Context, service, method str
 		"method", method,
 		"duration_ms", duration.Milliseconds(),
 	}
-	
+
 	if err != nil {
 		fields = append(fields, "error", err.Error())
 		lm.logger.WithContext(ctx).Error("Service call failed", fields...)
@@ -430,11 +430,11 @@ func (al *AuditLogger) LogUserAction(ctx context.Context, userID, action, resour
 		"action", action,
 		"resource", resource,
 	}
-	
+
 	if details != nil {
 		fields = append(fields, "details", details)
 	}
-	
+
 	al.logger.WithContext(ctx).Info("Audit event", fields...)
 }
 
@@ -445,11 +445,11 @@ func (al *AuditLogger) LogSystemEvent(ctx context.Context, event, component stri
 		"event", event,
 		"component", component,
 	}
-	
+
 	if details != nil {
 		fields = append(fields, "details", details)
 	}
-	
+
 	al.logger.WithContext(ctx).Info("Audit event", fields...)
 }
 
@@ -460,10 +460,10 @@ func (al *AuditLogger) LogSecurityEvent(ctx context.Context, event, severity str
 		"event", event,
 		"severity", severity,
 	}
-	
+
 	if details != nil {
 		fields = append(fields, "details", details)
 	}
-	
+
 	al.logger.WithContext(ctx).Warn("Security audit event", fields...)
 }

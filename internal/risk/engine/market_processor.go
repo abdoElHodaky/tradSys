@@ -3,7 +3,7 @@ package risk_management
 import (
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/core/matching"
+	order_matching "github.com/abdoElHodaky/tradSys/internal/core/matching"
 	"go.uber.org/zap"
 )
 
@@ -82,7 +82,7 @@ func (s *Service) checkCircuitBreaker(symbol string, price float64, timestamp ti
 			if timestamp.Sub(breaker.LastTriggered()) < breaker.TimeWindow {
 				breaker.IsTriggeredFlag = true
 				breaker.LastTriggeredTime = timestamp
-				
+
 				s.logger.Warn("Circuit breaker triggered",
 					zap.String("symbol", symbol),
 					zap.Float64("price_change", priceChange*100),
@@ -140,7 +140,7 @@ func (s *Service) processTrade(trade *order_matching.Trade) {
 func (s *Service) updatePosition(userID, symbol string, quantityDelta, price float64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	s.updatePositionInternal(userID, symbol, quantityDelta, price)
 }
 

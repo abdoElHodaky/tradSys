@@ -35,7 +35,7 @@ func (e *HFTEngine) ResetStats() {
 	atomic.StoreUint64(&e.stats.CancelledOrders, 0)
 	atomic.StoreUint64(&e.stats.RejectedOrders, 0)
 	e.stats.LastUpdateTime = time.Now()
-	
+
 	e.logger.Info("HFT Engine statistics reset")
 }
 
@@ -44,12 +44,12 @@ func (e *HFTEngine) UpdateLatencyStats(latencyNs uint64) {
 	// Update average latency (simple moving average)
 	currentAvg := atomic.LoadUint64(&e.avgLatency)
 	ordersProcessed := atomic.LoadUint64(&e.ordersProcessed)
-	
+
 	if ordersProcessed > 0 {
 		newAvg := (currentAvg*(ordersProcessed-1) + latencyNs) / ordersProcessed
 		atomic.StoreUint64(&e.avgLatency, newAvg)
 	}
-	
+
 	// Update max latency
 	for {
 		currentMax := atomic.LoadUint64(&e.stats.MaxLatencyNs)
@@ -60,7 +60,7 @@ func (e *HFTEngine) UpdateLatencyStats(latencyNs uint64) {
 			break
 		}
 	}
-	
+
 	// Update min latency
 	for {
 		currentMin := atomic.LoadUint64(&e.stats.MinLatencyNs)
@@ -80,7 +80,7 @@ func (e *HFTEngine) GetOrderBookStats(symbol string) *OrderBookStats {
 	if orderBook == nil {
 		return nil
 	}
-	
+
 	return &OrderBookStats{
 		Symbol:        orderBook.Symbol,
 		TotalOrders:   atomic.LoadUint64(&orderBook.totalOrders),
@@ -109,13 +109,13 @@ type OrderBookStats struct {
 func (e *HFTEngine) GetAllOrderBookStats() map[string]*OrderBookStats {
 	orderBooks := (*map[string]*HFTOrderBook)(atomic.LoadPointer(&e.orderBooks))
 	stats := make(map[string]*OrderBookStats)
-	
+
 	for symbol := range *orderBooks {
 		if bookStats := e.GetOrderBookStats(symbol); bookStats != nil {
 			stats[symbol] = bookStats
 		}
 	}
-	
+
 	return stats
 }
 
@@ -123,7 +123,7 @@ func (e *HFTEngine) GetAllOrderBookStats() map[string]*OrderBookStats {
 func (e *HFTEngine) performanceMonitor() {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-e.ctx.Done():
@@ -145,32 +145,32 @@ func (e *HFTEngine) performanceMonitor() {
 // GetThroughputMetrics calculates throughput metrics
 func (e *HFTEngine) GetThroughputMetrics() ThroughputMetrics {
 	stats := e.GetStats()
-	
+
 	// Calculate orders per second (simple approximation)
 	ordersPerSecond := float64(stats.OrdersProcessed)
 	tradesPerSecond := float64(stats.TradesExecuted)
-	
+
 	// In a real implementation, you'd track time windows for accurate rates
 	return ThroughputMetrics{
-		OrdersPerSecond:    ordersPerSecond,
-		TradesPerSecond:    tradesPerSecond,
-		AvgLatencyMs:       float64(stats.AvgLatencyNs) / 1_000_000,
-		MaxLatencyMs:       float64(stats.MaxLatencyNs) / 1_000_000,
-		MinLatencyMs:       float64(stats.MinLatencyNs) / 1_000_000,
-		TotalVolumeTraded:  stats.TotalVolumeTraded,
-		ActiveOrders:       stats.ActiveOrders,
+		OrdersPerSecond:   ordersPerSecond,
+		TradesPerSecond:   tradesPerSecond,
+		AvgLatencyMs:      float64(stats.AvgLatencyNs) / 1_000_000,
+		MaxLatencyMs:      float64(stats.MaxLatencyNs) / 1_000_000,
+		MinLatencyMs:      float64(stats.MinLatencyNs) / 1_000_000,
+		TotalVolumeTraded: stats.TotalVolumeTraded,
+		ActiveOrders:      stats.ActiveOrders,
 	}
 }
 
 // ThroughputMetrics represents throughput and performance metrics
 type ThroughputMetrics struct {
-	OrdersPerSecond    float64
-	TradesPerSecond    float64
-	AvgLatencyMs       float64
-	MaxLatencyMs       float64
-	MinLatencyMs       float64
-	TotalVolumeTraded  uint64
-	ActiveOrders       uint64
+	OrdersPerSecond   float64
+	TradesPerSecond   float64
+	AvgLatencyMs      float64
+	MaxLatencyMs      float64
+	MinLatencyMs      float64
+	TotalVolumeTraded uint64
+	ActiveOrders      uint64
 }
 
 // LogPerformanceMetrics logs comprehensive performance metrics
@@ -178,7 +178,7 @@ func (e *HFTEngine) LogPerformanceMetrics() {
 	stats := e.GetStats()
 	throughput := e.GetThroughputMetrics()
 	orderBookStats := e.GetAllOrderBookStats()
-	
+
 	e.logger.Info("HFT Engine Performance Summary",
 		zap.Uint64("total_orders_processed", stats.OrdersProcessed),
 		zap.Uint64("total_trades_executed", stats.TradesExecuted),
@@ -197,26 +197,26 @@ func (e *HFTEngine) LogPerformanceMetrics() {
 // GetHealthMetrics returns health-related metrics for monitoring
 func (e *HFTEngine) GetHealthMetrics() HealthMetrics {
 	stats := e.GetStats()
-	
+
 	// Calculate health indicators
 	errorRate := float64(stats.RejectedOrders) / float64(stats.OrdersProcessed) * 100
 	if stats.OrdersProcessed == 0 {
 		errorRate = 0
 	}
-	
+
 	cancellationRate := float64(stats.CancelledOrders) / float64(stats.OrdersProcessed) * 100
 	if stats.OrdersProcessed == 0 {
 		cancellationRate = 0
 	}
-	
+
 	return HealthMetrics{
-		IsHealthy:           stats.AvgLatencyNs < 1_000_000, // Less than 1ms average
-		ErrorRate:           errorRate,
-		CancellationRate:    cancellationRate,
-		AvgLatencyMs:        float64(stats.AvgLatencyNs) / 1_000_000,
-		ActiveOrders:        stats.ActiveOrders,
+		IsHealthy:            stats.AvgLatencyNs < 1_000_000, // Less than 1ms average
+		ErrorRate:            errorRate,
+		CancellationRate:     cancellationRate,
+		AvgLatencyMs:         float64(stats.AvgLatencyNs) / 1_000_000,
+		ActiveOrders:         stats.ActiveOrders,
 		TotalOrdersProcessed: stats.OrdersProcessed,
-		LastUpdateTime:      stats.LastUpdateTime,
+		LastUpdateTime:       stats.LastUpdateTime,
 	}
 }
 

@@ -16,15 +16,15 @@ func (d *UnifiedMessageDispatcher) Broadcast(ctx context.Context, message interf
 	d.channelsMux.RLock()
 	subscribers, exists := d.channels[channel]
 	d.channelsMux.RUnlock()
-	
+
 	if !exists || len(subscribers) == 0 {
 		d.logger.Debug("No subscribers for channel", zap.String("channel", channel))
 		return nil
 	}
-	
+
 	d.clientsMux.RLock()
 	defer d.clientsMux.RUnlock()
-	
+
 	successCount := 0
 	for clientID := range subscribers {
 		if clientChan, exists := d.clients[clientID]; exists {
@@ -40,12 +40,12 @@ func (d *UnifiedMessageDispatcher) Broadcast(ctx context.Context, message interf
 			}
 		}
 	}
-	
+
 	d.logger.Debug("Broadcast completed",
 		zap.String("channel", channel),
 		zap.Int("subscribers", len(subscribers)),
 		zap.Int("successful", successCount))
-	
+
 	return nil
 }
 
@@ -53,7 +53,7 @@ func (d *UnifiedMessageDispatcher) Broadcast(ctx context.Context, message interf
 func (d *UnifiedMessageDispatcher) BroadcastToUsers(ctx context.Context, message interfaces.Message, userIDs []string) error {
 	d.clientsMux.RLock()
 	defer d.clientsMux.RUnlock()
-	
+
 	successCount := 0
 	for _, userID := range userIDs {
 		if clientChan, exists := d.clients[userID]; exists {
@@ -68,11 +68,11 @@ func (d *UnifiedMessageDispatcher) BroadcastToUsers(ctx context.Context, message
 			}
 		}
 	}
-	
+
 	d.logger.Debug("User broadcast completed",
 		zap.Int("target_users", len(userIDs)),
 		zap.Int("successful", successCount))
-	
+
 	return nil
 }
 
@@ -80,17 +80,17 @@ func (d *UnifiedMessageDispatcher) BroadcastToUsers(ctx context.Context, message
 func (d *UnifiedMessageDispatcher) SubscribeToChannel(clientID, channel string) error {
 	d.channelsMux.Lock()
 	defer d.channelsMux.Unlock()
-	
+
 	if d.channels[channel] == nil {
 		d.channels[channel] = make(map[string]bool)
 	}
-	
+
 	d.channels[channel][clientID] = true
-	
+
 	d.logger.Debug("Client subscribed to channel",
 		zap.String("client_id", clientID),
 		zap.String("channel", channel))
-	
+
 	return nil
 }
 
@@ -98,20 +98,20 @@ func (d *UnifiedMessageDispatcher) SubscribeToChannel(clientID, channel string) 
 func (d *UnifiedMessageDispatcher) UnsubscribeFromChannel(clientID, channel string) error {
 	d.channelsMux.Lock()
 	defer d.channelsMux.Unlock()
-	
+
 	if subscribers, exists := d.channels[channel]; exists {
 		delete(subscribers, clientID)
-		
+
 		// Clean up empty channels
 		if len(subscribers) == 0 {
 			delete(d.channels, channel)
 		}
 	}
-	
+
 	d.logger.Debug("Client unsubscribed from channel",
 		zap.String("client_id", clientID),
 		zap.String("channel", channel))
-	
+
 	return nil
 }
 
@@ -119,17 +119,17 @@ func (d *UnifiedMessageDispatcher) UnsubscribeFromChannel(clientID, channel stri
 func (d *UnifiedMessageDispatcher) GetChannelSubscribers(channel string) []string {
 	d.channelsMux.RLock()
 	defer d.channelsMux.RUnlock()
-	
+
 	subscribers, exists := d.channels[channel]
 	if !exists {
 		return []string{}
 	}
-	
+
 	result := make([]string, 0, len(subscribers))
 	for clientID := range subscribers {
 		result = append(result, clientID)
 	}
-	
+
 	return result
 }
 
@@ -137,16 +137,16 @@ func (d *UnifiedMessageDispatcher) GetChannelSubscribers(channel string) []strin
 func (d *UnifiedMessageDispatcher) StartStream(ctx context.Context, clientID string, messageTypes []string) (<-chan interfaces.Message, error) {
 	d.streamsMux.Lock()
 	defer d.streamsMux.Unlock()
-	
+
 	// Check if stream already exists
 	if _, exists := d.streams[clientID]; exists {
 		return nil, fmt.Errorf("stream already exists for client: %s", clientID)
 	}
-	
+
 	// Create stream channel
 	streamChan := make(chan interfaces.Message, 100) // Buffered channel
 	d.streams[clientID] = streamChan
-	
+
 	// Create a stream handler that forwards messages to the stream
 	streamHandler := &StreamHandler{
 		clientID:     clientID,
@@ -154,18 +154,18 @@ func (d *UnifiedMessageDispatcher) StartStream(ctx context.Context, clientID str
 		streamChan:   streamChan,
 		logger:       d.logger,
 	}
-	
+
 	// Subscribe the stream handler to the specified message types
 	if err := d.Subscribe(messageTypes, streamHandler); err != nil {
 		delete(d.streams, clientID)
 		close(streamChan)
 		return nil, fmt.Errorf("failed to subscribe stream handler: %w", err)
 	}
-	
+
 	d.logger.Debug("Stream started",
 		zap.String("client_id", clientID),
 		zap.Strings("message_types", messageTypes))
-	
+
 	return streamChan, nil
 }
 
@@ -173,22 +173,22 @@ func (d *UnifiedMessageDispatcher) StartStream(ctx context.Context, clientID str
 func (d *UnifiedMessageDispatcher) StopStream(clientID string) error {
 	d.streamsMux.Lock()
 	defer d.streamsMux.Unlock()
-	
+
 	streamChan, exists := d.streams[clientID]
 	if !exists {
 		return fmt.Errorf("no stream found for client: %s", clientID)
 	}
-	
+
 	// Close and remove the stream
 	close(streamChan)
 	delete(d.streams, clientID)
-	
+
 	// Unsubscribe the stream handler
 	// Note: In a full implementation, we'd need to track the handler ID
 	// and unsubscribe it properly
-	
+
 	d.logger.Debug("Stream stopped", zap.String("client_id", clientID))
-	
+
 	return nil
 }
 
@@ -196,12 +196,12 @@ func (d *UnifiedMessageDispatcher) StopStream(clientID string) error {
 func (d *UnifiedMessageDispatcher) GetActiveStreams() []string {
 	d.streamsMux.RLock()
 	defer d.streamsMux.RUnlock()
-	
+
 	result := make([]string, 0, len(d.streams))
 	for clientID := range d.streams {
 		result = append(result, clientID)
 	}
-	
+
 	return result
 }
 
@@ -213,7 +213,7 @@ func (d *UnifiedMessageDispatcher) Enqueue(ctx context.Context, message interfac
 		priority: priority,
 		ctx:      ctx,
 	}
-	
+
 	select {
 	case d.messageQueue <- queuedMsg:
 		atomic.AddInt32(&d.queueStats.queueSize, 1)
@@ -234,12 +234,12 @@ func (d *UnifiedMessageDispatcher) GetQueueSize() int {
 func (d *UnifiedMessageDispatcher) GetQueueStats() interfaces.QueueStats {
 	processedCount := atomic.LoadInt64(&d.queueStats.processedCount)
 	totalWaitTime := atomic.LoadInt64(&d.queueStats.totalWaitTime)
-	
+
 	var avgWaitTime time.Duration
 	if processedCount > 0 {
 		avgWaitTime = time.Duration(totalWaitTime / processedCount)
 	}
-	
+
 	return interfaces.QueueStats{
 		QueueSize:       int(atomic.LoadInt32(&d.queueStats.queueSize)),
 		ProcessedCount:  processedCount,

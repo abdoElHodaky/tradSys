@@ -34,8 +34,6 @@ type PeerConnection struct {
 	mu        sync.RWMutex
 }
 
-
-
 // MessageHandler is a function that handles a message
 type MessageHandler func(msg Message) error
 

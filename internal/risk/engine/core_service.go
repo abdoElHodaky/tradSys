@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/core/matching"
+	order_matching "github.com/abdoElHodaky/tradSys/internal/core/matching"
 	"github.com/abdoElHodaky/tradSys/internal/orders"
 	"github.com/patrickmn/go-cache"
 	"go.uber.org/zap"
@@ -82,15 +82,15 @@ func (s *Service) CheckRiskLimits(ctx context.Context, userID, symbol string, or
 	if userID == "" {
 		return nil, errors.New("user ID cannot be empty")
 	}
-	
+
 	if symbol == "" {
 		return nil, errors.New("symbol cannot be empty")
 	}
-	
+
 	if orderSize <= 0 {
 		return nil, errors.New("order size must be positive")
 	}
-	
+
 	if currentPrice <= 0 {
 		return nil, errors.New("current price must be positive")
 	}
@@ -109,9 +109,9 @@ func (s *Service) CheckRiskLimits(ctx context.Context, userID, symbol string, or
 	// Use batch processing for high-frequency checks
 	resultCh := make(chan RiskOperationResult, 1)
 	operation := RiskOperation{
-		OpType:   OpTypeCheckLimit,
-		UserID:   userID,
-		Symbol:   symbol,
+		OpType: OpTypeCheckLimit,
+		UserID: userID,
+		Symbol: symbol,
 		Data: map[string]interface{}{
 			"order_size":    orderSize,
 			"current_price": currentPrice,
@@ -147,11 +147,11 @@ func (s *Service) AddRiskLimit(ctx context.Context, limit *RiskLimit) (*RiskLimi
 	if limit == nil {
 		return nil, errors.New("risk limit cannot be nil")
 	}
-	
+
 	if limit.UserID == "" {
 		return nil, errors.New("user ID cannot be empty")
 	}
-	
+
 	if limit.Value <= 0 {
 		return nil, errors.New("limit value must be positive")
 	}
@@ -194,7 +194,7 @@ func (s *Service) GetPosition(ctx context.Context, userID, symbol string) (*Posi
 	if userID == "" {
 		return nil, errors.New("user ID cannot be empty")
 	}
-	
+
 	if symbol == "" {
 		return nil, errors.New("symbol cannot be empty")
 	}
@@ -267,7 +267,7 @@ func (s *Service) UpdateMarketData(symbol string, price float64) error {
 	if symbol == "" {
 		return errors.New("symbol cannot be empty")
 	}
-	
+
 	if price <= 0 {
 		return errors.New("price must be positive")
 	}

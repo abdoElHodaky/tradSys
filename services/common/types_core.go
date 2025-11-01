@@ -320,21 +320,21 @@ func (tf TimeFrame) String() string {
 
 // Asset represents a tradeable asset
 type Asset struct {
-	ID           string                 `json:"id"`
-	Symbol       string                 `json:"symbol"`
-	Name         string                 `json:"name"`
-	AssetType    AssetType              `json:"asset_type"`
-	Exchange     string                 `json:"exchange"`
-	Region       string                 `json:"region"`
-	Currency     string                 `json:"currency"`
-	ISIN         string                 `json:"isin,omitempty"`
-	Sector       string                 `json:"sector,omitempty"`
-	Industry     string                 `json:"industry,omitempty"`
-	MarketCap    float64                `json:"market_cap,omitempty"`
-	IsActive     bool                   `json:"is_active"`
-	Metadata     map[string]interface{} `json:"metadata,omitempty"`
-	CreatedAt    time.Time              `json:"created_at"`
-	UpdatedAt    time.Time              `json:"updated_at"`
+	ID        string                 `json:"id"`
+	Symbol    string                 `json:"symbol"`
+	Name      string                 `json:"name"`
+	AssetType AssetType              `json:"asset_type"`
+	Exchange  string                 `json:"exchange"`
+	Region    string                 `json:"region"`
+	Currency  string                 `json:"currency"`
+	ISIN      string                 `json:"isin,omitempty"`
+	Sector    string                 `json:"sector,omitempty"`
+	Industry  string                 `json:"industry,omitempty"`
+	MarketCap float64                `json:"market_cap,omitempty"`
+	IsActive  bool                   `json:"is_active"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt time.Time              `json:"created_at"`
+	UpdatedAt time.Time              `json:"updated_at"`
 }
 
 // Order represents a trading order
@@ -364,38 +364,38 @@ type Order struct {
 
 // Trade represents an executed trade
 type Trade struct {
-	ID          string    `json:"id"`
-	OrderID     string    `json:"order_id"`
-	UserID      string    `json:"user_id"`
-	Symbol      string    `json:"symbol"`
-	Side        OrderSide `json:"side"`
-	Quantity    float64   `json:"quantity"`
-	Price       float64   `json:"price"`
-	Value       float64   `json:"value"`
-	Commission  float64   `json:"commission"`
-	Fees        float64   `json:"fees"`
-	Exchange    string    `json:"exchange"`
-	ExecutedAt  time.Time `json:"executed_at"`
-	SettledAt   *time.Time `json:"settled_at,omitempty"`
+	ID         string     `json:"id"`
+	OrderID    string     `json:"order_id"`
+	UserID     string     `json:"user_id"`
+	Symbol     string     `json:"symbol"`
+	Side       OrderSide  `json:"side"`
+	Quantity   float64    `json:"quantity"`
+	Price      float64    `json:"price"`
+	Value      float64    `json:"value"`
+	Commission float64    `json:"commission"`
+	Fees       float64    `json:"fees"`
+	Exchange   string     `json:"exchange"`
+	ExecutedAt time.Time  `json:"executed_at"`
+	SettledAt  *time.Time `json:"settled_at,omitempty"`
 }
 
 // Position represents a trading position
 type Position struct {
-	ID              string    `json:"id"`
-	UserID          string    `json:"user_id"`
-	Symbol          string    `json:"symbol"`
-	AssetType       AssetType `json:"asset_type"`
-	Exchange        string    `json:"exchange"`
-	Quantity        float64   `json:"quantity"`
-	AveragePrice    float64   `json:"average_price"`
-	MarketPrice     float64   `json:"market_price"`
-	MarketValue     float64   `json:"market_value"`
-	UnrealizedPL    float64   `json:"unrealized_pl"`
-	RealizedPL      float64   `json:"realized_pl"`
-	TotalCost       float64   `json:"total_cost"`
-	TotalCommission float64   `json:"total_commission"`
-	TotalFees       float64   `json:"total_fees"`
-	OpenedAt        time.Time `json:"opened_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID              string     `json:"id"`
+	UserID          string     `json:"user_id"`
+	Symbol          string     `json:"symbol"`
+	AssetType       AssetType  `json:"asset_type"`
+	Exchange        string     `json:"exchange"`
+	Quantity        float64    `json:"quantity"`
+	AveragePrice    float64    `json:"average_price"`
+	MarketPrice     float64    `json:"market_price"`
+	MarketValue     float64    `json:"market_value"`
+	UnrealizedPL    float64    `json:"unrealized_pl"`
+	RealizedPL      float64    `json:"realized_pl"`
+	TotalCost       float64    `json:"total_cost"`
+	TotalCommission float64    `json:"total_commission"`
+	TotalFees       float64    `json:"total_fees"`
+	OpenedAt        time.Time  `json:"opened_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
 	ClosedAt        *time.Time `json:"closed_at,omitempty"`
 }

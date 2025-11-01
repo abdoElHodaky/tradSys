@@ -97,13 +97,13 @@ func (h *MessageHandler) SerializeMessage(message *Message) ([]byte, error) {
 // handleSubscribe handles subscription requests
 func (h *MessageHandler) handleSubscribe(conn *Connection, message *Message) error {
 	var subReq SubscribeRequest
-	
+
 	// Parse subscription request from message data
 	dataBytes, err := json.Marshal(message.Data)
 	if err != nil {
 		return h.sendError(conn, "invalid_subscription", "Invalid subscription data")
 	}
-	
+
 	if err := json.Unmarshal(dataBytes, &subReq); err != nil {
 		return h.sendError(conn, "invalid_subscription", "Failed to parse subscription request")
 	}
@@ -132,13 +132,13 @@ func (h *MessageHandler) handleSubscribe(conn *Connection, message *Message) err
 // handleUnsubscribe handles unsubscription requests
 func (h *MessageHandler) handleUnsubscribe(conn *Connection, message *Message) error {
 	var unsubReq UnsubscribeRequest
-	
+
 	// Parse unsubscription request from message data
 	dataBytes, err := json.Marshal(message.Data)
 	if err != nil {
 		return h.sendError(conn, "invalid_unsubscription", "Invalid unsubscription data")
 	}
-	
+
 	if err := json.Unmarshal(dataBytes, &unsubReq); err != nil {
 		return h.sendError(conn, "invalid_unsubscription", "Failed to parse unsubscription request")
 	}
@@ -284,21 +284,21 @@ func NewPerformanceOptimizer(gateway *Gateway, logger *zap.Logger) *PerformanceO
 func (p *PerformanceOptimizer) OptimizePerformance() {
 	// Get current metrics
 	metrics := p.gateway.GetMetrics()
-	
+
 	// Log performance metrics
 	p.logger.Debug("WebSocket performance metrics",
 		zap.Int64("active_connections", metrics.ActiveConnections),
 		zap.Float64("messages_per_second", metrics.MessagesPerSecond),
 		zap.Duration("average_latency", metrics.AverageLatency),
 		zap.Int64("subscription_count", metrics.SubscriptionCount))
-	
+
 	// Perform optimizations based on metrics
 	if metrics.AverageLatency > 100*time.Millisecond {
 		p.logger.Warn("High WebSocket latency detected",
 			zap.Duration("average_latency", metrics.AverageLatency))
 		// Could implement latency optimization strategies here
 	}
-	
+
 	if metrics.ActiveConnections > int64(p.gateway.config.MaxConnections*0.8) {
 		p.logger.Warn("High connection count",
 			zap.Int64("active_connections", metrics.ActiveConnections),

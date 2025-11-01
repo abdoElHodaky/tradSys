@@ -110,9 +110,9 @@ func (s *Service) CheckRiskLimits(ctx context.Context, userID, symbol string, or
 	// Use batch processing for high-frequency checks
 	resultCh := make(chan RiskOperationResult, 1)
 	operation := RiskOperation{
-		OpType:   OpTypeCheckLimit,
-		UserID:   userID,
-		Symbol:   symbol,
+		OpType: OpTypeCheckLimit,
+		UserID: userID,
+		Symbol: symbol,
 		Data: map[string]interface{}{
 			"order_size":    orderSize,
 			"current_price": currentPrice,

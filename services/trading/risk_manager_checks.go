@@ -21,10 +21,10 @@ func (rm *RiskManager) checkOrderValue(orderValue float64, result *RiskCheckResu
 			Limit:       rm.config.MaxOrderValue,
 		}
 		result.Violations = append(result.Violations, violation)
-		result.Recommendations = append(result.Recommendations, 
+		result.Recommendations = append(result.Recommendations,
 			fmt.Sprintf("Reduce order size to stay within $%.2f limit", rm.config.MaxOrderValue))
 	}
-	
+
 	return nil
 }
 
@@ -35,7 +35,7 @@ func (rm *RiskManager) checkPositionSize(ctx context.Context, order *interfaces.
 	if err != nil {
 		return fmt.Errorf("failed to get user positions: %w", err)
 	}
-	
+
 	// Calculate new position size
 	var currentPosition float64
 	for _, pos := range positions {
@@ -44,20 +44,20 @@ func (rm *RiskManager) checkPositionSize(ctx context.Context, order *interfaces.
 			break
 		}
 	}
-	
+
 	var newPosition float64
 	if order.Side == interfaces.OrderSideBuy {
 		newPosition = currentPosition + order.Quantity
 	} else {
 		newPosition = currentPosition - order.Quantity
 	}
-	
+
 	newPositionValue := newPosition * order.Price
 	maxPositionSize := profile.MaxPositionSize
 	if maxPositionSize == 0 {
 		maxPositionSize = rm.config.MaxPositionSize
 	}
-	
+
 	if newPositionValue > maxPositionSize {
 		violation := RiskViolation{
 			Rule:        "MAX_POSITION_SIZE",
@@ -67,10 +67,10 @@ func (rm *RiskManager) checkPositionSize(ctx context.Context, order *interfaces.
 			Limit:       maxPositionSize,
 		}
 		result.Violations = append(result.Violations, violation)
-		result.Recommendations = append(result.Recommendations, 
+		result.Recommendations = append(result.Recommendations,
 			fmt.Sprintf("Reduce position size to stay within $%.2f limit", maxPositionSize))
 	}
-	
+
 	return nil
 }
 
@@ -81,15 +81,15 @@ func (rm *RiskManager) checkDailyVolume(ctx context.Context, order *interfaces.O
 	if err != nil {
 		return fmt.Errorf("failed to get daily volume: %w", err)
 	}
-	
+
 	orderValue := order.Price * order.Quantity
 	newDailyVolume := currentVolume + orderValue
-	
+
 	maxDailyVolume := profile.MaxDailyVolume
 	if maxDailyVolume == 0 {
 		maxDailyVolume = rm.config.MaxDailyVolume
 	}
-	
+
 	if newDailyVolume > maxDailyVolume {
 		violation := RiskViolation{
 			Rule:        "MAX_DAILY_VOLUME",
@@ -99,10 +99,10 @@ func (rm *RiskManager) checkDailyVolume(ctx context.Context, order *interfaces.O
 			Limit:       maxDailyVolume,
 		}
 		result.Violations = append(result.Violations, violation)
-		result.Recommendations = append(result.Recommendations, 
+		result.Recommendations = append(result.Recommendations,
 			fmt.Sprintf("Daily volume limit of $%.2f would be exceeded", maxDailyVolume))
 	}
-	
+
 	return nil
 }
 
@@ -113,32 +113,32 @@ func (rm *RiskManager) checkConcentration(ctx context.Context, order *interfaces
 	if err != nil {
 		return fmt.Errorf("failed to get user positions: %w", err)
 	}
-	
+
 	// Calculate total portfolio value
 	var totalPortfolioValue float64
 	var symbolValue float64
-	
+
 	for _, pos := range positions {
 		totalPortfolioValue += pos.MarketValue
 		if pos.Symbol == order.Symbol {
 			symbolValue = pos.MarketValue
 		}
 	}
-	
+
 	// Add new order value
 	orderValue := order.Price * order.Quantity
 	if order.Side == interfaces.OrderSideBuy {
 		symbolValue += orderValue
 		totalPortfolioValue += orderValue
 	}
-	
+
 	if totalPortfolioValue > 0 {
 		concentration := symbolValue / totalPortfolioValue
 		concentrationLimit := profile.ConcentrationLimit
 		if concentrationLimit == 0 {
 			concentrationLimit = rm.config.ConcentrationLimit
 		}
-		
+
 		if concentration > concentrationLimit {
 			violation := RiskViolation{
 				Rule:        "CONCENTRATION_LIMIT",
@@ -148,11 +148,11 @@ func (rm *RiskManager) checkConcentration(ctx context.Context, order *interfaces
 				Limit:       concentrationLimit * 100,
 			}
 			result.Violations = append(result.Violations, violation)
-			result.Recommendations = append(result.Recommendations, 
+			result.Recommendations = append(result.Recommendations,
 				fmt.Sprintf("Diversify portfolio to stay within %.1f%% concentration limit", concentrationLimit*100))
 		}
 	}
-	
+
 	return nil
 }
 
@@ -162,11 +162,11 @@ func (rm *RiskManager) checkVolatility(ctx context.Context, order *interfaces.Or
 	volatility, err := rm.calculator.GetVolatility(order.Symbol)
 	if err != nil {
 		// If we can't get volatility data, log warning but don't fail the check
-		result.Recommendations = append(result.Recommendations, 
+		result.Recommendations = append(result.Recommendations,
 			"Unable to assess volatility risk - consider manual review")
 		return nil
 	}
-	
+
 	if volatility.Volatility > rm.config.VolatilityThreshold {
 		violation := RiskViolation{
 			Rule:        "VOLATILITY_THRESHOLD",
@@ -176,10 +176,10 @@ func (rm *RiskManager) checkVolatility(ctx context.Context, order *interfaces.Or
 			Limit:       rm.config.VolatilityThreshold * 100,
 		}
 		result.Violations = append(result.Violations, violation)
-		result.Recommendations = append(result.Recommendations, 
+		result.Recommendations = append(result.Recommendations,
 			fmt.Sprintf("High volatility asset (%.1f%%) - consider reducing position size", volatility.Volatility*100))
 	}
-	
+
 	return nil
 }
 
@@ -195,10 +195,10 @@ func (rm *RiskManager) checkPortfolioViolations(portfolioRisk *PortfolioRisk, re
 			Limit:       portfolioRisk.TotalValue * 0.05,
 		}
 		result.Violations = append(result.Violations, violation)
-		result.Recommendations = append(result.Recommendations, 
+		result.Recommendations = append(result.Recommendations,
 			"Consider reducing portfolio risk through diversification")
 	}
-	
+
 	// Check volatility limits
 	if portfolioRisk.Volatility > 0.25 { // 25% volatility limit
 		violation := RiskViolation{
@@ -209,10 +209,10 @@ func (rm *RiskManager) checkPortfolioViolations(portfolioRisk *PortfolioRisk, re
 			Limit:       25.0,
 		}
 		result.Violations = append(result.Violations, violation)
-		result.Recommendations = append(result.Recommendations, 
+		result.Recommendations = append(result.Recommendations,
 			"High portfolio volatility - consider adding defensive positions")
 	}
-	
+
 	// Check maximum drawdown
 	if portfolioRisk.MaxDrawdown < -0.20 { // -20% max drawdown limit
 		violation := RiskViolation{
@@ -223,7 +223,7 @@ func (rm *RiskManager) checkPortfolioViolations(portfolioRisk *PortfolioRisk, re
 			Limit:       -20.0,
 		}
 		result.Violations = append(result.Violations, violation)
-		result.Recommendations = append(result.Recommendations, 
+		result.Recommendations = append(result.Recommendations,
 			"Excessive drawdown detected - review risk management strategy")
 	}
 }
@@ -231,22 +231,22 @@ func (rm *RiskManager) checkPortfolioViolations(portfolioRisk *PortfolioRisk, re
 // checkRealTimeViolations checks for real-time risk violations
 func (rm *RiskManager) checkRealTimeViolations(positions []*Position, profile *UserRiskProfile) []*RiskAlert {
 	var alerts []*RiskAlert
-	
+
 	// Calculate total exposure
 	var totalExposure float64
 	var maxSinglePosition float64
 	positionMap := make(map[string]float64)
-	
+
 	for _, pos := range positions {
 		exposure := pos.MarketValue
 		totalExposure += exposure
 		positionMap[pos.Symbol] = exposure
-		
+
 		if exposure > maxSinglePosition {
 			maxSinglePosition = exposure
 		}
 	}
-	
+
 	// Check concentration
 	if totalExposure > 0 {
 		concentration := maxSinglePosition / totalExposure
@@ -266,7 +266,7 @@ func (rm *RiskManager) checkRealTimeViolations(positions []*Position, profile *U
 			alerts = append(alerts, alert)
 		}
 	}
-	
+
 	// Check individual position limits
 	for symbol, exposure := range positionMap {
 		if exposure > profile.MaxPositionSize {
@@ -286,7 +286,7 @@ func (rm *RiskManager) checkRealTimeViolations(positions []*Position, profile *U
 			alerts = append(alerts, alert)
 		}
 	}
-	
+
 	return alerts
 }
 
@@ -295,7 +295,7 @@ func (rm *RiskManager) calculateRiskScore(violations []RiskViolation) float64 {
 	if len(violations) == 0 {
 		return 0.0
 	}
-	
+
 	var totalScore float64
 	for _, violation := range violations {
 		switch violation.Severity {
@@ -309,13 +309,13 @@ func (rm *RiskManager) calculateRiskScore(violations []RiskViolation) float64 {
 			totalScore += 15.0
 		}
 	}
-	
+
 	// Normalize score to 0-100 scale
 	maxPossibleScore := float64(len(violations)) * 15.0
 	if maxPossibleScore > 0 {
 		return (totalScore / maxPossibleScore) * 100.0
 	}
-	
+
 	return 0.0
 }
 
@@ -325,14 +325,14 @@ func (rm *RiskManager) calculateRiskScore(violations []RiskViolation) float64 {
 func (rc *RiskCalculator) GetVolatility(symbol string) (*VolatilityData, error) {
 	rc.mu.RLock()
 	defer rc.mu.RUnlock()
-	
+
 	// Check cache first
 	if data, exists := rc.volatilityCache[symbol]; exists {
 		if time.Since(data.LastUpdated) < rc.cacheTTL {
 			return data, nil
 		}
 	}
-	
+
 	// In a real implementation, this would fetch from a data provider
 	// For now, return mock data
 	volatility := &VolatilityData{
@@ -340,10 +340,10 @@ func (rc *RiskCalculator) GetVolatility(symbol string) (*VolatilityData, error) 
 		Volatility:  0.20, // 20% default volatility
 		LastUpdated: time.Now(),
 	}
-	
+
 	// Update cache
 	rc.volatilityCache[symbol] = volatility
-	
+
 	return volatility, nil
 }
 
@@ -352,26 +352,26 @@ func (rc *RiskCalculator) CalculatePortfolioVolatility(positions []*Position) fl
 	if len(positions) == 0 {
 		return 0.0
 	}
-	
+
 	// Simplified calculation - in reality would use correlation matrix
 	var totalValue float64
 	var weightedVolatility float64
-	
+
 	for _, pos := range positions {
 		volatility, err := rc.GetVolatility(pos.Symbol)
 		if err != nil {
 			continue
 		}
-		
+
 		weight := pos.MarketValue
 		totalValue += weight
 		weightedVolatility += weight * volatility.Volatility
 	}
-	
+
 	if totalValue > 0 {
 		return weightedVolatility / totalValue
 	}
-	
+
 	return 0.0
 }
 
@@ -380,15 +380,15 @@ func (rc *RiskCalculator) CalculateVaR(positions []*Position, confidence float64
 	if len(positions) == 0 {
 		return 0.0
 	}
-	
+
 	// Simplified VaR calculation using normal distribution
 	portfolioValue := 0.0
 	for _, pos := range positions {
 		portfolioValue += pos.MarketValue
 	}
-	
+
 	portfolioVolatility := rc.CalculatePortfolioVolatility(positions)
-	
+
 	// Z-score for confidence level
 	var zScore float64
 	if confidence >= 0.99 {
@@ -398,7 +398,7 @@ func (rc *RiskCalculator) CalculateVaR(positions []*Position, confidence float64
 	} else {
 		zScore = 1.28
 	}
-	
+
 	return portfolioValue * portfolioVolatility * zScore
 }
 
@@ -419,16 +419,16 @@ func (rc *RiskCalculator) CalculateMaxDrawdown(positions []*Position) float64 {
 	// Simplified max drawdown calculation
 	var totalUnrealizedPL float64
 	var totalValue float64
-	
+
 	for _, pos := range positions {
 		totalUnrealizedPL += pos.UnrealizedPL
 		totalValue += pos.MarketValue
 	}
-	
+
 	if totalValue > 0 {
 		return totalUnrealizedPL / totalValue
 	}
-	
+
 	return 0.0
 }
 

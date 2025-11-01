@@ -25,11 +25,11 @@ type UnifiedAssetSystem struct {
 
 // AssetRegistry maintains registry of all assets across exchanges
 type AssetRegistry struct {
-	assets          map[string]*UnifiedAsset
+	assets           map[string]*UnifiedAsset
 	assetsByExchange map[string]map[string]*UnifiedAsset
-	assetsByType    map[exchanges.AssetType][]*UnifiedAsset
-	searchIndex     *AssetSearchIndex
-	mu              sync.RWMutex
+	assetsByType     map[exchanges.AssetType][]*UnifiedAsset
+	searchIndex      *AssetSearchIndex
+	mu               sync.RWMutex
 }
 
 // UnifiedAsset represents a unified asset across exchanges
@@ -66,20 +66,20 @@ type AssetSearchIndex struct {
 
 // UnifiedPricingEngine provides unified pricing across exchanges
 type UnifiedPricingEngine struct {
-	priceProviders   map[string]PriceProvider
-	priceCache       *PriceCache
-	pricingRules     *PricingRuleEngine
+	priceProviders    map[string]PriceProvider
+	priceCache        *PriceCache
+	pricingRules      *PricingRuleEngine
 	arbitrageDetector *ArbitrageDetector
-	mu               sync.RWMutex
+	mu                sync.RWMutex
 }
 
 // CrossExchangePortfolioManager manages portfolios across exchanges
 type CrossExchangePortfolioManager struct {
-	portfolios       map[string]*UnifiedPortfolio
-	positionManager  *CrossExchangePositionManager
-	riskManager      *CrossExchangeRiskManager
-	rebalancer       *CrossExchangeRebalancer
-	mu               sync.RWMutex
+	portfolios      map[string]*UnifiedPortfolio
+	positionManager *CrossExchangePositionManager
+	riskManager     *CrossExchangeRiskManager
+	rebalancer      *CrossExchangeRebalancer
+	mu              sync.RWMutex
 }
 
 // UnifiedAnalyticsEngine provides unified analytics across exchanges
@@ -93,11 +93,11 @@ type UnifiedAnalyticsEngine struct {
 
 // UnifiedComplianceManager manages compliance across exchanges
 type UnifiedComplianceManager struct {
-	complianceRules    map[string]*ComplianceRuleSet
-	screeningEngine    *ComplianceScreeningEngine
-	reportingEngine    *ComplianceReportingEngine
-	auditTrail         *ComplianceAuditTrail
-	mu                 sync.RWMutex
+	complianceRules map[string]*ComplianceRuleSet
+	screeningEngine *ComplianceScreeningEngine
+	reportingEngine *ComplianceReportingEngine
+	auditTrail      *ComplianceAuditTrail
+	mu              sync.RWMutex
 }
 
 // UnifiedLicensingManager manages licensing across exchanges
@@ -120,20 +120,20 @@ type UnifiedConfigManager struct {
 
 // UnifiedReportingEngine provides unified reporting across exchanges
 type UnifiedReportingEngine struct {
-	reportTemplates  map[string]*ReportTemplate
-	reportGenerator  *ReportGenerator
-	reportScheduler  *ReportScheduler
-	reportDelivery   *ReportDeliveryManager
-	mu               sync.RWMutex
+	reportTemplates map[string]*ReportTemplate
+	reportGenerator *ReportGenerator
+	reportScheduler *ReportScheduler
+	reportDelivery  *ReportDeliveryManager
+	mu              sync.RWMutex
 }
 
 // UnifiedPerformanceMonitor monitors system performance
 type UnifiedPerformanceMonitor struct {
-	metrics         *SystemMetrics
-	alertManager    *AlertManager
-	performanceLog  *PerformanceLog
-	healthChecker   *HealthChecker
-	mu              sync.RWMutex
+	metrics        *SystemMetrics
+	alertManager   *AlertManager
+	performanceLog *PerformanceLog
+	healthChecker  *HealthChecker
+	mu             sync.RWMutex
 }
 
 // AssetSearchQuery represents an asset search query
@@ -235,13 +235,13 @@ type AnalyticsReport struct {
 }
 
 type ComplianceReport struct {
-	ReportID      string
-	UserID        string
-	PortfolioID   string
-	IsCompliant   bool
-	Violations    []string
+	ReportID        string
+	UserID          string
+	PortfolioID     string
+	IsCompliant     bool
+	Violations      []string
 	Recommendations []string
-	GeneratedAt   time.Time
+	GeneratedAt     time.Time
 }
 
 type ComplianceRuleSet struct {
@@ -252,11 +252,11 @@ type ComplianceRuleSet struct {
 }
 
 type ComplianceRule struct {
-	ID          string
-	Type        string
-	Condition   string
-	Action      string
-	Severity    string
+	ID        string
+	Type      string
+	Condition string
+	Action    string
+	Severity  string
 }
 
 type LicenseInfo struct {
@@ -276,11 +276,11 @@ type ServiceConfig struct {
 }
 
 type ReportTemplate struct {
-	TemplateID  string
-	Name        string
-	Type        string
-	Format      string
-	Template    string
+	TemplateID string
+	Name       string
+	Type       string
+	Format     string
+	Template   string
 }
 
 // Additional component types
@@ -318,12 +318,12 @@ type CrossExchangePositionManager struct {
 }
 
 type Position struct {
-	PositionID   string
-	Symbol       string
-	Exchange     string
-	Quantity     float64
-	AveragePrice float64
-	CurrentPrice float64
+	PositionID    string
+	Symbol        string
+	Exchange      string
+	Quantity      float64
+	AveragePrice  float64
+	CurrentPrice  float64
 	UnrealizedPnL float64
 }
 
@@ -333,10 +333,10 @@ type CrossExchangeRiskManager struct {
 }
 
 type RiskLimit struct {
-	LimitID     string
-	Type        string
-	Value       float64
-	Currency    string
+	LimitID  string
+	Type     string
+	Value    float64
+	Currency string
 }
 
 type CrossExchangeRebalancer struct {
@@ -386,10 +386,10 @@ type ComplianceScreeningEngine struct {
 }
 
 type ScreeningRule struct {
-	RuleID    string
-	Type      string
-	Criteria  string
-	Action    string
+	RuleID   string
+	Type     string
+	Criteria string
+	Action   string
 }
 
 type ComplianceReportingEngine struct {
@@ -432,10 +432,10 @@ type LicenseUsageTracker struct {
 }
 
 type UsageMetrics struct {
-	UserID      string
-	LicenseID   string
-	UsageCount  int64
-	LastUsed    time.Time
+	UserID     string
+	LicenseID  string
+	UsageCount int64
+	LastUsed   time.Time
 }
 
 type LicenseRenewalManager struct {
@@ -444,8 +444,8 @@ type LicenseRenewalManager struct {
 }
 
 type RenewalInfo struct {
-	LicenseID     string
-	RenewalDate   time.Time
+	LicenseID        string
+	RenewalDate      time.Time
 	NotificationSent bool
 }
 
@@ -459,12 +459,12 @@ type ConfigValidator struct {
 }
 
 type ConfigValidationRule struct {
-	RuleID    string
-	Field     string
-	Type      string
-	Required  bool
-	MinValue  interface{}
-	MaxValue  interface{}
+	RuleID   string
+	Field    string
+	Type     string
+	Required bool
+	MinValue interface{}
+	MaxValue interface{}
 }
 
 type ConfigChangeNotifier struct {
@@ -544,20 +544,20 @@ type HealthCheck interface {
 
 // Additional supporting types
 type AssetPricingInfo struct {
-	CurrentPrice    float64
-	PreviousClose   float64
-	DayChange       float64
+	CurrentPrice     float64
+	PreviousClose    float64
+	DayChange        float64
 	DayChangePercent float64
-	Volume          int64
-	LastUpdated     time.Time
+	Volume           int64
+	LastUpdated      time.Time
 }
 
 type AssetRiskMetrics struct {
-	Beta            float64
-	Volatility      float64
-	VaR95           float64
-	Correlation     map[string]float64
-	LastCalculated  time.Time
+	Beta           float64
+	Volatility     float64
+	VaR95          float64
+	Correlation    map[string]float64
+	LastCalculated time.Time
 }
 
 type AssetComplianceInfo struct {
@@ -575,27 +575,27 @@ type AssetLicensingInfo struct {
 }
 
 type UnifiedPortfolio struct {
-	ID              string
-	UserID          string
-	Name            string
-	Description     string
-	Assets          map[string]*PortfolioPosition
-	Performance     *PortfolioPerformance
-	RiskMetrics     *PortfolioRiskMetrics
-	IslamicInfo     *IslamicPortfolioInfo
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID          string
+	UserID      string
+	Name        string
+	Description string
+	Assets      map[string]*PortfolioPosition
+	Performance *PortfolioPerformance
+	RiskMetrics *PortfolioRiskMetrics
+	IslamicInfo *IslamicPortfolioInfo
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 type PortfolioPosition struct {
-	AssetID         string
-	Symbol          string
-	Exchange        string
-	Quantity        float64
-	AveragePrice    float64
-	CurrentPrice    float64
-	MarketValue     float64
-	UnrealizedPnL   float64
-	Weight          float64
-	LastUpdated     time.Time
+	AssetID       string
+	Symbol        string
+	Exchange      string
+	Quantity      float64
+	AveragePrice  float64
+	CurrentPrice  float64
+	MarketValue   float64
+	UnrealizedPnL float64
+	Weight        float64
+	LastUpdated   time.Time
 }

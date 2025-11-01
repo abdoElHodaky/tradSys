@@ -262,7 +262,7 @@ func (ob *OrderBook) checkStopOrders() {
 		if ob.LastPrice >= stopOrder.StopPrice {
 			// Trigger stop order
 			heap.Pop(ob.StopBids)
-			
+
 			// Convert to market or limit order
 			if stopOrder.Type == OrderTypeStopMarket {
 				stopOrder.Type = OrderTypeMarket
@@ -294,7 +294,7 @@ func (ob *OrderBook) checkStopOrders() {
 		if ob.LastPrice <= stopOrder.StopPrice {
 			// Trigger stop order
 			heap.Pop(ob.StopAsks)
-			
+
 			// Convert to market or limit order
 			if stopOrder.Type == OrderTypeStopMarket {
 				stopOrder.Type = OrderTypeMarket

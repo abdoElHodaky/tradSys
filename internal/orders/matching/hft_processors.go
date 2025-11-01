@@ -267,7 +267,7 @@ func (ob *HFTOrderBook) executeTradeOptimized(takerOrder *FastOrder, makerOrder 
 func (ob *HFTOrderBook) addOrderToBook(order *FastOrder, tree *PriceLevelTree) {
 	// Find or create price level
 	priceLevel := tree.findOrCreatePriceLevel(order.Price)
-	
+
 	// Convert FastOrder to Order for storage
 	bookOrder := &Order{
 		ID:             order.ID,
@@ -300,7 +300,7 @@ func (ob *HFTOrderBook) cancelOrder(orderID string) error {
 	}
 
 	order := orderInterface.(*Order)
-	
+
 	// Remove from appropriate tree
 	var tree *PriceLevelTree
 	if order.Side == OrderSideBuy {
@@ -396,7 +396,7 @@ func (e *HFTEngine) monitorPerformance() {
 		case <-ticker.C:
 			// Update performance metrics
 			stats := e.GetStats()
-			
+
 			// Log performance if latency exceeds threshold
 			if stats.AvgLatencyNanos > MaxTargetLatencyNanos {
 				e.logger.Warn("HFT engine latency exceeds target",

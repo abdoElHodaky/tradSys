@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	riskengine "github.com/abdoElHodaky/tradSys/internal/risk/engine"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -243,14 +243,14 @@ func (s *Service) updatePositionInternal(userID, symbol string, quantityDelta, p
 	if position == nil {
 		// Create new position
 		position = &riskengine.Position{
-			ID:           uuid.New().String(),
-			UserID:       userID,
-			Symbol:       symbol,
-			Quantity:     0,
-			AveragePrice: 0,
+			ID:            uuid.New().String(),
+			UserID:        userID,
+			Symbol:        symbol,
+			Quantity:      0,
+			AveragePrice:  0,
 			UnrealizedPnL: 0,
-			RealizedPnL:  0,
-			CreatedAt:    time.Now(),
+			RealizedPnL:   0,
+			CreatedAt:     time.Now(),
 		}
 		s.Positions[userID][symbol] = position
 	}

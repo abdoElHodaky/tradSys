@@ -12,13 +12,13 @@ func (co *CacheOptimizer) Initialize() {
 
 func (co *CacheOptimizer) Optimize(ctx context.Context) (*OptimizationResult, error) {
 	return &OptimizationResult{
-		Component:     "Cache",
-		Type:          "Hit Rate Optimization",
-		Description:   "Optimized cache hit rate and eviction policies",
-		Success:       true,
+		Component:      "Cache",
+		Type:           "Hit Rate Optimization",
+		Description:    "Optimized cache hit rate and eviction policies",
+		Success:        true,
 		ImprovementPct: 15.0,
-		BeforeMetrics: map[string]float64{"hit_rate": 0.80},
-		AfterMetrics:  map[string]float64{"hit_rate": 0.95},
+		BeforeMetrics:  map[string]float64{"hit_rate": 0.80},
+		AfterMetrics:   map[string]float64{"hit_rate": 0.95},
 	}, nil
 }
 
@@ -45,13 +45,13 @@ func (do *DatabaseOptimizer) Initialize() {
 
 func (do *DatabaseOptimizer) Optimize(ctx context.Context) (*OptimizationResult, error) {
 	return &OptimizationResult{
-		Component:     "Database",
-		Type:          "Query Optimization",
-		Description:   "Optimized query performance and indexing",
-		Success:       true,
+		Component:      "Database",
+		Type:           "Query Optimization",
+		Description:    "Optimized query performance and indexing",
+		Success:        true,
 		ImprovementPct: 25.0,
-		BeforeMetrics: map[string]float64{"query_latency_ms": 15.0},
-		AfterMetrics:  map[string]float64{"query_latency_ms": 10.0},
+		BeforeMetrics:  map[string]float64{"query_latency_ms": 15.0},
+		AfterMetrics:   map[string]float64{"query_latency_ms": 10.0},
 	}, nil
 }
 
@@ -78,13 +78,13 @@ func (no *NetworkOptimizer) Initialize() {
 
 func (no *NetworkOptimizer) Optimize(ctx context.Context) (*OptimizationResult, error) {
 	return &OptimizationResult{
-		Component:     "Network",
-		Type:          "Latency Optimization",
-		Description:   "Optimized network latency and compression",
-		Success:       true,
+		Component:      "Network",
+		Type:           "Latency Optimization",
+		Description:    "Optimized network latency and compression",
+		Success:        true,
 		ImprovementPct: 20.0,
-		BeforeMetrics: map[string]float64{"latency_ms": 8.0},
-		AfterMetrics:  map[string]float64{"latency_ms": 5.0},
+		BeforeMetrics:  map[string]float64{"latency_ms": 8.0},
+		AfterMetrics:   map[string]float64{"latency_ms": 5.0},
 	}, nil
 }
 
@@ -165,13 +165,13 @@ func (ro *RegionalOptimizer) InitializeRegions() {
 
 func (ro *RegionalOptimizer) Optimize(ctx context.Context) (*OptimizationResult, error) {
 	return &OptimizationResult{
-		Component:     "Regional",
-		Type:          "Edge Optimization",
-		Description:   "Optimized regional edge node performance",
-		Success:       true,
+		Component:      "Regional",
+		Type:           "Edge Optimization",
+		Description:    "Optimized regional edge node performance",
+		Success:        true,
 		ImprovementPct: 18.0,
-		BeforeMetrics: map[string]float64{"avg_latency_ms": 55.0},
-		AfterMetrics:  map[string]float64{"avg_latency_ms": 35.0},
+		BeforeMetrics:  map[string]float64{"avg_latency_ms": 55.0},
+		AfterMetrics:   map[string]float64{"avg_latency_ms": 35.0},
 	}, nil
 }
 
@@ -291,13 +291,13 @@ func (so *SecurityOptimizer) Initialize() {
 
 func (so *SecurityOptimizer) Optimize(ctx context.Context) (*OptimizationResult, error) {
 	return &OptimizationResult{
-		Component:     "Security",
-		Type:          "Encryption Optimization",
-		Description:   "Optimized encryption algorithms and authentication",
-		Success:       true,
+		Component:      "Security",
+		Type:           "Encryption Optimization",
+		Description:    "Optimized encryption algorithms and authentication",
+		Success:        true,
 		ImprovementPct: 12.0,
-		BeforeMetrics: map[string]float64{"encryption_latency_ms": 3.0},
-		AfterMetrics:  map[string]float64{"encryption_latency_ms": 2.0},
+		BeforeMetrics:  map[string]float64{"encryption_latency_ms": 3.0},
+		AfterMetrics:   map[string]float64{"encryption_latency_ms": 2.0},
 	}, nil
 }
 
@@ -329,7 +329,7 @@ func (am *AlertManager) SendAlert(alert *PerformanceAlert) {
 func (am *AlertManager) GetAlerts() []PerformanceAlert {
 	am.mu.RLock()
 	defer am.mu.RUnlock()
-	
+
 	// Return copy of alerts
 	alerts := make([]PerformanceAlert, len(am.alerts))
 	copy(alerts, am.alerts)
@@ -345,7 +345,7 @@ func (am *AlertManager) ClearAlerts() {
 // Component method implementations for PerformanceAnalyzer
 func (pa *PerformanceAnalyzer) AnalyzeMetrics(metrics *PerformanceMetrics) []PerformanceIssue {
 	var issues []PerformanceIssue
-	
+
 	// Check for high network latency
 	if metrics.NetworkMetrics.Latency > 100*time.Millisecond {
 		issues = append(issues, PerformanceIssue{
@@ -359,7 +359,7 @@ func (pa *PerformanceAnalyzer) AnalyzeMetrics(metrics *PerformanceMetrics) []Per
 			Timestamp: time.Now(),
 		})
 	}
-	
+
 	// Check for high CPU usage
 	if metrics.SystemMetrics.CPUUsage > 80.0 {
 		issues = append(issues, PerformanceIssue{
@@ -373,7 +373,7 @@ func (pa *PerformanceAnalyzer) AnalyzeMetrics(metrics *PerformanceMetrics) []Per
 			Timestamp: time.Now(),
 		})
 	}
-	
+
 	// Check for high memory usage
 	if metrics.SystemMetrics.MemoryUsage > 85.0 {
 		issues = append(issues, PerformanceIssue{
@@ -387,7 +387,7 @@ func (pa *PerformanceAnalyzer) AnalyzeMetrics(metrics *PerformanceMetrics) []Per
 			Timestamp: time.Now(),
 		})
 	}
-	
+
 	// Check for low cache hit rate
 	if metrics.CacheMetrics.HitRate < 0.80 {
 		issues = append(issues, PerformanceIssue{
@@ -401,7 +401,7 @@ func (pa *PerformanceAnalyzer) AnalyzeMetrics(metrics *PerformanceMetrics) []Per
 			Timestamp: time.Now(),
 		})
 	}
-	
+
 	// Check for high error rate
 	if metrics.SystemMetrics.ErrorRate > 0.01 {
 		issues = append(issues, PerformanceIssue{
@@ -415,7 +415,7 @@ func (pa *PerformanceAnalyzer) AnalyzeMetrics(metrics *PerformanceMetrics) []Per
 			Timestamp: time.Now(),
 		})
 	}
-	
+
 	return issues
 }
 

@@ -22,9 +22,9 @@ func NewHandlerRegistry() *HandlerRegistry {
 	registry := &HandlerRegistry{
 		handlers: make(map[types.AssetType]AssetHandler),
 	}
-	
+
 	registry.registerDefaultHandlers()
-	
+
 	return registry
 }
 
@@ -39,12 +39,12 @@ func (r *HandlerRegistry) RegisterHandler(assetType types.AssetType, handler Ass
 func (r *HandlerRegistry) GetHandler(assetType types.AssetType) (AssetHandler, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	handler, exists := r.handlers[assetType]
 	if !exists {
 		return nil, fmt.Errorf("no handler registered for asset type: %s", assetType)
 	}
-	
+
 	return handler, nil
 }
 
@@ -52,12 +52,12 @@ func (r *HandlerRegistry) GetHandler(assetType types.AssetType) (AssetHandler, e
 func (r *HandlerRegistry) GetAllHandlers() map[types.AssetType]AssetHandler {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	result := make(map[types.AssetType]AssetHandler)
 	for k, v := range r.handlers {
 		result[k] = v
 	}
-	
+
 	return result
 }
 
@@ -67,7 +67,7 @@ func (r *HandlerRegistry) ValidateOrder(ctx context.Context, order *interfaces.O
 	if err != nil {
 		return err
 	}
-	
+
 	return handler.ValidateOrder(ctx, order)
 }
 
@@ -77,7 +77,7 @@ func (r *HandlerRegistry) CalculateSettlement(ctx context.Context, order *interf
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return handler.CalculateSettlement(ctx, order)
 }
 
@@ -92,7 +92,7 @@ func (r *HandlerRegistry) registerDefaultHandlers() {
 	r.RegisterHandler(types.CRYPTO, NewCryptoHandler())
 	r.RegisterHandler(types.FOREX, NewForexHandler())
 	r.RegisterHandler(types.COMMODITY, NewCommodityHandler())
-	
+
 	// Islamic Assets
 	r.RegisterHandler(types.SUKUK, NewSukukHandler())
 	r.RegisterHandler(types.ISLAMIC_FUND, NewIslamicFundHandler())
@@ -108,34 +108,34 @@ func (b *BaseAssetHandler) ValidateOrder(ctx context.Context, order *interfaces.
 	if order.Quantity < b.MinOrderSize {
 		return fmt.Errorf("order quantity %f below minimum %f", order.Quantity, b.MinOrderSize)
 	}
-	
+
 	if b.MaxOrderSize > 0 && order.Quantity > b.MaxOrderSize {
 		return fmt.Errorf("order quantity %f exceeds maximum %f", order.Quantity, b.MaxOrderSize)
 	}
-	
+
 	if order.Price <= 0 && order.Type != interfaces.OrderTypeMarket {
 		return fmt.Errorf("price must be positive for non-market orders")
 	}
-	
+
 	return nil
 }
 
 func (b *BaseAssetHandler) CalculateSettlement(ctx context.Context, order *interfaces.Order) (*Settlement, error) {
 	settlementDate := time.Now().AddDate(0, 0, b.SettlementDays)
 	amount := order.Price * order.Quantity
-	
+
 	fees, err := b.CalculateFees(ctx, order)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	netAmount := amount
 	if order.Side == interfaces.OrderSideBuy {
 		netAmount += fees.TotalFees
 	} else {
 		netAmount -= fees.TotalFees
 	}
-	
+
 	return &Settlement{
 		OrderID:        order.ID,
 		SettlementDate: settlementDate,
@@ -195,9 +195,9 @@ func (b *BaseAssetHandler) CalculateFees(ctx context.Context, order *interfaces.
 	if b.FeeStructure == nil {
 		return &FeeCalculation{}, nil
 	}
-	
+
 	orderValue := order.Price * order.Quantity
-	
+
 	// Calculate commission
 	commission := orderValue * b.FeeStructure.CommissionRate
 	if commission < b.FeeStructure.MinCommission {
@@ -206,20 +206,20 @@ func (b *BaseAssetHandler) CalculateFees(ctx context.Context, order *interfaces.
 	if b.FeeStructure.MaxCommission > 0 && commission > b.FeeStructure.MaxCommission {
 		commission = b.FeeStructure.MaxCommission
 	}
-	
+
 	// Calculate other fees
 	exchangeFee := orderValue * b.FeeStructure.ExchangeFee
 	regulatoryFee := orderValue * b.FeeStructure.RegulatoryFee
-	
+
 	totalFees := commission + exchangeFee + regulatoryFee
 	netAmount := orderValue
-	
+
 	if order.Side == interfaces.OrderSideBuy {
 		netAmount += totalFees
 	} else {
 		netAmount -= totalFees
 	}
-	
+
 	return &FeeCalculation{
 		Commission:    commission,
 		ExchangeFee:   exchangeFee,

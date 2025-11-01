@@ -46,7 +46,7 @@ func (s *ETFService) calculateLiquidityMetrics(metrics *ETFMetrics, symbol strin
 		AverageVolume:       1000000,
 		MedianVolume:        800000,
 		VolumeWeightedPrice: metrics.MarketPrice,
-		LiquidityScore:      8.5, // Out of 10
+		LiquidityScore:      8.5,  // Out of 10
 		MarketImpact:        0.05, // 5 basis points
 	}
 }
@@ -60,11 +60,11 @@ func (s *ETFService) calculatePerformanceMetrics(metrics *ETFMetrics, symbol str
 		OneMonth:       2.34,
 		ThreeMonth:     5.67,
 		SixMonth:       8.91,
-		YTD:           12.45,
-		OneYear:       15.67,
-		ThreeYear:     8.23,
-		FiveYear:      9.87,
-		TenYear:       11.23,
+		YTD:            12.45,
+		OneYear:        15.67,
+		ThreeYear:      8.23,
+		FiveYear:       9.87,
+		TenYear:        11.23,
 		SinceInception: 9.45,
 	}
 }
@@ -78,8 +78,8 @@ func (s *ETFService) calculateRiskMetrics(metrics *ETFMetrics, symbol string) {
 		Volatility:         16.5,
 		SharpeRatio:        0.95,
 		MaxDrawdown:        -18.7,
-		VaR95:             -2.1,
-		VaR99:             -3.8,
+		VaR95:              -2.1,
+		VaR99:              -3.8,
 		CorrelationToIndex: 0.98,
 	}
 }
@@ -92,7 +92,7 @@ func (s *ETFService) calculateTaxEfficiency(metrics *ETFMetrics, symbol string) 
 		CapitalGainsDistribution: 0.15,
 		DividendDistribution:     2.34,
 		LastDistributionDate:     time.Now().AddDate(0, -3, 0),
-		TurnoverRatio:           25.5,
+		TurnoverRatio:            25.5,
 	}
 }
 
@@ -102,14 +102,14 @@ func (s *ETFService) getETFPriceHistory(symbol string, days int) ([]float64, err
 	// For now, return mock data
 	prices := make([]float64, days)
 	basePrice := 100.0
-	
+
 	for i := 0; i < days; i++ {
 		// Simulate price movement with random walk
 		change := (rand.Float64() - 0.5) * 2.0 // -1% to +1%
 		basePrice *= (1.0 + change/100.0)
 		prices[i] = basePrice
 	}
-	
+
 	return prices, nil
 }
 
@@ -119,14 +119,14 @@ func (s *ETFService) getBenchmarkPriceHistory(benchmarkIndex string, days int) (
 	// For now, return mock data
 	prices := make([]float64, days)
 	basePrice := 1000.0 // Typical index level
-	
+
 	for i := 0; i < days; i++ {
 		// Simulate index movement with random walk
 		change := (rand.Float64() - 0.5) * 1.5 // -0.75% to +0.75%
 		basePrice *= (1.0 + change/100.0)
 		prices[i] = basePrice
 	}
-	
+
 	return prices, nil
 }
 
@@ -135,38 +135,38 @@ func (s *ETFService) calculateTrackingError(etfPrices, benchmarkPrices []float64
 	if len(etfPrices) != len(benchmarkPrices) || len(etfPrices) < 2 {
 		return 0.0
 	}
-	
+
 	// Calculate daily returns
 	etfReturns := make([]float64, len(etfPrices)-1)
 	benchmarkReturns := make([]float64, len(benchmarkPrices)-1)
-	
+
 	for i := 1; i < len(etfPrices); i++ {
 		etfReturns[i-1] = (etfPrices[i] - etfPrices[i-1]) / etfPrices[i-1]
 		benchmarkReturns[i-1] = (benchmarkPrices[i] - benchmarkPrices[i-1]) / benchmarkPrices[i-1]
 	}
-	
+
 	// Calculate tracking differences
 	differences := make([]float64, len(etfReturns))
 	for i := 0; i < len(etfReturns); i++ {
 		differences[i] = etfReturns[i] - benchmarkReturns[i]
 	}
-	
+
 	// Calculate standard deviation of differences
 	mean := 0.0
 	for _, diff := range differences {
 		mean += diff
 	}
 	mean /= float64(len(differences))
-	
+
 	variance := 0.0
 	for _, diff := range differences {
 		variance += math.Pow(diff-mean, 2)
 	}
 	variance /= float64(len(differences) - 1)
-	
+
 	// Annualize tracking error (assuming daily data)
 	trackingError := math.Sqrt(variance) * math.Sqrt(252) * 100 // 252 trading days per year
-	
+
 	return trackingError
 }
 
@@ -175,19 +175,19 @@ func (s *ETFService) validateCreationRedemption(operation *CreationRedemptionOpe
 	if operation.Symbol == "" {
 		return fmt.Errorf("symbol is required")
 	}
-	
+
 	if operation.OperationType != "creation" && operation.OperationType != "redemption" {
 		return fmt.Errorf("invalid operation type: %s", operation.OperationType)
 	}
-	
+
 	if operation.Units <= 0 {
 		return fmt.Errorf("units must be positive")
 	}
-	
+
 	if operation.AuthorizedParticipant == "" {
 		return fmt.Errorf("authorized participant is required")
 	}
-	
+
 	return nil
 }
 
@@ -199,15 +199,15 @@ func (s *ETFService) processCreation(operation *CreationRedemptionOperation, ass
 	// 3. Process underlying securities
 	// 4. Update ETF shares outstanding
 	// 5. Record the transaction
-	
-	s.logger.Info("Processing ETF creation", 
+
+	s.logger.Info("Processing ETF creation",
 		zap.String("symbol", operation.Symbol),
 		zap.Int("units", operation.Units))
-	
+
 	// Mock processing
 	operation.Status = "completed"
 	operation.Timestamp = time.Now()
-	
+
 	return nil
 }
 
@@ -219,15 +219,15 @@ func (s *ETFService) processRedemption(operation *CreationRedemptionOperation, a
 	// 3. Deliver underlying securities
 	// 4. Update ETF shares outstanding
 	// 5. Record the transaction
-	
-	s.logger.Info("Processing ETF redemption", 
+
+	s.logger.Info("Processing ETF redemption",
 		zap.String("symbol", operation.Symbol),
 		zap.Int("units", operation.Units))
-	
+
 	// Mock processing
 	operation.Status = "completed"
 	operation.Timestamp = time.Now()
-	
+
 	return nil
 }
 
@@ -280,25 +280,25 @@ func (s *ETFService) getMockHoldings(symbol string) []ETFHolding {
 func (s *ETFService) generateRecommendations(result *ETFAnalysisResult, metrics *ETFMetrics) {
 	// Low expense ratio recommendation
 	if metrics.ExpenseRatio < 0.20 {
-		result.Recommendations = append(result.Recommendations, 
+		result.Recommendations = append(result.Recommendations,
 			"Low expense ratio makes this ETF cost-effective for long-term investing")
 	}
-	
+
 	// High liquidity recommendation
 	if metrics.Liquidity.LiquidityScore > 8.0 {
-		result.Recommendations = append(result.Recommendations, 
+		result.Recommendations = append(result.Recommendations,
 			"High liquidity score indicates easy entry and exit")
 	}
-	
+
 	// Low tracking error recommendation
 	if metrics.TrackingError < 0.50 {
-		result.Recommendations = append(result.Recommendations, 
+		result.Recommendations = append(result.Recommendations,
 			"Low tracking error indicates effective index replication")
 	}
-	
+
 	// Performance recommendation
 	if metrics.PerformanceMetrics.OneYear > 10.0 {
-		result.Recommendations = append(result.Recommendations, 
+		result.Recommendations = append(result.Recommendations,
 			"Strong one-year performance indicates good momentum")
 	}
 }
@@ -307,25 +307,25 @@ func (s *ETFService) generateRecommendations(result *ETFAnalysisResult, metrics 
 func (s *ETFService) generateWarnings(result *ETFAnalysisResult, metrics *ETFMetrics) {
 	// High expense ratio warning
 	if metrics.ExpenseRatio > 0.75 {
-		result.Warnings = append(result.Warnings, 
+		result.Warnings = append(result.Warnings,
 			"High expense ratio may impact long-term returns")
 	}
-	
+
 	// High tracking error warning
 	if metrics.TrackingError > 1.0 {
-		result.Warnings = append(result.Warnings, 
+		result.Warnings = append(result.Warnings,
 			"High tracking error indicates poor index replication")
 	}
-	
+
 	// Low liquidity warning
 	if metrics.Liquidity.LiquidityScore < 5.0 {
-		result.Warnings = append(result.Warnings, 
+		result.Warnings = append(result.Warnings,
 			"Low liquidity may result in wider bid-ask spreads")
 	}
-	
+
 	// Premium/discount warning
 	if math.Abs(metrics.Premium) > 2.0 {
-		result.Warnings = append(result.Warnings, 
+		result.Warnings = append(result.Warnings,
 			fmt.Sprintf("ETF trading at %.2f%% premium/discount to NAV", metrics.Premium))
 	}
 }
@@ -336,22 +336,22 @@ func (s *ETFService) meetsScreeningCriteria(metrics *ETFMetrics, criteria *ETFSc
 	if criteria.MinAUM > 0 && metrics.AUM < criteria.MinAUM {
 		return false
 	}
-	
+
 	// Check expense ratio
 	if criteria.MaxExpenseRatio > 0 && metrics.ExpenseRatio > criteria.MaxExpenseRatio {
 		return false
 	}
-	
+
 	// Check liquidity
 	if criteria.MinLiquidity > 0 && metrics.Liquidity.LiquidityScore < criteria.MinLiquidity {
 		return false
 	}
-	
+
 	// Check tracking error
 	if criteria.MaxTrackingError > 0 && metrics.TrackingError > criteria.MaxTrackingError {
 		return false
 	}
-	
+
 	return true
 }
 
@@ -362,14 +362,14 @@ func (s *ETFService) calculateETFRankings(result *ETFComparisonResult) {
 		symbol string
 		score  float64
 	}
-	
+
 	var scores []etfScore
 	for symbol, metrics := range result.Metrics {
 		// Calculate composite score (lower expense ratio + higher performance)
 		score := metrics.PerformanceMetrics.OneYear - (metrics.ExpenseRatio * 10)
 		scores = append(scores, etfScore{symbol: symbol, score: score})
 	}
-	
+
 	// Sort by score (descending)
 	for i := 0; i < len(scores)-1; i++ {
 		for j := i + 1; j < len(scores); j++ {
@@ -378,7 +378,7 @@ func (s *ETFService) calculateETFRankings(result *ETFComparisonResult) {
 			}
 		}
 	}
-	
+
 	// Assign rankings
 	for i, score := range scores {
 		result.Rankings[score.symbol] = i + 1

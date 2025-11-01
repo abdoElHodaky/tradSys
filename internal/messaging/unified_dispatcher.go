@@ -15,33 +15,33 @@ import (
 // UnifiedMessageDispatcher implements all dispatcher interfaces
 type UnifiedMessageDispatcher struct {
 	logger *zap.Logger
-	
+
 	// Core dispatch
-	handlers     map[string][]interfaces.MessageHandler
-	handlersMux  sync.RWMutex
-	filters      []interfaces.MessageFilter
-	filtersMux   sync.RWMutex
-	transformers []interfaces.MessageTransformer
+	handlers        map[string][]interfaces.MessageHandler
+	handlersMux     sync.RWMutex
+	filters         []interfaces.MessageFilter
+	filtersMux      sync.RWMutex
+	transformers    []interfaces.MessageTransformer
 	transformersMux sync.RWMutex
-	
+
 	// Broadcasting
-	channels     map[string]map[string]bool // channel -> clientID -> subscribed
-	channelsMux  sync.RWMutex
-	clients      map[string]chan interfaces.Message // clientID -> message channel
-	clientsMux   sync.RWMutex
-	
+	channels    map[string]map[string]bool // channel -> clientID -> subscribed
+	channelsMux sync.RWMutex
+	clients     map[string]chan interfaces.Message // clientID -> message channel
+	clientsMux  sync.RWMutex
+
 	// Streaming
-	streams     map[string]chan interfaces.Message // clientID -> stream channel
-	streamsMux  sync.RWMutex
-	
+	streams    map[string]chan interfaces.Message // clientID -> stream channel
+	streamsMux sync.RWMutex
+
 	// Queue
 	messageQueue chan queuedMessage
 	queueWorkers int
 	queueStats   queueStatsData
-	
+
 	// Statistics
 	stats statsData
-	
+
 	// Lifecycle
 	started   int32
 	startTime time.Time
@@ -60,30 +60,30 @@ type queuedMessage struct {
 
 // statsData holds dispatch statistics
 type statsData struct {
-	totalMessages     int64
+	totalMessages      int64
 	successfulMessages int64
-	failedMessages    int64
-	totalLatency      int64 // nanoseconds
-	handlerCount      int32
-	filterCount       int32
-	transformerCount  int32
+	failedMessages     int64
+	totalLatency       int64 // nanoseconds
+	handlerCount       int32
+	filterCount        int32
+	transformerCount   int32
 }
 
 // queueStatsData holds queue statistics
 type queueStatsData struct {
-	queueSize       int32
-	processedCount  int64
-	totalWaitTime   int64 // nanoseconds
-	peakQueueSize   int32
-	workerCount     int32
+	queueSize      int32
+	processedCount int64
+	totalWaitTime  int64 // nanoseconds
+	peakQueueSize  int32
+	workerCount    int32
 }
 
 // DispatcherConfig contains configuration for the unified dispatcher
 type DispatcherConfig struct {
-	QueueSize    int
-	WorkerCount  int
-	BufferSize   int
-	Logger       *zap.Logger
+	QueueSize   int
+	WorkerCount int
+	BufferSize  int
+	Logger      *zap.Logger
 }
 
 // NewUnifiedDispatcher creates a new unified message dispatcher
@@ -102,7 +102,7 @@ func NewUnifiedDispatcher(config DispatcherConfig) interfaces.UnifiedDispatcher 
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	return &UnifiedMessageDispatcher{
 		logger:       config.Logger,
 		handlers:     make(map[string][]interfaces.MessageHandler),
@@ -123,20 +123,20 @@ func (d *UnifiedMessageDispatcher) Start(ctx context.Context) error {
 	if !atomic.CompareAndSwapInt32(&d.started, 0, 1) {
 		return fmt.Errorf("dispatcher already started")
 	}
-	
+
 	d.startTime = time.Now()
 	atomic.StoreInt32(&d.queueStats.workerCount, int32(d.queueWorkers))
-	
+
 	// Start queue workers
 	for i := 0; i < d.queueWorkers; i++ {
 		d.wg.Add(1)
 		go d.queueWorker(i)
 	}
-	
+
 	d.logger.Info("Unified message dispatcher started",
 		zap.Int("workers", d.queueWorkers),
 		zap.Int("queue_size", cap(d.messageQueue)))
-	
+
 	return nil
 }
 
@@ -145,19 +145,19 @@ func (d *UnifiedMessageDispatcher) Stop(ctx context.Context) error {
 	if !atomic.CompareAndSwapInt32(&d.started, 1, 0) {
 		return fmt.Errorf("dispatcher not started")
 	}
-	
+
 	d.cancel()
-	
+
 	// Close message queue
 	close(d.messageQueue)
-	
+
 	// Wait for workers to finish
 	done := make(chan struct{})
 	go func() {
 		d.wg.Wait()
 		close(done)
 	}()
-	
+
 	select {
 	case <-done:
 		d.logger.Info("Unified message dispatcher stopped gracefully")
@@ -172,7 +172,7 @@ func (d *UnifiedMessageDispatcher) Stop(ctx context.Context) error {
 func (d *UnifiedMessageDispatcher) Health() interfaces.DispatcherHealth {
 	isStarted := atomic.LoadInt32(&d.started) == 1
 	uptime := time.Since(d.startTime)
-	
+
 	return interfaces.DispatcherHealth{
 		Status:     d.getHealthStatus(isStarted),
 		Uptime:     uptime,
@@ -187,26 +187,26 @@ func (d *UnifiedMessageDispatcher) Dispatch(ctx context.Context, message interfa
 	if atomic.LoadInt32(&d.started) != 1 {
 		return fmt.Errorf("dispatcher not started")
 	}
-	
+
 	start := time.Now()
 	defer func() {
 		latency := time.Since(start)
 		atomic.AddInt64(&d.stats.totalLatency, latency.Nanoseconds())
 		atomic.AddInt64(&d.stats.totalMessages, 1)
 	}()
-	
+
 	// Apply global filters
 	if !d.shouldProcessMessage(message) {
 		return nil
 	}
-	
+
 	// Apply transformations
 	transformedMessage, err := d.transformMessage(ctx, message)
 	if err != nil {
 		atomic.AddInt64(&d.stats.failedMessages, 1)
 		return fmt.Errorf("message transformation failed: %w", err)
 	}
-	
+
 	// Get dispatch options
 	if options == nil {
 		options = &interfaces.DispatchOptions{
@@ -214,7 +214,7 @@ func (d *UnifiedMessageDispatcher) Dispatch(ctx context.Context, message interfa
 			Timeout: 30 * time.Second,
 		}
 	}
-	
+
 	// Dispatch based on mode
 	switch options.Mode {
 	case interfaces.DispatchSync:
@@ -234,20 +234,20 @@ func (d *UnifiedMessageDispatcher) Dispatch(ctx context.Context, message interfa
 func (d *UnifiedMessageDispatcher) Subscribe(messageTypes []string, handler interfaces.MessageHandler) error {
 	d.handlersMux.Lock()
 	defer d.handlersMux.Unlock()
-	
+
 	for _, messageType := range messageTypes {
 		if d.handlers[messageType] == nil {
 			d.handlers[messageType] = make([]interfaces.MessageHandler, 0)
 		}
 		d.handlers[messageType] = append(d.handlers[messageType], handler)
 	}
-	
+
 	atomic.AddInt32(&d.stats.handlerCount, 1)
-	
+
 	d.logger.Debug("Handler subscribed",
 		zap.String("handler_id", handler.GetHandlerID()),
 		zap.Strings("message_types", messageTypes))
-	
+
 	return nil
 }
 
@@ -255,7 +255,7 @@ func (d *UnifiedMessageDispatcher) Subscribe(messageTypes []string, handler inte
 func (d *UnifiedMessageDispatcher) Unsubscribe(messageTypes []string, handlerID string) error {
 	d.handlersMux.Lock()
 	defer d.handlersMux.Unlock()
-	
+
 	for _, messageType := range messageTypes {
 		handlers := d.handlers[messageType]
 		for i, handler := range handlers {
@@ -265,19 +265,19 @@ func (d *UnifiedMessageDispatcher) Unsubscribe(messageTypes []string, handlerID 
 				break
 			}
 		}
-		
+
 		// Clean up empty handler lists
 		if len(d.handlers[messageType]) == 0 {
 			delete(d.handlers, messageType)
 		}
 	}
-	
+
 	atomic.AddInt32(&d.stats.handlerCount, -1)
-	
+
 	d.logger.Debug("Handler unsubscribed",
 		zap.String("handler_id", handlerID),
 		zap.Strings("message_types", messageTypes))
-	
+
 	return nil
 }
 
@@ -285,12 +285,12 @@ func (d *UnifiedMessageDispatcher) Unsubscribe(messageTypes []string, handlerID 
 func (d *UnifiedMessageDispatcher) GetSubscribers(messageType string) []interfaces.MessageHandler {
 	d.handlersMux.RLock()
 	defer d.handlersMux.RUnlock()
-	
+
 	handlers := d.handlers[messageType]
 	if handlers == nil {
 		return []interfaces.MessageHandler{}
 	}
-	
+
 	// Return a copy to avoid race conditions
 	result := make([]interfaces.MessageHandler, len(handlers))
 	copy(result, handlers)
@@ -301,10 +301,10 @@ func (d *UnifiedMessageDispatcher) GetSubscribers(messageType string) []interfac
 func (d *UnifiedMessageDispatcher) AddFilter(filter interfaces.MessageFilter) {
 	d.filtersMux.Lock()
 	defer d.filtersMux.Unlock()
-	
+
 	d.filters = append(d.filters, filter)
 	atomic.AddInt32(&d.stats.filterCount, 1)
-	
+
 	d.logger.Debug("Filter added", zap.String("filter_id", filter.GetFilterID()))
 }
 
@@ -312,7 +312,7 @@ func (d *UnifiedMessageDispatcher) AddFilter(filter interfaces.MessageFilter) {
 func (d *UnifiedMessageDispatcher) RemoveFilter(filterID string) {
 	d.filtersMux.Lock()
 	defer d.filtersMux.Unlock()
-	
+
 	for i, filter := range d.filters {
 		if filter.GetFilterID() == filterID {
 			d.filters = append(d.filters[:i], d.filters[i+1:]...)
@@ -327,10 +327,10 @@ func (d *UnifiedMessageDispatcher) RemoveFilter(filterID string) {
 func (d *UnifiedMessageDispatcher) AddTransformer(transformer interfaces.MessageTransformer) {
 	d.transformersMux.Lock()
 	defer d.transformersMux.Unlock()
-	
+
 	d.transformers = append(d.transformers, transformer)
 	atomic.AddInt32(&d.stats.transformerCount, 1)
-	
+
 	d.logger.Debug("Transformer added", zap.String("transformer_id", transformer.GetTransformerID()))
 }
 
@@ -338,7 +338,7 @@ func (d *UnifiedMessageDispatcher) AddTransformer(transformer interfaces.Message
 func (d *UnifiedMessageDispatcher) RemoveTransformer(transformerID string) {
 	d.transformersMux.Lock()
 	defer d.transformersMux.Unlock()
-	
+
 	for i, transformer := range d.transformers {
 		if transformer.GetTransformerID() == transformerID {
 			d.transformers = append(d.transformers[:i], d.transformers[i+1:]...)
@@ -353,12 +353,12 @@ func (d *UnifiedMessageDispatcher) RemoveTransformer(transformerID string) {
 func (d *UnifiedMessageDispatcher) GetStats() interfaces.DispatchStats {
 	totalMessages := atomic.LoadInt64(&d.stats.totalMessages)
 	totalLatency := atomic.LoadInt64(&d.stats.totalLatency)
-	
+
 	var avgLatency time.Duration
 	if totalMessages > 0 {
 		avgLatency = time.Duration(totalLatency / totalMessages)
 	}
-	
+
 	return interfaces.DispatchStats{
 		TotalMessages:      totalMessages,
 		SuccessfulMessages: atomic.LoadInt64(&d.stats.successfulMessages),
@@ -376,14 +376,14 @@ func (d *UnifiedMessageDispatcher) getHealthStatus(isStarted bool) string {
 	if !isStarted {
 		return "stopped"
 	}
-	
+
 	queueSize := d.getQueueSize()
 	queueCapacity := cap(d.messageQueue)
-	
+
 	if queueSize > queueCapacity*9/10 {
 		return "degraded"
 	}
-	
+
 	return "healthy"
 }
 
@@ -394,7 +394,7 @@ func (d *UnifiedMessageDispatcher) getQueueSize() int {
 func (d *UnifiedMessageDispatcher) shouldProcessMessage(message interfaces.Message) bool {
 	d.filtersMux.RLock()
 	defer d.filtersMux.RUnlock()
-	
+
 	for _, filter := range d.filters {
 		if !filter.ShouldProcess(message) {
 			return false
@@ -406,7 +406,7 @@ func (d *UnifiedMessageDispatcher) shouldProcessMessage(message interfaces.Messa
 func (d *UnifiedMessageDispatcher) transformMessage(ctx context.Context, message interfaces.Message) (interfaces.Message, error) {
 	d.transformersMux.RLock()
 	defer d.transformersMux.RUnlock()
-	
+
 	result := message
 	for _, transformer := range d.transformers {
 		var err error
@@ -423,7 +423,7 @@ func (d *UnifiedMessageDispatcher) dispatchSync(ctx context.Context, message int
 	if len(handlers) == 0 {
 		return nil
 	}
-	
+
 	for _, handler := range handlers {
 		if handler.CanHandle(message.GetType()) {
 			if err := handler.Handle(ctx, message); err != nil {
@@ -436,19 +436,19 @@ func (d *UnifiedMessageDispatcher) dispatchSync(ctx context.Context, message int
 			}
 		}
 	}
-	
+
 	atomic.AddInt64(&d.stats.successfulMessages, 1)
 	return nil
 }
 
 func (d *UnifiedMessageDispatcher) dispatchAsync(ctx context.Context, message interfaces.Message, options *interfaces.DispatchOptions) error {
 	queuedMsg := queuedMessage{
-		message: message,
-		options: options,
+		message:  message,
+		options:  options,
 		priority: 0,
-		ctx:     ctx,
+		ctx:      ctx,
 	}
-	
+
 	select {
 	case d.messageQueue <- queuedMsg:
 		atomic.AddInt32(&d.queueStats.queueSize, 1)
@@ -476,10 +476,10 @@ func (d *UnifiedMessageDispatcher) dispatchBroadcast(ctx context.Context, messag
 	if len(handlers) == 0 {
 		return nil
 	}
-	
+
 	var wg sync.WaitGroup
 	errors := make(chan error, len(handlers))
-	
+
 	for _, handler := range handlers {
 		if handler.CanHandle(message.GetType()) {
 			wg.Add(1)
@@ -491,10 +491,10 @@ func (d *UnifiedMessageDispatcher) dispatchBroadcast(ctx context.Context, messag
 			}(handler)
 		}
 	}
-	
+
 	wg.Wait()
 	close(errors)
-	
+
 	// Check for errors
 	var firstError error
 	errorCount := 0
@@ -504,7 +504,7 @@ func (d *UnifiedMessageDispatcher) dispatchBroadcast(ctx context.Context, messag
 		}
 		errorCount++
 	}
-	
+
 	if errorCount > 0 {
 		atomic.AddInt64(&d.stats.failedMessages, 1)
 		d.logger.Error("Broadcast dispatch had errors",
@@ -512,7 +512,7 @@ func (d *UnifiedMessageDispatcher) dispatchBroadcast(ctx context.Context, messag
 			zap.String("message_type", message.GetType()))
 		return firstError
 	}
-	
+
 	atomic.AddInt64(&d.stats.successfulMessages, 1)
 	return nil
 }
@@ -522,27 +522,27 @@ func (d *UnifiedMessageDispatcher) dispatchRoundRobin(ctx context.Context, messa
 	if len(handlers) == 0 {
 		return nil
 	}
-	
+
 	// Simple round-robin: use timestamp to select handler
 	handlerIndex := int(message.GetTimestamp().UnixNano()) % len(handlers)
 	handler := handlers[handlerIndex]
-	
+
 	if handler.CanHandle(message.GetType()) {
 		if err := handler.Handle(ctx, message); err != nil {
 			atomic.AddInt64(&d.stats.failedMessages, 1)
 			return err
 		}
 	}
-	
+
 	atomic.AddInt64(&d.stats.successfulMessages, 1)
 	return nil
 }
 
 func (d *UnifiedMessageDispatcher) queueWorker(workerID int) {
 	defer d.wg.Done()
-	
+
 	d.logger.Debug("Queue worker started", zap.Int("worker_id", workerID))
-	
+
 	for {
 		select {
 		case queuedMsg, ok := <-d.messageQueue:
@@ -550,10 +550,10 @@ func (d *UnifiedMessageDispatcher) queueWorker(workerID int) {
 				d.logger.Debug("Queue worker stopping", zap.Int("worker_id", workerID))
 				return
 			}
-			
+
 			atomic.AddInt32(&d.queueStats.queueSize, -1)
 			atomic.AddInt64(&d.queueStats.processedCount, 1)
-			
+
 			// Process the message
 			if err := d.dispatchSync(queuedMsg.ctx, queuedMsg.message, queuedMsg.options); err != nil {
 				d.logger.Error("Queue worker failed to process message",
@@ -561,7 +561,7 @@ func (d *UnifiedMessageDispatcher) queueWorker(workerID int) {
 					zap.String("message_type", queuedMsg.message.GetType()),
 					zap.Error(err))
 			}
-			
+
 		case <-d.ctx.Done():
 			d.logger.Debug("Queue worker stopping due to context cancellation", zap.Int("worker_id", workerID))
 			return

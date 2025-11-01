@@ -154,7 +154,7 @@ func (e *Engine) GetStats() *EngineStats {
 	for _, orderBook := range e.OrderBooks {
 		orderBook.mu.RLock()
 		totalOrders += int64(len(orderBook.Orders))
-		
+
 		// Calculate spread if we have both bids and asks
 		if orderBook.Bids.Len() > 0 && orderBook.Asks.Len() > 0 {
 			bestBid := orderBook.Bids.Peek()

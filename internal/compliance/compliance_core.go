@@ -334,7 +334,7 @@ func (c *UnifiedComplianceEngine) updateMetrics(checkTime time.Duration) {
 func (c *UnifiedComplianceEngine) GetMetrics() *ComplianceMetrics {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	// Return a copy of metrics to avoid race conditions
 	metricsCopy := *c.metrics
 	return &metricsCopy

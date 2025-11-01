@@ -18,4 +18,3 @@ package order_matching
 //
 // All order matching algorithms have been moved to engine_processors.go
 // while maintaining the exact same matching behavior and performance characteristics.
-

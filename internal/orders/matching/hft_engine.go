@@ -17,4 +17,3 @@ package order_matching
 //
 // All ultra-critical matching algorithms have been moved to hft_processors.go
 // while maintaining the exact same performance characteristics.
-

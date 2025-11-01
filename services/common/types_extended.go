@@ -62,36 +62,36 @@ type Tick struct {
 
 // Portfolio represents a user's portfolio
 type Portfolio struct {
-	ID              string                 `json:"id"`
-	UserID          string                 `json:"user_id"`
-	Name            string                 `json:"name"`
-	TotalValue      float64                `json:"total_value"`
-	CashBalance     float64                `json:"cash_balance"`
-	TotalPL         float64                `json:"total_pl"`
-	DayPL           float64                `json:"day_pl"`
-	Positions       []Position             `json:"positions"`
-	Currency        string                 `json:"currency"`
-	Metadata        map[string]interface{} `json:"metadata,omitempty"`
-	CreatedAt       time.Time              `json:"created_at"`
-	UpdatedAt       time.Time              `json:"updated_at"`
+	ID          string                 `json:"id"`
+	UserID      string                 `json:"user_id"`
+	Name        string                 `json:"name"`
+	TotalValue  float64                `json:"total_value"`
+	CashBalance float64                `json:"cash_balance"`
+	TotalPL     float64                `json:"total_pl"`
+	DayPL       float64                `json:"day_pl"`
+	Positions   []Position             `json:"positions"`
+	Currency    string                 `json:"currency"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt   time.Time              `json:"created_at"`
+	UpdatedAt   time.Time              `json:"updated_at"`
 }
 
 // Account represents a user account
 type Account struct {
-	ID              string                 `json:"id"`
-	UserID          string                 `json:"user_id"`
-	AccountType     string                 `json:"account_type"`
-	AccountNumber   string                 `json:"account_number"`
-	BrokerID        string                 `json:"broker_id"`
-	Currency        string                 `json:"currency"`
-	Balance         float64                `json:"balance"`
-	AvailableBalance float64               `json:"available_balance"`
-	MarginUsed      float64                `json:"margin_used"`
-	MarginAvailable float64                `json:"margin_available"`
-	IsActive        bool                   `json:"is_active"`
-	Metadata        map[string]interface{} `json:"metadata,omitempty"`
-	CreatedAt       time.Time              `json:"created_at"`
-	UpdatedAt       time.Time              `json:"updated_at"`
+	ID               string                 `json:"id"`
+	UserID           string                 `json:"user_id"`
+	AccountType      string                 `json:"account_type"`
+	AccountNumber    string                 `json:"account_number"`
+	BrokerID         string                 `json:"broker_id"`
+	Currency         string                 `json:"currency"`
+	Balance          float64                `json:"balance"`
+	AvailableBalance float64                `json:"available_balance"`
+	MarginUsed       float64                `json:"margin_used"`
+	MarginAvailable  float64                `json:"margin_available"`
+	IsActive         bool                   `json:"is_active"`
+	Metadata         map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt        time.Time              `json:"created_at"`
+	UpdatedAt        time.Time              `json:"updated_at"`
 }
 
 // TradingSession represents a trading session
@@ -236,13 +236,13 @@ type MessageQueueConfig struct {
 
 // APIConfig represents API configuration
 type APIConfig struct {
-	Host           string        `yaml:"host" json:"host"`
-	Port           int           `yaml:"port" json:"port"`
-	ReadTimeout    time.Duration `yaml:"read_timeout" json:"read_timeout"`
-	WriteTimeout   time.Duration `yaml:"write_timeout" json:"write_timeout"`
-	MaxHeaderBytes int           `yaml:"max_header_bytes" json:"max_header_bytes"`
-	TLS            TLSConfig     `yaml:"tls" json:"tls"`
-	CORS           CORSConfig    `yaml:"cors" json:"cors"`
+	Host           string          `yaml:"host" json:"host"`
+	Port           int             `yaml:"port" json:"port"`
+	ReadTimeout    time.Duration   `yaml:"read_timeout" json:"read_timeout"`
+	WriteTimeout   time.Duration   `yaml:"write_timeout" json:"write_timeout"`
+	MaxHeaderBytes int             `yaml:"max_header_bytes" json:"max_header_bytes"`
+	TLS            TLSConfig       `yaml:"tls" json:"tls"`
+	CORS           CORSConfig      `yaml:"cors" json:"cors"`
 	RateLimit      RateLimitConfig `yaml:"rate_limit" json:"rate_limit"`
 }
 
@@ -266,10 +266,10 @@ type CORSConfig struct {
 
 // RateLimitConfig represents rate limiting configuration
 type RateLimitConfig struct {
-	Enabled     bool          `yaml:"enabled" json:"enabled"`
-	RequestsPerSecond int     `yaml:"requests_per_second" json:"requests_per_second"`
-	BurstSize   int           `yaml:"burst_size" json:"burst_size"`
-	WindowSize  time.Duration `yaml:"window_size" json:"window_size"`
+	Enabled           bool          `yaml:"enabled" json:"enabled"`
+	RequestsPerSecond int           `yaml:"requests_per_second" json:"requests_per_second"`
+	BurstSize         int           `yaml:"burst_size" json:"burst_size"`
+	WindowSize        time.Duration `yaml:"window_size" json:"window_size"`
 }
 
 // Event represents a system event

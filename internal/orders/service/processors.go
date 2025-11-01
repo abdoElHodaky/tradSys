@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 // OrderProcessor defines the interface for processing different order types
@@ -26,13 +24,13 @@ func NewProcessorRegistry() *ProcessorRegistry {
 	registry := &ProcessorRegistry{
 		processors: make(map[OrderType]OrderProcessor),
 	}
-	
+
 	// Register processors for each order type
 	registry.RegisterProcessor(&MarketOrderProcessor{})
 	registry.RegisterProcessor(&LimitOrderProcessor{})
 	registry.RegisterProcessor(&StopLimitOrderProcessor{})
 	registry.RegisterProcessor(&StopMarketOrderProcessor{})
-	
+
 	return registry
 }
 
@@ -54,13 +52,13 @@ func (r *ProcessorRegistry) ProcessOrder(order *Order) error {
 	if order == nil {
 		return errors.New("order cannot be nil")
 	}
-	
+
 	processor := r.GetProcessor(order.Type)
-	
+
 	if err := processor.Validate(order); err != nil {
 		return fmt.Errorf("validation failed: %w", err)
 	}
-	
+
 	return processor.Process(order)
 }
 
@@ -90,7 +88,7 @@ func NewOrderStateMachine() *OrderStateMachine {
 	sm := &OrderStateMachine{
 		transitions: make(map[StateEventPair]StateTransition),
 	}
-	
+
 	// Define state transitions instead of using nested switch statements
 	sm.addTransition("NEW", "VALIDATE", "PENDING", sm.validateOrder)
 	sm.addTransition("NEW", "REJECT", "REJECTED", sm.rejectOrder)
@@ -100,7 +98,7 @@ func NewOrderStateMachine() *OrderStateMachine {
 	sm.addTransition("EXECUTED", "SETTLE", "SETTLED", sm.settleOrder)
 	sm.addTransition("PARTIALLY_FILLED", "FILL", "FILLED", sm.fillOrder)
 	sm.addTransition("PARTIALLY_FILLED", "CANCEL", "CANCELLED", sm.cancelOrder)
-	
+
 	return sm
 }
 
@@ -118,25 +116,25 @@ func (sm *OrderStateMachine) HandleEvent(order *Order, event string) error {
 	if order == nil {
 		return errors.New("order cannot be nil")
 	}
-	
+
 	pair := StateEventPair{State: string(order.Status), Event: event}
 	transition, exists := sm.transitions[pair]
-	
+
 	if !exists {
 		return fmt.Errorf("invalid transition: %s -> %s", order.Status, event)
 	}
-	
+
 	// Execute transition action if defined
 	if transition.Action != nil {
 		if err := transition.Action(order); err != nil {
 			return fmt.Errorf("transition action failed: %w", err)
 		}
 	}
-	
+
 	// Update order state
 	order.Status = OrderStatus(transition.ToState)
 	order.UpdatedAt = time.Now()
-	
+
 	return nil
 }
 

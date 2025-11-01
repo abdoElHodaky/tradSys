@@ -337,8 +337,6 @@ func (s *Service) matchesFilter(order *Order, filter *OrderFilter) bool {
 	return true
 }
 
-
-
 // updateOrderStatus updates the status of an order
 func (s *Service) updateOrderStatus(orderID string, status OrderStatus) error {
 	s.mu.Lock()

@@ -268,16 +268,16 @@ func (ir *IntelligentRouter) GetRoutingStats() map[string]interface{} {
 	defer ir.mu.RUnlock()
 
 	stats := make(map[string]interface{})
-	
+
 	// Get performance metrics
 	stats["performance"] = ir.performanceMonitor.GetStats()
-	
+
 	// Get cache statistics
 	stats["cache"] = ir.routingCache.GetStats()
-	
+
 	// Get circuit breaker status
 	stats["circuit_breakers"] = ir.circuitBreaker.GetStatus()
-	
+
 	// Get load balancer metrics
 	stats["load_balancer"] = ir.loadBalancer.GetMetrics()
 
@@ -323,7 +323,7 @@ func (ir *IntelligentRouter) UpdateRoutingRules(rules map[string]interface{}) er
 // GetHealthStatus returns the health status of the routing system
 func (ir *IntelligentRouter) GetHealthStatus() map[string]interface{} {
 	status := make(map[string]interface{})
-	
+
 	status["routing_engine"] = ir.routingEngine.IsHealthy()
 	status["context_analyzer"] = ir.contextAnalyzer.IsHealthy()
 	status["decision_engine"] = ir.decisionEngine.IsHealthy()

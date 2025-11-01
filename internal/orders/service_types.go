@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/core/matching"
+	order_matching "github.com/abdoElHodaky/tradSys/internal/core/matching"
 	cache "github.com/patrickmn/go-cache"
 	"go.uber.org/zap"
 )
@@ -278,20 +278,20 @@ type ServiceConfig struct {
 // Constants for order service operation
 const (
 	// Default configuration values
-	DefaultCacheExpiration     = 5 * time.Minute
+	DefaultCacheExpiration      = 5 * time.Minute
 	DefaultCacheCleanupInterval = 10 * time.Minute
-	DefaultBatchChannelSize    = 1000
-	DefaultMaxOrdersPerUser    = 1000
+	DefaultBatchChannelSize     = 1000
+	DefaultMaxOrdersPerUser     = 1000
 )
 
 // Error definitions (non-validation errors)
 var (
-	ErrOrderAlreadyExists   = errors.New("order already exists")
-	ErrOrderNotCancellable  = errors.New("order not cancellable")
-	ErrOrderExpired         = errors.New("order expired")
-	ErrInsufficientBalance  = errors.New("insufficient balance")
-	ErrInvalidPrice         = errors.New("invalid price")
-	ErrMaxOrdersExceeded    = errors.New("maximum orders per user exceeded")
+	ErrOrderAlreadyExists  = errors.New("order already exists")
+	ErrOrderNotCancellable = errors.New("order not cancellable")
+	ErrOrderExpired        = errors.New("order expired")
+	ErrInsufficientBalance = errors.New("insufficient balance")
+	ErrInvalidPrice        = errors.New("invalid price")
+	ErrMaxOrdersExceeded   = errors.New("maximum orders per user exceeded")
 )
 
 // Stop stops the service and cancels all background operations

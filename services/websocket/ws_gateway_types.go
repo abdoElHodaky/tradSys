@@ -27,12 +27,12 @@ const (
 type SubscriptionType string
 
 const (
-	SubTypeMarketData    SubscriptionType = "market_data"
-	SubTypeOrderBook     SubscriptionType = "order_book"
-	SubTypeTrades        SubscriptionType = "trades"
-	SubTypeOrderUpdates  SubscriptionType = "order_updates"
-	SubTypePortfolio     SubscriptionType = "portfolio"
-	SubTypeAlerts        SubscriptionType = "alerts"
+	SubTypeMarketData   SubscriptionType = "market_data"
+	SubTypeOrderBook    SubscriptionType = "order_book"
+	SubTypeTrades       SubscriptionType = "trades"
+	SubTypeOrderUpdates SubscriptionType = "order_updates"
+	SubTypePortfolio    SubscriptionType = "portfolio"
+	SubTypeAlerts       SubscriptionType = "alerts"
 )
 
 // Gateway manages WebSocket connections and routing for high-performance trading
@@ -41,19 +41,19 @@ type Gateway struct {
 	connectionManager *ConnectionManager
 	messageHandler    *MessageHandler
 	performanceOpt    *PerformanceOptimizer
-	
+
 	// Configuration
 	config *GatewayConfig
 	logger *zap.Logger
-	
+
 	// Connection tracking
 	connections map[string]*Connection
 	mu          sync.RWMutex
-	
+
 	// Lifecycle management
 	ctx    context.Context
 	cancel context.CancelFunc
-	
+
 	// Performance metrics
 	metrics *GatewayMetrics
 }
@@ -77,28 +77,28 @@ type Connection struct {
 	ID       string
 	UserID   string
 	Exchange string
-	
+
 	// WebSocket connection
 	conn *websocket.Conn
-	
+
 	// Message channels
 	send    chan []byte
 	receive chan []byte
-	
+
 	// Subscriptions
 	subscriptions map[string]*Subscription
 	subMu         sync.RWMutex
-	
+
 	// Performance tracking
 	lastActivity     time.Time
 	messageCount     int64
 	bytesTransferred int64
 	latencySum       int64
-	
+
 	// Connection state
 	isActive bool
 	mu       sync.RWMutex
-	
+
 	// Context for cancellation
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -117,14 +117,14 @@ type Subscription struct {
 
 // GatewayMetrics tracks gateway performance
 type GatewayMetrics struct {
-	TotalConnections    int64         `json:"total_connections"`
-	ActiveConnections   int64         `json:"active_connections"`
-	MessagesPerSecond   float64       `json:"messages_per_second"`
-	AverageLatency      time.Duration `json:"average_latency"`
-	BytesPerSecond      float64       `json:"bytes_per_second"`
-	ErrorRate           float64       `json:"error_rate"`
-	SubscriptionCount   int64         `json:"subscription_count"`
-	LastUpdated         time.Time     `json:"last_updated"`
+	TotalConnections  int64         `json:"total_connections"`
+	ActiveConnections int64         `json:"active_connections"`
+	MessagesPerSecond float64       `json:"messages_per_second"`
+	AverageLatency    time.Duration `json:"average_latency"`
+	BytesPerSecond    float64       `json:"bytes_per_second"`
+	ErrorRate         float64       `json:"error_rate"`
+	SubscriptionCount int64         `json:"subscription_count"`
+	LastUpdated       time.Time     `json:"last_updated"`
 }
 
 // Message represents a WebSocket message
@@ -159,16 +159,16 @@ type PerformanceOptimizer struct {
 
 // ConnectionStats represents connection statistics
 type ConnectionStats struct {
-	ID               string        `json:"id"`
-	UserID           string        `json:"user_id"`
-	Exchange         string        `json:"exchange"`
-	ConnectedAt      time.Time     `json:"connected_at"`
-	LastActivity     time.Time     `json:"last_activity"`
-	MessageCount     int64         `json:"message_count"`
-	BytesTransferred int64         `json:"bytes_transferred"`
-	AverageLatency   time.Duration `json:"average_latency"`
-	SubscriptionCount int          `json:"subscription_count"`
-	IsActive         bool          `json:"is_active"`
+	ID                string        `json:"id"`
+	UserID            string        `json:"user_id"`
+	Exchange          string        `json:"exchange"`
+	ConnectedAt       time.Time     `json:"connected_at"`
+	LastActivity      time.Time     `json:"last_activity"`
+	MessageCount      int64         `json:"message_count"`
+	BytesTransferred  int64         `json:"bytes_transferred"`
+	AverageLatency    time.Duration `json:"average_latency"`
+	SubscriptionCount int           `json:"subscription_count"`
+	IsActive          bool          `json:"is_active"`
 }
 
 // BroadcastOptions contains options for broadcasting messages

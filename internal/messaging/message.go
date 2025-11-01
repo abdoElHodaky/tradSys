@@ -83,7 +83,7 @@ func NewMarketDataMessage(symbol, exchange string, price, volume float64) interf
 		"price":    price,
 		"volume":   volume,
 	}
-	
+
 	msg := &MarketDataMessage{
 		StandardMessage: &StandardMessage{
 			messageType: "market_data",
@@ -96,11 +96,11 @@ func NewMarketDataMessage(symbol, exchange string, price, volume float64) interf
 		Price:    price,
 		Volume:   volume,
 	}
-	
+
 	// Add typed metadata
 	msg.SetMetadata("symbol", symbol)
 	msg.SetMetadata("exchange", exchange)
-	
+
 	return msg
 }
 
@@ -123,7 +123,7 @@ func NewOrderMessage(messageType, orderID, userID, symbol, orderType, status str
 		"order_type": orderType,
 		"status":     status,
 	}
-	
+
 	msg := &OrderMessage{
 		StandardMessage: &StandardMessage{
 			messageType: messageType,
@@ -137,12 +137,12 @@ func NewOrderMessage(messageType, orderID, userID, symbol, orderType, status str
 		OrderType: orderType,
 		Status:    status,
 	}
-	
+
 	// Add typed metadata
 	msg.SetMetadata("order_id", orderID)
 	msg.SetMetadata("user_id", userID)
 	msg.SetMetadata("symbol", symbol)
-	
+
 	return msg
 }
 
@@ -161,7 +161,7 @@ func NewSystemMessage(component, level, message string) interfaces.Message {
 		"level":     level,
 		"message":   message,
 	}
-	
+
 	msg := &SystemMessage{
 		StandardMessage: &StandardMessage{
 			messageType: "system",
@@ -173,11 +173,11 @@ func NewSystemMessage(component, level, message string) interfaces.Message {
 		Level:     level,
 		Message:   message,
 	}
-	
+
 	// Add typed metadata
 	msg.SetMetadata("component", component)
 	msg.SetMetadata("level", level)
-	
+
 	return msg
 }
 
@@ -196,7 +196,7 @@ func NewErrorMessage(errorCode, errorMsg, source string) interfaces.Message {
 		"error_msg":  errorMsg,
 		"source":     source,
 	}
-	
+
 	msg := &ErrorMessage{
 		StandardMessage: &StandardMessage{
 			messageType: "error",
@@ -208,10 +208,10 @@ func NewErrorMessage(errorCode, errorMsg, source string) interfaces.Message {
 		ErrorMsg:  errorMsg,
 		Source:    source,
 	}
-	
+
 	// Add typed metadata
 	msg.SetMetadata("error_code", errorCode)
 	msg.SetMetadata("source", source)
-	
+
 	return msg
 }

@@ -13,16 +13,16 @@ import (
 // AssetMetadata represents metadata for different asset types in the database
 type AssetMetadata struct {
 	gorm.Model
-	Symbol      string                 `gorm:"uniqueIndex;not null;size:50" json:"symbol"`
-	AssetType   types.AssetType        `gorm:"not null;size:20;index" json:"asset_type"`
-	Sector      string                 `gorm:"size:100;index" json:"sector,omitempty"`
-	Industry    string                 `gorm:"size:100" json:"industry,omitempty"`
-	Country     string                 `gorm:"size:10" json:"country,omitempty"`
-	Currency    string                 `gorm:"size:10" json:"currency,omitempty"`
-	Exchange    string                 `gorm:"size:50;index" json:"exchange,omitempty"`
-	Attributes  AssetAttributes        `gorm:"type:text" json:"attributes,omitempty"`
-	IsActive    bool                   `gorm:"default:true;index" json:"is_active"`
-	LastUpdated time.Time              `gorm:"autoUpdateTime" json:"last_updated"`
+	Symbol      string          `gorm:"uniqueIndex;not null;size:50" json:"symbol"`
+	AssetType   types.AssetType `gorm:"not null;size:20;index" json:"asset_type"`
+	Sector      string          `gorm:"size:100;index" json:"sector,omitempty"`
+	Industry    string          `gorm:"size:100" json:"industry,omitempty"`
+	Country     string          `gorm:"size:10" json:"country,omitempty"`
+	Currency    string          `gorm:"size:10" json:"currency,omitempty"`
+	Exchange    string          `gorm:"size:50;index" json:"exchange,omitempty"`
+	Attributes  AssetAttributes `gorm:"type:text" json:"attributes,omitempty"`
+	IsActive    bool            `gorm:"default:true;index" json:"is_active"`
+	LastUpdated time.Time       `gorm:"autoUpdateTime" json:"last_updated"`
 }
 
 // AssetAttributes is a custom type for storing asset-specific attributes as JSON
@@ -112,50 +112,50 @@ func (a AssetAttributes) GetTimeAttribute(key string) (time.Time, bool) {
 // AssetConfiguration represents configuration settings for different asset types
 type AssetConfiguration struct {
 	gorm.Model
-	AssetType           types.AssetType `gorm:"uniqueIndex;not null;size:20" json:"asset_type"`
-	TradingEnabled      bool            `gorm:"default:true" json:"trading_enabled"`
-	MinOrderSize        float64         `gorm:"type:decimal(20,8)" json:"min_order_size"`
-	MaxOrderSize        float64         `gorm:"type:decimal(20,8)" json:"max_order_size"`
-	PriceIncrement      float64         `gorm:"type:decimal(20,8)" json:"price_increment"`
-	QuantityIncrement   float64         `gorm:"type:decimal(20,8)" json:"quantity_increment"`
-	TradingHours        string          `gorm:"size:100" json:"trading_hours"`
-	SettlementDays      int             `gorm:"default:2" json:"settlement_days"`
-	RequiresApproval    bool            `gorm:"default:false" json:"requires_approval"`
-	RiskMultiplier      float64         `gorm:"type:decimal(10,4);default:1.0" json:"risk_multiplier"`
-	Configuration       AssetAttributes `gorm:"type:text" json:"configuration,omitempty"`
+	AssetType         types.AssetType `gorm:"uniqueIndex;not null;size:20" json:"asset_type"`
+	TradingEnabled    bool            `gorm:"default:true" json:"trading_enabled"`
+	MinOrderSize      float64         `gorm:"type:decimal(20,8)" json:"min_order_size"`
+	MaxOrderSize      float64         `gorm:"type:decimal(20,8)" json:"max_order_size"`
+	PriceIncrement    float64         `gorm:"type:decimal(20,8)" json:"price_increment"`
+	QuantityIncrement float64         `gorm:"type:decimal(20,8)" json:"quantity_increment"`
+	TradingHours      string          `gorm:"size:100" json:"trading_hours"`
+	SettlementDays    int             `gorm:"default:2" json:"settlement_days"`
+	RequiresApproval  bool            `gorm:"default:false" json:"requires_approval"`
+	RiskMultiplier    float64         `gorm:"type:decimal(10,4);default:1.0" json:"risk_multiplier"`
+	Configuration     AssetAttributes `gorm:"type:text" json:"configuration,omitempty"`
 }
 
 // AssetPricing represents pricing information for assets
 type AssetPricing struct {
 	gorm.Model
-	Symbol          string          `gorm:"index;not null;size:50" json:"symbol"`
-	AssetType       types.AssetType `gorm:"not null;size:20;index" json:"asset_type"`
-	Price           float64         `gorm:"type:decimal(20,8);not null" json:"price"`
-	BidPrice        float64         `gorm:"type:decimal(20,8)" json:"bid_price,omitempty"`
-	AskPrice        float64         `gorm:"type:decimal(20,8)" json:"ask_price,omitempty"`
-	Volume          float64         `gorm:"type:decimal(20,8)" json:"volume,omitempty"`
-	High24h         float64         `gorm:"type:decimal(20,8)" json:"high_24h,omitempty"`
-	Low24h          float64         `gorm:"type:decimal(20,8)" json:"low_24h,omitempty"`
-	Change24h       float64         `gorm:"type:decimal(20,8)" json:"change_24h,omitempty"`
-	ChangePercent24h float64        `gorm:"type:decimal(10,4)" json:"change_percent_24h,omitempty"`
-	MarketCap       float64         `gorm:"type:decimal(30,8)" json:"market_cap,omitempty"`
-	Timestamp       time.Time       `gorm:"not null;index" json:"timestamp"`
-	Source          string          `gorm:"size:50" json:"source,omitempty"`
+	Symbol           string          `gorm:"index;not null;size:50" json:"symbol"`
+	AssetType        types.AssetType `gorm:"not null;size:20;index" json:"asset_type"`
+	Price            float64         `gorm:"type:decimal(20,8);not null" json:"price"`
+	BidPrice         float64         `gorm:"type:decimal(20,8)" json:"bid_price,omitempty"`
+	AskPrice         float64         `gorm:"type:decimal(20,8)" json:"ask_price,omitempty"`
+	Volume           float64         `gorm:"type:decimal(20,8)" json:"volume,omitempty"`
+	High24h          float64         `gorm:"type:decimal(20,8)" json:"high_24h,omitempty"`
+	Low24h           float64         `gorm:"type:decimal(20,8)" json:"low_24h,omitempty"`
+	Change24h        float64         `gorm:"type:decimal(20,8)" json:"change_24h,omitempty"`
+	ChangePercent24h float64         `gorm:"type:decimal(10,4)" json:"change_percent_24h,omitempty"`
+	MarketCap        float64         `gorm:"type:decimal(30,8)" json:"market_cap,omitempty"`
+	Timestamp        time.Time       `gorm:"not null;index" json:"timestamp"`
+	Source           string          `gorm:"size:50" json:"source,omitempty"`
 }
 
 // AssetDividend represents dividend information for dividend-paying assets
 type AssetDividend struct {
 	gorm.Model
-	Symbol        string          `gorm:"index;not null;size:50" json:"symbol"`
-	AssetType     types.AssetType `gorm:"not null;size:20;index" json:"asset_type"`
-	ExDate        time.Time       `gorm:"not null;index" json:"ex_date"`
-	PayDate       time.Time       `gorm:"not null" json:"pay_date"`
-	RecordDate    time.Time       `json:"record_date,omitempty"`
-	Amount        float64         `gorm:"type:decimal(20,8);not null" json:"amount"`
-	Currency      string          `gorm:"size:10" json:"currency,omitempty"`
-	DividendType  string          `gorm:"size:20" json:"dividend_type,omitempty"` // Regular, Special, etc.
-	Frequency     string          `gorm:"size:20" json:"frequency,omitempty"`     // Monthly, Quarterly, etc.
-	YieldPercent  float64         `gorm:"type:decimal(10,4)" json:"yield_percent,omitempty"`
+	Symbol       string          `gorm:"index;not null;size:50" json:"symbol"`
+	AssetType    types.AssetType `gorm:"not null;size:20;index" json:"asset_type"`
+	ExDate       time.Time       `gorm:"not null;index" json:"ex_date"`
+	PayDate      time.Time       `gorm:"not null" json:"pay_date"`
+	RecordDate   time.Time       `json:"record_date,omitempty"`
+	Amount       float64         `gorm:"type:decimal(20,8);not null" json:"amount"`
+	Currency     string          `gorm:"size:10" json:"currency,omitempty"`
+	DividendType string          `gorm:"size:20" json:"dividend_type,omitempty"` // Regular, Special, etc.
+	Frequency    string          `gorm:"size:20" json:"frequency,omitempty"`     // Monthly, Quarterly, etc.
+	YieldPercent float64         `gorm:"type:decimal(10,4)" json:"yield_percent,omitempty"`
 }
 
 // TableName specifies the table name for AssetMetadata

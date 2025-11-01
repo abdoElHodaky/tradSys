@@ -123,13 +123,13 @@ type RiskCheck struct {
 
 // RiskEvent represents a risk-related event
 type RiskEvent struct {
-	Type      EventType     `json:"type"`
-	Symbol    string        `json:"symbol"`
-	Order     *types.Order  `json:"order,omitempty"`
-	Trade     *Trade        `json:"trade,omitempty"`
-	Severity  EventSeverity `json:"severity"`
-	Message   string        `json:"message"`
-	Timestamp time.Time     `json:"timestamp"`
+	Type      EventType              `json:"type"`
+	Symbol    string                 `json:"symbol"`
+	Order     *types.Order           `json:"order,omitempty"`
+	Trade     *Trade                 `json:"trade,omitempty"`
+	Severity  EventSeverity          `json:"severity"`
+	Message   string                 `json:"message"`
+	Timestamp time.Time              `json:"timestamp"`
 	Metadata  map[string]interface{} `json:"metadata,omitempty"`
 }
 
@@ -137,11 +137,11 @@ type RiskEvent struct {
 type EventType string
 
 const (
-	EventLimitBreach     EventType = "limit_breach"
-	EventCircuitBreaker  EventType = "circuit_breaker"
-	EventVaRBreach       EventType = "var_breach"
-	EventPositionUpdate  EventType = "position_update"
-	EventRiskAlert       EventType = "risk_alert"
+	EventLimitBreach    EventType = "limit_breach"
+	EventCircuitBreaker EventType = "circuit_breaker"
+	EventVaRBreach      EventType = "var_breach"
+	EventPositionUpdate EventType = "position_update"
+	EventRiskAlert      EventType = "risk_alert"
 )
 
 // EventSeverity represents the severity of risk events
@@ -192,24 +192,24 @@ type StressTestResult struct {
 
 // RiskAlert represents a risk alert
 type RiskAlert struct {
-	ID          string        `json:"id"`
-	Type        string        `json:"type"`
-	Symbol      string        `json:"symbol"`
-	Message     string        `json:"message"`
-	Severity    EventSeverity `json:"severity"`
-	Threshold   float64       `json:"threshold"`
-	CurrentValue float64      `json:"current_value"`
-	Timestamp   time.Time     `json:"timestamp"`
-	Acknowledged bool         `json:"acknowledged"`
+	ID           string        `json:"id"`
+	Type         string        `json:"type"`
+	Symbol       string        `json:"symbol"`
+	Message      string        `json:"message"`
+	Severity     EventSeverity `json:"severity"`
+	Threshold    float64       `json:"threshold"`
+	CurrentValue float64       `json:"current_value"`
+	Timestamp    time.Time     `json:"timestamp"`
+	Acknowledged bool          `json:"acknowledged"`
 }
 
 // PortfolioRisk represents portfolio-level risk metrics
 type PortfolioRisk struct {
-	TotalVaR        float64   `json:"total_var"`
-	ComponentVaR    map[string]float64 `json:"component_var"`
-	MarginalVaR     map[string]float64 `json:"marginal_var"`
-	ConcentrationRisk float64 `json:"concentration_risk"`
-	LeverageRatio   float64   `json:"leverage_ratio"`
-	BetaToMarket    float64   `json:"beta_to_market"`
-	Timestamp       time.Time `json:"timestamp"`
+	TotalVaR          float64            `json:"total_var"`
+	ComponentVaR      map[string]float64 `json:"component_var"`
+	MarginalVaR       map[string]float64 `json:"marginal_var"`
+	ConcentrationRisk float64            `json:"concentration_risk"`
+	LeverageRatio     float64            `json:"leverage_ratio"`
+	BetaToMarket      float64            `json:"beta_to_market"`
+	Timestamp         time.Time          `json:"timestamp"`
 }

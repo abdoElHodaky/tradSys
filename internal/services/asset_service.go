@@ -49,7 +49,7 @@ func (s *AssetService) CreateAssetMetadata(ctx context.Context, metadata *models
 		return fmt.Errorf("failed to create asset metadata: %w", err)
 	}
 
-	s.logger.Info("Created asset metadata", 
+	s.logger.Info("Created asset metadata",
 		zap.String("symbol", metadata.Symbol),
 		zap.String("asset_type", string(metadata.AssetType)))
 	return nil
@@ -64,11 +64,11 @@ func (s *AssetService) UpdateAssetMetadata(ctx context.Context, symbol string, u
 	result := s.db.WithContext(ctx).Model(&models.AssetMetadata{}).
 		Where("symbol = ?", symbol).
 		Updates(updates)
-	
+
 	if result.Error != nil {
 		return fmt.Errorf("failed to update asset metadata: %w", result.Error)
 	}
-	
+
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("asset metadata not found for symbol: %s", symbol)
 	}
@@ -137,11 +137,11 @@ func (s *AssetService) UpdateAssetPricing(ctx context.Context, pricing *models.A
 func (s *AssetService) GetAssetDividends(ctx context.Context, symbol string, limit int) ([]*models.AssetDividend, error) {
 	var dividends []*models.AssetDividend
 	query := s.db.WithContext(ctx).Where("symbol = ?", symbol).Order("ex_date DESC")
-	
+
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
-	
+
 	err := query.Find(&dividends).Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to get asset dividends: %w", err)
@@ -160,7 +160,7 @@ func (s *AssetService) CreateAssetDividend(ctx context.Context, dividend *models
 		return fmt.Errorf("failed to create asset dividend: %w", err)
 	}
 
-	s.logger.Info("Created asset dividend", 
+	s.logger.Info("Created asset dividend",
 		zap.String("symbol", dividend.Symbol),
 		zap.Float64("amount", dividend.Amount),
 		zap.Time("ex_date", dividend.ExDate))
@@ -201,11 +201,11 @@ func (s *AssetService) ValidateOrderForAsset(ctx context.Context, symbol string,
 	// Check order size limits
 	orderValue := quantity * price
 	if orderValue < config.MinOrderSize {
-		return fmt.Errorf("order size %.2f is below minimum %.2f for asset type %s", 
+		return fmt.Errorf("order size %.2f is below minimum %.2f for asset type %s",
 			orderValue, config.MinOrderSize, assetType)
 	}
 	if orderValue > config.MaxOrderSize {
-		return fmt.Errorf("order size %.2f exceeds maximum %.2f for asset type %s", 
+		return fmt.Errorf("order size %.2f exceeds maximum %.2f for asset type %s",
 			orderValue, config.MaxOrderSize, assetType)
 	}
 
@@ -213,7 +213,7 @@ func (s *AssetService) ValidateOrderForAsset(ctx context.Context, symbol string,
 	if config.QuantityIncrement > 0 {
 		remainder := quantity - (float64(int(quantity/config.QuantityIncrement)) * config.QuantityIncrement)
 		if remainder > 0.0001 { // Small tolerance for floating point precision
-			return fmt.Errorf("quantity %.8f does not match increment %.8f for asset type %s", 
+			return fmt.Errorf("quantity %.8f does not match increment %.8f for asset type %s",
 				quantity, config.QuantityIncrement, assetType)
 		}
 	}
@@ -222,7 +222,7 @@ func (s *AssetService) ValidateOrderForAsset(ctx context.Context, symbol string,
 	if config.PriceIncrement > 0 {
 		remainder := price - (float64(int(price/config.PriceIncrement)) * config.PriceIncrement)
 		if remainder > 0.0001 { // Small tolerance for floating point precision
-			return fmt.Errorf("price %.8f does not match increment %.8f for asset type %s", 
+			return fmt.Errorf("price %.8f does not match increment %.8f for asset type %s",
 				price, config.PriceIncrement, assetType)
 		}
 	}
@@ -268,7 +268,7 @@ func (s *AssetService) ListAssets(ctx context.Context, offset, limit int, assetT
 	var total int64
 
 	query := s.db.WithContext(ctx).Model(&models.AssetMetadata{}).Where("is_active = ?", true)
-	
+
 	if assetType != nil {
 		query = query.Where("asset_type = ?", *assetType)
 	}

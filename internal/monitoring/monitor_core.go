@@ -21,7 +21,7 @@ func NewUnifiedMonitor(config *MonitorConfig, logger *zap.Logger) (*UnifiedMonit
 	if config == nil {
 		return nil, ErrInvalidConfig
 	}
-	
+
 	// Set default values
 	if config.MetricsInterval == 0 {
 		config.MetricsInterval = 30 * time.Second
@@ -35,9 +35,9 @@ func NewUnifiedMonitor(config *MonitorConfig, logger *zap.Logger) (*UnifiedMonit
 	if config.MaxMetricsHistory == 0 {
 		config.MaxMetricsHistory = 1000
 	}
-	
+
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	monitor := &UnifiedMonitor{
 		config:   config,
 		logger:   logger,
@@ -45,13 +45,13 @@ func NewUnifiedMonitor(config *MonitorConfig, logger *zap.Logger) (*UnifiedMonit
 		ctx:      ctx,
 		cancel:   cancel,
 	}
-	
+
 	// Initialize components
 	monitor.metricsCollector = NewUnifiedMetricsCollector(config, logger)
 	monitor.alertManager = NewUnifiedAlertManager(config, logger)
 	monitor.healthChecker = NewHealthChecker(config, logger)
 	monitor.performanceTracker = NewPerformanceTracker(config, logger)
-	
+
 	return monitor, nil
 }
 
@@ -59,44 +59,44 @@ func NewUnifiedMonitor(config *MonitorConfig, logger *zap.Logger) (*UnifiedMonit
 func (m *UnifiedMonitor) Start() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	if m.isRunning {
 		return ErrMonitorAlreadyRunning
 	}
-	
+
 	m.logger.Info("Starting unified monitor",
 		zap.Duration("metrics_interval", m.config.MetricsInterval),
 		zap.Duration("health_check_interval", m.config.HealthCheckInterval))
-	
+
 	// Start components
 	if err := m.metricsCollector.Start(); err != nil {
 		return err
 	}
-	
+
 	if m.config.EnableAlerts {
 		if err := m.alertManager.Start(); err != nil {
 			return err
 		}
 	}
-	
+
 	if m.config.EnableHealthChecks {
 		if err := m.healthChecker.Start(); err != nil {
 			return err
 		}
 	}
-	
+
 	if err := m.performanceTracker.Start(); err != nil {
 		return err
 	}
-	
+
 	// Start background processes
 	go m.metricsLoop()
 	go m.healthCheckLoop()
 	go m.alertCheckLoop()
-	
+
 	m.isRunning = true
 	m.startTime = time.Now()
-	
+
 	return nil
 }
 
@@ -104,23 +104,23 @@ func (m *UnifiedMonitor) Start() error {
 func (m *UnifiedMonitor) Stop() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	if !m.isRunning {
 		return ErrMonitorNotRunning
 	}
-	
+
 	m.logger.Info("Stopping unified monitor")
-	
+
 	m.cancel()
-	
+
 	// Stop components
 	m.metricsCollector.Stop()
 	m.alertManager.Stop()
 	m.healthChecker.Stop()
 	m.performanceTracker.Stop()
-	
+
 	m.isRunning = false
-	
+
 	return nil
 }
 
@@ -158,14 +158,14 @@ func (m *UnifiedMonitor) RegisterHealthCheck(name string, check UnifiedHealthChe
 func (m *UnifiedMonitor) metricsLoop() {
 	ticker := time.NewTicker(m.config.MetricsInterval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
 			if err := m.metricsCollector.CollectMetrics(); err != nil {
 				m.logger.Error("Failed to collect metrics", zap.Error(err))
 			}
-			
+
 			// Update performance tracker
 			if metrics, err := m.metricsCollector.GetCurrentMetrics(); err == nil {
 				m.performanceTracker.RecordMetrics(metrics)
@@ -181,10 +181,10 @@ func (m *UnifiedMonitor) healthCheckLoop() {
 	if !m.config.EnableHealthChecks {
 		return
 	}
-	
+
 	ticker := time.NewTicker(m.config.HealthCheckInterval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -202,10 +202,10 @@ func (m *UnifiedMonitor) alertCheckLoop() {
 	if !m.config.EnableAlerts {
 		return
 	}
-	
+
 	ticker := time.NewTicker(m.config.AlertCheckInterval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -260,19 +260,19 @@ func (mc *UnifiedMetricsCollector) Stop() error {
 func (mc *UnifiedMetricsCollector) CollectMetrics() error {
 	mc.mu.Lock()
 	defer mc.mu.Unlock()
-	
+
 	// Collect metrics from various sources
 	mc.metrics = &SystemMetrics{
-		OrdersPerSecond:   mc.getOrdersPerSecond(),
-		TradesPerSecond:   mc.getTradesPerSecond(),
-		MatchingLatency:   mc.getMatchingLatency(),
-		CPUUsage:         mc.getCPUUsage(),
-		MemoryUsage:      mc.getMemoryUsage(),
-		ErrorRate:        mc.getErrorRate(),
-		ResponseTime:     mc.getResponseTime(),
-		Timestamp:        time.Now(),
+		OrdersPerSecond: mc.getOrdersPerSecond(),
+		TradesPerSecond: mc.getTradesPerSecond(),
+		MatchingLatency: mc.getMatchingLatency(),
+		CPUUsage:        mc.getCPUUsage(),
+		MemoryUsage:     mc.getMemoryUsage(),
+		ErrorRate:       mc.getErrorRate(),
+		ResponseTime:    mc.getResponseTime(),
+		Timestamp:       time.Now(),
 	}
-	
+
 	return nil
 }
 
@@ -280,7 +280,7 @@ func (mc *UnifiedMetricsCollector) CollectMetrics() error {
 func (mc *UnifiedMetricsCollector) GetCurrentMetrics() (*SystemMetrics, error) {
 	mc.mu.RLock()
 	defer mc.mu.RUnlock()
-	
+
 	// Return a copy
 	metrics := *mc.metrics
 	return &metrics, nil
@@ -355,17 +355,17 @@ func (am *UnifiedAlertManager) Stop() error {
 func (am *UnifiedAlertManager) CheckAlerts() error {
 	am.mu.RLock()
 	defer am.mu.RUnlock()
-	
+
 	// Check alert rules
 	for _, rule := range am.rules {
 		if !rule.Enabled {
 			continue
 		}
-		
+
 		// Placeholder alert checking logic
 		am.logger.Debug("Checking alert rule", zap.String("rule", rule.Name))
 	}
-	
+
 	return nil
 }
 
@@ -373,14 +373,14 @@ func (am *UnifiedAlertManager) CheckAlerts() error {
 func (am *UnifiedAlertManager) GetActiveAlerts() ([]*UnifiedAlert, error) {
 	am.mu.RLock()
 	defer am.mu.RUnlock()
-	
+
 	var alerts []*UnifiedAlert
 	for _, alert := range am.alerts {
 		if !alert.Resolved {
 			alerts = append(alerts, alert)
 		}
 	}
-	
+
 	return alerts, nil
 }
 
@@ -388,7 +388,7 @@ func (am *UnifiedAlertManager) GetActiveAlerts() ([]*UnifiedAlert, error) {
 func (am *UnifiedAlertManager) TriggerAlert(alert *UnifiedAlert) {
 	am.mu.Lock()
 	defer am.mu.Unlock()
-	
+
 	am.alerts[alert.ID] = alert
 	am.logger.Info("Alert triggered",
 		zap.String("id", alert.ID),
@@ -422,7 +422,7 @@ func (hc *HealthChecker) Stop() error {
 func (hc *HealthChecker) RegisterCheck(name string, check UnifiedHealthCheck) {
 	hc.mu.Lock()
 	defer hc.mu.Unlock()
-	
+
 	hc.checks[name] = check
 	hc.logger.Info("Registered health check", zap.String("name", name))
 }
@@ -431,11 +431,11 @@ func (hc *HealthChecker) RegisterCheck(name string, check UnifiedHealthCheck) {
 func (hc *HealthChecker) RunChecks() error {
 	hc.mu.Lock()
 	defer hc.mu.Unlock()
-	
+
 	components := make(map[string]HealthState)
 	details := make(map[string]interface{})
 	overall := HealthStateHealthy
-	
+
 	for name, check := range hc.checks {
 		state, detail, err := check()
 		if err != nil {
@@ -444,12 +444,12 @@ func (hc *HealthChecker) RunChecks() error {
 				zap.Error(err))
 			state = HealthStateUnknown
 		}
-		
+
 		components[name] = state
 		if detail != nil {
 			details[name] = detail
 		}
-		
+
 		// Determine overall health
 		if state == HealthStateCritical {
 			overall = HealthStateCritical
@@ -457,14 +457,14 @@ func (hc *HealthChecker) RunChecks() error {
 			overall = HealthStateWarning
 		}
 	}
-	
+
 	hc.lastStatus = &UnifiedHealthStatus{
 		Overall:    overall,
 		Components: components,
 		Timestamp:  time.Now(),
 		Details:    details,
 	}
-	
+
 	return nil
 }
 
@@ -472,14 +472,14 @@ func (hc *HealthChecker) RunChecks() error {
 func (hc *HealthChecker) GetCurrentHealth() (*UnifiedHealthStatus, error) {
 	hc.mu.RLock()
 	defer hc.mu.RUnlock()
-	
+
 	if hc.lastStatus == nil {
 		return &UnifiedHealthStatus{
 			Overall:   HealthStateUnknown,
 			Timestamp: time.Now(),
 		}, nil
 	}
-	
+
 	// Return a copy
 	status := *hc.lastStatus
 	return &status, nil
@@ -510,10 +510,10 @@ func (pt *PerformanceTracker) Stop() error {
 func (pt *PerformanceTracker) RecordMetrics(metrics *SystemMetrics) {
 	pt.mu.Lock()
 	defer pt.mu.Unlock()
-	
+
 	// Add to history
 	pt.metricsHistory = append(pt.metricsHistory, metrics)
-	
+
 	// Trim history if needed
 	if len(pt.metricsHistory) > pt.config.MaxMetricsHistory {
 		pt.metricsHistory = pt.metricsHistory[1:]

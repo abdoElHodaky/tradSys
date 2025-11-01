@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -23,13 +22,13 @@ func (suite *ComplianceTestSuite) SetupSuite() {
 // Test MiFID II compliance (European Union)
 func (suite *ComplianceTestSuite) TestMiFIDII_Compliance() {
 	suite.T().Log("Testing MiFID II compliance...")
-	
+
 	// Test transaction reporting requirements
 	suite.T().Run("TransactionReporting", func(t *testing.T) {
 		// Verify all required fields are captured
 		requiredFields := []string{
 			"transaction_id",
-			"instrument_id", 
+			"instrument_id",
 			"price",
 			"quantity",
 			"timestamp",
@@ -39,13 +38,13 @@ func (suite *ComplianceTestSuite) TestMiFIDII_Compliance() {
 			"investment_decision_maker",
 			"execution_decision_maker",
 		}
-		
+
 		for _, field := range requiredFields {
 			// In actual implementation, verify field exists in transaction records
 			assert.NotEmpty(t, field, "Required MiFID II field should be defined: %s", field)
 		}
 	})
-	
+
 	// Test best execution requirements
 	suite.T().Run("BestExecution", func(t *testing.T) {
 		// Verify execution quality monitoring
@@ -58,16 +57,16 @@ func (suite *ComplianceTestSuite) TestMiFIDII_Compliance() {
 			"size",
 			"nature",
 		}
-		
+
 		for _, factor := range executionFactors {
 			assert.NotEmpty(t, factor, "Best execution factor should be monitored: %s", factor)
 		}
 	})
-	
+
 	// Test client categorization
 	suite.T().Run("ClientCategorization", func(t *testing.T) {
 		clientTypes := []string{"retail", "professional", "eligible_counterparty"}
-		
+
 		for _, clientType := range clientTypes {
 			// Verify client categorization logic exists
 			assert.NotEmpty(t, clientType, "Client type should be supported: %s", clientType)
@@ -78,7 +77,7 @@ func (suite *ComplianceTestSuite) TestMiFIDII_Compliance() {
 // Test Dodd-Frank compliance (United States)
 func (suite *ComplianceTestSuite) TestDoddFrank_Compliance() {
 	suite.T().Log("Testing Dodd-Frank compliance...")
-	
+
 	// Test Volcker Rule compliance
 	suite.T().Run("VolckerRule", func(t *testing.T) {
 		// Verify proprietary trading restrictions
@@ -87,25 +86,25 @@ func (suite *ComplianceTestSuite) TestDoddFrank_Compliance() {
 			"hedge_fund_investment",
 			"private_equity_investment",
 		}
-		
+
 		for _, activity := range prohibitedActivities {
 			// In actual implementation, verify these activities are restricted
 			assert.NotEmpty(t, activity, "Prohibited activity should be monitored: %s", activity)
 		}
 	})
-	
+
 	// Test swap reporting requirements
 	suite.T().Run("SwapReporting", func(t *testing.T) {
 		swapFields := []string{
 			"swap_id",
 			"counterparty_1",
-			"counterparty_2", 
+			"counterparty_2",
 			"notional_amount",
 			"effective_date",
 			"maturity_date",
 			"underlying_asset",
 		}
-		
+
 		for _, field := range swapFields {
 			assert.NotEmpty(t, field, "Swap reporting field should be captured: %s", field)
 		}
@@ -115,23 +114,23 @@ func (suite *ComplianceTestSuite) TestDoddFrank_Compliance() {
 // Test CFTC compliance (United States - Derivatives)
 func (suite *ComplianceTestSuite) TestCFTC_Compliance() {
 	suite.T().Log("Testing CFTC compliance...")
-	
+
 	// Test position limits
 	suite.T().Run("PositionLimits", func(t *testing.T) {
 		// Verify position limit monitoring
 		limitTypes := []string{
 			"spot_month_limit",
-			"single_month_limit", 
+			"single_month_limit",
 			"all_months_limit",
 			"net_long_position",
 			"net_short_position",
 		}
-		
+
 		for _, limitType := range limitTypes {
 			assert.NotEmpty(t, limitType, "Position limit type should be monitored: %s", limitType)
 		}
 	})
-	
+
 	// Test real-time reporting
 	suite.T().Run("RealTimeReporting", func(t *testing.T) {
 		// Verify sub-second reporting capability
@@ -143,7 +142,7 @@ func (suite *ComplianceTestSuite) TestCFTC_Compliance() {
 // Test FCA compliance (United Kingdom)
 func (suite *ComplianceTestSuite) TestFCA_Compliance() {
 	suite.T().Log("Testing FCA compliance...")
-	
+
 	// Test market abuse prevention
 	suite.T().Run("MarketAbusePrevention", func(t *testing.T) {
 		abuseTypes := []string{
@@ -152,13 +151,13 @@ func (suite *ComplianceTestSuite) TestFCA_Compliance() {
 			"benchmark_manipulation",
 			"misleading_statements",
 		}
-		
+
 		for _, abuseType := range abuseTypes {
 			// Verify monitoring systems exist
 			assert.NotEmpty(t, abuseType, "Market abuse type should be monitored: %s", abuseType)
 		}
 	})
-	
+
 	// Test conduct of business rules
 	suite.T().Run("ConductOfBusiness", func(t *testing.T) {
 		conductRules := []string{
@@ -167,7 +166,7 @@ func (suite *ComplianceTestSuite) TestFCA_Compliance() {
 			"appropriate_information",
 			"conflicts_of_interest",
 		}
-		
+
 		for _, rule := range conductRules {
 			assert.NotEmpty(t, rule, "Conduct rule should be implemented: %s", rule)
 		}
@@ -177,7 +176,7 @@ func (suite *ComplianceTestSuite) TestFCA_Compliance() {
 // Test ASIC compliance (Australia)
 func (suite *ComplianceTestSuite) TestASIC_Compliance() {
 	suite.T().Log("Testing ASIC compliance...")
-	
+
 	// Test market integrity rules
 	suite.T().Run("MarketIntegrityRules", func(t *testing.T) {
 		integrityRules := []string{
@@ -186,7 +185,7 @@ func (suite *ComplianceTestSuite) TestASIC_Compliance() {
 			"price_improvement",
 			"order_priority",
 		}
-		
+
 		for _, rule := range integrityRules {
 			assert.NotEmpty(t, rule, "Market integrity rule should be implemented: %s", rule)
 		}
@@ -196,7 +195,7 @@ func (suite *ComplianceTestSuite) TestASIC_Compliance() {
 // Test JFSA compliance (Japan)
 func (suite *ComplianceTestSuite) TestJFSA_Compliance() {
 	suite.T().Log("Testing JFSA compliance...")
-	
+
 	// Test financial instruments business regulations
 	suite.T().Run("FinancialInstrumentsBusiness", func(t *testing.T) {
 		businessRules := []string{
@@ -205,7 +204,7 @@ func (suite *ComplianceTestSuite) TestJFSA_Compliance() {
 			"internal_control_system",
 			"compliance_system",
 		}
-		
+
 		for _, rule := range businessRules {
 			assert.NotEmpty(t, rule, "Business rule should be implemented: %s", rule)
 		}
@@ -215,7 +214,7 @@ func (suite *ComplianceTestSuite) TestJFSA_Compliance() {
 // Test HKMA compliance (Hong Kong)
 func (suite *ComplianceTestSuite) TestHKMA_Compliance() {
 	suite.T().Log("Testing HKMA compliance...")
-	
+
 	// Test securities and futures regulations
 	suite.T().Run("SecuritiesAndFutures", func(t *testing.T) {
 		regulations := []string{
@@ -224,7 +223,7 @@ func (suite *ComplianceTestSuite) TestHKMA_Compliance() {
 			"margin_requirements",
 			"position_limits",
 		}
-		
+
 		for _, regulation := range regulations {
 			assert.NotEmpty(t, regulation, "Regulation should be implemented: %s", regulation)
 		}
@@ -234,7 +233,7 @@ func (suite *ComplianceTestSuite) TestHKMA_Compliance() {
 // Test MAS compliance (Singapore)
 func (suite *ComplianceTestSuite) TestMAS_Compliance() {
 	suite.T().Log("Testing MAS compliance...")
-	
+
 	// Test securities and futures act requirements
 	suite.T().Run("SecuritiesAndFuturesAct", func(t *testing.T) {
 		requirements := []string{
@@ -243,7 +242,7 @@ func (suite *ComplianceTestSuite) TestMAS_Compliance() {
 			"operational_risk",
 			"technology_risk",
 		}
-		
+
 		for _, requirement := range requirements {
 			assert.NotEmpty(t, requirement, "SFA requirement should be implemented: %s", requirement)
 		}
@@ -253,19 +252,19 @@ func (suite *ComplianceTestSuite) TestMAS_Compliance() {
 // Test cross-jurisdictional compliance
 func (suite *ComplianceTestSuite) TestCrossJurisdictional_Compliance() {
 	suite.T().Log("Testing cross-jurisdictional compliance...")
-	
+
 	// Test data localization requirements
 	suite.T().Run("DataLocalization", func(t *testing.T) {
 		jurisdictions := []string{
 			"EU", "US", "UK", "AU", "JP", "HK", "SG", "CA",
 		}
-		
+
 		for _, jurisdiction := range jurisdictions {
 			// Verify data residency compliance
 			assert.NotEmpty(t, jurisdiction, "Data localization should be supported for: %s", jurisdiction)
 		}
 	})
-	
+
 	// Test reporting harmonization
 	suite.T().Run("ReportingHarmonization", func(t *testing.T) {
 		reportingStandards := []string{
@@ -274,7 +273,7 @@ func (suite *ComplianceTestSuite) TestCrossJurisdictional_Compliance() {
 			"SWIFT_Standards",
 			"LEI_Validation",
 		}
-		
+
 		for _, standard := range reportingStandards {
 			assert.NotEmpty(t, standard, "Reporting standard should be supported: %s", standard)
 		}
@@ -284,7 +283,7 @@ func (suite *ComplianceTestSuite) TestCrossJurisdictional_Compliance() {
 // Test audit trail requirements
 func (suite *ComplianceTestSuite) TestAuditTrail_Requirements() {
 	suite.T().Log("Testing audit trail requirements...")
-	
+
 	// Test comprehensive logging
 	suite.T().Run("ComprehensiveLogging", func(t *testing.T) {
 		auditEvents := []string{
@@ -297,12 +296,12 @@ func (suite *ComplianceTestSuite) TestAuditTrail_Requirements() {
 			"user_authentication",
 			"system_access",
 		}
-		
+
 		for _, event := range auditEvents {
 			assert.NotEmpty(t, event, "Audit event should be logged: %s", event)
 		}
 	})
-	
+
 	// Test data retention
 	suite.T().Run("DataRetention", func(t *testing.T) {
 		retentionPeriods := map[string]time.Duration{
@@ -311,12 +310,12 @@ func (suite *ComplianceTestSuite) TestAuditTrail_Requirements() {
 			"client_records":     7 * 365 * 24 * time.Hour, // 7 years
 			"compliance_records": 7 * 365 * 24 * time.Hour, // 7 years
 		}
-		
+
 		for recordType, period := range retentionPeriods {
 			assert.Greater(t, period, 365*24*time.Hour, "Retention period should be adequate for: %s", recordType)
 		}
 	})
-	
+
 	// Test data integrity
 	suite.T().Run("DataIntegrity", func(t *testing.T) {
 		integrityMeasures := []string{
@@ -325,7 +324,7 @@ func (suite *ComplianceTestSuite) TestAuditTrail_Requirements() {
 			"immutable_storage",
 			"version_control",
 		}
-		
+
 		for _, measure := range integrityMeasures {
 			assert.NotEmpty(t, measure, "Data integrity measure should be implemented: %s", measure)
 		}
@@ -335,22 +334,22 @@ func (suite *ComplianceTestSuite) TestAuditTrail_Requirements() {
 // Test real-time monitoring
 func (suite *ComplianceTestSuite) TestRealTimeMonitoring() {
 	suite.T().Log("Testing real-time monitoring...")
-	
+
 	// Test surveillance systems
 	suite.T().Run("SurveillanceSystems", func(t *testing.T) {
 		surveillanceTypes := []string{
 			"market_manipulation_detection",
-			"insider_trading_detection", 
+			"insider_trading_detection",
 			"wash_trading_detection",
 			"layering_detection",
 			"spoofing_detection",
 		}
-		
+
 		for _, surveillanceType := range surveillanceTypes {
 			assert.NotEmpty(t, surveillanceType, "Surveillance type should be implemented: %s", surveillanceType)
 		}
 	})
-	
+
 	// Test alert generation
 	suite.T().Run("AlertGeneration", func(t *testing.T) {
 		alertTypes := []string{
@@ -359,7 +358,7 @@ func (suite *ComplianceTestSuite) TestRealTimeMonitoring() {
 			"pattern_recognition",
 			"anomaly_detection",
 		}
-		
+
 		for _, alertType := range alertTypes {
 			assert.NotEmpty(t, alertType, "Alert type should be supported: %s", alertType)
 		}
@@ -369,7 +368,7 @@ func (suite *ComplianceTestSuite) TestRealTimeMonitoring() {
 // Test risk management compliance
 func (suite *ComplianceTestSuite) TestRiskManagement_Compliance() {
 	suite.T().Log("Testing risk management compliance...")
-	
+
 	// Test pre-trade risk controls
 	suite.T().Run("PreTradeRiskControls", func(t *testing.T) {
 		riskControls := []string{
@@ -379,12 +378,12 @@ func (suite *ComplianceTestSuite) TestRiskManagement_Compliance() {
 			"credit_limit_checks",
 			"concentration_limits",
 		}
-		
+
 		for _, control := range riskControls {
 			assert.NotEmpty(t, control, "Pre-trade risk control should be implemented: %s", control)
 		}
 	})
-	
+
 	// Test post-trade risk monitoring
 	suite.T().Run("PostTradeRiskMonitoring", func(t *testing.T) {
 		monitoringTypes := []string{
@@ -393,7 +392,7 @@ func (suite *ComplianceTestSuite) TestRiskManagement_Compliance() {
 			"stress_testing",
 			"scenario_analysis",
 		}
-		
+
 		for _, monitoringType := range monitoringTypes {
 			assert.NotEmpty(t, monitoringType, "Post-trade monitoring should be implemented: %s", monitoringType)
 		}
@@ -403,7 +402,7 @@ func (suite *ComplianceTestSuite) TestRiskManagement_Compliance() {
 // Test client protection measures
 func (suite *ComplianceTestSuite) TestClientProtection() {
 	suite.T().Log("Testing client protection measures...")
-	
+
 	// Test segregation of assets
 	suite.T().Run("AssetSegregation", func(t *testing.T) {
 		segregationTypes := []string{
@@ -411,12 +410,12 @@ func (suite *ComplianceTestSuite) TestClientProtection() {
 			"client_asset_segregation",
 			"firm_asset_separation",
 		}
-		
+
 		for _, segregationType := range segregationTypes {
 			assert.NotEmpty(t, segregationType, "Asset segregation should be implemented: %s", segregationType)
 		}
 	})
-	
+
 	// Test investor compensation
 	suite.T().Run("InvestorCompensation", func(t *testing.T) {
 		compensationSchemes := []string{
@@ -424,7 +423,7 @@ func (suite *ComplianceTestSuite) TestClientProtection() {
 			"investor_protection_fund",
 			"professional_indemnity_insurance",
 		}
-		
+
 		for _, scheme := range compensationSchemes {
 			assert.NotEmpty(t, scheme, "Compensation scheme should be available: %s", scheme)
 		}
@@ -434,7 +433,7 @@ func (suite *ComplianceTestSuite) TestClientProtection() {
 // Test technology governance
 func (suite *ComplianceTestSuite) TestTechnologyGovernance() {
 	suite.T().Log("Testing technology governance...")
-	
+
 	// Test system resilience
 	suite.T().Run("SystemResilience", func(t *testing.T) {
 		resilienceFeatures := []string{
@@ -443,12 +442,12 @@ func (suite *ComplianceTestSuite) TestTechnologyGovernance() {
 			"business_continuity",
 			"failover_mechanisms",
 		}
-		
+
 		for _, feature := range resilienceFeatures {
 			assert.NotEmpty(t, feature, "Resilience feature should be implemented: %s", feature)
 		}
 	})
-	
+
 	// Test change management
 	suite.T().Run("ChangeManagement", func(t *testing.T) {
 		changeProcesses := []string{
@@ -457,7 +456,7 @@ func (suite *ComplianceTestSuite) TestTechnologyGovernance() {
 			"rollback_procedures",
 			"impact_assessment",
 		}
-		
+
 		for _, process := range changeProcesses {
 			assert.NotEmpty(t, process, "Change management process should be defined: %s", process)
 		}
@@ -467,7 +466,7 @@ func (suite *ComplianceTestSuite) TestTechnologyGovernance() {
 // Test reporting and disclosure
 func (suite *ComplianceTestSuite) TestReportingAndDisclosure() {
 	suite.T().Log("Testing reporting and disclosure...")
-	
+
 	// Test regulatory reporting
 	suite.T().Run("RegulatoryReporting", func(t *testing.T) {
 		reportTypes := []string{
@@ -477,21 +476,21 @@ func (suite *ComplianceTestSuite) TestReportingAndDisclosure() {
 			"compliance_reports",
 			"incident_reports",
 		}
-		
+
 		for _, reportType := range reportTypes {
 			assert.NotEmpty(t, reportType, "Report type should be supported: %s", reportType)
 		}
 	})
-	
+
 	// Test timeliness requirements
 	suite.T().Run("TimelinessRequirements", func(t *testing.T) {
 		reportingDeadlines := map[string]time.Duration{
-			"trade_reporting":    1 * time.Minute,  // T+1 minute
-			"position_reporting": 24 * time.Hour,   // Daily
-			"risk_reporting":     24 * time.Hour,   // Daily
-			"incident_reporting": 4 * time.Hour,    // Within 4 hours
+			"trade_reporting":    1 * time.Minute, // T+1 minute
+			"position_reporting": 24 * time.Hour,  // Daily
+			"risk_reporting":     24 * time.Hour,  // Daily
+			"incident_reporting": 4 * time.Hour,   // Within 4 hours
 		}
-		
+
 		for reportType, deadline := range reportingDeadlines {
 			assert.Greater(t, deadline, 0*time.Second, "Reporting deadline should be defined for: %s", reportType)
 		}

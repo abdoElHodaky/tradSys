@@ -15,7 +15,7 @@ import (
 // createConnection creates a new connection instance
 func (g *Gateway) createConnection(conn *websocket.Conn, userID, exchange string) *Connection {
 	ctx, cancel := context.WithCancel(g.ctx)
-	
+
 	connection := &Connection{
 		ID:            generateConnectionID(),
 		UserID:        userID,
@@ -29,7 +29,7 @@ func (g *Gateway) createConnection(conn *websocket.Conn, userID, exchange string
 		ctx:           ctx,
 		cancel:        cancel,
 	}
-	
+
 	return connection
 }
 
@@ -37,11 +37,11 @@ func (g *Gateway) createConnection(conn *websocket.Conn, userID, exchange string
 func (g *Gateway) checkConnectionLimits() error {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
-	
+
 	if len(g.connections) >= g.config.MaxConnections {
 		return ErrMaxConnectionsReached
 	}
-	
+
 	return nil
 }
 
@@ -51,7 +51,7 @@ func (g *Gateway) handleConnectionRead(conn *Connection) {
 		conn.Close()
 		g.removeConnection(conn.ID)
 	}()
-	
+
 	conn.conn.SetReadLimit(g.config.MaxMessageSize)
 	conn.conn.SetReadDeadline(time.Now().Add(g.config.ReadTimeout))
 	conn.conn.SetPongHandler(func(string) error {
@@ -61,7 +61,7 @@ func (g *Gateway) handleConnectionRead(conn *Connection) {
 		conn.mu.Unlock()
 		return nil
 	})
-	
+
 	for {
 		_, message, err := conn.conn.ReadMessage()
 		if err != nil {
@@ -72,13 +72,13 @@ func (g *Gateway) handleConnectionRead(conn *Connection) {
 			}
 			break
 		}
-		
+
 		// Update activity
 		conn.mu.Lock()
 		conn.lastActivity = time.Now()
 		conn.messageCount++
 		conn.mu.Unlock()
-		
+
 		// Process message
 		if err := g.processMessage(conn, message); err != nil {
 			g.logger.Error("Message processing error",
@@ -95,7 +95,7 @@ func (g *Gateway) handleConnectionWrite(conn *Connection) {
 		ticker.Stop()
 		conn.conn.Close()
 	}()
-	
+
 	for {
 		select {
 		case message, ok := <-conn.send:
@@ -104,25 +104,25 @@ func (g *Gateway) handleConnectionWrite(conn *Connection) {
 				conn.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-			
+
 			if err := conn.conn.WriteMessage(websocket.TextMessage, message); err != nil {
 				g.logger.Error("WebSocket write error",
 					zap.String("connection_id", conn.ID),
 					zap.Error(err))
 				return
 			}
-			
+
 			// Update metrics
 			conn.mu.Lock()
 			conn.bytesTransferred += int64(len(message))
 			conn.mu.Unlock()
-			
+
 		case <-ticker.C:
 			conn.conn.SetWriteDeadline(time.Now().Add(g.config.WriteTimeout))
 			if err := conn.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
-			
+
 		case <-conn.ctx.Done():
 			return
 		}
@@ -133,7 +133,7 @@ func (g *Gateway) handleConnectionWrite(conn *Connection) {
 func (g *Gateway) handleConnectionPing(conn *Connection) {
 	ticker := time.NewTicker(g.config.PingInterval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -143,7 +143,7 @@ func (g *Gateway) handleConnectionPing(conn *Connection) {
 				conn.Close()
 				return
 			}
-			
+
 		case <-conn.ctx.Done():
 			return
 		}
@@ -156,7 +156,7 @@ func (g *Gateway) processMessage(conn *Connection, messageBytes []byte) error {
 	if err := json.Unmarshal(messageBytes, &message); err != nil {
 		return fmt.Errorf("invalid message format: %w", err)
 	}
-	
+
 	switch message.Type {
 	case MessageTypeSubscribe:
 		return g.handleSubscribeMessage(conn, &message)
@@ -174,21 +174,21 @@ func (g *Gateway) handleSubscribeMessage(conn *Connection, message *Message) err
 	if message.Channel == "" {
 		return ErrInvalidMessage
 	}
-	
+
 	subType := SubTypeMarketData
 	if message.Metadata != nil {
 		if t, ok := message.Metadata["type"].(string); ok {
 			subType = SubscriptionType(t)
 		}
 	}
-	
+
 	filters := make(map[string]interface{})
 	if message.Metadata != nil {
 		if f, ok := message.Metadata["filters"].(map[string]interface{}); ok {
 			filters = f
 		}
 	}
-	
+
 	return conn.Subscribe(message.Channel, message.Symbol, subType, filters)
 }
 
@@ -197,7 +197,7 @@ func (g *Gateway) handleUnsubscribeMessage(conn *Connection, message *Message) e
 	if message.ID == "" {
 		return ErrInvalidMessage
 	}
-	
+
 	return conn.Unsubscribe(message.ID)
 }
 
@@ -209,12 +209,12 @@ func (g *Gateway) handleHeartbeatMessage(conn *Connection, message *Message) err
 		Timestamp: time.Now(),
 		Data:      "pong",
 	}
-	
+
 	responseBytes, err := json.Marshal(response)
 	if err != nil {
 		return err
 	}
-	
+
 	select {
 	case conn.send <- responseBytes:
 		return nil
@@ -228,7 +228,7 @@ func (g *Gateway) removeConnection(connectionID string) {
 	g.mu.Lock()
 	delete(g.connections, connectionID)
 	g.mu.Unlock()
-	
+
 	g.logger.Debug("Connection removed",
 		zap.String("connection_id", connectionID))
 }
@@ -237,7 +237,7 @@ func (g *Gateway) removeConnection(connectionID string) {
 func (g *Gateway) metricsCollector() {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -252,7 +252,7 @@ func (g *Gateway) metricsCollector() {
 func (g *Gateway) connectionCleaner() {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -267,7 +267,7 @@ func (g *Gateway) connectionCleaner() {
 func (g *Gateway) performanceMonitor() {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -282,10 +282,10 @@ func (g *Gateway) performanceMonitor() {
 func (g *Gateway) updateMetrics() {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
-	
+
 	g.metrics.ActiveConnections = int64(len(g.connections))
 	g.metrics.LastUpdated = time.Now()
-	
+
 	// Calculate messages per second and other metrics
 	var totalMessages, totalBytes int64
 	for _, conn := range g.connections {
@@ -294,7 +294,7 @@ func (g *Gateway) updateMetrics() {
 		totalBytes += conn.bytesTransferred
 		conn.mu.RUnlock()
 	}
-	
+
 	// Simple rate calculation (would be more sophisticated in production)
 	if g.metrics.LastUpdated.Sub(time.Time{}).Seconds() > 0 {
 		g.metrics.MessagesPerSecond = float64(totalMessages) / g.metrics.LastUpdated.Sub(time.Time{}).Seconds()
@@ -306,10 +306,10 @@ func (g *Gateway) updateMetrics() {
 func (g *Gateway) cleanupInactiveConnections() {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	
+
 	inactiveThreshold := time.Now().Add(-5 * time.Minute)
 	var toRemove []string
-	
+
 	for id, conn := range g.connections {
 		conn.mu.RLock()
 		if conn.lastActivity.Before(inactiveThreshold) || !conn.isActive {
@@ -317,7 +317,7 @@ func (g *Gateway) cleanupInactiveConnections() {
 		}
 		conn.mu.RUnlock()
 	}
-	
+
 	for _, id := range toRemove {
 		if conn, exists := g.connections[id]; exists {
 			conn.Close()
@@ -331,13 +331,13 @@ func (g *Gateway) cleanupInactiveConnections() {
 // monitorPerformance monitors and logs performance metrics
 func (g *Gateway) monitorPerformance() {
 	metrics := g.GetMetrics()
-	
+
 	g.logger.Debug("Gateway performance metrics",
 		zap.Int64("active_connections", metrics.ActiveConnections),
 		zap.Float64("messages_per_second", metrics.MessagesPerSecond),
 		zap.Duration("average_latency", metrics.AverageLatency),
 		zap.Int64("subscription_count", metrics.SubscriptionCount))
-	
+
 	// Alert on high connection count
 	if metrics.ActiveConnections > int64(g.config.MaxConnections)*8/10 {
 		g.logger.Warn("High connection count",
@@ -359,14 +359,14 @@ func generateConnectionID() string {
 func (c *Connection) Subscribe(channel, symbol string, subType SubscriptionType, filters map[string]interface{}) error {
 	c.subMu.Lock()
 	defer c.subMu.Unlock()
-	
+
 	// Check subscription limits
 	if len(c.subscriptions) >= 100 { // Max 100 subscriptions per connection
 		return fmt.Errorf("maximum subscriptions reached")
 	}
-	
+
 	subscriptionID := generateSubscriptionID(channel, symbol)
-	
+
 	subscription := &Subscription{
 		ID:      subscriptionID,
 		Channel: channel,
@@ -375,9 +375,9 @@ func (c *Connection) Subscribe(channel, symbol string, subType SubscriptionType,
 		Filters: filters,
 		Created: time.Now(),
 	}
-	
+
 	c.subscriptions[subscriptionID] = subscription
-	
+
 	return nil
 }
 
@@ -385,11 +385,11 @@ func (c *Connection) Subscribe(channel, symbol string, subType SubscriptionType,
 func (c *Connection) Unsubscribe(subscriptionID string) error {
 	c.subMu.Lock()
 	defer c.subMu.Unlock()
-	
+
 	if _, exists := c.subscriptions[subscriptionID]; !exists {
 		return ErrSubscriptionNotFound
 	}
-	
+
 	delete(c.subscriptions, subscriptionID)
 	return nil
 }
@@ -398,13 +398,13 @@ func (c *Connection) Unsubscribe(subscriptionID string) error {
 func (c *Connection) IsSubscribedToChannel(channel string) bool {
 	c.subMu.RLock()
 	defer c.subMu.RUnlock()
-	
+
 	for _, sub := range c.subscriptions {
 		if sub.Channel == channel {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -412,13 +412,13 @@ func (c *Connection) IsSubscribedToChannel(channel string) bool {
 func (c *Connection) IsSubscribedToSymbol(symbol string) bool {
 	c.subMu.RLock()
 	defer c.subMu.RUnlock()
-	
+
 	for _, sub := range c.subscriptions {
 		if sub.Symbol == symbol {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -426,11 +426,11 @@ func (c *Connection) IsSubscribedToSymbol(symbol string) bool {
 func (c *Connection) Close() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	if !c.isActive {
 		return
 	}
-	
+
 	c.isActive = false
 	c.cancel()
 	close(c.send)

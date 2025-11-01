@@ -13,7 +13,7 @@ func NewRiskManager(config *RiskManagerConfig, riskStore RiskStore) *RiskManager
 	if config == nil {
 		config = GetDefaultRiskManagerConfig()
 	}
-	
+
 	return &RiskManager{
 		config:     config,
 		riskStore:  riskStore,
@@ -52,48 +52,48 @@ func (rm *RiskManager) ValidateOrder(ctx context.Context, order *interfaces.Orde
 		CheckedAt:       time.Now(),
 		Metadata:        make(map[string]interface{}),
 	}
-	
+
 	// Get user risk profile
 	profile, err := rm.riskStore.GetUserRisk(ctx, order.UserID)
 	if err != nil {
 		return result, fmt.Errorf("failed to get user risk profile: %w", err)
 	}
-	
+
 	if !profile.IsActive {
 		result.Approved = false
 		result.Reason = "user risk profile is inactive"
 		return result, nil
 	}
-	
+
 	// 1. Order value check
 	orderValue := order.Price * order.Quantity
 	if err := rm.checkOrderValue(orderValue, result); err != nil {
 		return result, err
 	}
-	
+
 	// 2. Position size check
 	if err := rm.checkPositionSize(ctx, order, profile, result); err != nil {
 		return result, err
 	}
-	
+
 	// 3. Daily volume check
 	if err := rm.checkDailyVolume(ctx, order, profile, result); err != nil {
 		return result, err
 	}
-	
+
 	// 4. Concentration check
 	if err := rm.checkConcentration(ctx, order, profile, result); err != nil {
 		return result, err
 	}
-	
+
 	// 5. Volatility check
 	if err := rm.checkVolatility(ctx, order, result); err != nil {
 		return result, err
 	}
-	
+
 	// Calculate overall risk score
 	result.RiskScore = rm.calculateRiskScore(result.Violations)
-	
+
 	// Determine approval based on violations
 	if len(result.Violations) > 0 {
 		for _, violation := range result.Violations {
@@ -104,7 +104,7 @@ func (rm *RiskManager) ValidateOrder(ctx context.Context, order *interfaces.Orde
 			}
 		}
 	}
-	
+
 	// Save risk check record
 	record := &RiskCheckRecord{
 		ID:        generateRiskCheckID(),
@@ -114,12 +114,12 @@ func (rm *RiskManager) ValidateOrder(ctx context.Context, order *interfaces.Orde
 		Order:     order,
 		CheckedAt: time.Now(),
 	}
-	
+
 	if err := rm.riskStore.SaveRiskCheck(ctx, record); err != nil {
 		// Log error but don't fail the check
 		fmt.Printf("Failed to save risk check record: %v\n", err)
 	}
-	
+
 	return result, nil
 }
 
@@ -127,7 +127,7 @@ func (rm *RiskManager) ValidateOrder(ctx context.Context, order *interfaces.Orde
 func (rm *RiskManager) GetUserRiskProfile(ctx context.Context, userID string) (*UserRiskProfile, error) {
 	rm.mu.RLock()
 	defer rm.mu.RUnlock()
-	
+
 	return rm.riskStore.GetUserRisk(ctx, userID)
 }
 
@@ -135,7 +135,7 @@ func (rm *RiskManager) GetUserRiskProfile(ctx context.Context, userID string) (*
 func (rm *RiskManager) UpdateUserRiskProfile(ctx context.Context, profile *UserRiskProfile) error {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
-	
+
 	profile.LastUpdated = time.Now()
 	return rm.riskStore.UpdateUserRisk(ctx, profile)
 }
@@ -151,27 +151,27 @@ func (rm *RiskManager) CalculatePortfolioRisk(ctx context.Context, userID string
 	if err != nil {
 		return nil, fmt.Errorf("failed to get positions: %w", err)
 	}
-	
+
 	if len(positions) == 0 {
 		return &PortfolioRisk{
 			UserID:         userID,
 			LastCalculated: time.Now(),
 		}, nil
 	}
-	
+
 	// Calculate total portfolio value
 	var totalValue float64
 	for _, pos := range positions {
 		totalValue += pos.MarketValue
 	}
-	
+
 	// Calculate basic risk metrics
 	portfolioRisk := &PortfolioRisk{
 		UserID:         userID,
 		TotalValue:     totalValue,
 		LastCalculated: time.Now(),
 	}
-	
+
 	// Calculate volatility and other metrics
 	portfolioRisk.Volatility = rm.calculator.CalculatePortfolioVolatility(positions)
 	portfolioRisk.VaR95 = rm.calculator.CalculateVaR(positions, 0.95)
@@ -179,7 +179,7 @@ func (rm *RiskManager) CalculatePortfolioRisk(ctx context.Context, userID string
 	portfolioRisk.Beta = rm.calculator.CalculatePortfolioBeta(positions)
 	portfolioRisk.Sharpe = rm.calculator.CalculateSharpeRatio(positions)
 	portfolioRisk.MaxDrawdown = rm.calculator.CalculateMaxDrawdown(positions)
-	
+
 	return portfolioRisk, nil
 }
 
@@ -189,31 +189,31 @@ func (rm *RiskManager) GetRiskMetrics(ctx context.Context, userID string) (*Risk
 	if err != nil {
 		return nil, fmt.Errorf("failed to get positions: %w", err)
 	}
-	
+
 	dailyVolume, err := rm.riskStore.GetDailyVolume(ctx, userID, time.Now())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get daily volume: %w", err)
 	}
-	
+
 	// Calculate total exposure
 	var totalExposure float64
 	var maxSinglePosition float64
-	
+
 	for _, pos := range positions {
 		exposure := pos.MarketValue
 		totalExposure += exposure
-		
+
 		if exposure > maxSinglePosition {
 			maxSinglePosition = exposure
 		}
 	}
-	
+
 	// Calculate concentration ratio
 	var concentrationRatio float64
 	if totalExposure > 0 {
 		concentrationRatio = maxSinglePosition / totalExposure
 	}
-	
+
 	return &RiskMetrics{
 		UserID:             userID,
 		TotalExposure:      totalExposure,
@@ -243,27 +243,27 @@ func (rm *RiskManager) MonitorRealTimeRisk(ctx context.Context, userID string) e
 	if !rm.config.EnableRealTimeCheck {
 		return nil
 	}
-	
+
 	// Get current positions
 	positions, err := rm.riskStore.GetPositions(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to get positions: %w", err)
 	}
-	
+
 	// Get user risk profile
 	profile, err := rm.riskStore.GetUserRisk(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to get user risk profile: %w", err)
 	}
-	
+
 	// Check for risk violations
 	alerts := rm.checkRealTimeViolations(positions, profile)
-	
+
 	// Process alerts (in a real implementation, this would send notifications)
 	for _, alert := range alerts {
 		fmt.Printf("Risk Alert: %s - %s\n", alert.AlertType, alert.Message)
 	}
-	
+
 	return nil
 }
 
@@ -273,13 +273,13 @@ func (rm *RiskManager) SetRiskLimits(ctx context.Context, userID string, limits 
 	if err != nil {
 		return fmt.Errorf("failed to get user risk profile: %w", err)
 	}
-	
+
 	// Update profile with new limits
 	profile.MaxPositionSize = limits.MaxPositionSize
 	profile.MaxDailyVolume = limits.MaxDailyVolume
 	profile.ConcentrationLimit = limits.ConcentrationLimit
 	profile.LastUpdated = time.Now()
-	
+
 	return rm.riskStore.UpdateUserRisk(ctx, profile)
 }
 
@@ -289,26 +289,26 @@ func (rm *RiskManager) GetRiskStatus(ctx context.Context, userID string) (RiskSt
 	if err != nil {
 		return StatusInactive, fmt.Errorf("failed to get user risk profile: %w", err)
 	}
-	
+
 	if !profile.IsActive {
 		return StatusInactive, nil
 	}
-	
+
 	// Check for any critical violations
 	metrics, err := rm.GetRiskMetrics(ctx, userID)
 	if err != nil {
 		return StatusInactive, fmt.Errorf("failed to get risk metrics: %w", err)
 	}
-	
+
 	// Determine status based on metrics
 	if metrics.ConcentrationRatio > profile.ConcentrationLimit {
 		return StatusSuspended, nil
 	}
-	
+
 	if metrics.DailyVolumeUsed > profile.MaxDailyVolume {
 		return StatusBlocked, nil
 	}
-	
+
 	return StatusActive, nil
 }
 
@@ -322,18 +322,18 @@ func (rm *RiskManager) ValidatePortfolio(ctx context.Context, userID string) (*R
 		CheckedAt:       time.Now(),
 		Metadata:        make(map[string]interface{}),
 	}
-	
+
 	// Get portfolio risk metrics
 	portfolioRisk, err := rm.CalculatePortfolioRisk(ctx, userID)
 	if err != nil {
 		return result, fmt.Errorf("failed to calculate portfolio risk: %w", err)
 	}
-	
+
 	// Check portfolio-level violations
 	rm.checkPortfolioViolations(portfolioRisk, result)
-	
+
 	// Calculate overall risk score
 	result.RiskScore = rm.calculateRiskScore(result.Violations)
-	
+
 	return result, nil
 }

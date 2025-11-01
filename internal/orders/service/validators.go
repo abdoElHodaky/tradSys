@@ -93,20 +93,20 @@ func validateOrderType(req *OrderRequest) error {
 	if req.Type == "" {
 		return errors.New("order type is required")
 	}
-	
+
 	validTypes := []OrderType{
 		OrderTypeLimit,
 		OrderTypeMarket,
 		OrderTypeStopLimit,
 		OrderTypeStopMarket,
 	}
-	
+
 	for _, validType := range validTypes {
 		if req.Type == validType {
 			return nil
 		}
 	}
-	
+
 	return fmt.Errorf("invalid order type: %s", req.Type)
 }
 
@@ -127,14 +127,14 @@ func validatePrice(req *OrderRequest) error {
 	if req.Type == OrderTypeMarket || req.Type == OrderTypeStopMarket {
 		return nil
 	}
-	
+
 	if req.Price <= 0 {
 		return errors.New("price must be positive for limit orders")
 	}
 	if req.Price > 1000000 {
 		return errors.New("price exceeds maximum limit")
 	}
-	
+
 	return nil
 }
 
@@ -144,14 +144,14 @@ func validateStopPrice(req *OrderRequest) error {
 	if req.Type != OrderTypeStopLimit && req.Type != OrderTypeStopMarket {
 		return nil
 	}
-	
+
 	if req.StopPrice <= 0 {
 		return errors.New("stop price must be positive for stop orders")
 	}
 	if req.StopPrice > 1000000 {
 		return errors.New("stop price exceeds maximum limit")
 	}
-	
+
 	return nil
 }
 
@@ -160,20 +160,20 @@ func validateTimeInForce(req *OrderRequest) error {
 	if req.TimeInForce == "" {
 		return errors.New("time in force is required")
 	}
-	
+
 	validTIF := []TimeInForce{
 		TimeInForceGTC,
 		TimeInForceIOC,
 		TimeInForceFOK,
 		TimeInForceDay,
 	}
-	
+
 	for _, validType := range validTIF {
 		if req.TimeInForce == validType {
 			return nil
 		}
 	}
-	
+
 	return fmt.Errorf("invalid time in force: %s", req.TimeInForce)
 }
 
@@ -183,7 +183,7 @@ func validateExpiration(req *OrderRequest) error {
 	if req.TimeInForce != TimeInForceDay {
 		return nil
 	}
-	
+
 	if req.ExpiresAt.IsZero() {
 		return errors.New("expiration time is required for day orders")
 	}
@@ -193,7 +193,7 @@ func validateExpiration(req *OrderRequest) error {
 	if req.ExpiresAt.After(time.Now().Add(24 * time.Hour)) {
 		return errors.New("expiration time cannot be more than 24 hours in the future")
 	}
-	
+
 	return nil
 }
 
@@ -203,10 +203,10 @@ func validateExpiration(req *OrderRequest) error {
 func isValidSymbolFormat(symbol string) bool {
 	// Allow alphanumeric characters and common separators
 	for _, char := range symbol {
-		if !((char >= 'A' && char <= 'Z') || 
-			 (char >= 'a' && char <= 'z') || 
-			 (char >= '0' && char <= '9') || 
-			 char == '-' || char == '_' || char == '.') {
+		if !((char >= 'A' && char <= 'Z') ||
+			(char >= 'a' && char <= 'z') ||
+			(char >= '0' && char <= '9') ||
+			char == '-' || char == '_' || char == '.') {
 			return false
 		}
 	}

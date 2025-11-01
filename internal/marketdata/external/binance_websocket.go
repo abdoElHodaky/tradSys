@@ -122,16 +122,16 @@ func (p *BinanceProvider) handleWebSocketMessages(conn *websocket.Conn, key stri
 
 		} else if key[:5] == string(MarketDataTypeTrade) {
 			var tradeUpdate struct {
-				EventType    string `json:"e"`
-				EventTime    int64  `json:"E"`
-				Symbol       string `json:"s"`
-				TradeId      int64  `json:"t"`
-				Price        string `json:"p"`
-				Quantity     string `json:"q"`
-				BuyerOrderId int64  `json:"b"`
-				SellerOrderId int64 `json:"a"`
-				TradeTime    int64  `json:"T"`
-				IsBuyerMaker bool   `json:"m"`
+				EventType     string `json:"e"`
+				EventTime     int64  `json:"E"`
+				Symbol        string `json:"s"`
+				TradeId       int64  `json:"t"`
+				Price         string `json:"p"`
+				Quantity      string `json:"q"`
+				BuyerOrderId  int64  `json:"b"`
+				SellerOrderId int64  `json:"a"`
+				TradeTime     int64  `json:"T"`
+				IsBuyerMaker  bool   `json:"m"`
 			}
 
 			if err := json.Unmarshal(message, &tradeUpdate); err != nil {

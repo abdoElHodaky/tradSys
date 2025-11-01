@@ -119,11 +119,11 @@ type Engine struct {
 
 // OrderBookSnapshot represents a point-in-time snapshot of the order book
 type OrderBookSnapshot struct {
-	Symbol    string      `json:"symbol"`
-	Timestamp time.Time   `json:"timestamp"`
+	Symbol    string       `json:"symbol"`
+	Timestamp time.Time    `json:"timestamp"`
 	Bids      []PriceLevel `json:"bids"`
 	Asks      []PriceLevel `json:"asks"`
-	LastPrice float64     `json:"last_price"`
+	LastPrice float64      `json:"last_price"`
 }
 
 // PriceLevel represents a price level in the order book
@@ -135,11 +135,11 @@ type PriceLevel struct {
 
 // EngineStats represents engine statistics
 type EngineStats struct {
-	TotalOrders     int64   `json:"total_orders"`
-	TotalTrades     int64   `json:"total_trades"`
-	ActiveSymbols   int     `json:"active_symbols"`
-	AverageSpread   float64 `json:"average_spread"`
-	LastUpdateTime  time.Time `json:"last_update_time"`
+	TotalOrders    int64     `json:"total_orders"`
+	TotalTrades    int64     `json:"total_trades"`
+	ActiveSymbols  int       `json:"active_symbols"`
+	AverageSpread  float64   `json:"average_spread"`
+	LastUpdateTime time.Time `json:"last_update_time"`
 }
 
 // TradeExecution represents a completed trade execution with details
@@ -158,15 +158,15 @@ type TradeExecution struct {
 
 // OrderBookState represents the current state of an order book
 type OrderBookState struct {
-	Symbol        string    `json:"symbol"`
-	BidCount      int       `json:"bid_count"`
-	AskCount      int       `json:"ask_count"`
-	StopBidCount  int       `json:"stop_bid_count"`
-	StopAskCount  int       `json:"stop_ask_count"`
-	BestBid       float64   `json:"best_bid"`
-	BestAsk       float64   `json:"best_ask"`
-	Spread        float64   `json:"spread"`
-	LastPrice     float64   `json:"last_price"`
+	Symbol         string    `json:"symbol"`
+	BidCount       int       `json:"bid_count"`
+	AskCount       int       `json:"ask_count"`
+	StopBidCount   int       `json:"stop_bid_count"`
+	StopAskCount   int       `json:"stop_ask_count"`
+	BestBid        float64   `json:"best_bid"`
+	BestAsk        float64   `json:"best_ask"`
+	Spread         float64   `json:"spread"`
+	LastPrice      float64   `json:"last_price"`
 	LastUpdateTime time.Time `json:"last_update_time"`
 }
 
@@ -175,11 +175,11 @@ const (
 	// Default configuration values
 	DefaultTradeChannelBuffer = 1000
 	DefaultMaxOrdersPerSymbol = 10000
-	
+
 	// Order book limits
 	MaxOrderBookDepth = 100
 	MaxPriceLevels    = 50
-	
+
 	// Performance thresholds (less strict than HFT)
 	MaxProcessingTimeMs = 10 // 10ms target
 )
@@ -219,9 +219,9 @@ type OrderMatchResult struct {
 
 // StopOrderTrigger represents a stop order trigger event
 type StopOrderTrigger struct {
-	OrderID     string    `json:"order_id"`
-	Symbol      string    `json:"symbol"`
-	TriggerPrice float64  `json:"trigger_price"`
-	CurrentPrice float64  `json:"current_price"`
+	OrderID      string    `json:"order_id"`
+	Symbol       string    `json:"symbol"`
+	TriggerPrice float64   `json:"trigger_price"`
+	CurrentPrice float64   `json:"current_price"`
 	TriggerTime  time.Time `json:"trigger_time"`
 }

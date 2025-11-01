@@ -294,7 +294,7 @@ func (e *RealTimeRiskEngine) calculateVaR() {
 
 	// Simple VaR calculation (in a real implementation, this would be more sophisticated)
 	totalPortfolioValue := 0.0
-	
+
 	// Calculate total portfolio value
 	e.positionManager.positions.Range(func(key, value interface{}) bool {
 		position := value.(*Position)
@@ -315,7 +315,7 @@ func (e *RealTimeRiskEngine) calculateVaR() {
 func (e *RealTimeRiskEngine) checkCircuitBreakerConditions() {
 	// Simple circuit breaker logic
 	// In a real implementation, this would check price movements, volatility, etc.
-	
+
 	// For now, just check if daily loss exceeds threshold
 	e.limitManager.mu.RLock()
 	currentDailyLoss := e.limitManager.currentDailyLoss
@@ -338,7 +338,7 @@ func (e *RealTimeRiskEngine) checkCircuitBreakerConditions() {
 			Symbol:    "ALL",
 			Timestamp: time.Now(),
 		}
-		
+
 		select {
 		case e.eventChannel <- event:
 		default:
@@ -358,7 +358,7 @@ func (e *RealTimeRiskEngine) handleCircuitBreakerEvent(event *RiskEvent) {
 	e.logger.Warn("Handling circuit breaker event",
 		zap.String("symbol", event.Symbol),
 		zap.Time("timestamp", event.Timestamp))
-	
+
 	// In a real implementation, this would:
 	// - Cancel all pending orders
 	// - Notify risk managers
@@ -371,7 +371,7 @@ func (e *RealTimeRiskEngine) handleLimitBreachEvent(event *RiskEvent) {
 	e.logger.Warn("Handling limit breach event",
 		zap.String("symbol", event.Symbol),
 		zap.Time("timestamp", event.Timestamp))
-	
+
 	// In a real implementation, this would:
 	// - Send alerts to risk managers
 	// - Adjust position limits
@@ -383,7 +383,7 @@ func (e *RealTimeRiskEngine) handleVaRUpdateEvent(event *RiskEvent) {
 	e.logger.Debug("Handling VaR update event",
 		zap.String("symbol", event.Symbol),
 		zap.Time("timestamp", event.Timestamp))
-	
+
 	// Recalculate VaR
 	e.calculateVaR()
 }

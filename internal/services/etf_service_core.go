@@ -26,9 +26,9 @@ func (s *ETFService) CreateETF(symbol, benchmarkIndex string, creationUnitSize i
 
 	// Create asset metadata
 	assetAttributes := models.AssetAttributes{
-		"benchmark_index":     benchmarkIndex,
-		"creation_unit_size":  creationUnitSize,
-		"expense_ratio":       expenseRatio,
+		"benchmark_index":    benchmarkIndex,
+		"creation_unit_size": creationUnitSize,
+		"expense_ratio":      expenseRatio,
 		"etf_type":           "equity", // default
 		"inception_date":     time.Now(),
 		"fund_family":        "",
@@ -50,13 +50,13 @@ func (s *ETFService) CreateETF(symbol, benchmarkIndex string, creationUnitSize i
 
 	// Create default configuration
 	config := &models.AssetConfiguration{
-		AssetType:       types.AssetTypeETF,
-		TradingEnabled:  true,
-		MinOrderSize:    1.0,
-		MaxOrderSize:    1000000.0,
-		RiskMultiplier:  1.0,
-		SettlementDays:  2,
-		TradingHours:    "09:30-16:00",
+		AssetType:      types.AssetTypeETF,
+		TradingEnabled: true,
+		MinOrderSize:   1.0,
+		MaxOrderSize:   1000000.0,
+		RiskMultiplier: 1.0,
+		SettlementDays: 2,
+		TradingHours:   "09:30-16:00",
 	}
 
 	if err := s.db.Create(config).Error; err != nil {
@@ -178,9 +178,9 @@ func (s *ETFService) GetTrackingError(symbol string, days int) (float64, error) 
 
 	// Calculate tracking error
 	trackingError := s.calculateTrackingError(etfPrices, benchmarkPrices)
-	
-	s.logger.Debug("Tracking error calculated", 
-		zap.String("symbol", symbol), 
+
+	s.logger.Debug("Tracking error calculated",
+		zap.String("symbol", symbol),
 		zap.Float64("tracking_error", trackingError))
 
 	return trackingError, nil
@@ -188,7 +188,7 @@ func (s *ETFService) GetTrackingError(symbol string, days int) (float64, error) 
 
 // ProcessCreationRedemption handles ETF creation/redemption operations
 func (s *ETFService) ProcessCreationRedemption(operation *CreationRedemptionOperation) error {
-	s.logger.Info("Processing creation/redemption operation", 
+	s.logger.Info("Processing creation/redemption operation",
 		zap.String("symbol", operation.Symbol),
 		zap.String("type", operation.OperationType),
 		zap.Int("units", operation.Units))
@@ -233,8 +233,8 @@ func (s *ETFService) GetETFHoldings(symbol string) ([]ETFHolding, error) {
 	// In a real implementation, this would fetch from a holdings database
 	holdings := s.getMockHoldings(symbol)
 
-	s.logger.Debug("Retrieved ETF holdings", 
-		zap.String("symbol", symbol), 
+	s.logger.Debug("Retrieved ETF holdings",
+		zap.String("symbol", symbol),
 		zap.Int("holdings_count", len(holdings)))
 
 	return holdings, nil
@@ -252,18 +252,18 @@ func (s *ETFService) AnalyzeETF(request *ETFAnalysisRequest) (*ETFAnalysisResult
 
 	// Perform analysis
 	result := &ETFAnalysisResult{
-		Symbol:       request.Symbol,
-		AnalysisDate: time.Now(),
-		Metrics:      *metrics,
+		Symbol:          request.Symbol,
+		AnalysisDate:    time.Now(),
+		Metrics:         *metrics,
 		Recommendations: []string{},
-		Warnings:       []string{},
+		Warnings:        []string{},
 	}
 
 	// Add recommendations based on metrics
 	s.generateRecommendations(result, metrics)
 	s.generateWarnings(result, metrics)
 
-	s.logger.Info("ETF analysis completed", 
+	s.logger.Info("ETF analysis completed",
 		zap.String("symbol", request.Symbol),
 		zap.Int("recommendations", len(result.Recommendations)),
 		zap.Int("warnings", len(result.Warnings)))
@@ -278,22 +278,22 @@ func (s *ETFService) ScreenETFs(criteria *ETFScreeningCriteria) ([]string, error
 	// This would typically query a database of ETFs
 	// For now, return a mock list
 	etfs := []string{"SPY", "QQQ", "VTI", "IWM", "EFA"}
-	
+
 	var filteredETFs []string
-	
+
 	for _, etf := range etfs {
 		metrics, err := s.GetETFMetrics(etf)
 		if err != nil {
 			s.logger.Warn("Failed to get metrics for ETF", zap.String("symbol", etf), zap.Error(err))
 			continue
 		}
-		
+
 		if s.meetsScreeningCriteria(metrics, criteria) {
 			filteredETFs = append(filteredETFs, etf)
 		}
 	}
 
-	s.logger.Info("ETF screening completed", 
+	s.logger.Info("ETF screening completed",
 		zap.Int("total_etfs", len(etfs)),
 		zap.Int("filtered_etfs", len(filteredETFs)))
 
@@ -324,7 +324,7 @@ func (s *ETFService) CompareETFs(symbols []string) (*ETFComparisonResult, error)
 	// Calculate rankings
 	s.calculateETFRankings(result)
 
-	s.logger.Info("ETF comparison completed", 
+	s.logger.Info("ETF comparison completed",
 		zap.Int("etfs_compared", len(result.Metrics)))
 
 	return result, nil
@@ -336,20 +336,20 @@ func (s *ETFService) ValidateETFOrder(symbol string, quantity, price float64) er
 	if symbol == "" {
 		return fmt.Errorf("symbol cannot be empty")
 	}
-	
+
 	if quantity <= 0 {
 		return fmt.Errorf("quantity must be positive")
 	}
-	
+
 	if price <= 0 {
 		return fmt.Errorf("price must be positive")
 	}
-	
+
 	// Check if ETF exists by trying to get its metrics
 	_, err := s.GetETFMetrics(symbol)
 	if err != nil {
 		return fmt.Errorf("ETF not found or invalid: %w", err)
 	}
-	
+
 	return nil
 }

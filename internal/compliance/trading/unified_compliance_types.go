@@ -76,44 +76,44 @@ type AlertManager struct {
 
 // ComplianceRule defines a compliance rule
 type ComplianceRule struct {
-	ID          string              `json:"id"`
-	Name        string              `json:"name"`
-	Description string              `json:"description"`
-	Type        ComplianceRuleType  `json:"type"`
-	Enabled     bool                `json:"enabled"`
-	Priority    int                 `json:"priority"`
+	ID          string                 `json:"id"`
+	Name        string                 `json:"name"`
+	Description string                 `json:"description"`
+	Type        ComplianceRuleType     `json:"type"`
+	Enabled     bool                   `json:"enabled"`
+	Priority    int                    `json:"priority"`
 	Parameters  map[string]interface{} `json:"parameters"`
-	CreatedAt   time.Time           `json:"created_at"`
-	UpdatedAt   time.Time           `json:"updated_at"`
+	CreatedAt   time.Time              `json:"created_at"`
+	UpdatedAt   time.Time              `json:"updated_at"`
 }
 
 // ComplianceRuleType defines types of compliance rules
 type ComplianceRuleType string
 
 const (
-	RuleTypePositionLimit    ComplianceRuleType = "position_limit"
-	RuleTypeTradingHours     ComplianceRuleType = "trading_hours"
-	RuleTypeRiskLimit        ComplianceRuleType = "risk_limit"
+	RuleTypePositionLimit      ComplianceRuleType = "position_limit"
+	RuleTypeTradingHours       ComplianceRuleType = "trading_hours"
+	RuleTypeRiskLimit          ComplianceRuleType = "risk_limit"
 	RuleTypeMarketManipulation ComplianceRuleType = "market_manipulation"
-	RuleTypeInsiderTrading   ComplianceRuleType = "insider_trading"
-	RuleTypeKYC              ComplianceRuleType = "kyc"
-	RuleTypeAML              ComplianceRuleType = "aml"
-	RuleTypeMiFID            ComplianceRuleType = "mifid"
+	RuleTypeInsiderTrading     ComplianceRuleType = "insider_trading"
+	RuleTypeKYC                ComplianceRuleType = "kyc"
+	RuleTypeAML                ComplianceRuleType = "aml"
+	RuleTypeMiFID              ComplianceRuleType = "mifid"
 )
 
 // ComplianceViolation represents a compliance violation
 type ComplianceViolation struct {
-	ID          string            `json:"id"`
-	RuleID      string            `json:"rule_id"`
-	UserID      string            `json:"user_id"`
-	OrderID     string            `json:"order_id"`
-	ViolationType string          `json:"violation_type"`
-	Severity    ViolationSeverity `json:"severity"`
-	Description string            `json:"description"`
-	Details     map[string]interface{} `json:"details"`
-	Status      ViolationStatus   `json:"status"`
-	DetectedAt  time.Time         `json:"detected_at"`
-	ResolvedAt  *time.Time        `json:"resolved_at,omitempty"`
+	ID            string                 `json:"id"`
+	RuleID        string                 `json:"rule_id"`
+	UserID        string                 `json:"user_id"`
+	OrderID       string                 `json:"order_id"`
+	ViolationType string                 `json:"violation_type"`
+	Severity      ViolationSeverity      `json:"severity"`
+	Description   string                 `json:"description"`
+	Details       map[string]interface{} `json:"details"`
+	Status        ViolationStatus        `json:"status"`
+	DetectedAt    time.Time              `json:"detected_at"`
+	ResolvedAt    *time.Time             `json:"resolved_at,omitempty"`
 }
 
 // ViolationSeverity defines severity levels for violations
@@ -130,23 +130,23 @@ const (
 type ViolationStatus string
 
 const (
-	ViolationStatusOpen       ViolationStatus = "open"
+	ViolationStatusOpen          ViolationStatus = "open"
 	ViolationStatusInvestigating ViolationStatus = "investigating"
-	ViolationStatusResolved   ViolationStatus = "resolved"
+	ViolationStatusResolved      ViolationStatus = "resolved"
 	ViolationStatusFalsePositive ViolationStatus = "false_positive"
 )
 
 // ComplianceReport represents a compliance report
 type ComplianceReport struct {
-	ID          string        `json:"id"`
-	Type        ReportType    `json:"type"`
-	Title       string        `json:"title"`
-	Description string        `json:"description"`
-	Period      ReportPeriod  `json:"period"`
-	Status      ReportStatus  `json:"status"`
-	Data        interface{}   `json:"data"`
-	GeneratedAt time.Time     `json:"generated_at"`
-	GeneratedBy string        `json:"generated_by"`
+	ID          string       `json:"id"`
+	Type        ReportType   `json:"type"`
+	Title       string       `json:"title"`
+	Description string       `json:"description"`
+	Period      ReportPeriod `json:"period"`
+	Status      ReportStatus `json:"status"`
+	Data        interface{}  `json:"data"`
+	GeneratedAt time.Time    `json:"generated_at"`
+	GeneratedBy string       `json:"generated_by"`
 }
 
 // ReportType defines types of compliance reports
@@ -171,10 +171,10 @@ type ReportPeriod struct {
 type ReportStatus string
 
 const (
-	ReportStatusPending   ReportStatus = "pending"
+	ReportStatusPending    ReportStatus = "pending"
 	ReportStatusGenerating ReportStatus = "generating"
-	ReportStatusCompleted ReportStatus = "completed"
-	ReportStatusFailed    ReportStatus = "failed"
+	ReportStatusCompleted  ReportStatus = "completed"
+	ReportStatusFailed     ReportStatus = "failed"
 )
 
 // ReportTemplate defines a template for generating reports
@@ -191,55 +191,55 @@ type ReportTemplate struct {
 
 // AuditEntry represents an audit trail entry
 type AuditEntry struct {
-	ID          string          `json:"id"`
-	EventType   AuditEventType  `json:"event_type"`
-	UserID      string          `json:"user_id"`
-	OrderID     string          `json:"order_id"`
-	Action      string          `json:"action"`
-	Description string          `json:"description"`
+	ID          string                 `json:"id"`
+	EventType   AuditEventType         `json:"event_type"`
+	UserID      string                 `json:"user_id"`
+	OrderID     string                 `json:"order_id"`
+	Action      string                 `json:"action"`
+	Description string                 `json:"description"`
 	Details     map[string]interface{} `json:"details"`
-	IPAddress   string          `json:"ip_address"`
-	UserAgent   string          `json:"user_agent"`
-	Timestamp   time.Time       `json:"timestamp"`
+	IPAddress   string                 `json:"ip_address"`
+	UserAgent   string                 `json:"user_agent"`
+	Timestamp   time.Time              `json:"timestamp"`
 }
 
 // AuditEventType defines types of audit events
 type AuditEventType string
 
 const (
-	AuditEventOrderPlaced    AuditEventType = "order_placed"
-	AuditEventOrderModified  AuditEventType = "order_modified"
-	AuditEventOrderCancelled AuditEventType = "order_cancelled"
-	AuditEventOrderExecuted  AuditEventType = "order_executed"
+	AuditEventOrderPlaced       AuditEventType = "order_placed"
+	AuditEventOrderModified     AuditEventType = "order_modified"
+	AuditEventOrderCancelled    AuditEventType = "order_cancelled"
+	AuditEventOrderExecuted     AuditEventType = "order_executed"
 	AuditEventViolationDetected AuditEventType = "violation_detected"
-	AuditEventReportGenerated AuditEventType = "report_generated"
-	AuditEventAlertTriggered AuditEventType = "alert_triggered"
-	AuditEventUserLogin      AuditEventType = "user_login"
-	AuditEventUserLogout     AuditEventType = "user_logout"
-	AuditEventConfigChanged  AuditEventType = "config_changed"
+	AuditEventReportGenerated   AuditEventType = "report_generated"
+	AuditEventAlertTriggered    AuditEventType = "alert_triggered"
+	AuditEventUserLogin         AuditEventType = "user_login"
+	AuditEventUserLogout        AuditEventType = "user_logout"
+	AuditEventConfigChanged     AuditEventType = "config_changed"
 )
 
 // ComplianceAlert represents a compliance alert
 type ComplianceAlert struct {
-	ID          string      `json:"id"`
-	Type        AlertType   `json:"type"`
-	Severity    ViolationSeverity `json:"severity"`
-	Title       string      `json:"title"`
-	Message     string      `json:"message"`
-	Details     map[string]interface{} `json:"details"`
-	Status      AlertStatus `json:"status"`
-	CreatedAt   time.Time   `json:"created_at"`
-	UpdatedAt   time.Time   `json:"updated_at"`
+	ID        string                 `json:"id"`
+	Type      AlertType              `json:"type"`
+	Severity  ViolationSeverity      `json:"severity"`
+	Title     string                 `json:"title"`
+	Message   string                 `json:"message"`
+	Details   map[string]interface{} `json:"details"`
+	Status    AlertStatus            `json:"status"`
+	CreatedAt time.Time              `json:"created_at"`
+	UpdatedAt time.Time              `json:"updated_at"`
 }
 
 // AlertType defines types of alerts
 type AlertType string
 
 const (
-	AlertTypeViolation    AlertType = "violation"
-	AlertTypeSystemError  AlertType = "system_error"
-	AlertTypeThreshold    AlertType = "threshold"
-	AlertTypeRegulatory   AlertType = "regulatory"
+	AlertTypeViolation   AlertType = "violation"
+	AlertTypeSystemError AlertType = "system_error"
+	AlertTypeThreshold   AlertType = "threshold"
+	AlertTypeRegulatory  AlertType = "regulatory"
 )
 
 // AlertStatus defines status of alerts

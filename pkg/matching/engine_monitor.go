@@ -166,9 +166,9 @@ func (ob *OrderBook) GetMarketData() *MarketData {
 	}
 
 	// Calculate 24h statistics (simplified - would need historical data in real implementation)
-	marketData.High = ob.LastPrice * 1.05   // Placeholder
-	marketData.Low = ob.LastPrice * 0.95    // Placeholder
-	marketData.Open = ob.LastPrice * 0.98   // Placeholder
+	marketData.High = ob.LastPrice * 1.05 // Placeholder
+	marketData.Low = ob.LastPrice * 0.95  // Placeholder
+	marketData.Open = ob.LastPrice * 0.98 // Placeholder
 	marketData.Close = ob.LastPrice
 	marketData.Change = marketData.Close - marketData.Open
 	if marketData.Open != 0 {
@@ -505,18 +505,18 @@ func (me *MatchingEngine) GetHealthStatus() map[string]interface{} {
 	metrics := me.GetMetrics()
 
 	health := map[string]interface{}{
-		"status":           "healthy",
-		"running":          status.Running,
-		"total_symbols":    status.TotalSymbols,
-		"total_orders":     status.TotalOrders,
-		"total_trades":     status.TotalTrades,
+		"status":            "healthy",
+		"running":           status.Running,
+		"total_symbols":     status.TotalSymbols,
+		"total_orders":      status.TotalOrders,
+		"total_trades":      status.TotalTrades,
 		"orders_per_second": status.OrdersPerSecond,
 		"trades_per_second": status.TradesPerSecond,
-		"average_latency":  metrics.AverageLatency.String(),
-		"max_latency":      metrics.MaxLatency.String(),
-		"min_latency":      metrics.MinLatency.String(),
-		"total_volume":     metrics.TotalVolume,
-		"last_trade_time":  metrics.LastTradeTime,
+		"average_latency":   metrics.AverageLatency.String(),
+		"max_latency":       metrics.MaxLatency.String(),
+		"min_latency":       metrics.MinLatency.String(),
+		"total_volume":      metrics.TotalVolume,
+		"last_trade_time":   metrics.LastTradeTime,
 	}
 
 	// Check for potential issues

@@ -77,12 +77,12 @@ func (s *SukukHandler) ValidateOrder(ctx context.Context, order *interfaces.Orde
 	if err := s.BaseAssetHandler.ValidateOrder(ctx, order); err != nil {
 		return err
 	}
-	
+
 	// Sukuk-specific validations
 	if time.Now().Weekday() == time.Friday {
 		return fmt.Errorf("Sukuk trading not allowed on Fridays")
 	}
-	
+
 	return nil
 }
 

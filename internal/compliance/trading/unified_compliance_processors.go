@@ -65,8 +65,8 @@ func (r *RuleEngine) checkRule(rule ComplianceRule, order *types.Order, userID s
 		endTime, _ := rule.Parameters["end_time"].(string)
 
 		// Parse time strings (simplified - assumes HH:MM format)
-		startHour := 9  // Default 09:00
-		endHour := 16   // Default 16:00
+		startHour := 9 // Default 09:00
+		endHour := 16  // Default 16:00
 
 		if now.Hour() < startHour || now.Hour() >= endHour {
 			return &ComplianceViolation{
@@ -155,10 +155,10 @@ func (g *ReportGenerator) GenerateReport(reportType ReportType, startDate, endDa
 	defer g.mu.Unlock()
 
 	report := &ComplianceReport{
-		ID:   fmt.Sprintf("report_%d", time.Now().UnixNano()),
-		Type: reportType,
+		ID:    fmt.Sprintf("report_%d", time.Now().UnixNano()),
+		Type:  reportType,
 		Title: fmt.Sprintf("%s Compliance Report", reportType),
-		Description: fmt.Sprintf("Compliance report for period %s to %s", 
+		Description: fmt.Sprintf("Compliance report for period %s to %s",
 			startDate.Format("2006-01-02"), endDate.Format("2006-01-02")),
 		Period: ReportPeriod{
 			StartDate: startDate,
@@ -252,7 +252,7 @@ func (m *AlertManager) TriggerAlert(alert *ComplianceAlert) {
 	// Notify handlers
 	for _, handler := range m.handlers {
 		if err := handler.HandleAlert(alert); err != nil {
-			m.logger.Error("Alert handler failed", 
+			m.logger.Error("Alert handler failed",
 				zap.Error(err),
 				zap.String("alert_id", alert.ID))
 		}

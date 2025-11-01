@@ -10,10 +10,10 @@ import (
 
 // DurabilityManager coordinates all durability features
 type DurabilityManager struct {
-	ErrorHandler   *ErrorHandler
-	HealthMonitor  *HealthMonitor
-	Metrics        *Metrics
-	logger         *zap.Logger
+	ErrorHandler  *ErrorHandler
+	HealthMonitor *HealthMonitor
+	Metrics       *Metrics
+	logger        *zap.Logger
 }
 
 // NewDurabilityManager creates a new durability manager
@@ -35,7 +35,7 @@ func (dm *DurabilityManager) InitializeSystemComponents() {
 	dm.HealthMonitor.RegisterComponent("websocket_gateway", dm.websocketHealthCheck, 30*time.Second)
 	dm.HealthMonitor.RegisterComponent("database", dm.databaseHealthCheck, 20*time.Second)
 	dm.HealthMonitor.RegisterComponent("external_apis", dm.externalAPIHealthCheck, 30*time.Second)
-	
+
 	dm.logger.Info("Durability system initialized with health monitoring for all components")
 }
 
@@ -86,7 +86,7 @@ func (dm *DurabilityManager) ExecuteWithDurability(
 	timeout time.Duration,
 ) error {
 	start := time.Now()
-	
+
 	// Wrap with timeout
 	timedOperation := func(ctx context.Context) error {
 		return TimeoutWrapper(ctx, timeout, func(timeoutCtx context.Context) error {
@@ -97,12 +97,12 @@ func (dm *DurabilityManager) ExecuteWithDurability(
 			return operation()
 		})
 	}
-	
+
 	// Execute with retry
 	err := RetryWithBackoff(ctx, retryConfig, func() error {
 		return timedOperation(ctx)
 	}, dm.logger)
-	
+
 	// Record metrics
 	latency := time.Since(start)
 	if err == nil {
@@ -121,7 +121,7 @@ func (dm *DurabilityManager) ExecuteWithDurability(
 		)
 		dm.ErrorHandler.HandleError(ctx, tradingErr)
 	}
-	
+
 	return err
 }
 
@@ -130,7 +130,7 @@ func (dm *DurabilityManager) GetSystemStatus() SystemStatus {
 	overallHealth := dm.HealthMonitor.GetOverallHealth()
 	components := dm.HealthMonitor.GetAllComponents()
 	metrics := dm.Metrics.GetSnapshot()
-	
+
 	return SystemStatus{
 		OverallHealth: overallHealth,
 		Components:    components,
@@ -151,7 +151,7 @@ type SystemStatus struct {
 func (dm *DurabilityManager) CreateCircuitBreakerForComponent(componentName string) *CircuitBreaker {
 	var failureThreshold int
 	var recoveryTimeout time.Duration
-	
+
 	// Configure circuit breaker based on component type
 	switch componentName {
 	case "order_matching":
@@ -173,7 +173,7 @@ func (dm *DurabilityManager) CreateCircuitBreakerForComponent(componentName stri
 		failureThreshold = 5
 		recoveryTimeout = 60 * time.Second
 	}
-	
+
 	return NewCircuitBreaker(failureThreshold, recoveryTimeout, dm.logger)
 }
 

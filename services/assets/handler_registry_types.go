@@ -24,24 +24,24 @@ type AssetHandler interface {
 
 // BaseAssetHandler provides common functionality for all asset handlers
 type BaseAssetHandler struct {
-	AssetType       types.AssetType
-	MinOrderSize    float64
-	MaxOrderSize    float64
-	PriceStep       float64
-	SettlementDays  int
-	RiskParameters  *RiskParameters
-	FeeStructure    *FeeStructure
+	AssetType      types.AssetType
+	MinOrderSize   float64
+	MaxOrderSize   float64
+	PriceStep      float64
+	SettlementDays int
+	RiskParameters *RiskParameters
+	FeeStructure   *FeeStructure
 }
 
 // Settlement represents settlement information
 type Settlement struct {
-	OrderID         string    `json:"order_id"`
-	SettlementDate  time.Time `json:"settlement_date"`
-	SettlementType  string    `json:"settlement_type"`
-	Currency        string    `json:"currency"`
-	Amount          float64   `json:"amount"`
-	Fees            float64   `json:"fees"`
-	NetAmount       float64   `json:"net_amount"`
+	OrderID        string    `json:"order_id"`
+	SettlementDate time.Time `json:"settlement_date"`
+	SettlementType string    `json:"settlement_type"`
+	Currency       string    `json:"currency"`
+	Amount         float64   `json:"amount"`
+	Fees           float64   `json:"fees"`
+	NetAmount      float64   `json:"net_amount"`
 }
 
 // TradingHours represents trading hours for an exchange

@@ -3,6 +3,7 @@ package exchanges
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -74,20 +75,20 @@ type OrderResponse struct {
 
 // MarketData represents market data for an asset
 type MarketData struct {
-	Symbol      string
-	AssetType   AssetType
-	Price       float64
-	Bid         float64
-	Ask         float64
-	Volume      int64
-	High        float64
-	Low         float64
-	Open        float64
-	Close       float64
-	Change      float64
+	Symbol        string
+	AssetType     AssetType
+	Price         float64
+	Bid           float64
+	Ask           float64
+	Volume        int64
+	High          float64
+	Low           float64
+	Open          float64
+	Close         float64
+	Change        float64
 	ChangePercent float64
-	Timestamp   time.Time
-	Exchange    string
+	Timestamp     time.Time
+	Exchange      string
 }
 
 // MarketDataUpdate represents real-time market data update
@@ -199,9 +200,9 @@ type HealthChecker struct {
 
 // DataFeed represents a market data feed
 type DataFeed struct {
-	Symbol    string
-	AssetType AssetType
-	IsActive  bool
+	Symbol     string
+	AssetType  AssetType
+	IsActive   bool
 	LastUpdate time.Time
 }
 
@@ -274,8 +275,8 @@ const (
 
 // PositionLimit defines position limits
 type PositionLimit struct {
-	MaxPosition     float64
-	MaxNotional     float64
+	MaxPosition        float64
+	MaxNotional        float64
 	ConcentrationLimit float64
 }
 
@@ -501,8 +502,8 @@ func NewPerformanceMonitor() *PerformanceMonitor {
 	return &PerformanceMonitor{
 		MetricsInterval: time.Minute,
 		AlertThresholds: map[string]float64{
-			"latency":    50.0, // 50ms
-			"error_rate": 0.01, // 1%
+			"latency":    50.0,  // 50ms
+			"error_rate": 0.01,  // 1%
 			"uptime":     0.999, // 99.9%
 		},
 	}

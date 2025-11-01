@@ -9,20 +9,20 @@ import (
 
 	"github.com/abdoElHodaky/tradSys/pkg/interfaces"
 	"github.com/abdoElHodaky/tradSys/pkg/types"
+	"github.com/abdoElHodaky/tradSys/services/assets"
 	"github.com/abdoElHodaky/tradSys/services/exchange"
 	"github.com/abdoElHodaky/tradSys/services/licensing"
-	"github.com/abdoElHodaky/tradSys/services/assets"
 )
 
 // OrderManager provides unified order management across all exchanges
 type OrderManager struct {
-	exchangeFactory *exchange.Factory
-	assetRegistry   *assets.HandlerRegistry
+	exchangeFactory  *exchange.Factory
+	assetRegistry    *assets.HandlerRegistry
 	licenseValidator *licensing.Validator
-	orderStore      OrderStore
-	riskManager     *RiskManager
-	config          *OrderManagerConfig
-	mu              sync.RWMutex
+	orderStore       OrderStore
+	riskManager      *RiskManager
+	config           *OrderManagerConfig
+	mu               sync.RWMutex
 }
 
 // OrderManagerConfig holds configuration for the order manager
@@ -46,25 +46,25 @@ type OrderStore interface {
 
 // OrderRequest represents a request to place an order
 type OrderRequest struct {
-	UserID      string                    `json:"user_id"`
-	Symbol      string                    `json:"symbol"`
-	AssetType   types.AssetType           `json:"asset_type"`
-	Exchange    types.ExchangeType        `json:"exchange"`
-	Side        interfaces.OrderSide      `json:"side"`
-	Type        interfaces.OrderType      `json:"type"`
-	Quantity    float64                   `json:"quantity"`
-	Price       float64                   `json:"price"`
-	TimeInForce interfaces.TimeInForce    `json:"time_in_force"`
-	Metadata    map[string]interface{}    `json:"metadata,omitempty"`
+	UserID      string                 `json:"user_id"`
+	Symbol      string                 `json:"symbol"`
+	AssetType   types.AssetType        `json:"asset_type"`
+	Exchange    types.ExchangeType     `json:"exchange"`
+	Side        interfaces.OrderSide   `json:"side"`
+	Type        interfaces.OrderType   `json:"type"`
+	Quantity    float64                `json:"quantity"`
+	Price       float64                `json:"price"`
+	TimeInForce interfaces.TimeInForce `json:"time_in_force"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // OrderResult represents the result of an order operation
 type OrderResult struct {
-	Order       *interfaces.Order         `json:"order"`
-	Response    *interfaces.OrderResponse `json:"response"`
-	Settlement  *assets.Settlement        `json:"settlement,omitempty"`
-	Fees        *assets.FeeCalculation    `json:"fees,omitempty"`
-	RiskCheck   *RiskCheckResult          `json:"risk_check,omitempty"`
+	Order        *interfaces.Order           `json:"order"`
+	Response     *interfaces.OrderResponse   `json:"response"`
+	Settlement   *assets.Settlement          `json:"settlement,omitempty"`
+	Fees         *assets.FeeCalculation      `json:"fees,omitempty"`
+	RiskCheck    *RiskCheckResult            `json:"risk_check,omitempty"`
 	LicenseCheck *licensing.ValidationResult `json:"license_check,omitempty"`
 }
 
@@ -80,7 +80,7 @@ func NewOrderManager(
 	if config == nil {
 		config = GetDefaultOrderManagerConfig()
 	}
-	
+
 	return &OrderManager{
 		exchangeFactory:  exchangeFactory,
 		assetRegistry:    assetRegistry,
@@ -108,11 +108,11 @@ func (om *OrderManager) PlaceOrder(ctx context.Context, request *OrderRequest) (
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
-	
+
 	result := &OrderResult{
 		Order: order,
 	}
-	
+
 	// 1. License validation
 	if om.config.EnableLicenseChecks && om.licenseValidator != nil {
 		licenseResult, err := om.validateLicense(ctx, request)
@@ -120,12 +120,12 @@ func (om *OrderManager) PlaceOrder(ctx context.Context, request *OrderRequest) (
 			return result, fmt.Errorf("license validation failed: %w", err)
 		}
 		result.LicenseCheck = licenseResult
-		
+
 		if !licenseResult.Valid {
 			return result, fmt.Errorf("license validation failed: %s", licenseResult.Reason)
 		}
 	}
-	
+
 	// 2. Risk management checks
 	if om.config.EnableRiskChecks && om.riskManager != nil {
 		riskResult, err := om.riskManager.ValidateOrder(ctx, order)
@@ -133,43 +133,43 @@ func (om *OrderManager) PlaceOrder(ctx context.Context, request *OrderRequest) (
 			return result, fmt.Errorf("risk validation failed: %w", err)
 		}
 		result.RiskCheck = riskResult
-		
+
 		if !riskResult.Approved {
 			return result, fmt.Errorf("risk validation failed: %s", riskResult.Reason)
 		}
 	}
-	
+
 	// 3. Asset-specific validation
 	if err := om.assetRegistry.ValidateOrder(ctx, order); err != nil {
 		return result, fmt.Errorf("asset validation failed: %w", err)
 	}
-	
+
 	// 4. Calculate fees and settlement
 	settlement, err := om.assetRegistry.CalculateSettlement(ctx, order)
 	if err != nil {
 		return result, fmt.Errorf("settlement calculation failed: %w", err)
 	}
 	result.Settlement = settlement
-	
+
 	// 5. Get exchange client
 	exchangeClient, err := om.exchangeFactory.GetExchange(request.Exchange)
 	if err != nil {
 		return result, fmt.Errorf("exchange not available: %w", err)
 	}
-	
+
 	// 6. Place order on exchange
 	response, err := exchangeClient.PlaceOrder(ctx, order)
 	if err != nil {
 		return result, fmt.Errorf("exchange order failed: %w", err)
 	}
 	result.Response = response
-	
+
 	// 7. Save order to store
 	if err := om.orderStore.SaveOrder(ctx, order); err != nil {
 		// Log error but don't fail the order
 		fmt.Printf("Failed to save order to store: %v\n", err)
 	}
-	
+
 	// 8. Record usage for licensing
 	if om.config.EnableLicenseChecks && om.licenseValidator != nil {
 		if err := om.licenseValidator.RecordUsage(ctx, request.UserID, "orders_per_day", 1); err != nil {
@@ -177,7 +177,7 @@ func (om *OrderManager) PlaceOrder(ctx context.Context, request *OrderRequest) (
 			fmt.Printf("Failed to record usage: %v\n", err)
 		}
 	}
-	
+
 	return result, nil
 }
 
@@ -188,30 +188,30 @@ func (om *OrderManager) CancelOrder(ctx context.Context, userID, orderID string)
 	if err != nil {
 		return fmt.Errorf("order not found: %w", err)
 	}
-	
+
 	// Verify user ownership
 	if order.UserID != userID {
 		return fmt.Errorf("unauthorized: order belongs to different user")
 	}
-	
+
 	// Get exchange client
 	exchangeClient, err := om.exchangeFactory.GetExchange(order.Exchange)
 	if err != nil {
 		return fmt.Errorf("exchange not available: %w", err)
 	}
-	
+
 	// Cancel order on exchange
 	if err := exchangeClient.CancelOrder(ctx, orderID); err != nil {
 		return fmt.Errorf("exchange cancel failed: %w", err)
 	}
-	
+
 	// Update order status
 	order.UpdatedAt = time.Now()
 	if err := om.orderStore.UpdateOrder(ctx, order); err != nil {
 		// Log error but don't fail the cancellation
 		fmt.Printf("Failed to update order in store: %v\n", err)
 	}
-	
+
 	return nil
 }
 
@@ -222,18 +222,18 @@ func (om *OrderManager) GetOrderStatus(ctx context.Context, userID, orderID stri
 	if err != nil {
 		return nil, fmt.Errorf("order not found: %w", err)
 	}
-	
+
 	// Verify user ownership
 	if order.UserID != userID {
 		return nil, fmt.Errorf("unauthorized: order belongs to different user")
 	}
-	
+
 	// Get exchange client
 	exchangeClient, err := om.exchangeFactory.GetExchange(order.Exchange)
 	if err != nil {
 		return nil, fmt.Errorf("exchange not available: %w", err)
 	}
-	
+
 	// Get status from exchange
 	return exchangeClient.GetOrderStatus(ctx, orderID)
 }
@@ -243,7 +243,7 @@ func (om *OrderManager) GetUserOrders(ctx context.Context, userID string, limit 
 	if limit <= 0 || limit > 1000 {
 		limit = 100 // Default limit
 	}
-	
+
 	return om.orderStore.GetUserOrders(ctx, userID, limit)
 }
 
@@ -252,7 +252,7 @@ func (om *OrderManager) GetOrdersByStatus(ctx context.Context, status string, li
 	if limit <= 0 || limit > 1000 {
 		limit = 100 // Default limit
 	}
-	
+
 	return om.orderStore.GetOrdersByStatus(ctx, status, limit)
 }
 
@@ -263,11 +263,11 @@ func (om *OrderManager) validateLicense(ctx context.Context, request *OrderReque
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if !result.Valid {
 		return result, nil
 	}
-	
+
 	// Check exchange-specific access
 	var exchangeFeature licensing.LicenseFeature
 	switch request.Exchange {
@@ -278,7 +278,7 @@ func (om *OrderManager) validateLicense(ctx context.Context, request *OrderReque
 	default:
 		return result, nil // No specific exchange feature required
 	}
-	
+
 	return om.licenseValidator.ValidateFeature(ctx, request.UserID, exchangeFeature)
 }
 
@@ -289,17 +289,17 @@ func (om *OrderManager) validateOrderLimits(ctx context.Context, request *OrderR
 	if orderValue > om.config.MaxOrderValue {
 		return fmt.Errorf("order value %f exceeds maximum %f", orderValue, om.config.MaxOrderValue)
 	}
-	
+
 	// Check maximum orders per user
 	userOrders, err := om.orderStore.GetUserOrders(ctx, request.UserID, om.config.MaxOrdersPerUser+1)
 	if err != nil {
 		return fmt.Errorf("failed to check user order count: %w", err)
 	}
-	
+
 	if len(userOrders) >= om.config.MaxOrdersPerUser {
 		return fmt.Errorf("user has reached maximum order limit of %d", om.config.MaxOrdersPerUser)
 	}
-	
+
 	return nil
 }
 
@@ -322,11 +322,11 @@ func GetDefaultOrderManagerConfig() *OrderManagerConfig {
 
 // OrderStatistics represents order statistics
 type OrderStatistics struct {
-	TotalOrders     int64   `json:"total_orders"`
-	ActiveOrders    int64   `json:"active_orders"`
-	CompletedOrders int64   `json:"completed_orders"`
-	CancelledOrders int64   `json:"cancelled_orders"`
-	TotalVolume     float64 `json:"total_volume"`
+	TotalOrders      int64   `json:"total_orders"`
+	ActiveOrders     int64   `json:"active_orders"`
+	CompletedOrders  int64   `json:"completed_orders"`
+	CancelledOrders  int64   `json:"cancelled_orders"`
+	TotalVolume      float64 `json:"total_volume"`
 	AverageOrderSize float64 `json:"average_order_size"`
 }
 
@@ -334,31 +334,31 @@ type OrderStatistics struct {
 func (om *OrderManager) GetOrderStatistics(ctx context.Context, userID string) (*OrderStatistics, error) {
 	// This would typically query the database for statistics
 	// For now, return a simplified implementation
-	
+
 	orders, err := om.orderStore.GetUserOrders(ctx, userID, 10000) // Get many orders for stats
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user orders: %w", err)
 	}
-	
+
 	stats := &OrderStatistics{
 		TotalOrders: int64(len(orders)),
 	}
-	
+
 	var totalVolume float64
 	for _, order := range orders {
 		orderValue := order.Price * order.Quantity
 		totalVolume += orderValue
-		
+
 		// This would typically check actual order status from exchange
 		// For now, using simplified logic
 		stats.CompletedOrders++
 	}
-	
+
 	stats.TotalVolume = totalVolume
 	if stats.TotalOrders > 0 {
 		stats.AverageOrderSize = totalVolume / float64(stats.TotalOrders)
 	}
-	
+
 	return stats, nil
 }
 
@@ -367,25 +367,25 @@ func (om *OrderManager) BatchPlaceOrders(ctx context.Context, requests []*OrderR
 	if len(requests) == 0 {
 		return nil, fmt.Errorf("no orders to place")
 	}
-	
+
 	if len(requests) > 100 {
 		return nil, fmt.Errorf("batch size too large, maximum 100 orders")
 	}
-	
+
 	results := make([]*OrderResult, len(requests))
-	
+
 	// Process orders concurrently with limited concurrency
 	semaphore := make(chan struct{}, 10) // Limit to 10 concurrent orders
 	var wg sync.WaitGroup
-	
+
 	for i, request := range requests {
 		wg.Add(1)
 		go func(index int, req *OrderRequest) {
 			defer wg.Done()
-			
-			semaphore <- struct{}{} // Acquire semaphore
+
+			semaphore <- struct{}{}        // Acquire semaphore
 			defer func() { <-semaphore }() // Release semaphore
-			
+
 			result, err := om.PlaceOrder(ctx, req)
 			if err != nil {
 				result = &OrderResult{
@@ -401,7 +401,7 @@ func (om *OrderManager) BatchPlaceOrders(ctx context.Context, requests []*OrderR
 			results[index] = result
 		}(i, request)
 	}
-	
+
 	wg.Wait()
 	return results, nil
 }

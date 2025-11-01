@@ -11,18 +11,18 @@ import (
 
 // Common errors
 var (
-	ErrConnectionNotFound      = errors.New("connection not found")
+	ErrConnectionNotFound       = errors.New("connection not found")
 	ErrConnectionSendBufferFull = errors.New("connection send buffer full")
-	ErrMaxConnectionsReached   = errors.New("maximum connections reached")
-	ErrInvalidMessage          = errors.New("invalid message")
-	ErrSubscriptionNotFound    = errors.New("subscription not found")
-	ErrRateLimitExceeded       = errors.New("rate limit exceeded")
+	ErrMaxConnectionsReached    = errors.New("maximum connections reached")
+	ErrInvalidMessage           = errors.New("invalid message")
+	ErrSubscriptionNotFound     = errors.New("subscription not found")
+	ErrRateLimitExceeded        = errors.New("rate limit exceeded")
 )
 
 // NewGateway creates a new WebSocket gateway
 func NewGateway(config *GatewayConfig, logger *zap.Logger) *Gateway {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	gateway := &Gateway{
 		config:      config,
 		logger:      logger,
@@ -31,12 +31,12 @@ func NewGateway(config *GatewayConfig, logger *zap.Logger) *Gateway {
 		cancel:      cancel,
 		metrics:     &GatewayMetrics{LastUpdated: time.Now()},
 	}
-	
+
 	// Initialize components
 	gateway.connectionManager = NewConnectionManager(gateway, logger)
 	gateway.messageHandler = NewMessageHandler(gateway, logger)
 	gateway.performanceOpt = NewPerformanceOptimizer(gateway, logger)
-	
+
 	return gateway
 }
 
@@ -45,28 +45,28 @@ func (g *Gateway) Start() error {
 	g.logger.Info("Starting WebSocket gateway",
 		zap.Int("max_connections", g.config.MaxConnections),
 		zap.Duration("ping_interval", g.config.PingInterval))
-	
+
 	// Start background processes
 	go g.metricsCollector()
 	go g.connectionCleaner()
 	go g.performanceMonitor()
-	
+
 	return nil
 }
 
 // Stop stops the WebSocket gateway
 func (g *Gateway) Stop() error {
 	g.logger.Info("Stopping WebSocket gateway")
-	
+
 	g.cancel()
-	
+
 	// Close all connections
 	g.mu.Lock()
 	for _, conn := range g.connections {
 		conn.Close()
 	}
 	g.mu.Unlock()
-	
+
 	return nil
 }
 
@@ -76,25 +76,25 @@ func (g *Gateway) HandleConnection(conn *websocket.Conn, userID, exchange string
 	if err := g.checkConnectionLimits(); err != nil {
 		return nil, err
 	}
-	
+
 	// Create connection
 	connection := g.createConnection(conn, userID, exchange)
-	
+
 	// Register connection
 	g.mu.Lock()
 	g.connections[connection.ID] = connection
 	g.mu.Unlock()
-	
+
 	// Start connection handlers
 	go g.handleConnectionRead(connection)
 	go g.handleConnectionWrite(connection)
 	go g.handleConnectionPing(connection)
-	
+
 	g.logger.Info("WebSocket connection established",
 		zap.String("connection_id", connection.ID),
 		zap.String("user_id", userID),
 		zap.String("exchange", exchange))
-	
+
 	return connection, nil
 }
 
@@ -103,11 +103,11 @@ func (g *Gateway) Subscribe(connectionID, channel, symbol string, subType Subscr
 	g.mu.RLock()
 	conn, exists := g.connections[connectionID]
 	g.mu.RUnlock()
-	
+
 	if !exists {
 		return ErrConnectionNotFound
 	}
-	
+
 	return conn.Subscribe(channel, symbol, subType, filters)
 }
 
@@ -116,11 +116,11 @@ func (g *Gateway) Unsubscribe(connectionID, subscriptionID string) error {
 	g.mu.RLock()
 	conn, exists := g.connections[connectionID]
 	g.mu.RUnlock()
-	
+
 	if !exists {
 		return ErrConnectionNotFound
 	}
-	
+
 	return conn.Unsubscribe(subscriptionID)
 }
 
@@ -130,15 +130,15 @@ func (g *Gateway) Broadcast(channel string, data interface{}) error {
 	if err != nil {
 		return err
 	}
-	
+
 	messageBytes, err := g.messageHandler.SerializeMessage(message)
 	if err != nil {
 		return err
 	}
-	
+
 	g.mu.RLock()
 	defer g.mu.RUnlock()
-	
+
 	for _, conn := range g.connections {
 		if conn.IsSubscribedToChannel(channel) {
 			select {
@@ -149,7 +149,7 @@ func (g *Gateway) Broadcast(channel string, data interface{}) error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -159,33 +159,33 @@ func (g *Gateway) BroadcastWithOptions(options *BroadcastOptions, data interface
 	if err != nil {
 		return err
 	}
-	
+
 	// Add metadata if provided
 	if options.Metadata != nil {
 		message.Metadata = options.Metadata
 	}
-	
+
 	messageBytes, err := g.messageHandler.SerializeMessage(message)
 	if err != nil {
 		return err
 	}
-	
+
 	g.mu.RLock()
 	defer g.mu.RUnlock()
-	
+
 	for _, conn := range g.connections {
 		// Apply user filter if provided
 		if options.UserFilter != nil && !options.UserFilter(conn.UserID) {
 			continue
 		}
-		
+
 		// Check channel subscription
 		if conn.IsSubscribedToChannel(options.Channel) {
 			// Check symbol filter if provided
 			if options.Symbol != "" && !conn.IsSubscribedToSymbol(options.Symbol) {
 				continue
 			}
-			
+
 			select {
 			case conn.send <- messageBytes:
 			default:
@@ -194,7 +194,7 @@ func (g *Gateway) BroadcastWithOptions(options *BroadcastOptions, data interface
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -203,21 +203,21 @@ func (g *Gateway) SendToConnection(connectionID string, messageType MessageType,
 	g.mu.RLock()
 	conn, exists := g.connections[connectionID]
 	g.mu.RUnlock()
-	
+
 	if !exists {
 		return ErrConnectionNotFound
 	}
-	
+
 	message, err := g.messageHandler.CreateMessage(messageType, "", data)
 	if err != nil {
 		return err
 	}
-	
+
 	messageBytes, err := g.messageHandler.SerializeMessage(message)
 	if err != nil {
 		return err
 	}
-	
+
 	select {
 	case conn.send <- messageBytes:
 		return nil
@@ -232,15 +232,15 @@ func (g *Gateway) SendToUser(userID string, messageType MessageType, data interf
 	if err != nil {
 		return err
 	}
-	
+
 	messageBytes, err := g.messageHandler.SerializeMessage(message)
 	if err != nil {
 		return err
 	}
-	
+
 	g.mu.RLock()
 	defer g.mu.RUnlock()
-	
+
 	sent := 0
 	for _, conn := range g.connections {
 		if conn.UserID == userID {
@@ -254,11 +254,11 @@ func (g *Gateway) SendToUser(userID string, messageType MessageType, data interf
 			}
 		}
 	}
-	
+
 	if sent == 0 {
 		return ErrConnectionNotFound
 	}
-	
+
 	return nil
 }
 
@@ -266,17 +266,17 @@ func (g *Gateway) SendToUser(userID string, messageType MessageType, data interf
 func (g *Gateway) GetMetrics() *GatewayMetrics {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
-	
+
 	metrics := &GatewayMetrics{
 		TotalConnections:  g.metrics.TotalConnections,
 		ActiveConnections: int64(len(g.connections)),
 		LastUpdated:       time.Now(),
 	}
-	
+
 	// Calculate aggregated metrics
 	var totalMessages, totalBytes, totalLatency int64
 	var subscriptionCount int64
-	
+
 	for _, conn := range g.connections {
 		conn.mu.RLock()
 		totalMessages += conn.messageCount
@@ -285,13 +285,13 @@ func (g *Gateway) GetMetrics() *GatewayMetrics {
 		subscriptionCount += int64(len(conn.subscriptions))
 		conn.mu.RUnlock()
 	}
-	
+
 	if totalMessages > 0 {
 		metrics.AverageLatency = time.Duration(totalLatency / totalMessages)
 	}
-	
+
 	metrics.SubscriptionCount = subscriptionCount
-	
+
 	return metrics
 }
 
@@ -299,30 +299,30 @@ func (g *Gateway) GetMetrics() *GatewayMetrics {
 func (g *Gateway) GetConnectionStats() []ConnectionStats {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
-	
+
 	stats := make([]ConnectionStats, 0, len(g.connections))
-	
+
 	for _, conn := range g.connections {
 		conn.mu.RLock()
 		stat := ConnectionStats{
-			ID:               conn.ID,
-			UserID:           conn.UserID,
-			Exchange:         conn.Exchange,
-			LastActivity:     conn.lastActivity,
-			MessageCount:     conn.messageCount,
-			BytesTransferred: conn.bytesTransferred,
+			ID:                conn.ID,
+			UserID:            conn.UserID,
+			Exchange:          conn.Exchange,
+			LastActivity:      conn.lastActivity,
+			MessageCount:      conn.messageCount,
+			BytesTransferred:  conn.bytesTransferred,
 			SubscriptionCount: len(conn.subscriptions),
-			IsActive:         conn.isActive,
+			IsActive:          conn.isActive,
 		}
-		
+
 		if conn.messageCount > 0 {
 			stat.AverageLatency = time.Duration(conn.latencySum / conn.messageCount)
 		}
-		
+
 		conn.mu.RUnlock()
 		stats = append(stats, stat)
 	}
-	
+
 	return stats
 }
 
@@ -330,12 +330,12 @@ func (g *Gateway) GetConnectionStats() []ConnectionStats {
 func (g *Gateway) GetConnection(connectionID string) (*Connection, error) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
-	
+
 	conn, exists := g.connections[connectionID]
 	if !exists {
 		return nil, ErrConnectionNotFound
 	}
-	
+
 	return conn, nil
 }
 
@@ -343,26 +343,26 @@ func (g *Gateway) GetConnection(connectionID string) (*Connection, error) {
 func (g *Gateway) CloseConnection(connectionID string) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	
+
 	conn, exists := g.connections[connectionID]
 	if !exists {
 		return ErrConnectionNotFound
 	}
-	
+
 	conn.Close()
 	delete(g.connections, connectionID)
-	
+
 	g.logger.Info("Connection closed",
 		zap.String("connection_id", connectionID),
 		zap.String("user_id", conn.UserID))
-	
+
 	return nil
 }
 
 // GetHealthStatus returns the health status of the gateway
 func (g *Gateway) GetHealthStatus() *HealthStatus {
 	metrics := g.GetMetrics()
-	
+
 	status := "healthy"
 	if metrics.ActiveConnections > int64(g.config.MaxConnections)*8/10 {
 		status = "warning"
@@ -370,7 +370,7 @@ func (g *Gateway) GetHealthStatus() *HealthStatus {
 	if metrics.ActiveConnections >= int64(g.config.MaxConnections) {
 		status = "critical"
 	}
-	
+
 	return &HealthStatus{
 		Status:            status,
 		ActiveConnections: metrics.ActiveConnections,

@@ -36,9 +36,9 @@ type CreateBondRequest struct {
 
 // UpdateCreditRatingRequest represents the request body for updating credit rating
 type UpdateCreditRatingRequest struct {
-	NewRating     string `json:"new_rating" binding:"required"`
-	RatingAgency  string `json:"rating_agency"`
-	RatingOutlook string `json:"rating_outlook"`
+	NewRating     string    `json:"new_rating" binding:"required"`
+	RatingAgency  string    `json:"rating_agency"`
+	RatingOutlook string    `json:"rating_outlook"`
 	EffectiveDate time.Time `json:"effective_date"`
 }
 
@@ -61,7 +61,7 @@ func (h *BondHandlers) CreateBond(c *gin.Context) {
 		return
 	}
 
-	err := h.bondService.CreateBond(req.Symbol, req.Issuer, req.FaceValue, 
+	err := h.bondService.CreateBond(req.Symbol, req.Issuer, req.FaceValue,
 		req.CouponRate, req.MaturityDate, req.CreditRating)
 	if err != nil {
 		h.logger.Error("Failed to create bond", zap.Error(err))
@@ -267,7 +267,7 @@ func (h *BondHandlers) UpdateCreditRating(c *gin.Context) {
 	}
 
 	// In a real implementation, this would update the bond's credit rating
-	h.logger.Info("Credit rating update processed", 
+	h.logger.Info("Credit rating update processed",
 		zap.String("symbol", symbol),
 		zap.String("new_rating", req.NewRating))
 
@@ -439,14 +439,14 @@ func (h *BondHandlers) CalculateDuration(c *gin.Context) {
 		faceValue, couponRate, ytm, yearsToMaturity, paymentsPerYear)
 
 	c.JSON(http.StatusOK, gin.H{
-		"face_value":         faceValue,
-		"coupon_rate":        couponRate,
-		"ytm":                ytm,
-		"years_to_maturity":  yearsToMaturity,
-		"payments_per_year":  paymentsPerYear,
-		"macaulay_duration":  macaulayDuration,
-		"modified_duration":  modifiedDuration,
-		"calculated_at":      time.Now(),
+		"face_value":        faceValue,
+		"coupon_rate":       couponRate,
+		"ytm":               ytm,
+		"years_to_maturity": yearsToMaturity,
+		"payments_per_year": paymentsPerYear,
+		"macaulay_duration": macaulayDuration,
+		"modified_duration": modifiedDuration,
+		"calculated_at":     time.Now(),
 	})
 }
 
@@ -521,7 +521,7 @@ func (h *BondHandlers) GetMaturitySchedule(c *gin.Context) {
 	}
 
 	// In a real implementation, this would query bonds maturing in the date range
-	h.logger.Info("Retrieving maturity schedule", 
+	h.logger.Info("Retrieving maturity schedule",
 		zap.String("start_date", startDateStr),
 		zap.String("end_date", endDateStr))
 

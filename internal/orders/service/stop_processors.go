@@ -19,19 +19,19 @@ func (p *StopLimitOrderProcessor) Validate(order *Order) error {
 	if order == nil {
 		return errors.New("order cannot be nil")
 	}
-	
+
 	if order.Quantity <= 0 {
 		return errors.New("quantity must be positive")
 	}
-	
+
 	if order.Price <= 0 {
 		return errors.New("price must be positive for stop-limit orders")
 	}
-	
+
 	if order.StopPrice <= 0 {
 		return errors.New("stop price must be positive for stop-limit orders")
 	}
-	
+
 	return nil
 }
 
@@ -40,7 +40,7 @@ func (p *StopLimitOrderProcessor) Process(order *Order) error {
 	// Stop-limit orders wait for trigger condition
 	order.Status = OrderStatusPending
 	order.UpdatedAt = time.Now()
-	
+
 	// In real implementation, monitor market price for trigger
 	return nil
 }
@@ -64,15 +64,15 @@ func (p *StopMarketOrderProcessor) Validate(order *Order) error {
 	if order == nil {
 		return errors.New("order cannot be nil")
 	}
-	
+
 	if order.Quantity <= 0 {
 		return errors.New("quantity must be positive")
 	}
-	
+
 	if order.StopPrice <= 0 {
 		return errors.New("stop price must be positive for stop-market orders")
 	}
-	
+
 	return nil
 }
 
@@ -81,7 +81,7 @@ func (p *StopMarketOrderProcessor) Process(order *Order) error {
 	// Stop-market orders wait for trigger condition
 	order.Status = OrderStatusPending
 	order.UpdatedAt = time.Now()
-	
+
 	return nil
 }
 

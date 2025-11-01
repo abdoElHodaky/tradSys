@@ -1,7 +1,6 @@
 package websocket
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -349,7 +348,7 @@ func (lv *LicenseValidator) ValidateLicense(userID string, tier LicenseTier) (bo
 }
 
 // FilterMessage filters a WebSocket message for Islamic compliance
-func (if *IslamicFilter) FilterMessage(message *WebSocketMessage, ctx *WebSocketConnectionContext) (*WebSocketMessage, error) {
+func (f *IslamicFilter) FilterMessage(message *WebSocketMessage, ctx *WebSocketConnectionContext) (*WebSocketMessage, error) {
 	// Implementation for Islamic filtering
 	return message, nil
 }

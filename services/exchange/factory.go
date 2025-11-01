@@ -7,8 +7,8 @@ import (
 
 	"github.com/abdoElHodaky/tradSys/pkg/interfaces"
 	"github.com/abdoElHodaky/tradSys/pkg/types"
-	"github.com/abdoElHodaky/tradSys/services/exchange/egx"
 	"github.com/abdoElHodaky/tradSys/services/exchange/adx"
+	"github.com/abdoElHodaky/tradSys/services/exchange/egx"
 )
 
 // Factory manages exchange client instances
@@ -37,12 +37,12 @@ func (f *Factory) RegisterExchange(exchangeType types.ExchangeType, exchange int
 func (f *Factory) GetExchange(exchangeType types.ExchangeType) (interfaces.ExchangeInterface, error) {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
-	
+
 	exchange, exists := f.exchanges[exchangeType]
 	if !exists {
 		return nil, fmt.Errorf("exchange %s not registered", exchangeType)
 	}
-	
+
 	return exchange, nil
 }
 
@@ -50,12 +50,12 @@ func (f *Factory) GetExchange(exchangeType types.ExchangeType) (interfaces.Excha
 func (f *Factory) GetAllExchanges() map[types.ExchangeType]interfaces.ExchangeInterface {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
-	
+
 	result := make(map[types.ExchangeType]interfaces.ExchangeInterface)
 	for k, v := range f.exchanges {
 		result[k] = v
 	}
-	
+
 	return result
 }
 
@@ -63,7 +63,7 @@ func (f *Factory) GetAllExchanges() map[types.ExchangeType]interfaces.ExchangeIn
 func (f *Factory) IsExchangeRegistered(exchangeType types.ExchangeType) bool {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
-	
+
 	_, exists := f.exchanges[exchangeType]
 	return exists
 }
@@ -72,12 +72,12 @@ func (f *Factory) IsExchangeRegistered(exchangeType types.ExchangeType) bool {
 func (f *Factory) GetSupportedExchanges() []types.ExchangeType {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
-	
+
 	var exchanges []types.ExchangeType
 	for exchangeType := range f.exchanges {
 		exchanges = append(exchanges, exchangeType)
 	}
-	
+
 	return exchanges
 }
 
@@ -86,14 +86,14 @@ func (f *Factory) CreateEGXClient(config *egx.Config) error {
 	if config == nil {
 		config = egx.GetDefaultConfig()
 	}
-	
+
 	client := egx.NewClient(config)
 	f.RegisterExchange(types.EGX, client)
-	
+
 	f.mu.Lock()
 	f.configs[types.EGX] = config
 	f.mu.Unlock()
-	
+
 	return nil
 }
 
@@ -102,14 +102,14 @@ func (f *Factory) CreateADXClient(config *adx.Config) error {
 	if config == nil {
 		config = adx.GetDefaultConfig()
 	}
-	
+
 	client := adx.NewClient(config)
 	f.RegisterExchange(types.ADX, client)
-	
+
 	f.mu.Lock()
 	f.configs[types.ADX] = config
 	f.mu.Unlock()
-	
+
 	return nil
 }
 
@@ -117,12 +117,12 @@ func (f *Factory) CreateADXClient(config *adx.Config) error {
 func (f *Factory) GetExchangeConfig(exchangeType types.ExchangeType) (interface{}, error) {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
-	
+
 	config, exists := f.configs[exchangeType]
 	if !exists {
 		return nil, fmt.Errorf("config for exchange %s not found", exchangeType)
 	}
-	
+
 	return config, nil
 }
 
@@ -130,11 +130,11 @@ func (f *Factory) GetExchangeConfig(exchangeType types.ExchangeType) (interface{
 func (f *Factory) UpdateExchangeConfig(exchangeType types.ExchangeType, config interface{}) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	
+
 	if _, exists := f.exchanges[exchangeType]; !exists {
 		return fmt.Errorf("exchange %s not registered", exchangeType)
 	}
-	
+
 	f.configs[exchangeType] = config
 	return nil
 }
@@ -143,14 +143,14 @@ func (f *Factory) UpdateExchangeConfig(exchangeType types.ExchangeType, config i
 func (f *Factory) RemoveExchange(exchangeType types.ExchangeType) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	
+
 	if _, exists := f.exchanges[exchangeType]; !exists {
 		return fmt.Errorf("exchange %s not registered", exchangeType)
 	}
-	
+
 	delete(f.exchanges, exchangeType)
 	delete(f.configs, exchangeType)
-	
+
 	return nil
 }
 
@@ -160,7 +160,7 @@ func (f *Factory) ValidateExchangeSupport(exchangeType types.ExchangeType, asset
 	if err != nil {
 		return err
 	}
-	
+
 	// For now, we'll use a simple validation based on exchange type
 	// This can be enhanced with more sophisticated logic
 	switch exchangeType {
@@ -180,13 +180,13 @@ func (f *Factory) validateEGXAssetSupport(assetType types.AssetType) error {
 		types.MUTUAL_FUND, types.SUKUK, types.ISLAMIC_FUND,
 		types.SHARIA_STOCK, types.ISLAMIC_ETF,
 	}
-	
+
 	for _, supported := range supportedAssets {
 		if assetType == supported {
 			return nil
 		}
 	}
-	
+
 	return fmt.Errorf("asset type %s not supported on EGX", assetType)
 }
 
@@ -197,13 +197,13 @@ func (f *Factory) validateADXAssetSupport(assetType types.AssetType) error {
 		types.SUKUK, types.ISLAMIC_FUND, types.SHARIA_STOCK,
 		types.ISLAMIC_ETF, types.ISLAMIC_REIT, types.TAKAFUL,
 	}
-	
+
 	for _, supported := range supportedAssets {
 		if assetType == supported {
 			return nil
 		}
 	}
-	
+
 	return fmt.Errorf("asset type %s not supported on ADX", assetType)
 }
 
@@ -215,12 +215,12 @@ func (f *Factory) GetExchangeForAsset(assetType types.AssetType) (interfaces.Exc
 			return f.GetExchange(types.ADX)
 		}
 	}
-	
+
 	// Default to EGX if available
 	if f.IsExchangeRegistered(types.EGX) {
 		return f.GetExchange(types.EGX)
 	}
-	
+
 	return nil, fmt.Errorf("no suitable exchange found for asset type %s", assetType)
 }
 
@@ -238,11 +238,11 @@ func InitializeDefaultExchanges() error {
 	if err := DefaultFactory.CreateEGXClient(nil); err != nil {
 		return fmt.Errorf("failed to initialize EGX client: %w", err)
 	}
-	
+
 	// Initialize ADX with default config
 	if err := DefaultFactory.CreateADXClient(nil); err != nil {
 		return fmt.Errorf("failed to initialize ADX client: %w", err)
 	}
-	
+
 	return nil
 }

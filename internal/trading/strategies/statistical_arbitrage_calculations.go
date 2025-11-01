@@ -490,7 +490,7 @@ func (s *StatisticalArbitrageStrategy) generateTradingSignal() *TradingSignal {
 
 	// Determine signal type and strength
 	absZScore := math.Abs(s.currentZScore)
-	
+
 	if absZScore >= s.zScoreEntry {
 		if s.currentZScore > 0 {
 			signal.Type = SignalShort

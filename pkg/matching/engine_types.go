@@ -326,11 +326,11 @@ type EngineEvent struct {
 
 // Event types
 const (
-	EventTypeOrderAdded    = "order_added"
-	EventTypeOrderCanceled = "order_canceled"
-	EventTypeOrderFilled   = "order_filled"
-	EventTypeTradeExecuted = "trade_executed"
+	EventTypeOrderAdded       = "order_added"
+	EventTypeOrderCanceled    = "order_canceled"
+	EventTypeOrderFilled      = "order_filled"
+	EventTypeTradeExecuted    = "trade_executed"
 	EventTypeOrderBookUpdated = "order_book_updated"
-	EventTypeEngineStarted = "engine_started"
-	EventTypeEngineStopped = "engine_stopped"
+	EventTypeEngineStarted    = "engine_started"
+	EventTypeEngineStopped    = "engine_stopped"
 )

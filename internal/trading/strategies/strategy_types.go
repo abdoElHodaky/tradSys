@@ -94,13 +94,13 @@ type OHLC struct {
 
 // TradingSignal represents a trading signal
 type TradingSignal struct {
-	StrategyID string        `json:"strategy_id"`
-	Symbol     string        `json:"symbol"`
-	Action     SignalAction  `json:"action"`
-	Price      float64       `json:"price,omitempty"`
-	Quantity   float64       `json:"quantity"`
-	Confidence float64       `json:"confidence"`
-	Timestamp  time.Time     `json:"timestamp"`
+	StrategyID string                 `json:"strategy_id"`
+	Symbol     string                 `json:"symbol"`
+	Action     SignalAction           `json:"action"`
+	Price      float64                `json:"price,omitempty"`
+	Quantity   float64                `json:"quantity"`
+	Confidence float64                `json:"confidence"`
+	Timestamp  time.Time              `json:"timestamp"`
 	Metadata   map[string]interface{} `json:"metadata,omitempty"`
 }
 
@@ -115,12 +115,12 @@ const (
 
 // Position represents a trading position
 type Position struct {
-	Symbol       string    `json:"symbol"`
-	Quantity     float64   `json:"quantity"`
-	AveragePrice float64   `json:"average_price"`
-	CurrentPrice float64   `json:"current_price"`
-	UnrealizedPnL float64  `json:"unrealized_pnl"`
-	RealizedPnL   float64  `json:"realized_pnl"`
+	Symbol        string    `json:"symbol"`
+	Quantity      float64   `json:"quantity"`
+	AveragePrice  float64   `json:"average_price"`
+	CurrentPrice  float64   `json:"current_price"`
+	UnrealizedPnL float64   `json:"unrealized_pnl"`
+	RealizedPnL   float64   `json:"realized_pnl"`
 	LastUpdate    time.Time `json:"last_update"`
 }
 
@@ -139,10 +139,10 @@ type MomentumStrategy struct {
 type StrategyType string
 
 const (
-	StrategyTypeMomentum     StrategyType = "momentum"
+	StrategyTypeMomentum      StrategyType = "momentum"
 	StrategyTypeMeanReversion StrategyType = "mean_reversion"
-	StrategyTypeArbitrage    StrategyType = "arbitrage"
-	StrategyTypeGrid         StrategyType = "grid"
+	StrategyTypeArbitrage     StrategyType = "arbitrage"
+	StrategyTypeGrid          StrategyType = "grid"
 )
 
 // StrategyStatus represents strategy execution status
@@ -157,41 +157,41 @@ const (
 
 // StrategyPerformance represents detailed performance metrics
 type StrategyPerformance struct {
-	StrategyID       string    `json:"strategy_id"`
-	Status           StrategyStatus `json:"status"`
-	TotalTrades      int64     `json:"total_trades"`
-	WinningTrades    int64     `json:"winning_trades"`
-	LosingTrades     int64     `json:"losing_trades"`
-	WinRate          float64   `json:"win_rate"`
-	TotalPnL         float64   `json:"total_pnl"`
-	AverageWin       float64   `json:"average_win"`
-	AverageLoss      float64   `json:"average_loss"`
-	ProfitFactor     float64   `json:"profit_factor"`
-	MaxDrawdown      float64   `json:"max_drawdown"`
-	SharpeRatio      float64   `json:"sharpe_ratio"`
-	CalmarRatio      float64   `json:"calmar_ratio"`
-	LastTradeTime    time.Time `json:"last_trade_time"`
-	LastUpdateTime   time.Time `json:"last_update_time"`
+	StrategyID     string         `json:"strategy_id"`
+	Status         StrategyStatus `json:"status"`
+	TotalTrades    int64          `json:"total_trades"`
+	WinningTrades  int64          `json:"winning_trades"`
+	LosingTrades   int64          `json:"losing_trades"`
+	WinRate        float64        `json:"win_rate"`
+	TotalPnL       float64        `json:"total_pnl"`
+	AverageWin     float64        `json:"average_win"`
+	AverageLoss    float64        `json:"average_loss"`
+	ProfitFactor   float64        `json:"profit_factor"`
+	MaxDrawdown    float64        `json:"max_drawdown"`
+	SharpeRatio    float64        `json:"sharpe_ratio"`
+	CalmarRatio    float64        `json:"calmar_ratio"`
+	LastTradeTime  time.Time      `json:"last_trade_time"`
+	LastUpdateTime time.Time      `json:"last_update_time"`
 }
 
 // RiskMetrics represents risk-related metrics
 type RiskMetrics struct {
-	CurrentExposure  float64 `json:"current_exposure"`
-	MaxExposure      float64 `json:"max_exposure"`
-	VaR95            float64 `json:"var_95"`
-	VaR99            float64 `json:"var_99"`
+	CurrentExposure   float64 `json:"current_exposure"`
+	MaxExposure       float64 `json:"max_exposure"`
+	VaR95             float64 `json:"var_95"`
+	VaR99             float64 `json:"var_99"`
 	ExpectedShortfall float64 `json:"expected_shortfall"`
-	Beta             float64 `json:"beta"`
-	Volatility       float64 `json:"volatility"`
+	Beta              float64 `json:"beta"`
+	Volatility        float64 `json:"volatility"`
 }
 
 // ExecutionMetrics represents execution-related metrics
 type ExecutionMetrics struct {
-	OrdersSubmitted   int64   `json:"orders_submitted"`
-	OrdersFilled      int64   `json:"orders_filled"`
-	OrdersCancelled   int64   `json:"orders_cancelled"`
-	OrdersRejected    int64   `json:"orders_rejected"`
-	FillRate          float64 `json:"fill_rate"`
-	AverageSlippage   float64 `json:"average_slippage"`
-	AverageLatency    float64 `json:"average_latency"`
+	OrdersSubmitted int64   `json:"orders_submitted"`
+	OrdersFilled    int64   `json:"orders_filled"`
+	OrdersCancelled int64   `json:"orders_cancelled"`
+	OrdersRejected  int64   `json:"orders_rejected"`
+	FillRate        float64 `json:"fill_rate"`
+	AverageSlippage float64 `json:"average_slippage"`
+	AverageLatency  float64 `json:"average_latency"`
 }

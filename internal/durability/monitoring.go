@@ -35,13 +35,13 @@ type HealthCheck func(ctx context.Context) error
 
 // ComponentHealth tracks the health of a system component
 type ComponentHealth struct {
-	Name           string
-	Status         HealthStatus
-	LastCheck      time.Time
-	LastError      error
-	CheckInterval  time.Duration
-	FailureCount   int
-	SuccessCount   int
+	Name          string
+	Status        HealthStatus
+	LastCheck     time.Time
+	LastError     error
+	CheckInterval time.Duration
+	FailureCount  int
+	SuccessCount  int
 }
 
 // HealthMonitor monitors the health of system components
@@ -146,7 +146,7 @@ func (hm *HealthMonitor) updateComponentHealth(name string, err error) {
 		}
 	} else {
 		comp.FailureCount++
-		
+
 		// Determine new status based on failure pattern
 		if comp.FailureCount >= 5 {
 			if comp.Status != HealthStatusUnhealthy {
@@ -249,15 +249,15 @@ func (hm *HealthMonitor) Stop() {
 
 // Metrics represents system metrics
 type Metrics struct {
-	mu                    sync.RWMutex
-	OrdersProcessed       int64
-	OrdersPerSecond       float64
-	AverageLatency        time.Duration
-	ErrorRate             float64
-	ActiveConnections     int64
-	MemoryUsage           int64
-	CPUUsage              float64
-	LastUpdated           time.Time
+	mu                sync.RWMutex
+	OrdersProcessed   int64
+	OrdersPerSecond   float64
+	AverageLatency    time.Duration
+	ErrorRate         float64
+	ActiveConnections int64
+	MemoryUsage       int64
+	CPUUsage          float64
+	LastUpdated       time.Time
 }
 
 // NewMetrics creates a new metrics instance
@@ -271,16 +271,16 @@ func NewMetrics() *Metrics {
 func (m *Metrics) UpdateOrderMetrics(processed int64, latency time.Duration) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	m.OrdersProcessed += processed
-	
+
 	// Calculate moving average for latency
 	if m.AverageLatency == 0 {
 		m.AverageLatency = latency
 	} else {
 		m.AverageLatency = (m.AverageLatency + latency) / 2
 	}
-	
+
 	m.LastUpdated = time.Now()
 }
 

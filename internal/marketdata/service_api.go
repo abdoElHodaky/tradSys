@@ -354,7 +354,7 @@ func (s *Service) AddMarketDataSource(name string, config map[string]interface{}
 // GetMarketData gets market data from cache or external provider
 func (s *Service) GetMarketData(ctx context.Context, symbol string, dataType external.MarketDataType) (interface{}, error) {
 	cacheKey := fmt.Sprintf("%s:%s", dataType, symbol)
-	
+
 	// Try cache first
 	if cached, found := s.Cache.Get(cacheKey); found {
 		return cached, nil

@@ -14,7 +14,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/core/matching"
+	order_matching "github.com/abdoElHodaky/tradSys/internal/core/matching"
 	"github.com/google/uuid"
 	cache "github.com/patrickmn/go-cache"
 	"go.uber.org/zap"
@@ -26,21 +26,21 @@ const (
 	OpTypeUpdate = "update"
 	OpTypeCancel = "cancel"
 	OpTypeAdd    = "add"
-	
+
 	// Cache keys
 	CacheKeyPrefix = "order:"
 )
 
 // OrderStats represents order statistics
 type OrderStats struct {
-	TotalOrders       int64     `json:"total_orders"`
-	ActiveOrders      int64     `json:"active_orders"`
-	FilledOrders      int64     `json:"filled_orders"`
-	CancelledOrders   int64     `json:"cancelled_orders"`
-	RejectedOrders    int64     `json:"rejected_orders"`
-	TotalTrades       int64     `json:"total_trades"`
-	TotalVolume       float64   `json:"total_volume"`
-	LastUpdateTime    time.Time `json:"last_update_time"`
+	TotalOrders     int64     `json:"total_orders"`
+	ActiveOrders    int64     `json:"active_orders"`
+	FilledOrders    int64     `json:"filled_orders"`
+	CancelledOrders int64     `json:"cancelled_orders"`
+	RejectedOrders  int64     `json:"rejected_orders"`
+	TotalTrades     int64     `json:"total_trades"`
+	TotalVolume     float64   `json:"total_volume"`
+	LastUpdateTime  time.Time `json:"last_update_time"`
 }
 
 // NewService creates a new order management service
@@ -384,13 +384,13 @@ func (s *Service) GetStats() *OrderStats {
 // Shutdown gracefully shuts down the service
 func (s *Service) Shutdown() error {
 	s.logger.Info("Shutting down order service")
-	
+
 	// Cancel context to stop background processes
 	s.cancel()
-	
+
 	// Close batch channel
 	close(s.orderBatchChan)
-	
+
 	s.logger.Info("Order service shutdown complete")
 	return nil
 }

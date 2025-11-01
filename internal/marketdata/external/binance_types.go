@@ -305,14 +305,14 @@ const (
 	DepthEndpoint        = "/api/v3/depth"
 	TradesEndpoint       = "/api/v3/trades"
 	AggTradesEndpoint    = "/api/v3/aggTrades"
-	
+
 	// WebSocket Streams
-	TickerStream    = "@ticker"
-	KlineStream     = "@kline_"
-	TradeStream     = "@trade"
-	DepthStream     = "@depth"
-	AggTradeStream  = "@aggTrade"
-	
+	TickerStream   = "@ticker"
+	KlineStream    = "@kline_"
+	TradeStream    = "@trade"
+	DepthStream    = "@depth"
+	AggTradeStream = "@aggTrade"
+
 	// Intervals
 	Interval1m  = "1m"
 	Interval3m  = "3m"
@@ -333,13 +333,13 @@ const (
 
 // Configuration
 type BinanceConfig struct {
-	BaseURL         string        `yaml:"base_url" json:"base_url"`
-	WebSocketURL    string        `yaml:"websocket_url" json:"websocket_url"`
-	APIKey          string        `yaml:"api_key" json:"api_key"`
-	APISecret       string        `yaml:"api_secret" json:"api_secret"`
-	Timeout         time.Duration `yaml:"timeout" json:"timeout"`
-	MaxConnections  int           `yaml:"max_connections" json:"max_connections"`
-	ReconnectDelay  time.Duration `yaml:"reconnect_delay" json:"reconnect_delay"`
-	PingInterval    time.Duration `yaml:"ping_interval" json:"ping_interval"`
-	EnableTestnet   bool          `yaml:"enable_testnet" json:"enable_testnet"`
+	BaseURL        string        `yaml:"base_url" json:"base_url"`
+	WebSocketURL   string        `yaml:"websocket_url" json:"websocket_url"`
+	APIKey         string        `yaml:"api_key" json:"api_key"`
+	APISecret      string        `yaml:"api_secret" json:"api_secret"`
+	Timeout        time.Duration `yaml:"timeout" json:"timeout"`
+	MaxConnections int           `yaml:"max_connections" json:"max_connections"`
+	ReconnectDelay time.Duration `yaml:"reconnect_delay" json:"reconnect_delay"`
+	PingInterval   time.Duration `yaml:"ping_interval" json:"ping_interval"`
+	EnableTestnet  bool          `yaml:"enable_testnet" json:"enable_testnet"`
 }

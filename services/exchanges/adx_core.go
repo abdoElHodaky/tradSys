@@ -24,7 +24,7 @@ func NewADXService() *ADXService {
 		region:          ADXRegion,
 		assetTypes:      []AssetType{AssetTypeEquity, AssetTypeSukuk, AssetTypeIslamicFund},
 		languageSupport: []string{"en", "ar"},
-		
+
 		// Initialize components
 		connector:          NewADXConnector(),
 		marketData:         NewADXMarketData(),
@@ -202,7 +202,7 @@ func (adx *ADXService) GetTradingHours() *TradingSchedule {
 func (adx *ADXService) IsMarketOpen() bool {
 	now := time.Now()
 	schedule := adx.GetTradingHours()
-	
+
 	if schedule == nil {
 		return false
 	}
@@ -214,7 +214,7 @@ func (adx *ADXService) IsMarketOpen() bool {
 func (adx *ADXService) GetSupportedAssetTypes() []AssetType {
 	adx.mu.RLock()
 	defer adx.mu.RUnlock()
-	
+
 	// Return copy to prevent modification
 	assetTypes := make([]AssetType, len(adx.assetTypes))
 	copy(assetTypes, adx.assetTypes)
@@ -225,7 +225,7 @@ func (adx *ADXService) GetSupportedAssetTypes() []AssetType {
 func (adx *ADXService) GetShariaBoards() []*ShariaBoard {
 	adx.mu.RLock()
 	defer adx.mu.RUnlock()
-	
+
 	// Return copy to prevent modification
 	boards := make([]*ShariaBoard, len(adx.shariaBoards))
 	copy(boards, adx.shariaBoards)
@@ -350,12 +350,12 @@ func (adx *ADXService) AddShariaBoard(board *ShariaBoard) error {
 // GetServiceStatus returns current service status
 func (adx *ADXService) GetServiceStatus() *ServiceStatus {
 	return &ServiceStatus{
-		Service:            "ADX",
-		Status:             "running",
-		Uptime:             adx.performanceMonitor.GetUptime(),
-		ConnectionStatus:   adx.connector.GetStatus(),
-		IslamicCompliance:  adx.islamicCompliance.GetStatus(),
-		UAECompliance:      adx.uaeCompliance.GetStatus(),
-		LastHealthCheck:    time.Now(),
+		Service:           "ADX",
+		Status:            "running",
+		Uptime:            adx.performanceMonitor.GetUptime(),
+		ConnectionStatus:  adx.connector.GetStatus(),
+		IslamicCompliance: adx.islamicCompliance.GetStatus(),
+		UAECompliance:     adx.uaeCompliance.GetStatus(),
+		LastHealthCheck:   time.Now(),
 	}
 }

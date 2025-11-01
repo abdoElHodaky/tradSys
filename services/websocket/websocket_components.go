@@ -46,7 +46,7 @@ func (cm *ConnectionManager) GetConnection(connectionID string) (*WebSocketConne
 func (cm *ConnectionManager) GetActiveConnections() []*WebSocketConnection {
 	cm.mu.RLock()
 	defer cm.mu.RUnlock()
-	
+
 	var active []*WebSocketConnection
 	for _, conn := range cm.connections {
 		if conn.IsActive {
@@ -95,7 +95,7 @@ func (sm *SubscriptionManager) GetSubscription(subscriptionID string) (*Subscrip
 func (sm *SubscriptionManager) GetSubscriptionsByChannel(channel string) []*Subscription {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
-	
+
 	var channelSubs []*Subscription
 	for _, sub := range sm.subscriptions {
 		if sub.Channel == channel {
@@ -156,13 +156,13 @@ func (lv *LicenseValidator) ValidateLicense(userID string, tier LicenseTier) (bo
 func (lv *LicenseValidator) GetLicenseInfo(userID string) (*LicenseValidationResult, error) {
 	lv.mu.RLock()
 	defer lv.mu.RUnlock()
-	
+
 	if result, exists := lv.cache[userID]; exists {
 		if time.Now().Before(result.ExpiresAt) {
 			return result, nil
 		}
 	}
-	
+
 	return nil, fmt.Errorf("license not found or expired for user: %s", userID)
 }
 
@@ -201,10 +201,10 @@ func NewIslamicFilter() *IslamicFilter {
 	filter := &IslamicFilter{
 		rules: make(map[string]FilterRule),
 	}
-	
+
 	// Initialize default Islamic finance rules
 	filter.initializeDefaultRules()
-	
+
 	return filter
 }
 
@@ -305,26 +305,26 @@ func (if_ *IslamicFilter) initializeDefaultRules() {
 // isHalalActivity checks if a business activity is halal
 func (if_ *IslamicFilter) isHalalActivity(activity string) bool {
 	halalActivities := map[string]bool{
-		"technology":     true,
-		"healthcare":     true,
-		"education":      true,
-		"manufacturing":  true,
-		"retail":         true,
+		"technology":         true,
+		"healthcare":         true,
+		"education":          true,
+		"manufacturing":      true,
+		"retail":             true,
 		"telecommunications": true,
-		"utilities":      true,
-		"real_estate":    true,
-		"transportation": true,
-		"agriculture":    true,
+		"utilities":          true,
+		"real_estate":        true,
+		"transportation":     true,
+		"agriculture":        true,
 	}
 
 	haramActivities := map[string]bool{
-		"alcohol":        false,
-		"gambling":       false,
-		"pork":          false,
-		"adult_entertainment": false,
+		"alcohol":              false,
+		"gambling":             false,
+		"pork":                 false,
+		"adult_entertainment":  false,
 		"conventional_banking": false,
-		"insurance":      false,
-		"tobacco":        false,
+		"insurance":            false,
+		"tobacco":              false,
 	}
 
 	if _, isHaram := haramActivities[activity]; isHaram {
@@ -369,10 +369,10 @@ func NewComplianceEngine() *ComplianceEngine {
 	engine := &ComplianceEngine{
 		rules: make(map[string]ComplianceRule),
 	}
-	
+
 	// Initialize default compliance rules
 	engine.initializeDefaultRules()
-	
+
 	return engine
 }
 
@@ -388,7 +388,7 @@ func (ce *ComplianceEngine) ValidateCompliance(ctx *WebSocketConnectionContext) 
 			if !rule.Validator(ctx) {
 				violation := fmt.Sprintf("compliance validation failed: %s", rule.Requirement)
 				violations = append(violations, violation)
-				
+
 				if rule.Severity == SeverityCritical {
 					return fmt.Errorf("critical compliance violation: %s", rule.Requirement)
 				}
@@ -540,7 +540,7 @@ func (ae *AnalyticsEngine) RecordMessage(conn *WebSocketConnection, message *Web
 func (ae *AnalyticsEngine) GetConnectionMetrics(connectionID string) (*ConnectionMetrics, bool) {
 	ae.mu.RLock()
 	defer ae.mu.RUnlock()
-	
+
 	metrics, exists := ae.metrics[connectionID]
 	return metrics, exists
 }
@@ -553,7 +553,7 @@ func (ae *AnalyticsEngine) GetAggregatedMetrics() map[string]interface{} {
 	totalConnections := len(ae.metrics)
 	totalMessages := int64(0)
 	totalBytes := int64(0)
-	
+
 	exchangeDistribution := make(map[ExchangeType]int)
 	licenseDistribution := make(map[LicenseTier]int)
 
@@ -565,8 +565,8 @@ func (ae *AnalyticsEngine) GetAggregatedMetrics() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"total_connections":      totalConnections,
-		"total_messages":         totalMessages,
+		"total_connections":     totalConnections,
+		"total_messages":        totalMessages,
 		"total_bytes":           totalBytes,
 		"exchange_distribution": exchangeDistribution,
 		"license_distribution":  licenseDistribution,

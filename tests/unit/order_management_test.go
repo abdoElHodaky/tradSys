@@ -12,25 +12,25 @@ import (
 
 func TestOrderService_CreateOrder(t *testing.T) {
 	service := orders.NewService(&orders.Config{
-		MaxOrdersPerUser:    1000,
-		MaxOrderValue:       1000000,
-		EnableRiskChecks:    true,
-		EnableCompliance:    true,
-		OrderTimeout:        30 * time.Minute,
+		MaxOrdersPerUser: 1000,
+		MaxOrderValue:    1000000,
+		EnableRiskChecks: true,
+		EnableCompliance: true,
+		OrderTimeout:     30 * time.Minute,
 	})
 
 	ctx := context.Background()
 
 	// Test valid order creation
 	orderReq := &orders.CreateOrderRequest{
-		UserID:      "user-001",
+		UserID:        "user-001",
 		ClientOrderID: "client-001",
-		Symbol:      "AAPL",
-		Side:        orders.SideBuy,
-		Type:        orders.TypeLimit,
-		Quantity:    100,
-		Price:       150.50,
-		TimeInForce: orders.TimeInForceGTC,
+		Symbol:        "AAPL",
+		Side:          orders.SideBuy,
+		Type:          orders.TypeLimit,
+		Quantity:      100,
+		Price:         150.50,
+		TimeInForce:   orders.TimeInForceGTC,
 	}
 
 	order, err := service.CreateOrder(ctx, orderReq)
@@ -52,11 +52,11 @@ func TestOrderService_CreateOrder(t *testing.T) {
 
 func TestOrderService_ValidateOrder(t *testing.T) {
 	service := orders.NewService(&orders.Config{
-		MaxOrdersPerUser:    1000,
-		MaxOrderValue:       1000000,
-		EnableRiskChecks:    true,
-		EnableCompliance:    true,
-		OrderTimeout:        30 * time.Minute,
+		MaxOrdersPerUser: 1000,
+		MaxOrderValue:    1000000,
+		EnableRiskChecks: true,
+		EnableCompliance: true,
+		OrderTimeout:     30 * time.Minute,
 	})
 
 	ctx := context.Background()
@@ -116,25 +116,25 @@ func TestOrderService_ValidateOrder(t *testing.T) {
 
 func TestOrderService_UpdateOrder(t *testing.T) {
 	service := orders.NewService(&orders.Config{
-		MaxOrdersPerUser:    1000,
-		MaxOrderValue:       1000000,
-		EnableRiskChecks:    true,
-		EnableCompliance:    true,
-		OrderTimeout:        30 * time.Minute,
+		MaxOrdersPerUser: 1000,
+		MaxOrderValue:    1000000,
+		EnableRiskChecks: true,
+		EnableCompliance: true,
+		OrderTimeout:     30 * time.Minute,
 	})
 
 	ctx := context.Background()
 
 	// Create initial order
 	orderReq := &orders.CreateOrderRequest{
-		UserID:      "user-001",
+		UserID:        "user-001",
 		ClientOrderID: "client-001",
-		Symbol:      "AAPL",
-		Side:        orders.SideBuy,
-		Type:        orders.TypeLimit,
-		Quantity:    100,
-		Price:       150.50,
-		TimeInForce: orders.TimeInForceGTC,
+		Symbol:        "AAPL",
+		Side:          orders.SideBuy,
+		Type:          orders.TypeLimit,
+		Quantity:      100,
+		Price:         150.50,
+		TimeInForce:   orders.TimeInForceGTC,
 	}
 
 	order, err := service.CreateOrder(ctx, orderReq)
@@ -161,25 +161,25 @@ func TestOrderService_UpdateOrder(t *testing.T) {
 
 func TestOrderService_CancelOrder(t *testing.T) {
 	service := orders.NewService(&orders.Config{
-		MaxOrdersPerUser:    1000,
-		MaxOrderValue:       1000000,
-		EnableRiskChecks:    true,
-		EnableCompliance:    true,
-		OrderTimeout:        30 * time.Minute,
+		MaxOrdersPerUser: 1000,
+		MaxOrderValue:    1000000,
+		EnableRiskChecks: true,
+		EnableCompliance: true,
+		OrderTimeout:     30 * time.Minute,
 	})
 
 	ctx := context.Background()
 
 	// Create order
 	orderReq := &orders.CreateOrderRequest{
-		UserID:      "user-001",
+		UserID:        "user-001",
 		ClientOrderID: "client-001",
-		Symbol:      "AAPL",
-		Side:        orders.SideBuy,
-		Type:        orders.TypeLimit,
-		Quantity:    100,
-		Price:       150.50,
-		TimeInForce: orders.TimeInForceGTC,
+		Symbol:        "AAPL",
+		Side:          orders.SideBuy,
+		Type:          orders.TypeLimit,
+		Quantity:      100,
+		Price:         150.50,
+		TimeInForce:   orders.TimeInForceGTC,
 	}
 
 	order, err := service.CreateOrder(ctx, orderReq)
@@ -204,25 +204,25 @@ func TestOrderService_CancelOrder(t *testing.T) {
 
 func TestOrderService_GetOrder(t *testing.T) {
 	service := orders.NewService(&orders.Config{
-		MaxOrdersPerUser:    1000,
-		MaxOrderValue:       1000000,
-		EnableRiskChecks:    true,
-		EnableCompliance:    true,
-		OrderTimeout:        30 * time.Minute,
+		MaxOrdersPerUser: 1000,
+		MaxOrderValue:    1000000,
+		EnableRiskChecks: true,
+		EnableCompliance: true,
+		OrderTimeout:     30 * time.Minute,
 	})
 
 	ctx := context.Background()
 
 	// Create order
 	orderReq := &orders.CreateOrderRequest{
-		UserID:      "user-001",
+		UserID:        "user-001",
 		ClientOrderID: "client-001",
-		Symbol:      "AAPL",
-		Side:        orders.SideBuy,
-		Type:        orders.TypeLimit,
-		Quantity:    100,
-		Price:       150.50,
-		TimeInForce: orders.TimeInForceGTC,
+		Symbol:        "AAPL",
+		Side:          orders.SideBuy,
+		Type:          orders.TypeLimit,
+		Quantity:      100,
+		Price:         150.50,
+		TimeInForce:   orders.TimeInForceGTC,
 	}
 
 	createdOrder, err := service.CreateOrder(ctx, orderReq)
@@ -253,11 +253,11 @@ func TestOrderService_GetOrder(t *testing.T) {
 
 func TestOrderService_ListOrders(t *testing.T) {
 	service := orders.NewService(&orders.Config{
-		MaxOrdersPerUser:    1000,
-		MaxOrderValue:       1000000,
-		EnableRiskChecks:    true,
-		EnableCompliance:    true,
-		OrderTimeout:        30 * time.Minute,
+		MaxOrdersPerUser: 1000,
+		MaxOrderValue:    1000000,
+		EnableRiskChecks: true,
+		EnableCompliance: true,
+		OrderTimeout:     30 * time.Minute,
 	})
 
 	ctx := context.Background()
@@ -268,14 +268,14 @@ func TestOrderService_ListOrders(t *testing.T) {
 
 	for _, symbol := range symbols {
 		orderReq := &orders.CreateOrderRequest{
-			UserID:      "user-001",
+			UserID:        "user-001",
 			ClientOrderID: "client-" + symbol,
-			Symbol:      symbol,
-			Side:        orders.SideBuy,
-			Type:        orders.TypeLimit,
-			Quantity:    100,
-			Price:       150.50,
-			TimeInForce: orders.TimeInForceGTC,
+			Symbol:        symbol,
+			Side:          orders.SideBuy,
+			Type:          orders.TypeLimit,
+			Quantity:      100,
+			Price:         150.50,
+			TimeInForce:   orders.TimeInForceGTC,
 		}
 
 		order, err := service.CreateOrder(ctx, orderReq)
@@ -327,8 +327,8 @@ func TestOrderService_ListOrders(t *testing.T) {
 func TestOrderLifecycle_StateTransitions(t *testing.T) {
 	lifecycle := orders.NewLifecycle(&orders.LifecycleConfig{
 		EnableStateValidation: true,
-		EnableAuditTrail:     true,
-		MaxRetries:           3,
+		EnableAuditTrail:      true,
+		MaxRetries:            3,
 	})
 
 	ctx := context.Background()
@@ -366,8 +366,8 @@ func TestOrderLifecycle_StateTransitions(t *testing.T) {
 func TestOrderLifecycle_CancellationStates(t *testing.T) {
 	lifecycle := orders.NewLifecycle(&orders.LifecycleConfig{
 		EnableStateValidation: true,
-		EnableAuditTrail:     true,
-		MaxRetries:           3,
+		EnableAuditTrail:      true,
+		MaxRetries:            3,
 	})
 
 	ctx := context.Background()
@@ -423,12 +423,12 @@ func TestOrderLifecycle_CancellationStates(t *testing.T) {
 
 func TestOrderValidator_BusinessRules(t *testing.T) {
 	validator := orders.NewValidator(&orders.ValidatorConfig{
-		MaxOrderValue:       1000000,
-		MaxQuantity:         10000,
-		MinPrice:           0.01,
-		MaxPrice:           10000.00,
-		EnableMarketHours:   true,
-		EnableSymbolCheck:   true,
+		MaxOrderValue:     1000000,
+		MaxQuantity:       10000,
+		MinPrice:          0.01,
+		MaxPrice:          10000.00,
+		EnableMarketHours: true,
+		EnableSymbolCheck: true,
 	})
 
 	ctx := context.Background()
@@ -480,11 +480,11 @@ func TestOrderValidator_BusinessRules(t *testing.T) {
 
 func BenchmarkOrderService_CreateOrder(b *testing.B) {
 	service := orders.NewService(&orders.Config{
-		MaxOrdersPerUser:    1000,
-		MaxOrderValue:       1000000,
-		EnableRiskChecks:    false, // Disable for benchmarking
-		EnableCompliance:    false, // Disable for benchmarking
-		OrderTimeout:        30 * time.Minute,
+		MaxOrdersPerUser: 1000,
+		MaxOrderValue:    1000000,
+		EnableRiskChecks: false, // Disable for benchmarking
+		EnableCompliance: false, // Disable for benchmarking
+		OrderTimeout:     30 * time.Minute,
 	})
 
 	ctx := context.Background()
@@ -494,14 +494,14 @@ func BenchmarkOrderService_CreateOrder(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		orderReq := &orders.CreateOrderRequest{
-			UserID:      "user-001",
+			UserID:        "user-001",
 			ClientOrderID: "client-" + string(rune(i)),
-			Symbol:      "AAPL",
-			Side:        orders.SideBuy,
-			Type:        orders.TypeLimit,
-			Quantity:    100,
-			Price:       150.50 + float64(i%100)*0.01,
-			TimeInForce: orders.TimeInForceGTC,
+			Symbol:        "AAPL",
+			Side:          orders.SideBuy,
+			Type:          orders.TypeLimit,
+			Quantity:      100,
+			Price:         150.50 + float64(i%100)*0.01,
+			TimeInForce:   orders.TimeInForceGTC,
 		}
 
 		_, err := service.CreateOrder(ctx, orderReq)
@@ -514,8 +514,8 @@ func BenchmarkOrderService_CreateOrder(b *testing.B) {
 func BenchmarkOrderLifecycle_StateTransition(b *testing.B) {
 	lifecycle := orders.NewLifecycle(&orders.LifecycleConfig{
 		EnableStateValidation: true,
-		EnableAuditTrail:     false, // Disable for benchmarking
-		MaxRetries:           3,
+		EnableAuditTrail:      false, // Disable for benchmarking
+		MaxRetries:            3,
 	})
 
 	ctx := context.Background()

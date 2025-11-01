@@ -62,7 +62,7 @@ func (adx *ADXService) validateOrder(order *Order) error {
 func (adx *ADXService) validateOrderSize(order *Order) error {
 	// Get asset-specific limits
 	limits := adx.getAssetLimits(order.AssetType)
-	
+
 	if limits == nil {
 		return fmt.Errorf("no limits defined for asset type: %v", order.AssetType)
 	}
@@ -163,17 +163,17 @@ func (adx *ADXService) getAssetLimits(assetType AssetType) *AssetLimits {
 		AssetTypeEquity: {
 			MinOrderSize:  1,
 			MaxOrderSize:  1000000,
-			MinOrderValue: 1000,   // AED 1,000
+			MinOrderValue: 1000,     // AED 1,000
 			MaxOrderValue: 50000000, // AED 50 million
 		},
 		AssetTypeSukuk: {
-			MinOrderSize:  1000,   // AED 1,000 face value
+			MinOrderSize:  1000,     // AED 1,000 face value
 			MaxOrderSize:  10000000, // AED 10 million
 			MinOrderValue: 1000,
 			MaxOrderValue: 100000000, // AED 100 million
 		},
 		AssetTypeIslamicFund: {
-			MinOrderSize:  100,    // 100 units
+			MinOrderSize:  100,     // 100 units
 			MaxOrderSize:  1000000, // 1 million units
 			MinOrderValue: 1000,
 			MaxOrderValue: 10000000, // AED 10 million
@@ -187,7 +187,7 @@ func (adx *ADXService) getAssetLimits(assetType AssetType) *AssetLimits {
 func (adx *ADXService) isMarketOpen(now time.Time) bool {
 	// Convert to UAE timezone
 	uaeTime := now.In(adx.tradingHours.Timezone)
-	
+
 	// Check if it's a weekend (Friday-Saturday in UAE)
 	weekday := uaeTime.Weekday()
 	if weekday == time.Friday || weekday == time.Saturday {
@@ -206,8 +206,8 @@ func (adx *ADXService) isMarketOpen(now time.Time) bool {
 	minute := uaeTime.Minute()
 	currentMinutes := hour*60 + minute
 
-	openMinutes := 10*60     // 10:00 AM
-	closeMinutes := 15*60    // 3:00 PM
+	openMinutes := 10 * 60  // 10:00 AM
+	closeMinutes := 15 * 60 // 3:00 PM
 
 	return currentMinutes >= openMinutes && currentMinutes < closeMinutes
 }
@@ -215,30 +215,30 @@ func (adx *ADXService) isMarketOpen(now time.Time) bool {
 // getCurrentSession returns the current trading session
 func (adx *ADXService) getCurrentSession(now time.Time) *TradingSession {
 	uaeTime := now.In(adx.tradingHours.Timezone)
-	
+
 	for _, session := range adx.tradingHours.TradingSessions {
 		if uaeTime.After(session.StartTime) && uaeTime.Before(session.EndTime) {
 			return &session
 		}
 	}
-	
+
 	return nil
 }
 
 // getNextMarketOpen returns the next market opening time
 func (adx *ADXService) getNextMarketOpen(now time.Time) time.Time {
 	uaeTime := now.In(adx.tradingHours.Timezone)
-	
+
 	// If market is currently open, return tomorrow's opening
 	if adx.isMarketOpen(uaeTime) {
 		return adx.getNextBusinessDay(uaeTime).Add(10 * time.Hour) // 10:00 AM
 	}
-	
+
 	// If it's the same day but before opening, return today's opening
 	if uaeTime.Hour() < 10 {
 		return time.Date(uaeTime.Year(), uaeTime.Month(), uaeTime.Day(), 10, 0, 0, 0, adx.tradingHours.Timezone)
 	}
-	
+
 	// Otherwise, return next business day opening
 	return adx.getNextBusinessDay(uaeTime).Add(10 * time.Hour)
 }
@@ -246,12 +246,12 @@ func (adx *ADXService) getNextMarketOpen(now time.Time) time.Time {
 // getNextMarketClose returns the next market closing time
 func (adx *ADXService) getNextMarketClose(now time.Time) time.Time {
 	uaeTime := now.In(adx.tradingHours.Timezone)
-	
+
 	// If market is currently open, return today's closing
 	if adx.isMarketOpen(uaeTime) {
 		return time.Date(uaeTime.Year(), uaeTime.Month(), uaeTime.Day(), 15, 0, 0, 0, adx.tradingHours.Timezone)
 	}
-	
+
 	// Otherwise, return next business day closing
 	return adx.getNextBusinessDay(uaeTime).Add(15 * time.Hour)
 }
@@ -259,7 +259,7 @@ func (adx *ADXService) getNextMarketClose(now time.Time) time.Time {
 // getNextBusinessDay returns the next business day (excluding weekends and holidays)
 func (adx *ADXService) getNextBusinessDay(from time.Time) time.Time {
 	next := from.AddDate(0, 0, 1)
-	
+
 	for {
 		weekday := next.Weekday()
 		if weekday != time.Friday && weekday != time.Saturday {
@@ -271,12 +271,12 @@ func (adx *ADXService) getNextBusinessDay(from time.Time) time.Time {
 					break
 				}
 			}
-			
+
 			if !isHoliday {
 				return next
 			}
 		}
-		
+
 		next = next.AddDate(0, 0, 1)
 	}
 }
@@ -288,7 +288,7 @@ func (adx *ADXService) calculateTradingFees(order *Order) (*TradingFees, error) 
 	}
 
 	orderValue := order.Quantity * order.Price
-	
+
 	fees := &TradingFees{
 		Currency: "AED",
 	}
@@ -331,12 +331,12 @@ func (adx *ADXService) calculateTradingFees(order *Order) (*TradingFees, error) 
 func (adx *ADXService) formatADXSymbol(symbol string) string {
 	// Convert to uppercase and remove spaces
 	formatted := strings.ToUpper(strings.ReplaceAll(symbol, " ", ""))
-	
+
 	// Ensure it meets ADX format requirements
 	if len(formatted) > 10 {
 		formatted = formatted[:10]
 	}
-	
+
 	return formatted
 }
 
@@ -375,14 +375,14 @@ func (adx *ADXService) generateOrderID() string {
 // logOrderActivity logs order activity for audit purposes
 func (adx *ADXService) logOrderActivity(order *Order, activity string, details map[string]interface{}) {
 	logEntry := map[string]interface{}{
-		"timestamp":   time.Now(),
-		"exchange":    "ADX",
-		"order_id":    order.OrderID,
-		"symbol":      order.Symbol,
-		"activity":    activity,
-		"asset_type":  order.AssetType,
-		"islamic":     adx.isIslamicAsset(order.AssetType),
-		"details":     details,
+		"timestamp":  time.Now(),
+		"exchange":   "ADX",
+		"order_id":   order.OrderID,
+		"symbol":     order.Symbol,
+		"activity":   activity,
+		"asset_type": order.AssetType,
+		"islamic":    adx.isIslamicAsset(order.AssetType),
+		"details":    details,
 	}
 
 	// Log to audit trail

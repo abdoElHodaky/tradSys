@@ -3,7 +3,7 @@ package risk
 import (
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/core/matching"
+	order_matching "github.com/abdoElHodaky/tradSys/internal/core/matching"
 	riskengine "github.com/abdoElHodaky/tradSys/internal/risk/engine"
 	"go.uber.org/zap"
 )
@@ -130,7 +130,7 @@ func (s *Service) processTrade(trade *order_matching.Trade) {
 			zap.Error(err))
 		return
 	}
-	
+
 	sellOrder, err := s.OrderService.GetOrder(trade.SellOrderID)
 	if err != nil {
 		s.logger.Warn("Could not find sell order for trade",
@@ -139,7 +139,7 @@ func (s *Service) processTrade(trade *order_matching.Trade) {
 			zap.Error(err))
 		return
 	}
-	
+
 	if buyOrder == nil || sellOrder == nil {
 		s.logger.Warn("Could not find orders for trade",
 			zap.String("trade_id", trade.ID),

@@ -74,9 +74,9 @@ type HFTOrderBook struct {
 	lastTradeTime time.Time
 
 	// Spread tracking
-	bestBid  uint64 // atomic
-	bestAsk  uint64 // atomic
-	spread   uint64 // atomic
+	bestBid uint64 // atomic
+	bestAsk uint64 // atomic
+	spread  uint64 // atomic
 
 	// Lock for critical sections (minimal usage)
 	mu sync.RWMutex

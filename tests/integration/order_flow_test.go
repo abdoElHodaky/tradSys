@@ -44,11 +44,11 @@ func (suite *OrderFlowTestSuite) SetupSuite() {
 
 	// Initialize matching engine
 	suite.matchingEngine = matching.NewEngine(&matching.Config{
-		Symbol:           "AAPL",
-		LatencyTargetNS:  100000,
-		MaxOrdersPerSec:  100000,
-		OrderBookDepth:   1000,
-		EnableHFTMode:    true,
+		Symbol:          "AAPL",
+		LatencyTargetNS: 100000,
+		MaxOrdersPerSec: 100000,
+		OrderBookDepth:  1000,
+		EnableHFTMode:   true,
 	})
 }
 
@@ -57,14 +57,14 @@ func (suite *OrderFlowTestSuite) TestCompleteOrderFlow() {
 
 	// Step 1: Create buy order
 	buyOrderReq := &orders.CreateOrderRequest{
-		UserID:      "user-001",
+		UserID:        "user-001",
 		ClientOrderID: "buy-001",
-		Symbol:      "AAPL",
-		Side:        orders.SideBuy,
-		Type:        orders.TypeLimit,
-		Quantity:    100,
-		Price:       150.50,
-		TimeInForce: orders.TimeInForceGTC,
+		Symbol:        "AAPL",
+		Side:          orders.SideBuy,
+		Type:          orders.TypeLimit,
+		Quantity:      100,
+		Price:         150.50,
+		TimeInForce:   orders.TimeInForceGTC,
 	}
 
 	buyOrder, err := suite.orderService.CreateOrder(suite.ctx, buyOrderReq)
@@ -86,8 +86,8 @@ func (suite *OrderFlowTestSuite) TestCompleteOrderFlow() {
 		},
 		TotalMarketValue:   75000,
 		TotalUnrealizedPnL: 2500,
-		Cash:              425000,
-		TotalValue:        500000,
+		Cash:               425000,
+		TotalValue:         500000,
 	}
 
 	orderRisk := &risk.OrderRisk{
@@ -122,14 +122,14 @@ func (suite *OrderFlowTestSuite) TestCompleteOrderFlow() {
 
 	// Step 4: Create matching sell order
 	sellOrderReq := &orders.CreateOrderRequest{
-		UserID:      "user-002",
+		UserID:        "user-002",
 		ClientOrderID: "sell-001",
-		Symbol:      "AAPL",
-		Side:        orders.SideSell,
-		Type:        orders.TypeLimit,
-		Quantity:    100,
-		Price:       150.50,
-		TimeInForce: orders.TimeInForceGTC,
+		Symbol:        "AAPL",
+		Side:          orders.SideSell,
+		Type:          orders.TypeLimit,
+		Quantity:      100,
+		Price:         150.50,
+		TimeInForce:   orders.TimeInForceGTC,
 	}
 
 	sellOrder, err := suite.orderService.CreateOrder(suite.ctx, sellOrderReq)
@@ -166,14 +166,14 @@ func (suite *OrderFlowTestSuite) TestPartialFillFlow() {
 
 	// Create large buy order
 	buyOrderReq := &orders.CreateOrderRequest{
-		UserID:      "user-003",
+		UserID:        "user-003",
 		ClientOrderID: "buy-large-001",
-		Symbol:      "AAPL",
-		Side:        orders.SideBuy,
-		Type:        orders.TypeLimit,
-		Quantity:    1000,
-		Price:       151.00,
-		TimeInForce: orders.TimeInForceGTC,
+		Symbol:        "AAPL",
+		Side:          orders.SideBuy,
+		Type:          orders.TypeLimit,
+		Quantity:      1000,
+		Price:         151.00,
+		TimeInForce:   orders.TimeInForceGTC,
 	}
 
 	buyOrder, err := suite.orderService.CreateOrder(suite.ctx, buyOrderReq)
@@ -202,14 +202,14 @@ func (suite *OrderFlowTestSuite) TestPartialFillFlow() {
 
 	for i, qty := range sellQuantities {
 		sellOrderReq := &orders.CreateOrderRequest{
-			UserID:      "user-004",
+			UserID:        "user-004",
 			ClientOrderID: "sell-partial-" + string(rune(i)),
-			Symbol:      "AAPL",
-			Side:        orders.SideSell,
-			Type:        orders.TypeLimit,
-			Quantity:    qty,
-			Price:       151.00,
-			TimeInForce: orders.TimeInForceGTC,
+			Symbol:        "AAPL",
+			Side:          orders.SideSell,
+			Type:          orders.TypeLimit,
+			Quantity:      qty,
+			Price:         151.00,
+			TimeInForce:   orders.TimeInForceGTC,
 		}
 
 		sellOrder, err := suite.orderService.CreateOrder(suite.ctx, sellOrderReq)
@@ -268,8 +268,8 @@ func (suite *OrderFlowTestSuite) TestRiskRejectionFlow() {
 		},
 		TotalMarketValue:   775000,
 		TotalUnrealizedPnL: 25000,
-		Cash:              225000,
-		TotalValue:        1000000,
+		Cash:               225000,
+		TotalValue:         1000000,
 	}
 
 	// Try to create order that would exceed concentration limits
@@ -305,14 +305,14 @@ func (suite *OrderFlowTestSuite) TestMarketOrderFlow() {
 	sellPrices := []float64{152.00, 152.25, 152.50}
 	for i, price := range sellPrices {
 		sellOrderReq := &orders.CreateOrderRequest{
-			UserID:      "user-liquidity",
+			UserID:        "user-liquidity",
 			ClientOrderID: "sell-liquidity-" + string(rune(i)),
-			Symbol:      "AAPL",
-			Side:        orders.SideSell,
-			Type:        orders.TypeLimit,
-			Quantity:    100,
-			Price:       price,
-			TimeInForce: orders.TimeInForceGTC,
+			Symbol:        "AAPL",
+			Side:          orders.SideSell,
+			Type:          orders.TypeLimit,
+			Quantity:      100,
+			Price:         price,
+			TimeInForce:   orders.TimeInForceGTC,
 		}
 
 		sellOrder, err := suite.orderService.CreateOrder(suite.ctx, sellOrderReq)
@@ -336,13 +336,13 @@ func (suite *OrderFlowTestSuite) TestMarketOrderFlow() {
 
 	// Now create market buy order
 	marketOrderReq := &orders.CreateOrderRequest{
-		UserID:      "user-006",
+		UserID:        "user-006",
 		ClientOrderID: "market-buy-001",
-		Symbol:      "AAPL",
-		Side:        orders.SideBuy,
-		Type:        orders.TypeMarket,
-		Quantity:    250, // Should match against all three sell orders
-		TimeInForce: orders.TimeInForceIOC,
+		Symbol:        "AAPL",
+		Side:          orders.SideBuy,
+		Type:          orders.TypeMarket,
+		Quantity:      250, // Should match against all three sell orders
+		TimeInForce:   orders.TimeInForceIOC,
 	}
 
 	marketOrder, err := suite.orderService.CreateOrder(suite.ctx, marketOrderReq)
@@ -378,14 +378,14 @@ func (suite *OrderFlowTestSuite) TestOrderCancellationFlow() {
 
 	// Create order
 	orderReq := &orders.CreateOrderRequest{
-		UserID:      "user-007",
+		UserID:        "user-007",
 		ClientOrderID: "cancel-test-001",
-		Symbol:      "AAPL",
-		Side:        orders.SideBuy,
-		Type:        orders.TypeLimit,
-		Quantity:    100,
-		Price:       149.00,
-		TimeInForce: orders.TimeInForceGTC,
+		Symbol:        "AAPL",
+		Side:          orders.SideBuy,
+		Type:          orders.TypeLimit,
+		Quantity:      100,
+		Price:         149.00,
+		TimeInForce:   orders.TimeInForceGTC,
 	}
 
 	order, err := suite.orderService.CreateOrder(suite.ctx, orderReq)
@@ -471,14 +471,14 @@ func (suite *OrderFlowTestSuite) TestHighFrequencyOrderFlow() {
 		}
 
 		orderReq := &orders.CreateOrderRequest{
-			UserID:      "user-hft",
+			UserID:        "user-hft",
 			ClientOrderID: "hft-" + string(rune(i)),
-			Symbol:      "AAPL",
-			Side:        side,
-			Type:        orders.TypeLimit,
-			Quantity:    100,
-			Price:       price,
-			TimeInForce: orders.TimeInForceGTC,
+			Symbol:        "AAPL",
+			Side:          side,
+			Type:          orders.TypeLimit,
+			Quantity:      100,
+			Price:         price,
+			TimeInForce:   orders.TimeInForceGTC,
 		}
 
 		order, err := suite.orderService.CreateOrder(suite.ctx, orderReq)

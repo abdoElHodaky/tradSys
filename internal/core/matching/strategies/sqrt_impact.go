@@ -3,7 +3,7 @@ package strategies
 
 import (
 	"math"
-	
+
 	"github.com/abdoElHodaky/tradSys/internal/trading/types"
 	"github.com/abdoElHodaky/tradSys/pkg/interfaces"
 )

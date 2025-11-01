@@ -149,9 +149,9 @@ func (r *RuleEngine) checkRule(rule ComplianceRule, order *types.Order, userID s
 					Severity:    rule.Severity,
 					Description: "Potential market manipulation detected: large volume order",
 					Details: map[string]interface{}{
-						"order_volume":      order.Quantity,
-						"volume_threshold":  volumeThreshold,
-						"price_deviation":   priceDeviation,
+						"order_volume":     order.Quantity,
+						"volume_threshold": volumeThreshold,
+						"price_deviation":  priceDeviation,
 					},
 					Status:     ViolationStatusOpen,
 					DetectedAt: time.Now(),
@@ -167,7 +167,7 @@ func (r *RuleEngine) checkRule(rule ComplianceRule, order *types.Order, userID s
 func (r *RuleEngine) GetViolations() []ComplianceViolation {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	// Return a copy to avoid race conditions
 	violations := make([]ComplianceViolation, len(r.violations))
 	copy(violations, r.violations)
@@ -178,7 +178,7 @@ func (r *RuleEngine) GetViolations() []ComplianceViolation {
 func (r *RuleEngine) GetRules() map[string]ComplianceRule {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	// Return a copy to avoid race conditions
 	rules := make(map[string]ComplianceRule)
 	for k, v := range r.rules {
@@ -228,7 +228,7 @@ func (g *ReportGenerator) GenerateReport(reportType ReportType, startDate, endDa
 func (g *ReportGenerator) GetReports() []ComplianceReport {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
-	
+
 	// Return a copy to avoid race conditions
 	reports := make([]ComplianceReport, len(g.reports))
 	copy(reports, g.reports)
@@ -246,7 +246,7 @@ func (g *ReportGenerator) AddTemplate(template ReportTemplate) {
 func (g *ReportGenerator) GetTemplates() map[string]ReportTemplate {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
-	
+
 	// Return a copy to avoid race conditions
 	templates := make(map[string]ReportTemplate)
 	for k, v := range g.templates {
@@ -371,7 +371,7 @@ func (m *AlertManager) Subscribe(handler AlertHandler) {
 func (m *AlertManager) GetAlerts() []ComplianceAlert {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	// Return a copy to avoid race conditions
 	alerts := make([]ComplianceAlert, len(m.alerts))
 	copy(alerts, m.alerts)
@@ -388,7 +388,7 @@ func (m *AlertManager) AcknowledgeAlert(alertID string) error {
 			now := time.Now()
 			m.alerts[i].Status = AlertStatusAcknowledged
 			m.alerts[i].AcknowledgedAt = &now
-			
+
 			m.logger.Info("Alert acknowledged",
 				zap.String("alert_id", alertID))
 			return nil
@@ -406,7 +406,7 @@ func (m *AlertManager) ResolveAlert(alertID string) error {
 	for i, alert := range m.alerts {
 		if alert.ID == alertID {
 			m.alerts[i].Status = AlertStatusResolved
-			
+
 			m.logger.Info("Alert resolved",
 				zap.String("alert_id", alertID))
 			return nil

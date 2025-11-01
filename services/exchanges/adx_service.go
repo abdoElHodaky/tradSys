@@ -26,4 +26,3 @@ package exchanges
 // All validation and processing logic has been moved to adx_processors.go
 // while maintaining the exact same API and functionality with enhanced
 // Islamic finance capabilities for the UAE market.
-

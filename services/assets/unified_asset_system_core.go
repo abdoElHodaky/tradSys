@@ -268,10 +268,10 @@ func (uas *UnifiedAssetSystem) updatePortfolioValues(ctx context.Context, portfo
 // Constructor functions for components (placeholder implementations)
 func NewAssetRegistry() *AssetRegistry {
 	return &AssetRegistry{
-		assets:          make(map[string]*UnifiedAsset),
+		assets:           make(map[string]*UnifiedAsset),
 		assetsByExchange: make(map[string]map[string]*UnifiedAsset),
-		assetsByType:    make(map[exchanges.AssetType][]*UnifiedAsset),
-		searchIndex:     &AssetSearchIndex{},
+		assetsByType:     make(map[exchanges.AssetType][]*UnifiedAsset),
+		searchIndex:      &AssetSearchIndex{},
 	}
 }
 

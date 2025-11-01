@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/pkg/matching"
-	"github.com/stretchr/testify/require"
 )
 
 // BenchmarkMatchingEngine_SingleThreaded tests single-threaded performance
@@ -30,13 +29,13 @@ func BenchmarkMatchingEngine_SingleThreaded(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		order := &matching.Order{
-			ID:       fmt.Sprintf("order-%d", i),
-			UserID:   "user-001",
-			Symbol:   "AAPL",
-			Side:     matching.SideBuy,
-			Type:     matching.TypeLimit,
-			Quantity: 100,
-			Price:    150.00 + float64(i%1000)*0.01,
+			ID:          fmt.Sprintf("order-%d", i),
+			UserID:      "user-001",
+			Symbol:      "AAPL",
+			Side:        matching.SideBuy,
+			Type:        matching.TypeLimit,
+			Quantity:    100,
+			Price:       150.00 + float64(i%1000)*0.01,
 			TimeInForce: matching.TimeInForceGTC,
 			Timestamp:   time.Now(),
 		}
@@ -64,13 +63,13 @@ func BenchmarkMatchingEngine_WithMatching(b *testing.B) {
 	// Pre-populate with buy orders
 	for i := 0; i < 1000; i++ {
 		buyOrder := &matching.Order{
-			ID:       fmt.Sprintf("buy-%d", i),
-			UserID:   "user-buy",
-			Symbol:   "AAPL",
-			Side:     matching.SideBuy,
-			Type:     matching.TypeLimit,
-			Quantity: 100,
-			Price:    150.00 + float64(i)*0.01,
+			ID:          fmt.Sprintf("buy-%d", i),
+			UserID:      "user-buy",
+			Symbol:      "AAPL",
+			Side:        matching.SideBuy,
+			Type:        matching.TypeLimit,
+			Quantity:    100,
+			Price:       150.00 + float64(i)*0.01,
 			TimeInForce: matching.TimeInForceGTC,
 			Timestamp:   time.Now(),
 		}
@@ -83,13 +82,13 @@ func BenchmarkMatchingEngine_WithMatching(b *testing.B) {
 	// Benchmark sell orders that will match
 	for i := 0; i < b.N; i++ {
 		sellOrder := &matching.Order{
-			ID:       fmt.Sprintf("sell-%d", i),
-			UserID:   "user-sell",
-			Symbol:   "AAPL",
-			Side:     matching.SideSell,
-			Type:     matching.TypeLimit,
-			Quantity: 100,
-			Price:    150.00 + float64(i%1000)*0.01,
+			ID:          fmt.Sprintf("sell-%d", i),
+			UserID:      "user-sell",
+			Symbol:      "AAPL",
+			Side:        matching.SideSell,
+			Type:        matching.TypeLimit,
+			Quantity:    100,
+			Price:       150.00 + float64(i%1000)*0.01,
 			TimeInForce: matching.TimeInForceGTC,
 			Timestamp:   time.Now(),
 		}
@@ -117,13 +116,13 @@ func BenchmarkMatchingEngine_MarketOrders(b *testing.B) {
 	// Pre-populate with sell orders at different prices
 	for i := 0; i < 1000; i++ {
 		sellOrder := &matching.Order{
-			ID:       fmt.Sprintf("sell-%d", i),
-			UserID:   "user-sell",
-			Symbol:   "AAPL",
-			Side:     matching.SideSell,
-			Type:     matching.TypeLimit,
-			Quantity: 100,
-			Price:    150.00 + float64(i)*0.01,
+			ID:          fmt.Sprintf("sell-%d", i),
+			UserID:      "user-sell",
+			Symbol:      "AAPL",
+			Side:        matching.SideSell,
+			Type:        matching.TypeLimit,
+			Quantity:    100,
+			Price:       150.00 + float64(i)*0.01,
 			TimeInForce: matching.TimeInForceGTC,
 			Timestamp:   time.Now(),
 		}
@@ -136,12 +135,12 @@ func BenchmarkMatchingEngine_MarketOrders(b *testing.B) {
 	// Benchmark market buy orders
 	for i := 0; i < b.N; i++ {
 		marketOrder := &matching.Order{
-			ID:       fmt.Sprintf("market-%d", i),
-			UserID:   "user-market",
-			Symbol:   "AAPL",
-			Side:     matching.SideBuy,
-			Type:     matching.TypeMarket,
-			Quantity: 100,
+			ID:          fmt.Sprintf("market-%d", i),
+			UserID:      "user-market",
+			Symbol:      "AAPL",
+			Side:        matching.SideBuy,
+			Type:        matching.TypeMarket,
+			Quantity:    100,
 			TimeInForce: matching.TimeInForceIOC,
 			Timestamp:   time.Now(),
 		}
@@ -174,13 +173,13 @@ func BenchmarkMatchingEngine_Concurrent(b *testing.B) {
 		orderID := 0
 		for pb.Next() {
 			order := &matching.Order{
-				ID:       fmt.Sprintf("concurrent-%d-%d", runtime.NumGoroutine(), orderID),
-				UserID:   fmt.Sprintf("user-%d", runtime.NumGoroutine()),
-				Symbol:   "AAPL",
-				Side:     matching.SideBuy,
-				Type:     matching.TypeLimit,
-				Quantity: 100,
-				Price:    150.00 + float64(orderID%1000)*0.01,
+				ID:          fmt.Sprintf("concurrent-%d-%d", runtime.NumGoroutine(), orderID),
+				UserID:      fmt.Sprintf("user-%d", runtime.NumGoroutine()),
+				Symbol:      "AAPL",
+				Side:        matching.SideBuy,
+				Type:        matching.TypeLimit,
+				Quantity:    100,
+				Price:       150.00 + float64(orderID%1000)*0.01,
 				TimeInForce: matching.TimeInForceGTC,
 				Timestamp:   time.Now(),
 			}
@@ -226,13 +225,13 @@ func BenchmarkMatchingEngine_HighVolume(b *testing.B) {
 		}
 
 		order := &matching.Order{
-			ID:       fmt.Sprintf("hv-%d", i),
-			UserID:   fmt.Sprintf("user-%d", i%1000),
-			Symbol:   "AAPL",
-			Side:     side,
-			Type:     matching.TypeLimit,
-			Quantity: 100,
-			Price:    price,
+			ID:          fmt.Sprintf("hv-%d", i),
+			UserID:      fmt.Sprintf("user-%d", i%1000),
+			Symbol:      "AAPL",
+			Side:        side,
+			Type:        matching.TypeLimit,
+			Quantity:    100,
+			Price:       price,
 			TimeInForce: matching.TimeInForceGTC,
 			Timestamp:   time.Now(),
 		}
@@ -262,13 +261,13 @@ func BenchmarkMatchingEngine_Latency(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		order := &matching.Order{
-			ID:       fmt.Sprintf("latency-%d", i),
-			UserID:   "user-001",
-			Symbol:   "AAPL",
-			Side:     matching.SideBuy,
-			Type:     matching.TypeLimit,
-			Quantity: 100,
-			Price:    150.00 + float64(i%1000)*0.01,
+			ID:          fmt.Sprintf("latency-%d", i),
+			UserID:      "user-001",
+			Symbol:      "AAPL",
+			Side:        matching.SideBuy,
+			Type:        matching.TypeLimit,
+			Quantity:    100,
+			Price:       150.00 + float64(i%1000)*0.01,
 			TimeInForce: matching.TimeInForceGTC,
 			Timestamp:   time.Now(),
 		}
@@ -334,13 +333,13 @@ func BenchmarkMatchingEngine_Throughput(b *testing.B) {
 
 	for i := 0; i < orderCount; i++ {
 		order := &matching.Order{
-			ID:       fmt.Sprintf("throughput-%d", i),
-			UserID:   "user-001",
-			Symbol:   "AAPL",
-			Side:     matching.SideBuy,
-			Type:     matching.TypeLimit,
-			Quantity: 100,
-			Price:    150.00 + float64(i%1000)*0.01,
+			ID:          fmt.Sprintf("throughput-%d", i),
+			UserID:      "user-001",
+			Symbol:      "AAPL",
+			Side:        matching.SideBuy,
+			Type:        matching.TypeLimit,
+			Quantity:    100,
+			Price:       150.00 + float64(i%1000)*0.01,
 			TimeInForce: matching.TimeInForceGTC,
 			Timestamp:   time.Now(),
 		}
@@ -387,13 +386,13 @@ func BenchmarkMatchingEngine_MemoryUsage(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		order := &matching.Order{
-			ID:       fmt.Sprintf("memory-%d", i),
-			UserID:   "user-001",
-			Symbol:   "AAPL",
-			Side:     matching.SideBuy,
-			Type:     matching.TypeLimit,
-			Quantity: 100,
-			Price:    150.00 + float64(i%1000)*0.01,
+			ID:          fmt.Sprintf("memory-%d", i),
+			UserID:      "user-001",
+			Symbol:      "AAPL",
+			Side:        matching.SideBuy,
+			Type:        matching.TypeLimit,
+			Quantity:    100,
+			Price:       150.00 + float64(i%1000)*0.01,
 			TimeInForce: matching.TimeInForceGTC,
 			Timestamp:   time.Now(),
 		}
@@ -455,13 +454,13 @@ func BenchmarkMatchingEngine_ConcurrentMatching(b *testing.B) {
 				}
 
 				order := &matching.Order{
-					ID:       fmt.Sprintf("worker-%d-%d", workerID, i),
-					UserID:   fmt.Sprintf("user-%d", workerID),
-					Symbol:   "AAPL",
-					Side:     side,
-					Type:     matching.TypeLimit,
-					Quantity: 100,
-					Price:    150.00 + float64(i%100)*0.01,
+					ID:          fmt.Sprintf("worker-%d-%d", workerID, i),
+					UserID:      fmt.Sprintf("user-%d", workerID),
+					Symbol:      "AAPL",
+					Side:        side,
+					Type:        matching.TypeLimit,
+					Quantity:    100,
+					Price:       150.00 + float64(i%100)*0.01,
 					TimeInForce: matching.TimeInForceGTC,
 					Timestamp:   time.Now(),
 				}
@@ -507,26 +506,26 @@ func BenchmarkMatchingEngine_OrderBookDepth(b *testing.B) {
 			// Pre-populate order book to specified depth
 			for i := 0; i < depth/2; i++ {
 				buyOrder := &matching.Order{
-					ID:       fmt.Sprintf("buy-depth-%d", i),
-					UserID:   "user-buy",
-					Symbol:   "AAPL",
-					Side:     matching.SideBuy,
-					Type:     matching.TypeLimit,
-					Quantity: 100,
-					Price:    150.00 - float64(i)*0.01,
+					ID:          fmt.Sprintf("buy-depth-%d", i),
+					UserID:      "user-buy",
+					Symbol:      "AAPL",
+					Side:        matching.SideBuy,
+					Type:        matching.TypeLimit,
+					Quantity:    100,
+					Price:       150.00 - float64(i)*0.01,
 					TimeInForce: matching.TimeInForceGTC,
 					Timestamp:   time.Now(),
 				}
 				engine.ProcessOrder(ctx, buyOrder)
 
 				sellOrder := &matching.Order{
-					ID:       fmt.Sprintf("sell-depth-%d", i),
-					UserID:   "user-sell",
-					Symbol:   "AAPL",
-					Side:     matching.SideSell,
-					Type:     matching.TypeLimit,
-					Quantity: 100,
-					Price:    150.00 + float64(i)*0.01,
+					ID:          fmt.Sprintf("sell-depth-%d", i),
+					UserID:      "user-sell",
+					Symbol:      "AAPL",
+					Side:        matching.SideSell,
+					Type:        matching.TypeLimit,
+					Quantity:    100,
+					Price:       150.00 + float64(i)*0.01,
 					TimeInForce: matching.TimeInForceGTC,
 					Timestamp:   time.Now(),
 				}
@@ -539,13 +538,13 @@ func BenchmarkMatchingEngine_OrderBookDepth(b *testing.B) {
 			// Benchmark order processing with populated book
 			for i := 0; i < b.N; i++ {
 				order := &matching.Order{
-					ID:       fmt.Sprintf("test-%d", i),
-					UserID:   "user-test",
-					Symbol:   "AAPL",
-					Side:     matching.SideBuy,
-					Type:     matching.TypeLimit,
-					Quantity: 100,
-					Price:    150.00 + float64(i%100)*0.01,
+					ID:          fmt.Sprintf("test-%d", i),
+					UserID:      "user-test",
+					Symbol:      "AAPL",
+					Side:        matching.SideBuy,
+					Type:        matching.TypeLimit,
+					Quantity:    100,
+					Price:       150.00 + float64(i%100)*0.01,
 					TimeInForce: matching.TimeInForceGTC,
 					Timestamp:   time.Now(),
 				}

@@ -428,15 +428,15 @@ func (ob *OrderBook) executeTrade(takerOrder, makerOrder *Order, remainingQuanti
 	}
 
 	trade := &Trade{
-		ID:          uuid.New().String(),
-		Symbol:      ob.Symbol,
-		Price:       makerOrder.Price,
-		Quantity:    tradeQuantity,
-		Timestamp:   time.Now(),
-		TakerSide:   takerOrder.Side,
-		MakerSide:   makerOrder.Side,
-		TakerFee:    tradeQuantity * makerOrder.Price * 0.001, // 0.1% fee
-		MakerFee:    tradeQuantity * makerOrder.Price * 0.0005, // 0.05% fee
+		ID:        uuid.New().String(),
+		Symbol:    ob.Symbol,
+		Price:     makerOrder.Price,
+		Quantity:  tradeQuantity,
+		Timestamp: time.Now(),
+		TakerSide: takerOrder.Side,
+		MakerSide: makerOrder.Side,
+		TakerFee:  tradeQuantity * makerOrder.Price * 0.001,  // 0.1% fee
+		MakerFee:  tradeQuantity * makerOrder.Price * 0.0005, // 0.05% fee
 	}
 
 	if takerOrder.Side == OrderSideBuy {

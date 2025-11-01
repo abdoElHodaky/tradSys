@@ -38,25 +38,25 @@ const (
 
 // CircuitBreaker implements the circuit breaker pattern
 type CircuitBreaker struct {
-	mu                sync.RWMutex
-	state             CircuitBreakerState
-	failureCount      int
-	successCount      int
-	lastFailureTime   time.Time
-	failureThreshold  int
-	recoveryTimeout   time.Duration
-	halfOpenMaxCalls  int
-	logger            *zap.Logger
+	mu               sync.RWMutex
+	state            CircuitBreakerState
+	failureCount     int
+	successCount     int
+	lastFailureTime  time.Time
+	failureThreshold int
+	recoveryTimeout  time.Duration
+	halfOpenMaxCalls int
+	logger           *zap.Logger
 }
 
 // NewCircuitBreaker creates a new circuit breaker
 func NewCircuitBreaker(failureThreshold int, recoveryTimeout time.Duration, logger *zap.Logger) *CircuitBreaker {
 	return &CircuitBreaker{
-		state:             StateClosed,
-		failureThreshold:  failureThreshold,
-		recoveryTimeout:   recoveryTimeout,
-		halfOpenMaxCalls:  3,
-		logger:            logger,
+		state:            StateClosed,
+		failureThreshold: failureThreshold,
+		recoveryTimeout:  recoveryTimeout,
+		halfOpenMaxCalls: 3,
+		logger:           logger,
 	}
 }
 
@@ -110,7 +110,7 @@ func (cb *CircuitBreaker) recordResult(success bool) {
 	} else {
 		cb.failureCount++
 		cb.lastFailureTime = time.Now()
-		
+
 		if cb.state == StateClosed && cb.failureCount >= cb.failureThreshold {
 			cb.state = StateOpen
 			cb.logger.Warn("Circuit breaker opened due to failures",

@@ -9,38 +9,38 @@ import (
 
 // PerformanceOptimizer provides comprehensive performance optimization
 type PerformanceOptimizer struct {
-	cacheOptimizer     *CacheOptimizer
-	databaseOptimizer  *DatabaseOptimizer
-	networkOptimizer   *NetworkOptimizer
-	memoryOptimizer    *MemoryOptimizer
-	cpuOptimizer       *CPUOptimizer
-	loadBalancer       *IntelligentLoadBalancer
-	autoScaler         *AutoScaler
-	regionOptimizer    *RegionalOptimizer
-	securityOptimizer  *SecurityOptimizer
-	monitoringSystem   *ComprehensiveMonitoring
-	alertManager       *AlertManager
+	cacheOptimizer      *CacheOptimizer
+	databaseOptimizer   *DatabaseOptimizer
+	networkOptimizer    *NetworkOptimizer
+	memoryOptimizer     *MemoryOptimizer
+	cpuOptimizer        *CPUOptimizer
+	loadBalancer        *IntelligentLoadBalancer
+	autoScaler          *AutoScaler
+	regionOptimizer     *RegionalOptimizer
+	securityOptimizer   *SecurityOptimizer
+	monitoringSystem    *ComprehensiveMonitoring
+	alertManager        *AlertManager
 	performanceAnalyzer *PerformanceAnalyzer
-	mu                 sync.RWMutex
+	mu                  sync.RWMutex
 }
 
 // CacheOptimizer optimizes caching across all services
 type CacheOptimizer struct {
-	cacheStrategies map[string]CacheStrategy
-	hitRateMonitor  *CacheHitRateMonitor
-	evictionPolicy  *EvictionPolicyManager
+	cacheStrategies  map[string]CacheStrategy
+	hitRateMonitor   *CacheHitRateMonitor
+	evictionPolicy   *EvictionPolicyManager
 	distributedCache *DistributedCacheManager
-	mu              sync.RWMutex
+	mu               sync.RWMutex
 }
 
 // DatabaseOptimizer optimizes database performance
 type DatabaseOptimizer struct {
-	queryOptimizer    *QueryOptimizer
-	indexManager      *IndexManager
-	connectionPooler  *ConnectionPoolOptimizer
-	shardingManager   *ShardingManager
+	queryOptimizer     *QueryOptimizer
+	indexManager       *IndexManager
+	connectionPooler   *ConnectionPoolOptimizer
+	shardingManager    *ShardingManager
 	replicationManager *ReplicationManager
-	mu                sync.RWMutex
+	mu                 sync.RWMutex
 }
 
 // NetworkOptimizer optimizes network performance
@@ -55,44 +55,44 @@ type NetworkOptimizer struct {
 
 // RegionalOptimizer optimizes performance for different regions
 type RegionalOptimizer struct {
-	regionConfigs     map[string]*RegionConfig
-	edgeNodes         map[string]*EdgeNode
-	routingOptimizer  *RegionalRoutingOptimizer
-	dataReplication   *RegionalDataReplication
-	mu                sync.RWMutex
+	regionConfigs    map[string]*RegionConfig
+	edgeNodes        map[string]*EdgeNode
+	routingOptimizer *RegionalRoutingOptimizer
+	dataReplication  *RegionalDataReplication
+	mu               sync.RWMutex
 }
 
 // RegionConfig defines configuration for a specific region
 type RegionConfig struct {
-	RegionID        string
-	Name            string
-	Timezone        *time.Location
-	PrimaryExchange string
-	LatencyTarget   time.Duration
+	RegionID         string
+	Name             string
+	Timezone         *time.Location
+	PrimaryExchange  string
+	LatencyTarget    time.Duration
 	ThroughputTarget int64
-	EdgeNodes       []string
-	CacheConfig     *RegionalCacheConfig
-	DatabaseConfig  *RegionalDatabaseConfig
+	EdgeNodes        []string
+	CacheConfig      *RegionalCacheConfig
+	DatabaseConfig   *RegionalDatabaseConfig
 }
 
 // AutoScaler provides intelligent auto-scaling
 type AutoScaler struct {
-	scalingPolicies   map[string]*ScalingPolicy
-	metricsCollector  *MetricsCollector
-	predictionEngine  *ScalingPredictionEngine
-	resourceManager   *ResourceManager
-	mu                sync.RWMutex
+	scalingPolicies  map[string]*ScalingPolicy
+	metricsCollector *MetricsCollector
+	predictionEngine *ScalingPredictionEngine
+	resourceManager  *ResourceManager
+	mu               sync.RWMutex
 }
 
 // ScalingPolicy defines auto-scaling policy
 type ScalingPolicy struct {
-	ServiceName     string
-	MinInstances    int
-	MaxInstances    int
-	TargetCPU       float64
-	TargetMemory    float64
-	TargetLatency   time.Duration
-	ScaleUpCooldown time.Duration
+	ServiceName       string
+	MinInstances      int
+	MaxInstances      int
+	TargetCPU         float64
+	TargetMemory      float64
+	TargetLatency     time.Duration
+	ScaleUpCooldown   time.Duration
 	ScaleDownCooldown time.Duration
 	PredictiveScaling bool
 }
@@ -127,14 +127,14 @@ type OptimizationReport struct {
 
 // OptimizationResult represents the result of a specific optimization
 type OptimizationResult struct {
-	Component     string
-	Type          string
-	Description   string
+	Component      string
+	Type           string
+	Description    string
 	ImprovementPct float64
-	BeforeMetrics map[string]float64
-	AfterMetrics  map[string]float64
-	Success       bool
-	Error         string
+	BeforeMetrics  map[string]float64
+	AfterMetrics   map[string]float64
+	Success        bool
+	Error          string
 }
 
 // PerformanceMetrics represents comprehensive performance metrics
@@ -150,12 +150,12 @@ type PerformanceMetrics struct {
 
 // CacheMetrics represents cache performance metrics
 type CacheMetrics struct {
-	HitRate         float64
-	MissRate        float64
-	EvictionRate    float64
-	MemoryUsage     float64
-	ResponseTime    time.Duration
-	ThroughputRPS   float64
+	HitRate       float64
+	MissRate      float64
+	EvictionRate  float64
+	MemoryUsage   float64
+	ResponseTime  time.Duration
+	ThroughputRPS float64
 }
 
 // DatabaseMetrics represents database performance metrics
@@ -170,12 +170,12 @@ type DatabaseMetrics struct {
 
 // NetworkMetrics represents network performance metrics
 type NetworkMetrics struct {
-	Latency         time.Duration
-	Throughput      float64
-	PacketLoss      float64
-	Bandwidth       float64
+	Latency          time.Duration
+	Throughput       float64
+	PacketLoss       float64
+	Bandwidth        float64
 	CompressionRatio float64
-	CDNHitRate      float64
+	CDNHitRate       float64
 }
 
 // RegionalMetrics represents regional performance metrics
@@ -197,14 +197,14 @@ type SecurityMetrics struct {
 
 // SystemMetrics represents overall system metrics
 type SystemMetrics struct {
-	CPUUsage      float64
-	MemoryUsage   float64
-	DiskUsage     float64
-	NetworkIO     float64
-	ActiveUsers   int64
+	CPUUsage       float64
+	MemoryUsage    float64
+	DiskUsage      float64
+	NetworkIO      float64
+	ActiveUsers    int64
 	RequestsPerSec float64
-	ErrorRate     float64
-	Uptime        time.Duration
+	ErrorRate      float64
+	Uptime         time.Duration
 }
 
 // PerformanceAlert represents a performance alert

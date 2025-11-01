@@ -67,7 +67,7 @@ func (po *PerformanceOptimizer) initialize() {
 func (po *PerformanceOptimizer) OptimizeSystem(ctx context.Context) (*OptimizationReport, error) {
 	startTime := time.Now()
 	report := &OptimizationReport{
-		StartTime: startTime,
+		StartTime:     startTime,
 		Optimizations: make([]OptimizationResult, 0),
 	}
 
@@ -170,11 +170,11 @@ func (po *PerformanceOptimizer) startOptimizationLoop() {
 
 	for range ticker.C {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-		
+
 		if _, err := po.OptimizeSystem(ctx); err != nil {
 			log.Printf("Optimization loop error: %v", err)
 		}
-		
+
 		cancel()
 	}
 }
@@ -186,16 +186,16 @@ func (po *PerformanceOptimizer) startMonitoringLoop() {
 
 	for range ticker.C {
 		metrics := po.GetPerformanceMetrics()
-		
+
 		// Check for performance issues
 		if issues := po.performanceAnalyzer.AnalyzeMetrics(metrics); len(issues) > 0 {
 			for _, issue := range issues {
 				po.alertManager.SendAlert(&PerformanceAlert{
-					Type:        issue.Type,
-					Severity:    issue.Severity,
-					Message:     issue.Message,
-					Timestamp:   time.Now(),
-					Metrics:     metrics,
+					Type:      issue.Type,
+					Severity:  issue.Severity,
+					Message:   issue.Message,
+					Timestamp: time.Now(),
+					Metrics:   metrics,
 				})
 			}
 		}
@@ -209,11 +209,11 @@ func (po *PerformanceOptimizer) startAutoScalingLoop() {
 
 	for range ticker.C {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		
+
 		if err := po.autoScaler.EvaluateScaling(ctx); err != nil {
 			log.Printf("Auto-scaling evaluation error: %v", err)
 		}
-		
+
 		cancel()
 	}
 }
@@ -246,10 +246,10 @@ func NewCacheOptimizer() *CacheOptimizer {
 
 func NewDatabaseOptimizer() *DatabaseOptimizer {
 	return &DatabaseOptimizer{
-		queryOptimizer:    &QueryOptimizer{optimizedQueries: make(map[string]string)},
-		indexManager:      &IndexManager{indexes: make(map[string][]string)},
-		connectionPooler:  &ConnectionPoolOptimizer{poolSize: 10},
-		shardingManager:   &ShardingManager{shards: make(map[string]string)},
+		queryOptimizer:     &QueryOptimizer{optimizedQueries: make(map[string]string)},
+		indexManager:       &IndexManager{indexes: make(map[string][]string)},
+		connectionPooler:   &ConnectionPoolOptimizer{poolSize: 10},
+		shardingManager:    &ShardingManager{shards: make(map[string]string)},
 		replicationManager: &ReplicationManager{replicas: make(map[string][]string)},
 	}
 }

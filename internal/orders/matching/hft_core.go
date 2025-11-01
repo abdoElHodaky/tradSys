@@ -30,8 +30,8 @@ func NewHFTEngine(logger *zap.Logger) *HFTEngine {
 
 	engine := &HFTEngine{
 		TradeChannel:  make(chan *Trade, DefaultTradeChannelBuffer), // Large buffer for high throughput
-		fastOrderPool: pool.NewFastOrderPool(),                     // Fast order pool for zero-allocation processing
-		tradePool:     pool.NewTradePool(DefaultTradePoolSize),     // Pre-allocate trades
+		fastOrderPool: pool.NewFastOrderPool(),                      // Fast order pool for zero-allocation processing
+		tradePool:     pool.NewTradePool(DefaultTradePoolSize),      // Pre-allocate trades
 		logger:        logger,
 		ctx:           ctx,
 		cancel:        cancel,
@@ -80,7 +80,7 @@ func NewHFTEngineWithConfig(config *HFTEngineConfig, logger *zap.Logger) *HFTEng
 	if config.EnableMetrics {
 		go engine.monitorPerformance()
 	}
-	
+
 	go engine.processTradesAsync()
 
 	return engine
@@ -98,7 +98,7 @@ func (e *HFTEngine) PlaceOrderFast(order *Order) ([]*Trade, error) {
 	defer e.fastOrderPool.Put(fastOrder) // Return to pool when done
 
 	fastOrder.Order = *order
-	fastOrder.PriceInt64 = int64(order.Price * 100000000)    // 8 decimal places precision
+	fastOrder.PriceInt64 = int64(order.Price * 100000000) // 8 decimal places precision
 	fastOrder.QuantityInt64 = int64(order.Quantity * 100000000)
 	fastOrder.CreatedAtNano = startTime.UnixNano()
 	fastOrder.UpdatedAtNano = startTime.UnixNano()
@@ -176,11 +176,11 @@ func (e *HFTEngine) GetStats() *EngineStats {
 // GetPerformanceMetrics returns detailed performance metrics
 func (e *HFTEngine) GetPerformanceMetrics() *HFTPerformanceMetrics {
 	stats := e.GetStats()
-	
+
 	metrics := &HFTPerformanceMetrics{
-		OrdersPerSecond:   float64(stats.OrdersProcessed) / time.Since(time.Unix(0, stats.LastUpdateTime)).Seconds(),
-		TradesPerSecond:   float64(stats.TradesExecuted) / time.Since(time.Unix(0, stats.LastUpdateTime)).Seconds(),
-		LastUpdateTime:    time.Now().UnixNano(),
+		OrdersPerSecond: float64(stats.OrdersProcessed) / time.Since(time.Unix(0, stats.LastUpdateTime)).Seconds(),
+		TradesPerSecond: float64(stats.TradesExecuted) / time.Since(time.Unix(0, stats.LastUpdateTime)).Seconds(),
+		LastUpdateTime:  time.Now().UnixNano(),
 	}
 
 	metrics.OrderProcessingLatency.Min = stats.MinLatencyNanos
@@ -194,7 +194,7 @@ func (e *HFTEngine) GetPerformanceMetrics() *HFTPerformanceMetrics {
 func (e *HFTEngine) GetEngineState() *HFTEngineState {
 	orderBooksPtr := atomic.LoadPointer(&e.orderBooks)
 	orderBooksMap := (*map[string]*HFTOrderBook)(orderBooksPtr)
-	
+
 	state := &HFTEngineState{
 		IsRunning:      e.ctx.Err() == nil,
 		ActiveSymbols:  len(*orderBooksMap),
@@ -210,7 +210,7 @@ func (e *HFTEngine) GetEngineState() *HFTEngineState {
 // Shutdown gracefully shuts down the engine
 func (e *HFTEngine) Shutdown() error {
 	e.cancel()
-	
+
 	// Wait for goroutines to finish (with timeout)
 	done := make(chan struct{})
 	go func() {
@@ -318,7 +318,7 @@ func (e *HFTEngine) updateLatencyStats(latency uint64) {
 // getHealthStatus determines the current health status
 func (e *HFTEngine) getHealthStatus() string {
 	currentLatency := atomic.LoadUint64(&e.avgLatency)
-	
+
 	if currentLatency < MaxTargetLatencyNanos/2 {
 		return HealthStatusHealthy
 	} else if currentLatency < MaxTargetLatencyNanos {

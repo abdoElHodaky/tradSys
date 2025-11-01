@@ -90,7 +90,7 @@ func GetDefaultShariaConfig() *ShariaConfig {
 func GetStrictShariaConfig() *ShariaConfig {
 	config := GetDefaultShariaConfig()
 	config.ComplianceLevel = STRICT
-	
+
 	// Add additional strict rules
 	strictRules := []ShariaRule{
 		{
@@ -116,7 +116,7 @@ func GetStrictShariaConfig() *ShariaConfig {
 			UpdatedAt:       time.Now(),
 		},
 	}
-	
+
 	config.ScreeningRules = append(config.ScreeningRules, strictRules...)
 	return config
 }
@@ -126,14 +126,14 @@ func GetFlexibleShariaConfig() *ShariaConfig {
 	config := GetDefaultShariaConfig()
 	config.ComplianceLevel = FLEXIBLE
 	config.ZakatRate = 0.02 // Reduced rate for flexible compliance
-	
+
 	// Make some rules less strict
 	for i := range config.ScreeningRules {
 		if config.ScreeningRules[i].ID == "debt_ratio_check" {
 			config.ScreeningRules[i].ComplianceLevel = FLEXIBLE
 		}
 	}
-	
+
 	return config
 }
 
@@ -216,19 +216,19 @@ func (config *ShariaConfig) ValidateConfig() error {
 	if config.ZakatRate < 0 || config.ZakatRate > 1 {
 		return fmt.Errorf("invalid Zakat rate: must be between 0 and 1")
 	}
-	
+
 	if config.NisabThreshold < 0 {
 		return fmt.Errorf("invalid Nisab threshold: must be non-negative")
 	}
-	
+
 	if config.Currency == "" {
 		return fmt.Errorf("currency is required")
 	}
-	
+
 	if config.ShariaStandard == "" {
 		return fmt.Errorf("Sharia standard is required")
 	}
-	
+
 	// Validate compliance level
 	switch config.ComplianceLevel {
 	case STRICT, MODERATE, FLEXIBLE:
@@ -236,7 +236,7 @@ func (config *ShariaConfig) ValidateConfig() error {
 	default:
 		return fmt.Errorf("invalid compliance level: %s", config.ComplianceLevel)
 	}
-	
+
 	return nil
 }
 
@@ -253,9 +253,9 @@ func (config *ShariaConfig) Clone() *ShariaConfig {
 		ComplianceLevel:   config.ComplianceLevel,
 		ScreeningRules:    make([]ShariaRule, len(config.ScreeningRules)),
 	}
-	
+
 	// Deep copy screening rules
 	copy(clone.ScreeningRules, config.ScreeningRules)
-	
+
 	return clone
 }

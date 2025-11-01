@@ -39,11 +39,11 @@ func NewRealTimeRiskEngine(config *RiskEngineConfig, logger *zap.Logger) *RealTi
 	}
 
 	engine := &RealTimeRiskEngine{
-		config:      config,
-		logger:      logger,
-		metrics:     &RiskMetrics{LastUpdateTime: time.Now()},
-		stopChannel: make(chan struct{}),
-		eventChannel: make(chan *RiskEvent, 10000), // Large buffer for HFT
+		config:          config,
+		logger:          logger,
+		metrics:         &RiskMetrics{LastUpdateTime: time.Now()},
+		stopChannel:     make(chan struct{}),
+		eventChannel:    make(chan *RiskEvent, 10000), // Large buffer for HFT
 		positionManager: &PositionManager{},
 		limitManager: &LimitManager{
 			positionLimits: make(map[string]float64),

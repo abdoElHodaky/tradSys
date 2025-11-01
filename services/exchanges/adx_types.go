@@ -105,9 +105,9 @@ type UAECompliance struct {
 
 // SCACompliance handles SCA (Securities and Commodities Authority) compliance
 type SCACompliance struct {
-	rules       map[string]ComplianceRule
+	rules        map[string]ComplianceRule
 	reportingReq ReportingRequirements
-	licensing   LicensingRequirements
+	licensing    LicensingRequirements
 }
 
 // ADXConnector handles connection to Abu Dhabi Exchange
@@ -124,13 +124,13 @@ type ADXConnector struct {
 
 // ADXMarketData handles Islamic-focused market data from ADX
 type ADXMarketData struct {
-	realTimeFeeds     map[string]*DataFeed
-	islamicFeeds      map[string]*IslamicDataFeed
-	sukukPricing      *SukukPricingEngine
-	islamicIndices    *IslamicIndexCalculator
-	historicalData    *HistoricalDataStore
-	complianceData    *ComplianceDataStore
-	mu                sync.RWMutex
+	realTimeFeeds  map[string]*DataFeed
+	islamicFeeds   map[string]*IslamicDataFeed
+	sukukPricing   *SukukPricingEngine
+	islamicIndices *IslamicIndexCalculator
+	historicalData *HistoricalDataStore
+	complianceData *ComplianceDataStore
+	mu             sync.RWMutex
 }
 
 // IslamicDataFeed represents Islamic-compliant data feed
@@ -154,14 +154,14 @@ type SukukService struct {
 
 // SukukType defines types of Sukuk
 type SukukType struct {
-	TypeID      string
-	Name        string
-	Structure   string
-	Underlying  string
-	Maturity    time.Duration
-	MinAmount   float64
-	Currency    string
-	IsActive    bool
+	TypeID     string
+	Name       string
+	Structure  string
+	Underlying string
+	Maturity   time.Duration
+	MinAmount  float64
+	Currency   string
+	IsActive   bool
 }
 
 // ADXOrderManager handles order management for ADX
@@ -202,11 +202,11 @@ type IslamicOrder struct {
 
 // ADXRiskEngine handles risk management for ADX
 type ADXRiskEngine struct {
-	riskLimits      map[string]RiskLimit
-	islamicRisks    map[string]IslamicRisk
-	riskCalculator  *RiskCalculator
-	complianceRisk  *ComplianceRiskEngine
-	mu              sync.RWMutex
+	riskLimits     map[string]RiskLimit
+	islamicRisks   map[string]IslamicRisk
+	riskCalculator *RiskCalculator
+	complianceRisk *ComplianceRiskEngine
+	mu             sync.RWMutex
 }
 
 // IslamicFundService handles Islamic mutual funds
@@ -241,12 +241,12 @@ type PerformanceMonitor struct {
 
 // PerformanceMetric represents a performance metric
 type PerformanceMetric struct {
-	MetricID    string
-	Name        string
-	Value       float64
-	Unit        string
-	Timestamp   time.Time
-	IsIslamic   bool
+	MetricID  string
+	Name      string
+	Value     float64
+	Unit      string
+	Timestamp time.Time
+	IsIslamic bool
 }
 
 // IslamicMetric represents Islamic-specific metrics
@@ -263,11 +263,11 @@ const (
 	DefaultRequestTimeout    = 10 * time.Second
 	DefaultRetryAttempts     = 3
 	DefaultRateLimit         = 1000 // requests per minute
-	
+
 	// Islamic finance constants
-	DefaultNisabThreshold = 85.0 // grams of gold equivalent
+	DefaultNisabThreshold = 85.0  // grams of gold equivalent
 	DefaultZakatRate      = 0.025 // 2.5%
-	
+
 	// ADX specific constants
 	ADXExchangeID = "ADX"
 	ADXRegion     = "UAE"
@@ -277,11 +277,11 @@ const (
 // Error definitions
 var (
 	ErrInvalidShariaCompliance = fmt.Errorf("invalid Sharia compliance")
-	ErrSukukNotFound          = fmt.Errorf("Sukuk not found")
-	ErrIslamicOrderRejected   = fmt.Errorf("Islamic order rejected")
-	ErrComplianceCheckFailed  = fmt.Errorf("compliance check failed")
-	ErrZakatCalculationFailed = fmt.Errorf("Zakat calculation failed")
-	ErrADXConnectionFailed    = fmt.Errorf("ADX connection failed")
-	ErrInvalidAssetType       = fmt.Errorf("invalid asset type")
-	ErrShariaRuleViolation    = fmt.Errorf("Sharia rule violation")
+	ErrSukukNotFound           = fmt.Errorf("Sukuk not found")
+	ErrIslamicOrderRejected    = fmt.Errorf("Islamic order rejected")
+	ErrComplianceCheckFailed   = fmt.Errorf("compliance check failed")
+	ErrZakatCalculationFailed  = fmt.Errorf("Zakat calculation failed")
+	ErrADXConnectionFailed     = fmt.Errorf("ADX connection failed")
+	ErrInvalidAssetType        = fmt.Errorf("invalid asset type")
+	ErrShariaRuleViolation     = fmt.Errorf("Sharia rule violation")
 )

@@ -85,12 +85,12 @@ func WrapError(code, message string, severity ErrorSeverity, cause error, contex
 
 // Common error codes
 const (
-	ErrCodeOrderValidation    = "ORDER_VALIDATION"
-	ErrCodeRiskCheck         = "RISK_CHECK"
-	ErrCodeMarketData        = "MARKET_DATA"
-	ErrCodeExecution         = "EXECUTION"
-	ErrCodeCompliance        = "COMPLIANCE"
-	ErrCodeWebSocket         = "WEBSOCKET"
-	ErrCodeDatabase          = "DATABASE"
-	ErrCodeExternalAPI       = "EXTERNAL_API"
+	ErrCodeOrderValidation = "ORDER_VALIDATION"
+	ErrCodeRiskCheck       = "RISK_CHECK"
+	ErrCodeMarketData      = "MARKET_DATA"
+	ErrCodeExecution       = "EXECUTION"
+	ErrCodeCompliance      = "COMPLIANCE"
+	ErrCodeWebSocket       = "WEBSOCKET"
+	ErrCodeDatabase        = "DATABASE"
+	ErrCodeExternalAPI     = "EXTERNAL_API"
 )

@@ -63,7 +63,7 @@ func NewValidator(cache CacheInterface, db DatabaseInterface, rateLimiter RateLi
 	if config == nil {
 		config = GetDefaultValidatorConfig()
 	}
-	
+
 	return &Validator{
 		cache:       cache,
 		db:          db,
@@ -81,11 +81,11 @@ func (v *Validator) ValidateFeature(ctx context.Context, userID string, feature 
 			v.metrics.RecordValidationLatency(time.Since(start))
 		}
 	}()
-	
+
 	// Create validation context with timeout
 	validationCtx, cancel := context.WithTimeout(ctx, v.config.ValidationTimeout)
 	defer cancel()
-	
+
 	// Check cache first for sub-millisecond response
 	cacheKey := fmt.Sprintf("license_validation:%s:%s", userID, feature)
 	if cached, err := v.getCachedValidation(validationCtx, cacheKey); err == nil && cached != nil {
@@ -94,11 +94,11 @@ func (v *Validator) ValidateFeature(ctx context.Context, userID string, feature 
 		}
 		return cached, nil
 	}
-	
+
 	if v.config.EnableMetrics && v.metrics != nil {
 		v.metrics.RecordCacheMiss()
 	}
-	
+
 	// Fetch license from database
 	license, err := v.db.GetLicense(validationCtx, userID)
 	if err != nil {
@@ -111,23 +111,23 @@ func (v *Validator) ValidateFeature(ctx context.Context, userID string, feature 
 		}
 		return result, err
 	}
-	
+
 	// Validate license
 	result := v.validateLicense(validationCtx, license, feature)
-	
+
 	// Cache result for fast subsequent access
 	if err := v.cacheValidation(validationCtx, cacheKey, result); err != nil {
 		// Log error but don't fail validation
 		fmt.Printf("Failed to cache validation result: %v\n", err)
 	}
-	
+
 	if v.config.EnableMetrics && v.metrics != nil {
 		v.metrics.RecordValidationResult(result.Valid)
 		if !result.Valid && result.Reason == "quota_exceeded" {
 			v.metrics.RecordQuotaExceeded(string(feature))
 		}
 	}
-	
+
 	return result, nil
 }
 
@@ -138,25 +138,25 @@ func (v *Validator) ValidateQuota(ctx context.Context, userID, usageType string,
 	if err != nil {
 		return &ValidationResult{Valid: false, Reason: "license_not_found"}, err
 	}
-	
+
 	// Check if license is active
-	if !license.IsActive() {
+	if !license.IsValid() {
 		return &ValidationResult{Valid: false, Reason: "license_inactive"}, nil
 	}
-	
+
 	// Get quota for usage type
 	quota := license.GetQuota(usageType)
 	if quota == -1 {
 		// Unlimited quota
 		return &ValidationResult{Valid: true, QuotaLimit: -1}, nil
 	}
-	
+
 	// Get current usage
 	currentUsage, err := v.db.GetUsage(ctx, userID, usageType)
 	if err != nil {
 		return &ValidationResult{Valid: false, Reason: "usage_check_failed"}, err
 	}
-	
+
 	// Check if adding the amount would exceed quota
 	if currentUsage+amount > quota {
 		return &ValidationResult{
@@ -166,7 +166,7 @@ func (v *Validator) ValidateQuota(ctx context.Context, userID, usageType string,
 			QuotaLimit: quota,
 		}, nil
 	}
-	
+
 	return &ValidationResult{
 		Valid:      true,
 		QuotaUsed:  currentUsage,
@@ -179,31 +179,31 @@ func (v *Validator) ValidateRateLimit(ctx context.Context, userID, usageType str
 	if !v.config.EnableRateLimit || v.rateLimiter == nil {
 		return &ValidationResult{Valid: true}, nil
 	}
-	
+
 	// Get license
 	license, err := v.db.GetLicense(ctx, userID)
 	if err != nil {
 		return &ValidationResult{Valid: false, Reason: "license_not_found"}, err
 	}
-	
+
 	// Get rate limit for usage type
 	rateLimit := license.GetRateLimit(usageType)
 	if rateLimit == -1 {
 		// Unlimited rate
 		return &ValidationResult{Valid: true}, nil
 	}
-	
+
 	// Check rate limit (per minute)
 	rateLimitKey := fmt.Sprintf("rate_limit:%s:%s", userID, usageType)
 	allowed, err := v.rateLimiter.Allow(ctx, rateLimitKey, rateLimit, time.Minute)
 	if err != nil {
 		return &ValidationResult{Valid: false, Reason: "rate_limit_check_failed"}, err
 	}
-	
+
 	if !allowed {
 		return &ValidationResult{Valid: false, Reason: "rate_limit_exceeded"}, nil
 	}
-	
+
 	return &ValidationResult{Valid: true}, nil
 }
 
@@ -219,19 +219,19 @@ func (v *Validator) GetUsageStats(ctx context.Context, userID, usageType string)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Get current usage
 	usage, err := v.db.GetUsage(ctx, userID, usageType)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	quota := license.GetQuota(usageType)
 	percentage := float64(0)
 	if quota > 0 {
 		percentage = float64(usage) / float64(quota) * 100
 	}
-	
+
 	return &UsageStats{
 		UserID:      userID,
 		UsageType:   usageType,
@@ -253,7 +253,7 @@ func (v *Validator) validateLicense(ctx context.Context, license *License, featu
 			ExpiresAt: license.ExpiresAt,
 		}
 	}
-	
+
 	// Check if license has expired
 	if license.IsExpired() {
 		return &ValidationResult{
@@ -262,7 +262,7 @@ func (v *Validator) validateLicense(ctx context.Context, license *License, featu
 			ExpiresAt: license.ExpiresAt,
 		}
 	}
-	
+
 	// Check if license includes the feature
 	if !license.HasFeature(feature) {
 		return &ValidationResult{
@@ -272,7 +272,7 @@ func (v *Validator) validateLicense(ctx context.Context, license *License, featu
 			RemainingTime: int64(time.Until(license.ExpiresAt).Seconds()),
 		}
 	}
-	
+
 	return &ValidationResult{
 		Valid:         true,
 		ExpiresAt:     license.ExpiresAt,
@@ -285,16 +285,16 @@ func (v *Validator) getCachedValidation(ctx context.Context, key string) (*Valid
 	if v.cache == nil {
 		return nil, fmt.Errorf("cache not available")
 	}
-	
+
 	cached, err := v.cache.Get(ctx, key)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if result, ok := cached.(*ValidationResult); ok {
 		return result, nil
 	}
-	
+
 	return nil, fmt.Errorf("invalid cached data type")
 }
 
@@ -303,7 +303,7 @@ func (v *Validator) cacheValidation(ctx context.Context, key string, result *Val
 	if v.cache == nil {
 		return nil
 	}
-	
+
 	return v.cache.Set(ctx, key, result, v.config.CacheTTL)
 }
 

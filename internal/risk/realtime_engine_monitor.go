@@ -28,41 +28,41 @@ func (e *RealTimeRiskEngine) GetPortfolioRisk() *PortfolioRisk {
 	var totalVaR float64
 	componentVaR := make(map[string]float64)
 	marginalVaR := make(map[string]float64)
-	
+
 	var totalExposure float64
 	var totalValue float64
-	
+
 	// Calculate risk metrics for each position
 	e.positionManager.positions.Range(func(key, value interface{}) bool {
 		symbol := key.(string)
 		position := value.(*RealtimePosition)
-		
+
 		// Calculate position value and exposure
 		positionValue := math.Abs(position.Quantity * position.MarketPrice)
 		totalExposure += positionValue
 		totalValue += position.Quantity * position.MarketPrice
-		
+
 		// Calculate component VaR (simplified)
 		if e.config.EnableVaRCalculation {
 			componentVaR[symbol] = e.calculatePositionVaR(position)
 			totalVaR += componentVaR[symbol]
-			
+
 			// Calculate marginal VaR (simplified)
 			marginalVaR[symbol] = componentVaR[symbol] / positionValue
 		}
-		
+
 		return true
 	})
-	
+
 	// Calculate concentration risk (Herfindahl index)
 	concentrationRisk := e.calculateConcentrationRisk()
-	
+
 	// Calculate leverage ratio
 	leverageRatio := float64(0)
 	if totalValue != 0 {
 		leverageRatio = totalExposure / math.Abs(totalValue)
 	}
-	
+
 	return &PortfolioRisk{
 		TotalVaR:          totalVaR,
 		ComponentVaR:      componentVaR,
@@ -77,11 +77,11 @@ func (e *RealTimeRiskEngine) GetPortfolioRisk() *PortfolioRisk {
 // GetAllPositions returns all current positions
 func (e *RealTimeRiskEngine) GetAllPositions() map[string]*RealtimePosition {
 	positions := make(map[string]*RealtimePosition)
-	
+
 	e.positionManager.positions.Range(func(key, value interface{}) bool {
 		symbol := key.(string)
 		position := value.(*RealtimePosition)
-		
+
 		// Create a copy to avoid race conditions
 		positions[symbol] = &RealtimePosition{
 			Symbol:         position.Symbol,
@@ -96,22 +96,22 @@ func (e *RealTimeRiskEngine) GetAllPositions() map[string]*RealtimePosition {
 			Theta:          position.Theta,
 			LastUpdateTime: position.LastUpdateTime,
 		}
-		
+
 		return true
 	})
-	
+
 	return positions
 }
 
 // GetRiskAlerts returns current risk alerts
 func (e *RealTimeRiskEngine) GetRiskAlerts() []*RiskAlert {
 	var alerts []*RiskAlert
-	
+
 	// Check position limit alerts
 	e.positionManager.positions.Range(func(key, value interface{}) bool {
 		symbol := key.(string)
 		position := value.(*RealtimePosition)
-		
+
 		limit := e.getPositionLimit(symbol)
 		if math.Abs(position.Quantity) > limit*0.9 { // Alert at 90% of limit
 			alerts = append(alerts, &RiskAlert{
@@ -126,16 +126,16 @@ func (e *RealTimeRiskEngine) GetRiskAlerts() []*RiskAlert {
 				Acknowledged: false,
 			})
 		}
-		
+
 		return true
 	})
-	
+
 	// Check daily loss alert
 	e.limitManager.mu.RLock()
 	currentLoss := e.limitManager.currentDailyLoss
 	lossLimit := e.limitManager.dailyLossLimit
 	e.limitManager.mu.RUnlock()
-	
+
 	if currentLoss > lossLimit*0.8 { // Alert at 80% of limit
 		alerts = append(alerts, &RiskAlert{
 			ID:           generateAlertID(),
@@ -149,7 +149,7 @@ func (e *RealTimeRiskEngine) GetRiskAlerts() []*RiskAlert {
 			Acknowledged: false,
 		})
 	}
-	
+
 	return alerts
 }
 
@@ -158,7 +158,7 @@ func (e *RealTimeRiskEngine) CalculateVaR(symbol string) (*VaRResult, error) {
 	if !e.config.EnableVaRCalculation {
 		return nil, fmt.Errorf("VaR calculation is disabled")
 	}
-	
+
 	position := e.getPosition(symbol)
 	if position.Quantity == 0 {
 		return &VaRResult{
@@ -169,9 +169,9 @@ func (e *RealTimeRiskEngine) CalculateVaR(symbol string) (*VaRResult, error) {
 			Timestamp:       time.Now(),
 		}, nil
 	}
-	
+
 	var95 := e.calculatePositionVaR(position)
-	
+
 	return &VaRResult{
 		Symbol:          symbol,
 		VaR:             var95,
@@ -186,18 +186,18 @@ func (e *RealTimeRiskEngine) RunStressTest(scenarios []*StressTestScenario) []*S
 	if !e.config.StressTestEnabled {
 		return nil
 	}
-	
+
 	var results []*StressTestResult
-	
+
 	for _, scenario := range scenarios {
 		if !scenario.Enabled {
 			continue
 		}
-		
+
 		result := e.runSingleStressTest(scenario)
 		results = append(results, result)
 	}
-	
+
 	return results
 }
 
@@ -206,34 +206,34 @@ func (e *RealTimeRiskEngine) runSingleStressTest(scenario *StressTestScenario) *
 	var totalPnL float64
 	var worstPnL float64
 	var worstPosition string
-	
+
 	// Apply shocks to each position
 	e.positionManager.positions.Range(func(key, value interface{}) bool {
 		symbol := key.(string)
 		position := value.(*RealtimePosition)
-		
+
 		// Get shock for this symbol
 		shock, exists := scenario.Shocks[symbol]
 		if !exists {
 			shock = scenario.Shocks["DEFAULT"] // Use default shock if symbol-specific not found
 		}
-		
+
 		// Calculate stressed price
 		stressedPrice := position.MarketPrice * (1 + shock)
-		
+
 		// Calculate P&L under stress
 		pnl := position.Quantity * (stressedPrice - position.AveragePrice)
 		totalPnL += pnl
-		
+
 		// Track worst position
 		if pnl < worstPnL {
 			worstPnL = pnl
 			worstPosition = symbol
 		}
-		
+
 		return true
 	})
-	
+
 	return &StressTestResult{
 		Scenario:      scenario.Name,
 		TotalPnL:      totalPnL,
@@ -248,7 +248,7 @@ func (e *RealTimeRiskEngine) LogRiskSummary() {
 	metrics := e.GetMetrics()
 	portfolioRisk := e.GetPortfolioRisk()
 	alerts := e.GetRiskAlerts()
-	
+
 	e.logger.Info("Risk Engine Summary",
 		zap.Float64("checks_per_second", metrics.ChecksPerSecond),
 		zap.Duration("avg_latency", metrics.AverageLatency),
@@ -265,7 +265,7 @@ func (e *RealTimeRiskEngine) LogRiskSummary() {
 func (e *RealTimeRiskEngine) MonitorRiskLimits(ctx context.Context) {
 	ticker := time.NewTicker(time.Second * 30) // Check every 30 seconds
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -284,7 +284,7 @@ func (e *RealTimeRiskEngine) checkAllRiskLimits() {
 	e.positionManager.positions.Range(func(key, value interface{}) bool {
 		symbol := key.(string)
 		position := value.(*RealtimePosition)
-		
+
 		limit := e.getPositionLimit(symbol)
 		if math.Abs(position.Quantity) > limit {
 			e.publishEvent(&RiskEvent{
@@ -299,16 +299,16 @@ func (e *RealTimeRiskEngine) checkAllRiskLimits() {
 				},
 			})
 		}
-		
+
 		return true
 	})
-	
+
 	// Check daily loss limit
 	e.limitManager.mu.RLock()
 	currentLoss := e.limitManager.currentDailyLoss
 	lossLimit := e.limitManager.dailyLossLimit
 	e.limitManager.mu.RUnlock()
-	
+
 	if currentLoss > lossLimit {
 		e.publishEvent(&RiskEvent{
 			Type:      EventLimitBreach,
@@ -328,25 +328,25 @@ func (e *RealTimeRiskEngine) checkAllRiskLimits() {
 func (e *RealTimeRiskEngine) UpdateMarketData(symbol string, price float64) {
 	if positionInterface, exists := e.positionManager.positions.Load(symbol); exists {
 		position := positionInterface.(*RealtimePosition)
-		
+
 		// Update market price
 		oldPrice := position.MarketPrice
 		position.MarketPrice = price
-		
+
 		// Recalculate unrealized P&L
 		if position.AveragePrice > 0 {
 			position.UnrealizedPnL = position.Quantity * (price - position.AveragePrice)
 		}
-		
+
 		// Update Greeks (simplified)
 		if oldPrice > 0 {
 			priceChange := (price - oldPrice) / oldPrice
 			position.Delta = priceChange // Simplified delta calculation
 		}
-		
+
 		position.LastUpdateTime = time.Now()
 		e.positionManager.positions.Store(symbol, position)
-		
+
 		// Publish position update event
 		e.publishEvent(&RiskEvent{
 			Type:      EventPositionUpdate,
@@ -355,9 +355,9 @@ func (e *RealTimeRiskEngine) UpdateMarketData(symbol string, price float64) {
 			Message:   fmt.Sprintf("Position updated for %s", symbol),
 			Timestamp: time.Now(),
 			Metadata: map[string]interface{}{
-				"old_price":       oldPrice,
-				"new_price":       price,
-				"unrealized_pnl":  position.UnrealizedPnL,
+				"old_price":      oldPrice,
+				"new_price":      price,
+				"unrealized_pnl": position.UnrealizedPnL,
 			},
 		})
 	}
@@ -371,13 +371,13 @@ func (e *RealTimeRiskEngine) calculateChecksPerSecond() float64 {
 	if totalChecks == 0 {
 		return 0
 	}
-	
+
 	// Simplified calculation - in production would use time windows
 	elapsed := time.Since(e.metrics.LastUpdateTime).Seconds()
 	if elapsed == 0 {
 		return 0
 	}
-	
+
 	return float64(totalChecks) / elapsed
 }
 
@@ -385,14 +385,14 @@ func (e *RealTimeRiskEngine) calculateChecksPerSecond() float64 {
 func (e *RealTimeRiskEngine) calculatePositionVaR(position *RealtimePosition) float64 {
 	// Simplified VaR calculation
 	// In production, would use historical returns and proper statistical models
-	
+
 	positionValue := math.Abs(position.Quantity * position.MarketPrice)
 	volatility := 0.02 // Assume 2% daily volatility
-	
+
 	// 95% VaR using normal distribution
 	zScore := 1.645 // 95% confidence level
 	var95 := positionValue * volatility * zScore
-	
+
 	return var95
 }
 
@@ -400,30 +400,30 @@ func (e *RealTimeRiskEngine) calculatePositionVaR(position *RealtimePosition) fl
 func (e *RealTimeRiskEngine) calculateConcentrationRisk() float64 {
 	var totalValue float64
 	var sumSquares float64
-	
+
 	// Calculate total portfolio value and sum of squares
 	e.positionManager.positions.Range(func(key, value interface{}) bool {
 		position := value.(*RealtimePosition)
 		positionValue := math.Abs(position.Quantity * position.MarketPrice)
 		totalValue += positionValue
-		
+
 		return true
 	})
-	
+
 	if totalValue == 0 {
 		return 0
 	}
-	
+
 	// Calculate sum of squared weights
 	e.positionManager.positions.Range(func(key, value interface{}) bool {
 		position := value.(*RealtimePosition)
 		positionValue := math.Abs(position.Quantity * position.MarketPrice)
 		weight := positionValue / totalValue
 		sumSquares += weight * weight
-		
+
 		return true
 	})
-	
+
 	// Herfindahl index
 	return sumSquares
 }
@@ -437,7 +437,7 @@ func generateAlertID() string {
 func (e *RealTimeRiskEngine) GetCircuitBreakerStatus() map[string]interface{} {
 	e.circuitBreaker.mu.RLock()
 	defer e.circuitBreaker.mu.RUnlock()
-	
+
 	return map[string]interface{}{
 		"enabled":           e.circuitBreaker.enabled,
 		"state":             e.circuitBreaker.state,
@@ -457,47 +457,47 @@ func (e *RealTimeRiskEngine) ResetMetrics() {
 	e.metrics.AverageLatency = 0
 	e.metrics.MaxLatency = 0
 	e.metrics.LastUpdateTime = time.Now()
-	
+
 	e.logger.Info("Risk engine metrics reset")
 }
 
 // GetHealthStatus returns overall health status of risk engine
 func (e *RealTimeRiskEngine) GetHealthStatus() map[string]interface{} {
 	metrics := e.GetMetrics()
-	
+
 	isHealthy := true
 	issues := []string{}
-	
+
 	// Check latency
 	if metrics.AverageLatency > e.config.MaxLatency {
 		isHealthy = false
 		issues = append(issues, "High latency")
 	}
-	
+
 	// Check rejection rate
 	rejectionRate := float64(0)
 	if metrics.TotalChecks > 0 {
 		rejectionRate = float64(metrics.RejectedOrders) / float64(metrics.TotalChecks) * 100
 	}
-	
+
 	if rejectionRate > 10 { // More than 10% rejection rate
 		isHealthy = false
 		issues = append(issues, "High rejection rate")
 	}
-	
+
 	// Check circuit breaker
 	if e.isCircuitBreakerOpen() {
 		isHealthy = false
 		issues = append(issues, "Circuit breaker open")
 	}
-	
+
 	return map[string]interface{}{
-		"healthy":         isHealthy,
-		"issues":          issues,
-		"avg_latency":     metrics.AverageLatency,
-		"max_latency":     metrics.MaxLatency,
-		"rejection_rate":  rejectionRate,
-		"total_checks":    metrics.TotalChecks,
-		"last_update":     metrics.LastUpdateTime,
+		"healthy":        isHealthy,
+		"issues":         issues,
+		"avg_latency":    metrics.AverageLatency,
+		"max_latency":    metrics.MaxLatency,
+		"rejection_rate": rejectionRate,
+		"total_checks":   metrics.TotalChecks,
+		"last_update":    metrics.LastUpdateTime,
 	}
 }

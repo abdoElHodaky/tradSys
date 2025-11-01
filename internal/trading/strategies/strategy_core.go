@@ -351,12 +351,12 @@ func (s *MomentumStrategy) Initialize(config map[string]interface{}) error {
 	if lookback, ok := config["lookback"].(int); ok {
 		s.lookback = lookback
 	}
-	
+
 	s.logger.Info("Initialized momentum strategy",
 		zap.String("strategy_id", s.id),
 		zap.Float64("threshold", s.threshold),
 		zap.Int("lookback", s.lookback))
-	
+
 	return nil
 }
 

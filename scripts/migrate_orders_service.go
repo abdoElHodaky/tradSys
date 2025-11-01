@@ -32,36 +32,36 @@ func NewMigrationScript(oldPath, newPath string) *MigrationScript {
 // Migrate performs the migration from old service to new split architecture
 func (m *MigrationScript) Migrate() error {
 	fmt.Println("🚀 Starting Orders Service Migration...")
-	
+
 	// Step 1: Parse the old service file
 	fmt.Println("📖 Parsing old service file...")
 	oldFile, err := parser.ParseFile(m.fileSet, m.oldPath, nil, parser.ParseComments)
 	if err != nil {
 		return fmt.Errorf("failed to parse old service file: %w", err)
 	}
-	
+
 	// Step 2: Extract components
 	fmt.Println("🔍 Extracting components...")
 	components := m.extractComponents(oldFile)
-	
+
 	// Step 3: Generate new files
 	fmt.Println("📝 Generating new split files...")
 	if err := m.generateSplitFiles(components); err != nil {
 		return fmt.Errorf("failed to generate split files: %w", err)
 	}
-	
+
 	// Step 4: Update imports in dependent files
 	fmt.Println("🔄 Updating imports in dependent files...")
 	if err := m.updateImports(); err != nil {
 		return fmt.Errorf("failed to update imports: %w", err)
 	}
-	
+
 	// Step 5: Generate migration report
 	fmt.Println("📊 Generating migration report...")
 	if err := m.generateReport(components); err != nil {
 		return fmt.Errorf("failed to generate report: %w", err)
 	}
-	
+
 	fmt.Println("✅ Migration completed successfully!")
 	return nil
 }
@@ -83,7 +83,7 @@ func (m *MigrationScript) extractComponents(file *ast.File) map[string]*Componen
 		"processors": {Imports: []string{"errors", "fmt", "time", "github.com/google/uuid"}},
 		"core":       {Imports: []string{"context", "errors", "fmt", "sync", "time", "github.com/google/uuid", "github.com/patrickmn/go-cache", "go.uber.org/zap"}},
 	}
-	
+
 	// Walk through all declarations
 	for _, decl := range file.Decls {
 		switch d := decl.(type) {
@@ -93,7 +93,7 @@ func (m *MigrationScript) extractComponents(file *ast.File) map[string]*Componen
 			m.categorizeFuncDecl(d, components)
 		}
 	}
-	
+
 	return components
 }
 
@@ -116,7 +116,7 @@ func (m *MigrationScript) categorizeGenDecl(decl *ast.GenDecl, components map[st
 // categorizeFuncDecl categorizes function declarations
 func (m *MigrationScript) categorizeFuncDecl(decl *ast.FuncDecl, components map[string]*ComponentInfo) {
 	funcName := decl.Name.Name
-	
+
 	// Categorize based on function name patterns
 	if strings.Contains(strings.ToLower(funcName), "validate") {
 		components["validators"].Functions = append(components["validators"].Functions, decl)
@@ -130,7 +130,7 @@ func (m *MigrationScript) categorizeFuncDecl(decl *ast.FuncDecl, components map[
 // categorizeType categorizes types based on their names
 func (m *MigrationScript) categorizeType(typeName string) string {
 	lowerName := strings.ToLower(typeName)
-	
+
 	if strings.Contains(lowerName, "validator") {
 		return "validators"
 	}
@@ -140,7 +140,7 @@ func (m *MigrationScript) categorizeType(typeName string) string {
 	if strings.Contains(lowerName, "service") {
 		return "core"
 	}
-	
+
 	// Default to types for basic types
 	return "types"
 }
@@ -151,13 +151,13 @@ func (m *MigrationScript) generateSplitFiles(components map[string]*ComponentInf
 	if err := os.MkdirAll(m.newPath, 0755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
-	
+
 	for fileName, component := range components {
 		if err := m.generateFile(fileName, component); err != nil {
 			return fmt.Errorf("failed to generate %s: %w", fileName, err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -165,17 +165,17 @@ func (m *MigrationScript) generateSplitFiles(components map[string]*ComponentInf
 func (m *MigrationScript) generateFile(fileName string, component *ComponentInfo) error {
 	// Create new AST file
 	file := &ast.File{
-		Name: ast.NewIdent("service"),
+		Name:  ast.NewIdent("service"),
 		Decls: []ast.Decl{},
 	}
-	
+
 	// Add imports
 	if len(component.Imports) > 0 {
 		importDecl := &ast.GenDecl{
-			Tok: token.IMPORT,
+			Tok:   token.IMPORT,
 			Specs: []ast.Spec{},
 		}
-		
+
 		for _, imp := range component.Imports {
 			importSpec := &ast.ImportSpec{
 				Path: &ast.BasicLit{
@@ -185,16 +185,16 @@ func (m *MigrationScript) generateFile(fileName string, component *ComponentInfo
 			}
 			importDecl.Specs = append(importDecl.Specs, importSpec)
 		}
-		
+
 		file.Decls = append(file.Decls, importDecl)
 	}
-	
+
 	// Add all declarations
 	file.Decls = append(file.Decls, component.Types...)
 	file.Decls = append(file.Decls, component.Constants...)
 	file.Decls = append(file.Decls, component.Interfaces...)
 	file.Decls = append(file.Decls, component.Functions...)
-	
+
 	// Write to file
 	filePath := filepath.Join(m.newPath, fileName+".go")
 	return m.writeASTToFile(file, filePath)
@@ -207,7 +207,7 @@ func (m *MigrationScript) writeASTToFile(file *ast.File, filePath string) error 
 	if err := format.Node(&buf, m.fileSet, file); err != nil {
 		return fmt.Errorf("failed to format AST: %w", err)
 	}
-	
+
 	// Write to file
 	return ioutil.WriteFile(filePath, []byte(buf.String()), 0644)
 }
@@ -219,11 +219,11 @@ func (m *MigrationScript) updateImports() error {
 		if err != nil {
 			return err
 		}
-		
+
 		if !strings.HasSuffix(path, ".go") || strings.Contains(path, "vendor/") {
 			return nil
 		}
-		
+
 		return m.updateFileImports(path)
 	})
 }
@@ -235,7 +235,7 @@ func (m *MigrationScript) updateFileImports(filePath string) error {
 	if err != nil {
 		return nil // Skip files that can't be parsed
 	}
-	
+
 	// Check if file imports the old orders package
 	hasOrdersImport := false
 	for _, imp := range file.Imports {
@@ -244,26 +244,26 @@ func (m *MigrationScript) updateFileImports(filePath string) error {
 			break
 		}
 	}
-	
+
 	if !hasOrdersImport {
 		return nil
 	}
-	
+
 	// Update imports (simplified - would need more sophisticated logic)
 	fmt.Printf("📝 Updating imports in %s\n", filePath)
-	
+
 	return nil
 }
 
 // generateReport generates a migration report
 func (m *MigrationScript) generateReport(components map[string]*ComponentInfo) error {
 	reportPath := filepath.Join(m.newPath, "MIGRATION_REPORT.md")
-	
+
 	var report strings.Builder
 	report.WriteString("# Orders Service Migration Report\n\n")
 	report.WriteString("## Overview\n")
 	report.WriteString("This report summarizes the migration from monolithic orders service to split architecture.\n\n")
-	
+
 	report.WriteString("## File Structure\n")
 	report.WriteString("```\n")
 	report.WriteString("internal/orders/service/\n")
@@ -272,7 +272,7 @@ func (m *MigrationScript) generateReport(components map[string]*ComponentInfo) e
 	report.WriteString("├── processors.go # Order processing with polymorphism\n")
 	report.WriteString("└── core.go       # Main service logic\n")
 	report.WriteString("```\n\n")
-	
+
 	report.WriteString("## Migration Statistics\n")
 	for fileName, component := range components {
 		report.WriteString(fmt.Sprintf("### %s.go\n", fileName))
@@ -282,47 +282,47 @@ func (m *MigrationScript) generateReport(components map[string]*ComponentInfo) e
 		report.WriteString(fmt.Sprintf("- Interfaces: %d\n", len(component.Interfaces)))
 		report.WriteString("\n")
 	}
-	
+
 	report.WriteString("## Optimizations Applied\n")
 	report.WriteString("1. **File Size Compliance**: All files under 410 lines\n")
 	report.WriteString("2. **Early Return Pattern**: Eliminated nested if statements\n")
 	report.WriteString("3. **Polymorphism**: Replaced switch statements with interfaces\n")
 	report.WriteString("4. **Composition**: Used dependency injection for validators\n")
 	report.WriteString("5. **State Machine**: Command pattern for state transitions\n\n")
-	
+
 	report.WriteString("## Performance Preservation\n")
 	report.WriteString("- Maintained <100μs latency requirement\n")
 	report.WriteString("- Preserved 100,000+ orders/second throughput\n")
 	report.WriteString("- No memory overhead increase\n\n")
-	
+
 	return ioutil.WriteFile(reportPath, []byte(report.String()), 0644)
 }
 
 // validateMigration validates the migration results
 func (m *MigrationScript) validateMigration() error {
 	fmt.Println("🔍 Validating migration results...")
-	
+
 	// Check file sizes
 	return filepath.Walk(m.newPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		
+
 		if !strings.HasSuffix(path, ".go") {
 			return nil
 		}
-		
+
 		// Count lines
 		content, err := ioutil.ReadFile(path)
 		if err != nil {
 			return err
 		}
-		
+
 		lines := strings.Count(string(content), "\n") + 1
 		if lines > 410 {
 			return fmt.Errorf("file %s exceeds 410 lines (%d)", path, lines)
 		}
-		
+
 		fmt.Printf("✅ %s: %d lines (compliant)\n", filepath.Base(path), lines)
 		return nil
 	})
@@ -332,20 +332,20 @@ func main() {
 	if len(os.Args) < 3 {
 		log.Fatal("Usage: go run migrate_orders_service.go <old_service_path> <new_service_dir>")
 	}
-	
+
 	oldPath := os.Args[1]
 	newPath := os.Args[2]
-	
+
 	migrator := NewMigrationScript(oldPath, newPath)
-	
+
 	if err := migrator.Migrate(); err != nil {
 		log.Fatalf("Migration failed: %v", err)
 	}
-	
+
 	if err := migrator.validateMigration(); err != nil {
 		log.Fatalf("Validation failed: %v", err)
 	}
-	
+
 	fmt.Println("🎉 Migration completed successfully!")
 	fmt.Printf("📁 New service files created in: %s\n", newPath)
 	fmt.Printf("📊 Migration report: %s/MIGRATION_REPORT.md\n", newPath)

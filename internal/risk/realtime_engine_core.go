@@ -280,7 +280,7 @@ func (e *RealTimeRiskEngine) checkPostTradeLimits(order *types.Order) error {
 	limit := e.getPositionLimit(order.Symbol)
 
 	if math.Abs(position.Quantity) > limit {
-		return fmt.Errorf("position %f exceeds limit %f after trade", 
+		return fmt.Errorf("position %f exceeds limit %f after trade",
 			math.Abs(position.Quantity), limit)
 	}
 
@@ -292,9 +292,9 @@ func (e *RealTimeRiskEngine) updatePosition(trade *Trade) {
 	positionInterface, _ := e.positionManager.positions.LoadOrStore(trade.Symbol, &RealtimePosition{
 		Symbol: trade.Symbol,
 	})
-	
+
 	position := positionInterface.(*RealtimePosition)
-	
+
 	// Update position based on trade
 	if trade.Side == "buy" {
 		// Calculate new average price
@@ -311,7 +311,7 @@ func (e *RealTimeRiskEngine) updatePosition(trade *Trade) {
 			position.RealizedPnL += pnl
 		}
 	}
-	
+
 	position.LastUpdateTime = time.Now()
 	e.positionManager.positions.Store(trade.Symbol, position)
 }
@@ -321,7 +321,7 @@ func (e *RealTimeRiskEngine) getPosition(symbol string) *RealtimePosition {
 	if positionInterface, exists := e.positionManager.positions.Load(symbol); exists {
 		return positionInterface.(*RealtimePosition)
 	}
-	
+
 	return &RealtimePosition{Symbol: symbol}
 }
 
@@ -329,7 +329,7 @@ func (e *RealTimeRiskEngine) getPosition(symbol string) *RealtimePosition {
 func (e *RealTimeRiskEngine) getOrderSizeLimit(symbol string) float64 {
 	e.limitManager.mu.RLock()
 	defer e.limitManager.mu.RUnlock()
-	
+
 	if limit, exists := e.limitManager.orderLimits[symbol]; exists {
 		return limit
 	}
@@ -340,7 +340,7 @@ func (e *RealTimeRiskEngine) getOrderSizeLimit(symbol string) float64 {
 func (e *RealTimeRiskEngine) getPositionLimit(symbol string) float64 {
 	e.limitManager.mu.RLock()
 	defer e.limitManager.mu.RUnlock()
-	
+
 	if limit, exists := e.limitManager.positionLimits[symbol]; exists {
 		return limit
 	}
@@ -350,7 +350,7 @@ func (e *RealTimeRiskEngine) getPositionLimit(symbol string) float64 {
 // getProjectedPosition calculates projected position after order
 func (e *RealTimeRiskEngine) getProjectedPosition(order *types.Order) float64 {
 	position := e.getPosition(order.Symbol)
-	
+
 	if order.Side == types.OrderSideBuy {
 		return math.Abs(position.Quantity + order.Quantity)
 	}
@@ -361,7 +361,7 @@ func (e *RealTimeRiskEngine) getProjectedPosition(order *types.Order) float64 {
 func (e *RealTimeRiskEngine) isCircuitBreakerOpen() bool {
 	e.circuitBreaker.mu.RLock()
 	defer e.circuitBreaker.mu.RUnlock()
-	
+
 	return e.circuitBreaker.state == CircuitBreakerOpen
 }
 
@@ -397,7 +397,7 @@ func (e *RealTimeRiskEngine) handleEvent(event *RiskEvent) {
 		zap.String("symbol", event.Symbol),
 		zap.String("severity", string(event.Severity)),
 		zap.String("message", event.Message))
-	
+
 	// In a real implementation, would:
 	// - Send alerts to risk managers
 	// - Update dashboards
@@ -409,7 +409,7 @@ func (e *RealTimeRiskEngine) handleEvent(event *RiskEvent) {
 func (e *RealTimeRiskEngine) calculateVaRPeriodically(ctx context.Context) {
 	ticker := time.NewTicker(time.Hour) // Calculate VaR every hour
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -426,9 +426,9 @@ func (e *RealTimeRiskEngine) calculateVaRPeriodically(ctx context.Context) {
 func (e *RealTimeRiskEngine) calculatePortfolioVaR() {
 	// Simplified VaR calculation
 	// In production, would use more sophisticated models
-	
+
 	e.logger.Debug("Calculating portfolio VaR")
-	
+
 	// This is a placeholder - real implementation would:
 	// 1. Collect historical returns for all positions
 	// 2. Calculate correlation matrix
@@ -440,7 +440,7 @@ func (e *RealTimeRiskEngine) calculatePortfolioVaR() {
 func (e *RealTimeRiskEngine) monitorCircuitBreaker(ctx context.Context) {
 	ticker := time.NewTicker(time.Second * 10) // Check every 10 seconds
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -461,10 +461,10 @@ func (e *RealTimeRiskEngine) checkCircuitBreakerConditions() {
 	// - Price movements
 	// - Volume spikes
 	// - System health metrics
-	
+
 	e.circuitBreaker.mu.Lock()
 	defer e.circuitBreaker.mu.Unlock()
-	
+
 	// Check if we should transition from open to half-open
 	if e.circuitBreaker.state == CircuitBreakerOpen {
 		if time.Since(e.circuitBreaker.lastFailureTime) > e.circuitBreaker.timeout {
@@ -482,11 +482,11 @@ func (e *RealTimeRiskEngine) updateMetrics(latency time.Duration) {
 	} else {
 		e.metrics.AverageLatency = (e.metrics.AverageLatency + latency) / 2
 	}
-	
+
 	// Update max latency
 	if latency > e.metrics.MaxLatency {
 		e.metrics.MaxLatency = latency
 	}
-	
+
 	e.metrics.LastUpdateTime = time.Now()
 }

@@ -1,6 +1,6 @@
 // 🎯 **Risk Engine Types**
 // Generated using TradSys Code Splitting Standards
-// 
+//
 // This file contains type definitions, constants, and data structures
 // for the RealTime Risk Engine component. All types follow the established
 // naming conventions and include comprehensive documentation.
@@ -59,13 +59,13 @@ type RealTimeRiskEngine struct {
 
 // RiskEngineConfig contains configuration for the risk engine
 type RiskEngineConfig struct {
-	MaxLatency            time.Duration `json:"max_latency"`             // Target: <10μs
+	MaxLatency            time.Duration `json:"max_latency"` // Target: <10μs
 	EnablePreTradeChecks  bool          `json:"enable_pre_trade_checks"`
 	EnablePostTradeChecks bool          `json:"enable_post_trade_checks"`
 	EnableVaRCalculation  bool          `json:"enable_var_calculation"`
 	EnableCircuitBreaker  bool          `json:"enable_circuit_breaker"`
-	VaRConfidenceLevel    float64       `json:"var_confidence_level"`    // 95%, 99%
-	VaRTimeHorizon        time.Duration `json:"var_time_horizon"`        // 1 day
+	VaRConfidenceLevel    float64       `json:"var_confidence_level"` // 95%, 99%
+	VaRTimeHorizon        time.Duration `json:"var_time_horizon"`     // 1 day
 	MaxPositionSize       float64       `json:"max_position_size"`
 	MaxOrderSize          float64       `json:"max_order_size"`
 	MaxDailyLoss          float64       `json:"max_daily_loss"`

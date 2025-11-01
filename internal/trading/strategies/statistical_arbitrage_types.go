@@ -118,34 +118,34 @@ func (ps PositionState) String() string {
 
 // PairMetrics contains statistical metrics for a trading pair
 type PairMetrics struct {
-	PairID         string
-	Symbol1        string
-	Symbol2        string
-	Correlation    float64
-	Cointegration  float64
-	SpreadMean     float64
-	SpreadStdDev   float64
-	CurrentSpread  float64
-	CurrentZScore  float64
-	LastUpdate     time.Time
-	SampleSize     int
+	PairID        string
+	Symbol1       string
+	Symbol2       string
+	Correlation   float64
+	Cointegration float64
+	SpreadMean    float64
+	SpreadStdDev  float64
+	CurrentSpread float64
+	CurrentZScore float64
+	LastUpdate    time.Time
+	SampleSize    int
 }
 
 // PerformanceMetrics contains performance metrics for the strategy
 type PerformanceMetrics struct {
-	TotalTrades       int
-	WinningTrades     int
-	LosingTrades      int
-	WinRate           float64
-	TotalPnL          float64
-	MaxDrawdown       float64
-	SharpeRatio       float64
-	AverageWin        float64
-	AverageLoss       float64
-	ProfitFactor      float64
-	MaxConsecutiveWins int
+	TotalTrades          int
+	WinningTrades        int
+	LosingTrades         int
+	WinRate              float64
+	TotalPnL             float64
+	MaxDrawdown          float64
+	SharpeRatio          float64
+	AverageWin           float64
+	AverageLoss          float64
+	ProfitFactor         float64
+	MaxConsecutiveWins   int
 	MaxConsecutiveLosses int
-	LastUpdated       time.Time
+	LastUpdated          time.Time
 }
 
 // RiskMetrics contains risk metrics for the strategy
@@ -180,23 +180,23 @@ type StrategyConfig struct {
 	MaxPositions int     `yaml:"max_positions" json:"max_positions"`
 
 	// Risk management
-	MaxDrawdown     float64 `yaml:"max_drawdown" json:"max_drawdown"`
-	StopLoss        float64 `yaml:"stop_loss" json:"stop_loss"`
-	TakeProfit      float64 `yaml:"take_profit" json:"take_profit"`
-	MaxLeverage     float64 `yaml:"max_leverage" json:"max_leverage"`
-	RiskPerTrade    float64 `yaml:"risk_per_trade" json:"risk_per_trade"`
+	MaxDrawdown  float64 `yaml:"max_drawdown" json:"max_drawdown"`
+	StopLoss     float64 `yaml:"stop_loss" json:"stop_loss"`
+	TakeProfit   float64 `yaml:"take_profit" json:"take_profit"`
+	MaxLeverage  float64 `yaml:"max_leverage" json:"max_leverage"`
+	RiskPerTrade float64 `yaml:"risk_per_trade" json:"risk_per_trade"`
 
 	// Execution parameters
-	MinSpread       float64       `yaml:"min_spread" json:"min_spread"`
-	MaxSpread       float64       `yaml:"max_spread" json:"max_spread"`
-	ExecutionDelay  time.Duration `yaml:"execution_delay" json:"execution_delay"`
-	SlippageTolerance float64     `yaml:"slippage_tolerance" json:"slippage_tolerance"`
+	MinSpread         float64       `yaml:"min_spread" json:"min_spread"`
+	MaxSpread         float64       `yaml:"max_spread" json:"max_spread"`
+	ExecutionDelay    time.Duration `yaml:"execution_delay" json:"execution_delay"`
+	SlippageTolerance float64       `yaml:"slippage_tolerance" json:"slippage_tolerance"`
 
 	// Market conditions
-	MinVolume       float64 `yaml:"min_volume" json:"min_volume"`
-	MaxVolatility   float64 `yaml:"max_volatility" json:"max_volatility"`
-	TradingHours    []TradingHour `yaml:"trading_hours" json:"trading_hours"`
-	ExcludedDays    []time.Weekday `yaml:"excluded_days" json:"excluded_days"`
+	MinVolume     float64        `yaml:"min_volume" json:"min_volume"`
+	MaxVolatility float64        `yaml:"max_volatility" json:"max_volatility"`
+	TradingHours  []TradingHour  `yaml:"trading_hours" json:"trading_hours"`
+	ExcludedDays  []time.Weekday `yaml:"excluded_days" json:"excluded_days"`
 }
 
 // TradingHour represents a trading time window
@@ -237,14 +237,14 @@ type OrderRequest struct {
 
 // OrderResponse represents the response from placing an order
 type OrderResponse struct {
-	OrderID     string
-	ClientID    string
-	Status      string
-	FilledQty   float64
-	AvgPrice    float64
-	Commission  float64
-	Timestamp   time.Time
-	Error       error
+	OrderID    string
+	ClientID   string
+	Status     string
+	FilledQty  float64
+	AvgPrice   float64
+	Commission float64
+	Timestamp  time.Time
+	Error      error
 }
 
 // Constants for the statistical arbitrage strategy
@@ -258,11 +258,11 @@ const (
 	DefaultUpdateInterval = 1 * time.Second
 
 	// Risk management defaults
-	DefaultMaxDrawdown     = 0.05  // 5%
-	DefaultStopLoss        = 0.02  // 2%
-	DefaultTakeProfit      = 0.04  // 4%
-	DefaultMaxLeverage     = 2.0
-	DefaultRiskPerTrade    = 0.01  // 1%
+	DefaultMaxDrawdown  = 0.05 // 5%
+	DefaultStopLoss     = 0.02 // 2%
+	DefaultTakeProfit   = 0.04 // 4%
+	DefaultMaxLeverage  = 2.0
+	DefaultRiskPerTrade = 0.01 // 1%
 
 	// Execution defaults
 	DefaultMinSpread         = 0.001 // 0.1%
@@ -271,8 +271,8 @@ const (
 	DefaultSlippageTolerance = 0.001 // 0.1%
 
 	// Market condition defaults
-	DefaultMinVolume      = 1000.0
-	DefaultMaxVolatility  = 0.3 // 30%
+	DefaultMinVolume     = 1000.0
+	DefaultMaxVolatility = 0.3 // 30%
 
 	// Statistical thresholds
 	MinCorrelation     = 0.7  // Minimum correlation for pair trading
@@ -281,17 +281,17 @@ const (
 	MaxZScoreThreshold = 5.0  // Maximum z-score to prevent outliers
 
 	// Performance tracking
-	MetricsUpdateInterval = 5 * time.Minute
+	MetricsUpdateInterval  = 5 * time.Minute
 	PerformanceLogInterval = 1 * time.Hour
 )
 
 // Error constants
 const (
-	ErrInsufficientData    = "insufficient data for calculation"
-	ErrInvalidParameters   = "invalid strategy parameters"
+	ErrInsufficientData     = "insufficient data for calculation"
+	ErrInvalidParameters    = "invalid strategy parameters"
 	ErrPositionLimitReached = "maximum position limit reached"
-	ErrRiskLimitExceeded   = "risk limit exceeded"
-	ErrMarketClosed        = "market is closed"
-	ErrInvalidSymbol       = "invalid trading symbol"
+	ErrRiskLimitExceeded    = "risk limit exceeded"
+	ErrMarketClosed         = "market is closed"
+	ErrInvalidSymbol        = "invalid trading symbol"
 	ErrOrderExecutionFailed = "order execution failed"
 )
