@@ -228,3 +228,186 @@ func (l *License) GetRateLimit(usageType string) int64 {
 func (l *License) IsValid() bool {
 	return l.IsActive && !l.IsExpired()
 }
+
+// CanGrant checks if the license can grant access to a specific feature
+func (l *License) CanGrant(feature LicenseFeature) bool {
+	return l.IsActive && !l.IsExpired() && l.MaxUsers > 0 && l.HasFeature(feature)
+}
+
+// CanAccessExchange checks if the license allows access to a specific exchange
+func (l *License) CanAccessExchange(exchange string) bool {
+	if !l.IsValid() {
+		return false
+	}
+	
+	switch exchange {
+	case "EGX":
+		return l.HasFeature(EGX_ACCESS) || l.HasFeature(MULTI_EXCHANGE)
+	case "ADX":
+		return l.HasFeature(ADX_ACCESS) || l.HasFeature(MULTI_EXCHANGE)
+	default:
+		return l.HasFeature(MULTI_EXCHANGE)
+	}
+}
+
+// CanPerformTradingType checks if the license allows a specific trading type
+func (l *License) CanPerformTradingType(tradingType string) bool {
+	if !l.IsValid() {
+		return false
+	}
+	
+	switch tradingType {
+	case "basic":
+		return l.HasFeature(BASIC_TRADING)
+	case "advanced":
+		return l.HasFeature(ADVANCED_TRADING) || l.HasFeature(HFT_TRADING)
+	case "hft":
+		return l.HasFeature(HFT_TRADING)
+	default:
+		return false
+	}
+}
+
+// CanAccessAssetType checks if the license allows access to specific asset types
+func (l *License) CanAccessAssetType(assetType string) bool {
+	if !l.IsValid() {
+		return false
+	}
+	
+	switch assetType {
+	case "basic":
+		return l.HasFeature(BASIC_ASSETS)
+	case "advanced":
+		return l.HasFeature(ADVANCED_ASSETS)
+	case "islamic":
+		return l.HasFeature(ISLAMIC_ASSETS)
+	case "crypto":
+		return l.HasFeature(CRYPTO_ASSETS)
+	default:
+		return false
+	}
+}
+
+// CanUseAnalytics checks if the license allows analytics features
+func (l *License) CanUseAnalytics(analyticsLevel string) bool {
+	if !l.IsValid() {
+		return false
+	}
+	
+	switch analyticsLevel {
+	case "basic":
+		return l.HasFeature(BASIC_ANALYTICS)
+	case "advanced":
+		return l.HasFeature(ADVANCED_ANALYTICS)
+	case "realtime":
+		return l.HasFeature(REAL_TIME_ANALYTICS)
+	default:
+		return false
+	}
+}
+
+// CanUseAPI checks if the license allows API access
+func (l *License) CanUseAPI(apiType string) bool {
+	if !l.IsValid() {
+		return false
+	}
+	
+	switch apiType {
+	case "rest":
+		return l.HasFeature(REST_API)
+	case "websocket":
+		return l.HasFeature(WEBSOCKET_API)
+	case "third_party":
+		return l.HasFeature(THIRD_PARTY_API)
+	default:
+		return false
+	}
+}
+
+// CanUseIslamicFeatures checks if the license allows Islamic finance features
+func (l *License) CanUseIslamicFeatures(featureType string) bool {
+	if !l.IsValid() {
+		return false
+	}
+	
+	switch featureType {
+	case "compliance":
+		return l.HasFeature(SHARIA_COMPLIANCE)
+	case "zakat":
+		return l.HasFeature(ZAKAT_CALCULATION)
+	case "screening":
+		return l.HasFeature(HALAL_SCREENING)
+	default:
+		return false
+	}
+}
+
+// HasCapacity checks if the license has capacity for additional users
+func (l *License) HasCapacity() bool {
+	return l.IsValid() && l.MaxUsers > 0
+}
+
+// HasQuotaRemaining checks if there's remaining quota for a usage type
+func (l *License) HasQuotaRemaining(usageType string, currentUsage int64) bool {
+	if !l.IsValid() {
+		return false
+	}
+	
+	quota := l.GetQuota(usageType)
+	return quota == 0 || currentUsage < quota // 0 means unlimited
+}
+
+// IsWithinRateLimit checks if usage is within rate limits
+func (l *License) IsWithinRateLimit(usageType string, currentRate int64) bool {
+	if !l.IsValid() {
+		return false
+	}
+	
+	rateLimit := l.GetRateLimit(usageType)
+	return rateLimit == 0 || currentRate <= rateLimit // 0 means unlimited
+}
+
+// CanExecuteOrder checks if the license allows order execution with given parameters
+func (l *License) CanExecuteOrder(exchange, tradingType, assetType string) bool {
+	return l.CanAccessExchange(exchange) && 
+		   l.CanPerformTradingType(tradingType) && 
+		   l.CanAccessAssetType(assetType)
+}
+
+// GetUsagePercentage calculates usage percentage for a quota type
+func (l *License) GetUsagePercentage(usageType string, currentUsage int64) float64 {
+	quota := l.GetQuota(usageType)
+	if quota == 0 {
+		return 0.0 // Unlimited
+	}
+	
+	percentage := float64(currentUsage) / float64(quota) * 100.0
+	if percentage > 100.0 {
+		return 100.0
+	}
+	return percentage
+}
+
+// GetRemainingQuota calculates remaining quota for a usage type
+func (l *License) GetRemainingQuota(usageType string, currentUsage int64) int64 {
+	quota := l.GetQuota(usageType)
+	if quota == 0 {
+		return -1 // Unlimited
+	}
+	
+	remaining := quota - currentUsage
+	if remaining < 0 {
+		return 0
+	}
+	return remaining
+}
+
+// IsNearExpiry checks if the license is near expiry (within specified duration)
+func (l *License) IsNearExpiry(threshold time.Duration) bool {
+	return time.Until(l.ExpiresAt) <= threshold
+}
+
+// GetTimeUntilExpiry returns the duration until license expires
+func (l *License) GetTimeUntilExpiry() time.Duration {
+	return time.Until(l.ExpiresAt)
+}
