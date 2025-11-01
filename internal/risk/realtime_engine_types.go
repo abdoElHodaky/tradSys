@@ -108,14 +108,7 @@ type CircuitBreaker struct {
 	mu              sync.RWMutex
 }
 
-// CircuitBreakerState represents circuit breaker states
-type CircuitBreakerState int
-
-const (
-	CircuitBreakerClosed CircuitBreakerState = iota
-	CircuitBreakerOpen
-	CircuitBreakerHalfOpen
-)
+// CircuitBreakerState is defined in circuit_breaker.go to avoid duplication
 
 // RiskCheck represents the result of a risk check
 type RiskCheck struct {

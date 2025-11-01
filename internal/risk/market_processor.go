@@ -122,7 +122,7 @@ func (s *Service) processTrade(trade *order_matching.Trade) {
 	}
 
 	// Get user IDs from the orders
-	buyOrder, err := s.OrderEngine.GetOrder(trade.Symbol, trade.BuyOrderID)
+	buyOrder, err := s.OrderService.GetOrder(trade.BuyOrderID)
 	if err != nil {
 		s.logger.Warn("Could not find buy order for trade",
 			zap.String("trade_id", trade.ID),
@@ -131,7 +131,7 @@ func (s *Service) processTrade(trade *order_matching.Trade) {
 		return
 	}
 	
-	sellOrder, err := s.OrderEngine.GetOrder(trade.Symbol, trade.SellOrderID)
+	sellOrder, err := s.OrderService.GetOrder(trade.SellOrderID)
 	if err != nil {
 		s.logger.Warn("Could not find sell order for trade",
 			zap.String("trade_id", trade.ID),
