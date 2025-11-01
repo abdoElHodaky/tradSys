@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/abdoElHodaky/tradSys/internal/orders"
 	"github.com/abdoElHodaky/tradSys/internal/risk"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -354,104 +355,49 @@ func TestRiskCalculator_AccountRisk(t *testing.T) {
 	assert.GreaterOrEqual(t, accountRisk.ConcentrationRisk, 0.0)
 }
 
+// TestRiskCalculator_RealTimeMonitoring is commented out because the Calculator
+// doesn't expose real-time monitoring APIs. Real-time monitoring is handled
+// by the RealTimeRiskEngine separately.
+/*
 func TestRiskCalculator_RealTimeMonitoring(t *testing.T) {
-	calculator := risk.NewCalculator(&risk.Config{
-		VaRConfidence:       0.95,
-		CalculationInterval: 100 * time.Millisecond, // Fast for testing
-		MaxPositionSize:     1000000,
-		ConcentrationLimit:  0.3,
-		EnableRealTimeCalc:  true,
-	})
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
-	// Create portfolio
-	portfolio := &risk.Portfolio{
-		UserID: "user-001",
-		Positions: []risk.Position{
-			{
-				Symbol:        "AAPL",
-				Quantity:      1000,
-				AveragePrice:  150.00,
-				CurrentPrice:  155.00,
-				MarketValue:   155000,
-				UnrealizedPnL: 5000,
-			},
-		},
-		TotalMarketValue:   155000,
-		TotalUnrealizedPnL: 5000,
-		Cash:               345000,
-		TotalValue:         500000,
-	}
-
-	// Start real-time monitoring
-	alertChan := make(chan *risk.RiskAlert, 10)
-	err := calculator.StartRealTimeMonitoring(ctx, portfolio, alertChan)
-	require.NoError(t, err)
-
-	// Simulate price change that triggers alert
-	portfolio.Positions[0].CurrentPrice = 140.00 // 10% drop
-	portfolio.Positions[0].MarketValue = 140000
-	portfolio.Positions[0].UnrealizedPnL = -10000
-	portfolio.TotalMarketValue = 140000
-	portfolio.TotalUnrealizedPnL = -10000
-	portfolio.TotalValue = 485000
-
-	// Update portfolio in calculator
-	err = calculator.UpdatePortfolio(ctx, portfolio)
-	require.NoError(t, err)
-
-	// Wait for alert
-	select {
-	case alert := <-alertChan:
-		assert.NotNil(t, alert)
-		assert.Equal(t, "user-001", alert.UserID)
-		assert.Equal(t, risk.AlertTypePositionLoss, alert.Type)
-		assert.Greater(t, alert.Severity, risk.SeverityMedium)
-	case <-time.After(1 * time.Second):
-		t.Fatal("Expected risk alert but none received")
-	}
+	// Real-time monitoring APIs (StartRealTimeMonitoring, UpdatePortfolio) 
+	// are not available on the Calculator type. They exist on the RealTimeRiskEngine.
+	t.Skip("Real-time monitoring APIs not available on Calculator")
 }
+*/
 
 func BenchmarkRiskCalculator_VaRCalculation(b *testing.B) {
-	calculator := risk.NewCalculator(&risk.Config{
-		VaRConfidence:       0.95,
-		CalculationInterval: time.Second,
-		MaxPositionSize:     1000000,
-		ConcentrationLimit:  0.3,
-		EnableRealTimeCalc:  false, // Disable for benchmarking
-	})
+	calculator := risk.NewCalculator(nil) // Updated constructor signature
 
 	ctx := context.Background()
 
-	// Create large portfolio for benchmarking
-	positions := make([]risk.Position, 100)
+	// Create large position list for benchmarking
+	positions := make([]*risk.Position, 100)
+	prices := make(map[string]float64)
+	
 	for i := 0; i < 100; i++ {
-		positions[i] = risk.Position{
-			Symbol:        "STOCK" + string(rune(i)),
-			Quantity:      1000,
-			AveragePrice:  100.0 + float64(i),
-			CurrentPrice:  105.0 + float64(i),
-			MarketValue:   105000 + float64(i*1000),
-			UnrealizedPnL: 5000,
+		symbol := "STOCK" + string(rune('A'+i%26)) + string(rune('A'+(i/26)%26))
+		positions[i] = &risk.Position{
+			ID:             "pos-" + string(rune('0'+i%10)),
+			UserID:         "user-001",
+			Symbol:         symbol,
+			Quantity:       1000,
+			AveragePrice:   100.0 + float64(i),
+			MarketValue:    105000 + float64(i*1000),
+			UnrealizedPnL:  5000,
+			RealizedPnL:    0,
+			InstrumentType: "stock",
+			CreatedAt:      time.Now(),
+			UpdatedAt:      time.Now(),
 		}
-	}
-
-	portfolio := &risk.Portfolio{
-		UserID:             "user-001",
-		Positions:          positions,
-		TotalMarketValue:   10500000,
-		TotalUnrealizedPnL: 500000,
-		Cash:               500000,
-		TotalValue:         11000000,
+		prices[symbol] = 105.0 + float64(i)
 	}
 
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		_, err := calculator.CalculateVaR(ctx, portfolio)
+		_, err := calculator.CalculateAccountRisk(ctx, "user-001", positions, prices)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -459,34 +405,32 @@ func BenchmarkRiskCalculator_VaRCalculation(b *testing.B) {
 }
 
 func BenchmarkRiskCalculator_GreeksCalculation(b *testing.B) {
-	calculator := risk.NewCalculator(&risk.Config{
-		VaRConfidence:       0.95,
-		CalculationInterval: time.Second,
-		MaxPositionSize:     1000000,
-		ConcentrationLimit:  0.3,
-		EnableRealTimeCalc:  false,
-	})
+	calculator := risk.NewCalculator(nil) // Updated constructor signature
 
 	ctx := context.Background()
 
-	option := &risk.OptionPosition{
-		Symbol:           "AAPL240315C00150000",
-		UnderlyingSymbol: "AAPL",
-		OptionType:       risk.OptionTypeCall,
-		Strike:           150.00,
-		Expiry:           time.Now().AddDate(0, 3, 0),
-		Quantity:         10,
-		Premium:          5.50,
-		UnderlyingPrice:  155.00,
-		Volatility:       0.25,
-		RiskFreeRate:     0.05,
+	// Create option position for benchmarking
+	optionPosition := &risk.Position{
+		ID:             "opt-001",
+		UserID:         "user-001",
+		Symbol:         "AAPL240315C00150000",
+		Quantity:       10,
+		AveragePrice:   5.50, // Premium paid
+		MarketValue:    5500,
+		UnrealizedPnL:  0,
+		RealizedPnL:    0,
+		InstrumentType: "option", // This triggers Greeks calculation
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
+
+	currentPrice := 155.00
 
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		_, err := calculator.CalculateGreeks(ctx, option)
+		_, err := calculator.CalculatePositionRisk(ctx, optionPosition, currentPrice)
 		if err != nil {
 			b.Fatal(err)
 		}
