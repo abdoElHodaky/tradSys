@@ -26,7 +26,7 @@ func NewRoutingEngine() *RoutingEngine {
 func (re *RoutingEngine) UpdateRules(rules map[string]interface{}) error {
 	re.mu.Lock()
 	defer re.mu.Unlock()
-	
+
 	for key, value := range rules {
 		re.rules[key] = value
 	}

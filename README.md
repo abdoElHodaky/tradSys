@@ -33,21 +33,54 @@ go run cmd/tradsys/main.go
 
 ## 🏗️ Architecture
 
-TradSys v3 uses a microservices architecture with 13 core services:
+TradSys v3 uses a **modernized microservices architecture** with comprehensive standardization:
 
+### **🏭 Core Engine Architecture**
+- **Factory Pattern**: Centralized engine creation with 5 engine types (Basic, Advanced, HFT, Optimized, Compliance)
+- **Canonical Types**: Single source of truth for all engine types in `pkg/types/`
+- **Handler Pattern**: Extensible compliance rule processing with 7+ rule handlers
+- **Type Safety**: Compile-time guarantees for engine selection and configuration
+
+### **📦 Package Structure**
+```
+pkg/                    # Public APIs (4+ packages)
+├── types/              # Canonical type definitions
+├── matching/           # Engine factory and implementations
+├── interfaces/         # Public interface definitions
+└── common/             # Shared utilities
+
+internal/               # Private implementations (44+ packages)
+├── compliance/         # Compliance handlers and processors
+├── core/               # Core business logic
+├── orders/             # Order management
+└── trading/            # Trading strategies
+
+services/               # Business services (15 packages)
+├── licensing/          # Enhanced license validation
+├── trading/            # Trading services
+└── assets/             # Asset management
+```
+
+### **🎯 Service Categories**
 - **Trading Services**: Orders, Risk, Portfolio, Market Data
-- **Exchange Integration**: EGX, ADX connectivity
+- **Exchange Integration**: EGX, ADX connectivity with multi-exchange support
 - **Platform Services**: Authentication, Licensing, Compliance, Analytics
 - **Communication**: WebSocket gateway, Notifications
 
-**Tech Stack**: Go, gRPC, PostgreSQL, Redis, Kubernetes
+**Tech Stack**: Go 1.21+, gRPC, PostgreSQL, Redis, Kubernetes
 
 ## 📚 Documentation
 
 - **[Architecture](ARCHITECTURE.md)** - System architecture and technical design
+- **[Standardization Plan](COMPREHENSIVE_STANDARDIZATION_PLAN.md)** - Code standardization implementation
 - **[Multi-Asset Analysis](MULTI_ASSET_ANALYSIS.md)** - Comprehensive platform analysis
 - **[Licensing Plan](LICENSING_PLAN.md)** - Enterprise licensing implementation
 - **[Resimplification Analysis](RESIMPLIFICATION_ANALYSIS.md)** - Code optimization analysis
+
+### **🔧 Developer Resources**
+- **Engine Factory**: Use `pkg/matching.NewEngine(engineType, config, logger)` for type-safe engine creation
+- **Compliance Handlers**: Extend `internal/compliance/handlers.RuleHandler` interface for custom rules
+- **License Validation**: Use enhanced methods like `license.CanGrant(feature)` for readable conditions
 
 ## 🔧 Development
 

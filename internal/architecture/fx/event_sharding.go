@@ -3,7 +3,6 @@ package fx
 import (
 	"context"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/handlers"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/fx"
 	"go.uber.org/zap"

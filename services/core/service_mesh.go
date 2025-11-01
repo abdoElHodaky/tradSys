@@ -111,7 +111,7 @@ func (sm *ServiceMesh) RegisterService(ctx context.Context, service *ServiceNode
 	// Register health service
 	healthServer := health.NewServer()
 	grpc_health_v1.RegisterHealthServer(server, healthServer)
-	
+
 	// Enable reflection for development
 	reflection.Register(server)
 
@@ -130,7 +130,7 @@ func (sm *ServiceMesh) RegisterService(ctx context.Context, service *ServiceNode
 	// Add to services map
 	sm.services[service.ID] = service
 
-	log.Printf("Service registered: %s (%s) at %s:%d", 
+	log.Printf("Service registered: %s (%s) at %s:%d",
 		service.Name, service.ID, service.Address, service.Port)
 
 	return nil

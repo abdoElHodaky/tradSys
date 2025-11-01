@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
 	"github.com/google/uuid"
 	"go.uber.org/zap"

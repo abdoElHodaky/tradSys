@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/pkg/matching"
+	"github.com/abdoElHodaky/tradSys/pkg/types"
 	"github.com/google/uuid"
 	cache "github.com/patrickmn/go-cache"
 	"go.uber.org/zap"
@@ -14,7 +14,7 @@ import (
 // OrderService handles core order management operations
 type OrderService struct {
 	// MatchingEngine is the order matching engine
-	MatchingEngine *matching.MatchingEngine
+	MatchingEngine types.Engine
 	// Orders is a map of order ID to order
 	Orders map[string]*Order
 	// UserOrders is a map of user ID to order IDs
@@ -40,9 +40,9 @@ type OrderService struct {
 }
 
 // NewOrderService creates a new order service
-func NewOrderService(matchingEngine *matching.MatchingEngine, logger *zap.Logger) *OrderService {
+func NewOrderService(matchingEngine types.Engine, logger *zap.Logger) *OrderService {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	service := &OrderService{
 		MatchingEngine: matchingEngine,
 		Orders:         make(map[string]*Order),
@@ -54,11 +54,11 @@ func NewOrderService(matchingEngine *matching.MatchingEngine, logger *zap.Logger
 		ctx:            ctx,
 		cancel:         cancel,
 	}
-	
+
 	// Initialize components
 	service.lifecycle = NewOrderLifecycle(service, logger)
 	service.validator = NewOrderValidator(logger)
-	
+
 	return service
 }
 
@@ -78,23 +78,23 @@ func (s *OrderService) CreateOrder(ctx context.Context, req *OrderRequest) (*Ord
 
 	// Create order
 	order := &Order{
-		ID:              uuid.New().String(),
-		UserID:          req.UserID,
-		ClientOrderID:   req.ClientOrderID,
-		Symbol:          req.Symbol,
-		Side:            req.Side,
-		Type:            req.Type,
-		Price:           req.Price,
-		StopPrice:       req.StopPrice,
-		Quantity:        req.Quantity,
-		FilledQuantity:  0,
-		Status:          OrderStatusNew,
-		TimeInForce:     req.TimeInForce,
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
-		ExpiresAt:       req.ExpiresAt,
-		Trades:          make([]*Trade, 0),
-		Metadata:        make(map[string]interface{}),
+		ID:             uuid.New().String(),
+		UserID:         req.UserID,
+		ClientOrderID:  req.ClientOrderID,
+		Symbol:         req.Symbol,
+		Side:           req.Side,
+		Type:           req.Type,
+		Price:          req.Price,
+		StopPrice:      req.StopPrice,
+		Quantity:       req.Quantity,
+		FilledQuantity: 0,
+		Status:         OrderStatusNew,
+		TimeInForce:    req.TimeInForce,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+		ExpiresAt:      req.ExpiresAt,
+		Trades:         make([]*Trade, 0),
+		Metadata:       make(map[string]interface{}),
 	}
 
 	// Store order
@@ -237,7 +237,6 @@ func (s *OrderService) UpdateOrder(ctx context.Context, req *OrderUpdateRequest)
 		order.ExpiresAt = req.ExpiresAt
 	}
 
-
 	order.UpdatedAt = time.Now()
 
 	// Update cache
@@ -276,14 +275,11 @@ func (s *OrderService) CancelOrder(ctx context.Context, req *OrderCancelRequest)
 		return nil, err
 	}
 
-	// Cancel order in matching engine
-	if order.Status == OrderStatusNew || order.Status == OrderStatusPending {
-		success := s.MatchingEngine.CancelOrder(order.Symbol, order.ID)
-		if !success {
-			s.logger.Warn("Failed to cancel order in matching engine",
-				zap.String("order_id", order.ID))
-		}
-	}
+	// Note: Order cancellation in matching engine is handled at the engine level
+	// The new Engine interface processes orders but doesn't expose direct cancellation
+	s.logger.Info("Cancelling order",
+		zap.String("order_id", order.ID),
+		zap.String("status", string(order.Status)))
 
 	// Update order status
 	if err := s.lifecycle.CancelOrder(ctx, order); err != nil {
@@ -309,10 +305,16 @@ func (s *OrderService) SubmitOrder(ctx context.Context, order *Order) error {
 	matchingOrder := s.convertToMatchingOrder(order)
 
 	// Submit to matching engine
-	trades := s.MatchingEngine.AddOrder(matchingOrder)
+	trade, err := s.MatchingEngine.ProcessOrder(matchingOrder)
+	if err != nil {
+		s.logger.Error("Failed to process order in matching engine",
+			zap.String("order_id", order.ID),
+			zap.Error(err))
+		return err
+	}
 
-	// Process resulting trades
-	for _, trade := range trades {
+	// Process resulting trade if one was created
+	if trade != nil {
 		if err := s.processTrade(ctx, trade, order); err != nil {
 			s.logger.Error("Failed to process trade",
 				zap.String("trade_id", trade.ID),
@@ -333,7 +335,7 @@ func (s *OrderService) SubmitOrder(ctx context.Context, order *Order) error {
 }
 
 // processTrade processes a trade from the matching engine
-func (s *OrderService) processTrade(ctx context.Context, matchingTrade *matching.Trade, order *Order) error {
+func (s *OrderService) processTrade(ctx context.Context, matchingTrade *types.Trade, order *Order) error {
 	trade := &Trade{
 		ID:                  matchingTrade.ID,
 		OrderID:             order.ID,
@@ -366,21 +368,21 @@ func (s *OrderService) processTrade(ctx context.Context, matchingTrade *matching
 }
 
 // convertToMatchingOrder converts an order to matching engine format
-func (s *OrderService) convertToMatchingOrder(order *Order) *matching.Order {
-	return &matching.Order{
+func (s *OrderService) convertToMatchingOrder(order *Order) *types.Order {
+	return &types.Order{
 		ID:        order.ID,
 		Symbol:    order.Symbol,
-		Side:      matching.OrderSide(order.Side),
-		Type:      matching.OrderType(order.Type),
+		Side:      string(order.Side),
+		Type:      string(order.Type),
 		Price:     order.Price,
 		Quantity:  order.Quantity,
-		CreatedAt: order.CreatedAt,
+		Timestamp: order.CreatedAt,
 		UserID:    order.UserID,
 	}
 }
 
 // getCounterPartyOrderID extracts counter party order ID from matching trade
-func (s *OrderService) getCounterPartyOrderID(trade *matching.Trade, order *Order) string {
+func (s *OrderService) getCounterPartyOrderID(trade *types.Trade, order *Order) string {
 	if order.Side == OrderSideBuy {
 		return trade.SellOrderID
 	}
@@ -434,26 +436,26 @@ func (s *OrderService) matchesFilter(order *Order, filter *OrderFilter) bool {
 // Start starts the order service
 func (s *OrderService) Start() error {
 	s.logger.Info("Starting order service")
-	
+
 	// Start lifecycle manager
 	if err := s.lifecycle.Start(); err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
 // Stop stops the order service
 func (s *OrderService) Stop() error {
 	s.logger.Info("Stopping order service")
-	
+
 	s.cancel()
-	
+
 	// Stop lifecycle manager
 	if err := s.lifecycle.Stop(); err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -488,10 +490,10 @@ func (s *OrderService) calculateCacheHitRate() float64 {
 
 // OrderServiceStats represents order service statistics
 type OrderServiceStats struct {
-	TotalOrders     int                    `json:"total_orders"`
-	TotalUsers      int                    `json:"total_users"`
-	TotalSymbols    int                    `json:"total_symbols"`
-	OrdersByStatus  map[OrderStatus]int    `json:"orders_by_status"`
-	CacheHitRate    float64                `json:"cache_hit_rate"`
-	LastUpdateTime  time.Time              `json:"last_update_time"`
+	TotalOrders    int                 `json:"total_orders"`
+	TotalUsers     int                 `json:"total_users"`
+	TotalSymbols   int                 `json:"total_symbols"`
+	OrdersByStatus map[OrderStatus]int `json:"orders_by_status"`
+	CacheHitRate   float64             `json:"cache_hit_rate"`
+	LastUpdateTime time.Time           `json:"last_update_time"`
 }

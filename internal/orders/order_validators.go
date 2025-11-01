@@ -208,7 +208,7 @@ func (v *OrderValidator) validateBusinessRules(ctx context.Context, req *OrderRe
 // validateUpdateFields validates fields in order update request
 func (v *OrderValidator) validateUpdateFields(req *OrderUpdateRequest) error {
 	// At least one field must be updated
-	if req.Price <= 0 && req.Quantity <= 0 && req.StopPrice <= 0 && 
+	if req.Price <= 0 && req.Quantity <= 0 && req.StopPrice <= 0 &&
 		req.TimeInForce == "" && req.ExpiresAt.IsZero() {
 		return ErrNoFieldsToUpdate
 	}
@@ -271,9 +271,9 @@ func (v *OrderValidator) canOrderBeUpdated(order *Order) bool {
 // canOrderBeCancelled checks if an order can be cancelled
 func (v *OrderValidator) canOrderBeCancelled(order *Order) bool {
 	// Only new, pending, and partially filled orders can be cancelled
-	return order.Status == OrderStatusNew || 
-		   order.Status == OrderStatusPending || 
-		   order.Status == OrderStatusPartiallyFilled
+	return order.Status == OrderStatusNew ||
+		order.Status == OrderStatusPending ||
+		order.Status == OrderStatusPartiallyFilled
 }
 
 // isValidOrderSide checks if order side is valid
@@ -452,7 +452,7 @@ func (v *OrderValidator) isMarketOpen(symbol string) bool {
 	// Simplified market hours check
 	now := time.Now()
 	hour := now.Hour()
-	
+
 	// Assume market is open 9 AM to 4 PM
 	return hour >= 9 && hour < 16
 }
@@ -460,31 +460,31 @@ func (v *OrderValidator) isMarketOpen(symbol string) bool {
 // Error definitions for validation
 var (
 	ErrInvalidOrderRequest      = errors.New("invalid order request")
-	ErrMissingUserID           = errors.New("missing user ID")
-	ErrMissingSymbol           = errors.New("missing symbol")
-	ErrMissingSide             = errors.New("missing order side")
-	ErrMissingOrderType        = errors.New("missing order type")
-	ErrMissingPrice            = errors.New("missing price for limit order")
-	ErrMissingStopPrice        = errors.New("missing stop price for stop order")
-	ErrInvalidQuantity         = errors.New("invalid quantity")
-	ErrInvalidOrderSide        = errors.New("invalid order side")
-	ErrInvalidOrderType        = errors.New("invalid order type")
-	ErrInvalidTimeInForce      = errors.New("invalid time in force")
-	ErrInvalidSymbol           = errors.New("invalid symbol format")
-	ErrInvalidPricePrecision   = errors.New("invalid price precision")
+	ErrMissingUserID            = errors.New("missing user ID")
+	ErrMissingSymbol            = errors.New("missing symbol")
+	ErrMissingSide              = errors.New("missing order side")
+	ErrMissingOrderType         = errors.New("missing order type")
+	ErrMissingPrice             = errors.New("missing price for limit order")
+	ErrMissingStopPrice         = errors.New("missing stop price for stop order")
+	ErrInvalidQuantity          = errors.New("invalid quantity")
+	ErrInvalidOrderSide         = errors.New("invalid order side")
+	ErrInvalidOrderType         = errors.New("invalid order type")
+	ErrInvalidTimeInForce       = errors.New("invalid time in force")
+	ErrInvalidSymbol            = errors.New("invalid symbol format")
+	ErrInvalidPricePrecision    = errors.New("invalid price precision")
 	ErrInvalidQuantityPrecision = errors.New("invalid quantity precision")
-	ErrOrderSizeExceedsLimit   = errors.New("order size exceeds limit")
-	ErrOrderSizeBelowMinimum   = errors.New("order size below minimum")
-	ErrOrderValueExceedsLimit  = errors.New("order value exceeds limit")
-	ErrPriceBelowMinimum       = errors.New("price below minimum")
-	ErrPriceExceedsMaximum     = errors.New("price exceeds maximum")
-	ErrExpirationTimeInPast    = errors.New("expiration time is in the past")
-	ErrExpirationTimeTooFar    = errors.New("expiration time is too far in the future")
-	ErrMarketClosed            = errors.New("market is closed")
-	ErrOrderCannotBeUpdated    = errors.New("order cannot be updated")
-	ErrOrderCannotBeCancelled  = errors.New("order cannot be cancelled")
-	ErrUnauthorizedOrderAccess = errors.New("unauthorized order access")
-	ErrNoFieldsToUpdate        = errors.New("no fields to update")
-	ErrQuantityBelowFilled     = errors.New("quantity cannot be below filled quantity")
-	ErrOrderNotFound           = errors.New("order not found")
+	ErrOrderSizeExceedsLimit    = errors.New("order size exceeds limit")
+	ErrOrderSizeBelowMinimum    = errors.New("order size below minimum")
+	ErrOrderValueExceedsLimit   = errors.New("order value exceeds limit")
+	ErrPriceBelowMinimum        = errors.New("price below minimum")
+	ErrPriceExceedsMaximum      = errors.New("price exceeds maximum")
+	ErrExpirationTimeInPast     = errors.New("expiration time is in the past")
+	ErrExpirationTimeTooFar     = errors.New("expiration time is too far in the future")
+	ErrMarketClosed             = errors.New("market is closed")
+	ErrOrderCannotBeUpdated     = errors.New("order cannot be updated")
+	ErrOrderCannotBeCancelled   = errors.New("order cannot be cancelled")
+	ErrUnauthorizedOrderAccess  = errors.New("unauthorized order access")
+	ErrNoFieldsToUpdate         = errors.New("no fields to update")
+	ErrQuantityBelowFilled      = errors.New("quantity cannot be below filled quantity")
+	ErrOrderNotFound            = errors.New("order not found")
 )

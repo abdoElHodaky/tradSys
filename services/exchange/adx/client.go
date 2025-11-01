@@ -57,22 +57,22 @@ func NewClient(config *Config) *Client {
 func (c *Client) Connect(ctx context.Context) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	if c.connected {
 		return nil
 	}
-	
+
 	if err := c.connector.Connect(ctx); err != nil {
 		return fmt.Errorf("failed to connect to ADX: %w", err)
 	}
-	
+
 	// Initialize Islamic finance services if enabled
 	if c.config.EnableIslamic {
 		if err := c.islamicService.Initialize(ctx); err != nil {
 			return fmt.Errorf("failed to initialize Islamic finance services: %w", err)
 		}
 	}
-	
+
 	c.connected = true
 	return nil
 }
@@ -81,15 +81,15 @@ func (c *Client) Connect(ctx context.Context) error {
 func (c *Client) Disconnect(ctx context.Context) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	if !c.connected {
 		return nil
 	}
-	
+
 	if err := c.connector.Disconnect(ctx); err != nil {
 		return fmt.Errorf("failed to disconnect from ADX: %w", err)
 	}
-	
+
 	c.connected = false
 	return nil
 }
@@ -106,24 +106,24 @@ func (c *Client) PlaceOrder(ctx context.Context, order *interfaces.Order) (*inte
 	if !c.connected {
 		return nil, fmt.Errorf("not connected to ADX")
 	}
-	
+
 	// Validate order for ADX
 	if err := c.validateOrder(order); err != nil {
 		return nil, fmt.Errorf("order validation failed: %w", err)
 	}
-	
+
 	// Check market hours
 	if !c.IsMarketOpen() {
 		return nil, fmt.Errorf("ADX market is closed")
 	}
-	
+
 	// Additional Islamic finance validation if needed
 	if order.AssetType.IsIslamic() && c.config.EnableIslamic {
 		if err := c.islamicService.ValidateOrder(ctx, order); err != nil {
 			return nil, fmt.Errorf("Islamic finance validation failed: %w", err)
 		}
 	}
-	
+
 	return c.orderManager.PlaceOrder(ctx, order)
 }
 
@@ -132,7 +132,7 @@ func (c *Client) CancelOrder(ctx context.Context, orderID string) error {
 	if !c.connected {
 		return fmt.Errorf("not connected to ADX")
 	}
-	
+
 	return c.orderManager.CancelOrder(ctx, orderID)
 }
 
@@ -141,7 +141,7 @@ func (c *Client) GetOrderStatus(ctx context.Context, orderID string) (*interface
 	if !c.connected {
 		return nil, fmt.Errorf("not connected to ADX")
 	}
-	
+
 	return c.orderManager.GetOrderStatus(ctx, orderID)
 }
 
@@ -150,7 +150,7 @@ func (c *Client) GetMarketData(ctx context.Context, symbol string) (*interfaces.
 	if !c.connected {
 		return nil, fmt.Errorf("not connected to ADX")
 	}
-	
+
 	return c.marketData.GetMarketData(ctx, symbol)
 }
 
@@ -159,7 +159,7 @@ func (c *Client) SubscribeMarketData(ctx context.Context, symbols []string) (<-c
 	if !c.connected {
 		return nil, fmt.Errorf("not connected to ADX")
 	}
-	
+
 	return c.marketData.Subscribe(ctx, symbols)
 }
 
@@ -168,7 +168,7 @@ func (c *Client) GetAssetInfo(ctx context.Context, symbol string) (*interfaces.A
 	if !c.connected {
 		return nil, fmt.Errorf("not connected to ADX")
 	}
-	
+
 	return c.assetManager.GetAssetInfo(ctx, symbol)
 }
 
@@ -177,7 +177,7 @@ func (c *Client) ValidateAsset(ctx context.Context, asset *interfaces.Asset) err
 	if !c.connected {
 		return fmt.Errorf("not connected to ADX")
 	}
-	
+
 	return c.assetManager.ValidateAsset(ctx, asset)
 }
 
@@ -186,7 +186,7 @@ func (c *Client) IsShariahCompliant(ctx context.Context, symbol string) (bool, e
 	if !c.config.EnableIslamic {
 		return false, fmt.Errorf("Islamic finance not enabled for ADX")
 	}
-	
+
 	return c.islamicService.IsShariahCompliant(ctx, symbol)
 }
 
@@ -195,7 +195,7 @@ func (c *Client) GetHalalScreening(ctx context.Context, symbol string) (*interfa
 	if !c.config.EnableIslamic {
 		return nil, fmt.Errorf("Islamic finance not enabled for ADX")
 	}
-	
+
 	return c.islamicService.GetHalalScreening(ctx, symbol)
 }
 
@@ -228,20 +228,20 @@ func (c *Client) validateOrder(order *interfaces.Order) error {
 			break
 		}
 	}
-	
+
 	if !supported {
 		return fmt.Errorf("asset type %s not supported on ADX", order.AssetType)
 	}
-	
+
 	// Validate price and quantity
 	if order.Price <= 0 {
 		return fmt.Errorf("price must be positive")
 	}
-	
+
 	if order.Quantity <= 0 {
 		return fmt.Errorf("quantity must be positive")
 	}
-	
+
 	// ADX-specific validations
 	if order.AssetType == types.SUKUK {
 		// Minimum order size for Sukuk
@@ -249,14 +249,14 @@ func (c *Client) validateOrder(order *interfaces.Order) error {
 			return fmt.Errorf("minimum Sukuk quantity is 1000")
 		}
 	}
-	
+
 	if order.AssetType == types.ISLAMIC_FUND {
 		// Islamic fund specific validations
 		if order.Quantity < 100 {
 			return fmt.Errorf("minimum Islamic fund quantity is 100")
 		}
 	}
-	
+
 	return nil
 }
 
@@ -265,7 +265,7 @@ func (c *Client) GetSukukInfo(ctx context.Context, symbol string) (*SukukInfo, e
 	if !c.config.EnableIslamic {
 		return nil, fmt.Errorf("Islamic finance not enabled")
 	}
-	
+
 	return c.islamicService.GetSukukInfo(ctx, symbol)
 }
 
@@ -274,7 +274,7 @@ func (c *Client) CalculateZakat(ctx context.Context, portfolio *IslamicPortfolio
 	if !c.config.EnableIslamic {
 		return nil, fmt.Errorf("Islamic finance not enabled")
 	}
-	
+
 	return c.islamicService.CalculateZakat(ctx, portfolio)
 }
 
@@ -283,7 +283,7 @@ func (c *Client) GetShariaBoard(ctx context.Context) (*ShariaBoard, error) {
 	if !c.config.EnableShariaBoard {
 		return nil, fmt.Errorf("Sharia board information not enabled")
 	}
-	
+
 	return c.islamicService.GetShariaBoard(ctx)
 }
 
@@ -328,11 +328,11 @@ type SukukInfo struct {
 
 // IslamicPortfolio represents a portfolio of Islamic assets
 type IslamicPortfolio struct {
-	UserID     string                    `json:"user_id"`
-	Assets     map[string]IslamicAsset   `json:"assets"`
-	TotalValue float64                   `json:"total_value"`
-	Currency   string                    `json:"currency"`
-	AsOfDate   time.Time                 `json:"as_of_date"`
+	UserID     string                  `json:"user_id"`
+	Assets     map[string]IslamicAsset `json:"assets"`
+	TotalValue float64                 `json:"total_value"`
+	Currency   string                  `json:"currency"`
+	AsOfDate   time.Time               `json:"as_of_date"`
 }
 
 // IslamicAsset represents an Islamic financial asset
@@ -347,31 +347,31 @@ type IslamicAsset struct {
 
 // ZakatCalculation represents Zakat calculation results
 type ZakatCalculation struct {
-	PortfolioValue    float64   `json:"portfolio_value"`
-	ZakatableAmount   float64   `json:"zakatable_amount"`
-	ZakatRate         float64   `json:"zakat_rate"`
-	ZakatDue          float64   `json:"zakat_due"`
-	Currency          string    `json:"currency"`
-	CalculationDate   time.Time `json:"calculation_date"`
-	NextDueDate       time.Time `json:"next_due_date"`
-	ExemptAssets      []string  `json:"exempt_assets"`
+	PortfolioValue  float64   `json:"portfolio_value"`
+	ZakatableAmount float64   `json:"zakatable_amount"`
+	ZakatRate       float64   `json:"zakat_rate"`
+	ZakatDue        float64   `json:"zakat_due"`
+	Currency        string    `json:"currency"`
+	CalculationDate time.Time `json:"calculation_date"`
+	NextDueDate     time.Time `json:"next_due_date"`
+	ExemptAssets    []string  `json:"exempt_assets"`
 }
 
 // ShariaBoard represents Sharia board information
 type ShariaBoard struct {
-	Name        string              `json:"name"`
-	Members     []ShariaBoardMember `json:"members"`
-	Established time.Time           `json:"established"`
-	Certifications []string         `json:"certifications"`
-	ContactInfo ContactInfo         `json:"contact_info"`
+	Name           string              `json:"name"`
+	Members        []ShariaBoardMember `json:"members"`
+	Established    time.Time           `json:"established"`
+	Certifications []string            `json:"certifications"`
+	ContactInfo    ContactInfo         `json:"contact_info"`
 }
 
 // ShariaBoardMember represents a Sharia board member
 type ShariaBoardMember struct {
-	Name         string `json:"name"`
-	Title        string `json:"title"`
+	Name           string   `json:"name"`
+	Title          string   `json:"title"`
 	Qualifications []string `json:"qualifications"`
-	Experience   int    `json:"experience_years"`
+	Experience     int      `json:"experience_years"`
 }
 
 // ContactInfo represents contact information
