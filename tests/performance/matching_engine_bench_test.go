@@ -9,18 +9,23 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/pkg/matching"
+	"go.uber.org/zap"
 )
 
 // BenchmarkMatchingEngine_SingleThreaded tests single-threaded performance
 func BenchmarkMatchingEngine_SingleThreaded(b *testing.B) {
-	engine := matching.NewEngine(&matching.Config{
-		Symbol:           "AAPL",
-		LatencyTargetNS:  100000, // 100μs target
-		MaxOrdersPerSec:  100000,
-		OrderBookDepth:   1000,
-		EnableHFTMode:    true,
-		NUMAOptimization: false, // Disable for consistent benchmarking
-	})
+	config := &matching.EngineConfig{
+		Symbol:            "AAPL",
+		MaxOrderBookDepth: 1000,
+		TickSize:          0.01,
+		LotSize:           1.0,
+	}
+	
+	logger := zap.NewNop()
+	engine, err := matching.NewEngine(matching.EngineTypeAdvanced, config, logger)
+	if err != nil {
+		b.Fatal(err)
+	}
 
 	ctx := context.Background()
 
@@ -40,7 +45,7 @@ func BenchmarkMatchingEngine_SingleThreaded(b *testing.B) {
 			Timestamp:   time.Now(),
 		}
 
-		_, err := engine.ProcessOrder(ctx, order)
+		_, err := engine.ProcessOrder(order)
 		if err != nil {
 			b.Fatal(err)
 		}

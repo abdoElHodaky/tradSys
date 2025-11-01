@@ -10,6 +10,55 @@ import (
 	"go.uber.org/zap"
 )
 
+// Type aliases for backward compatibility with tests
+type (
+	// Core types
+	Engine = types.Engine
+	Order  = types.Order
+	Trade  = types.Trade
+	
+	// Configuration
+	EngineConfig = types.EngineConfig
+	EngineStats  = types.EngineStats
+	EngineError  = types.EngineError
+)
+
+// Constants for backward compatibility
+const (
+	// Order sides
+	SideBuy  = types.OrderSideBuy
+	SideSell = types.OrderSideSell
+	
+	// Order types  
+	TypeMarket = types.OrderTypeMarket
+	TypeLimit  = types.OrderTypeLimit
+	TypeStop   = types.OrderTypeStop
+	
+	// Time in force
+	TimeInForceGTC = types.TimeInForceGTC
+	TimeInForceIOC = types.TimeInForceIOC
+	TimeInForceFOK = types.TimeInForceFOK
+	
+	// Order status
+	StatusPending   = types.OrderStatusPending
+	StatusPartial   = types.OrderStatusPartial
+	StatusFilled    = types.OrderStatusFilled
+	StatusCancelled = types.OrderStatusCancelled
+)
+
+// Helper functions for backward compatibility
+func NewEngineError(code, message, details, severity string) *EngineError {
+	return types.NewEngineError(code, message, details, severity)
+}
+
+func DefaultEngineConfig() *EngineConfig {
+	return types.DefaultEngineConfig()
+}
+
+func NewEngineStats() *EngineStats {
+	return types.NewEngineStats()
+}
+
 // EngineType represents the type of matching engine to create
 type EngineType string
 
