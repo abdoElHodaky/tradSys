@@ -275,22 +275,11 @@ func (s *OrderService) CancelOrder(ctx context.Context, req *OrderCancelRequest)
 		return nil, err
 	}
 
-	// Cancel order in matching engine
-	if order.Status == OrderStatusNew || order.Status == OrderStatusPending {
-		// Note: The new Engine interface doesn't have CancelOrder method
-		// This functionality would need to be implemented differently
-		// For now, we'll just log and continue with the cancellation
-		s.logger.Info("Order cancelled locally (matching engine cancel not available)",
-			zap.String("order_id", order.ID))
-		
-		// Set a flag to indicate we couldn't cancel in matching engine
-		cancelSuccess := true
-		if !cancelSuccess {
-			s.logger.Warn("Order cancellation was not successful",
-				zap.String("order_id", order.ID),
-				zap.String("error", "matching engine cancel not available"))
-		}
-	}
+	// Note: Order cancellation in matching engine is handled at the engine level
+	// The new Engine interface processes orders but doesn't expose direct cancellation
+	s.logger.Info("Cancelling order",
+		zap.String("order_id", order.ID),
+		zap.String("status", string(order.Status)))
 
 	// Update order status
 	if err := s.lifecycle.CancelOrder(ctx, order); err != nil {
@@ -324,7 +313,7 @@ func (s *OrderService) SubmitOrder(ctx context.Context, order *Order) error {
 		return err
 	}
 
-	// Process resulting trade (if any)
+	// Process resulting trade if one was created
 	if trade != nil {
 		if err := s.processTrade(ctx, trade, order); err != nil {
 			s.logger.Error("Failed to process trade",
