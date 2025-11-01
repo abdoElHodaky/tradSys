@@ -42,7 +42,7 @@ func (s *Service) SubscribeOrderBook(ctx context.Context, symbol string) (*Subsc
 	}
 
 	// Create callback function
-	callback := func(data interface{}) {
+	callback := func(data interface{}) error {
 		// Cache the data
 		s.Cache.Set(
 			"orderbook:"+symbol,
@@ -58,6 +58,7 @@ func (s *Service) SubscribeOrderBook(ctx context.Context, symbol string) (*Subsc
 				zap.String("subscription_id", subscription.ID),
 				zap.String("symbol", symbol))
 		}
+		return nil
 	}
 
 	// Subscribe to external provider
@@ -97,7 +98,7 @@ func (s *Service) SubscribeTrades(ctx context.Context, symbol string) (*Subscrip
 	}
 
 	// Create callback function
-	callback := func(data interface{}) {
+	callback := func(data interface{}) error {
 		// Cache the data
 		s.Cache.Set(
 			"trades:"+symbol,
@@ -113,6 +114,7 @@ func (s *Service) SubscribeTrades(ctx context.Context, symbol string) (*Subscrip
 				zap.String("subscription_id", subscription.ID),
 				zap.String("symbol", symbol))
 		}
+		return nil
 	}
 
 	// Subscribe to external provider
@@ -152,7 +154,7 @@ func (s *Service) SubscribeTicker(ctx context.Context, symbol string) (*Subscrip
 	}
 
 	// Create callback function
-	callback := func(data interface{}) {
+	callback := func(data interface{}) error {
 		// Cache the data
 		s.Cache.Set(
 			"ticker:"+symbol,
@@ -168,6 +170,7 @@ func (s *Service) SubscribeTicker(ctx context.Context, symbol string) (*Subscrip
 				zap.String("subscription_id", subscription.ID),
 				zap.String("symbol", symbol))
 		}
+		return nil
 	}
 
 	// Subscribe to external provider
@@ -208,7 +211,7 @@ func (s *Service) SubscribeOHLCV(ctx context.Context, symbol, interval string) (
 	}
 
 	// Create callback function
-	callback := func(data interface{}) {
+	callback := func(data interface{}) error {
 		// Cache the data
 		s.Cache.Set(
 			fmt.Sprintf("ohlcv:%s:%s", symbol, interval),
@@ -225,6 +228,7 @@ func (s *Service) SubscribeOHLCV(ctx context.Context, symbol, interval string) (
 				zap.String("symbol", symbol),
 				zap.String("interval", interval))
 		}
+		return nil
 	}
 
 	// Subscribe to external provider
@@ -339,7 +343,7 @@ func (s *Service) GetOHLCV(ctx context.Context, symbol, interval string, limit i
 
 // GetHistoricalOHLCV gets historical OHLCV data from the database
 func (s *Service) GetHistoricalOHLCV(ctx context.Context, symbol, interval string, start, end time.Time) ([]*db.MarketData, error) {
-	return s.MarketDataRepository.GetBySymbolAndTimeRange(ctx, symbol, start, end)
+	return s.MarketDataRepository.GetBySymbolAndTimeRange(ctx, symbol, interval, start, end)
 }
 
 // AddMarketDataSource adds a new market data source

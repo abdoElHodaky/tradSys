@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/config"
 	"github.com/abdoElHodaky/tradSys/internal/db"
-	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"github.com/abdoElHodaky/tradSys/internal/marketdata/external"
 	"github.com/patrickmn/go-cache"
 	"go.uber.org/zap"
