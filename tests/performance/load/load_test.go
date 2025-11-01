@@ -292,13 +292,7 @@ func runMatchingEngineLoadTest(t *testing.T, config LoadTestConfig) *LoadTestRes
 
 // runOrderServiceLoadTest executes load test against order service
 func runOrderServiceLoadTest(t *testing.T, config LoadTestConfig) *LoadTestResult {
-	orderService := orders.NewService(&orders.Config{
-		MaxOrdersPerUser: 10000,
-		MaxOrderValue:    10000000,
-		EnableRiskChecks: config.EnableRiskChecks,
-		EnableCompliance: config.EnableCompliance,
-		OrderTimeout:     30 * time.Minute,
-	})
+	orderService := orders.NewService(nil, nil) // Updated constructor signature
 
 	ctx, cancel := context.WithTimeout(context.Background(), config.Duration+time.Minute)
 	defer cancel()
@@ -341,9 +335,9 @@ func runOrderServiceLoadTest(t *testing.T, config LoadTestConfig) *LoadTestResul
 					return
 				case <-ticker.C:
 					// Generate order request
-					side := orders.SideBuy
+					side := orders.OrderSideBuy
 					if orderID%2 == 1 {
-						side = orders.SideSell
+						side = orders.OrderSideSell
 					}
 
 					symbol := symbols[orderID%len(symbols)]
@@ -354,7 +348,7 @@ func runOrderServiceLoadTest(t *testing.T, config LoadTestConfig) *LoadTestResul
 						ClientOrderID: fmt.Sprintf("client-%d-%d", userID, orderID),
 						Symbol:        symbol,
 						Side:          side,
-						Type:          orders.TypeLimit,
+						Type:          orders.OrderTypeLimit,
 						Quantity:      100,
 						Price:         price,
 						TimeInForce:   orders.TimeInForceGTC,
@@ -412,13 +406,7 @@ func runOrderServiceLoadTest(t *testing.T, config LoadTestConfig) *LoadTestResul
 // runEndToEndLoadTest executes comprehensive end-to-end load test
 func runEndToEndLoadTest(t *testing.T, config LoadTestConfig) *LoadTestResult {
 	// Initialize all components
-	orderService := orders.NewService(&orders.Config{
-		MaxOrdersPerUser: 10000,
-		MaxOrderValue:    10000000,
-		EnableRiskChecks: config.EnableRiskChecks,
-		EnableCompliance: config.EnableCompliance,
-		OrderTimeout:     30 * time.Minute,
-	})
+	orderService := orders.NewService(nil, nil) // Updated constructor signature
 
 	riskCalculator := risk.NewCalculator(&risk.Config{
 		VaRConfidence:       0.95,
@@ -480,9 +468,9 @@ func runEndToEndLoadTest(t *testing.T, config LoadTestConfig) *LoadTestResult {
 					start := time.Now()
 
 					// Step 1: Create order
-					side := orders.SideBuy
+					side := orders.OrderSideBuy
 					if orderID%2 == 1 {
-						side = orders.SideSell
+						side = orders.OrderSideSell
 					}
 
 					symbol := symbols[orderID%len(symbols)]
@@ -493,7 +481,7 @@ func runEndToEndLoadTest(t *testing.T, config LoadTestConfig) *LoadTestResult {
 						ClientOrderID: fmt.Sprintf("client-%d-%d", userID, orderID),
 						Symbol:        symbol,
 						Side:          side,
-						Type:          orders.TypeLimit,
+						Type:          orders.OrderTypeLimit,
 						Quantity:      100,
 						Price:         price,
 						TimeInForce:   orders.TimeInForceGTC,
