@@ -92,7 +92,7 @@ func TestOrderService_ValidateOrder(t *testing.T) {
 		UserID:   "user-001",
 		Symbol:   "AAPL",
 		Side:     orders.OrderSideBuy,
-		Type:     orders.TypeLimit,
+		Type:     orders.OrderTypeLimit,
 		Quantity: 100,
 		// Missing Price
 	}
@@ -324,11 +324,7 @@ func TestOrderLifecycle_StateTransitions(t *testing.T) {
 }
 
 func TestOrderLifecycle_CancellationStates(t *testing.T) {
-	lifecycle := orders.NewLifecycle(&orders.LifecycleConfig{
-		EnableStateValidation: true,
-		EnableAuditTrail:      true,
-		MaxRetries:            3,
-	})
+	lifecycle := orders.NewLifecycle(nil) // Updated constructor signature
 
 	ctx := context.Background()
 
@@ -337,59 +333,52 @@ func TestOrderLifecycle_CancellationStates(t *testing.T) {
 		ID:     "order-001",
 		UserID: "user-001",
 		Symbol: "AAPL",
-		Status: orders.StatusNew,
+		Status: orders.OrderStatusNew,
 	}
 
-	err := lifecycle.TransitionTo(ctx, newOrder, orders.StatusCancelled, "User cancellation")
+	err := lifecycle.TransitionTo(ctx, newOrder, orders.OrderStatusCancelled, "User cancellation")
 	require.NoError(t, err)
-	assert.Equal(t, orders.StatusCancelled, newOrder.Status)
+	assert.Equal(t, orders.OrderStatusCancelled, newOrder.Status)
 
 	// Test cancellation from PENDING state
 	pendingOrder := &orders.Order{
 		ID:     "order-002",
 		UserID: "user-001",
 		Symbol: "AAPL",
-		Status: orders.StatusPending,
+		Status: orders.OrderStatusPending,
 	}
 
-	err = lifecycle.TransitionTo(ctx, pendingOrder, orders.StatusCancelled, "User cancellation")
+	err = lifecycle.TransitionTo(ctx, pendingOrder, orders.OrderStatusCancelled, "User cancellation")
 	require.NoError(t, err)
-	assert.Equal(t, orders.StatusCancelled, pendingOrder.Status)
+	assert.Equal(t, orders.OrderStatusCancelled, pendingOrder.Status)
 
 	// Test cancellation from PARTIALLY_FILLED state
 	partialOrder := &orders.Order{
 		ID:     "order-003",
 		UserID: "user-001",
 		Symbol: "AAPL",
-		Status: orders.StatusPartiallyFilled,
+		Status: orders.OrderStatusPartiallyFilled,
 	}
 
-	err = lifecycle.TransitionTo(ctx, partialOrder, orders.StatusCancelled, "User cancellation")
+	err = lifecycle.TransitionTo(ctx, partialOrder, orders.OrderStatusCancelled, "User cancellation")
 	require.NoError(t, err)
-	assert.Equal(t, orders.StatusCancelled, partialOrder.Status)
+	assert.Equal(t, orders.OrderStatusCancelled, partialOrder.Status)
 
 	// Test invalid cancellation from FILLED state
 	filledOrder := &orders.Order{
 		ID:     "order-004",
 		UserID: "user-001",
 		Symbol: "AAPL",
-		Status: orders.StatusFilled,
+		Status: orders.OrderStatusFilled,
 	}
 
-	err = lifecycle.TransitionTo(ctx, filledOrder, orders.StatusCancelled, "Invalid cancellation")
+	err = lifecycle.TransitionTo(ctx, filledOrder, orders.OrderStatusCancelled, "Invalid cancellation")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "cannot cancel filled order")
 }
 
 func TestOrderValidator_BusinessRules(t *testing.T) {
-	validator := orders.NewValidator(&orders.ValidatorConfig{
-		MaxOrderValue:     1000000,
-		MaxQuantity:       10000,
-		MinPrice:          0.01,
-		MaxPrice:          10000.00,
-		EnableMarketHours: true,
-		EnableSymbolCheck: true,
-	})
+	validator := orders.NewValidator(nil) // Updated constructor signature
 
 	ctx := context.Background()
 
@@ -397,8 +386,8 @@ func TestOrderValidator_BusinessRules(t *testing.T) {
 	validOrder := &orders.CreateOrderRequest{
 		UserID:   "user-001",
 		Symbol:   "AAPL",
-		Side:     orders.SideBuy,
-		Type:     orders.TypeLimit,
+		Side:     orders.OrderSideBuy,
+		Type:     orders.OrderTypeLimit,
 		Quantity: 100,
 		Price:    150.50,
 	}
@@ -411,8 +400,8 @@ func TestOrderValidator_BusinessRules(t *testing.T) {
 	highValueOrder := &orders.CreateOrderRequest{
 		UserID:   "user-001",
 		Symbol:   "AAPL",
-		Side:     orders.SideBuy,
-		Type:     orders.TypeLimit,
+		Side:     orders.OrderSideBuy,
+		Type:     orders.OrderTypeLimit,
 		Quantity: 10000,
 		Price:    150.50, // 10000 * 150.50 = 1,505,000 > 1,000,000 limit
 	}
@@ -426,8 +415,8 @@ func TestOrderValidator_BusinessRules(t *testing.T) {
 	invalidPriceOrder := &orders.CreateOrderRequest{
 		UserID:   "user-001",
 		Symbol:   "AAPL",
-		Side:     orders.SideBuy,
-		Type:     orders.TypeLimit,
+		Side:     orders.OrderSideBuy,
+		Type:     orders.OrderTypeLimit,
 		Quantity: 100,
 		Price:    0.005, // Below minimum price
 	}
@@ -439,13 +428,7 @@ func TestOrderValidator_BusinessRules(t *testing.T) {
 }
 
 func BenchmarkOrderService_CreateOrder(b *testing.B) {
-	service := orders.NewService(&orders.Config{
-		MaxOrdersPerUser: 1000,
-		MaxOrderValue:    1000000,
-		EnableRiskChecks: false, // Disable for benchmarking
-		EnableCompliance: false, // Disable for benchmarking
-		OrderTimeout:     30 * time.Minute,
-	})
+	service := orders.NewService(nil, nil) // Updated constructor signature
 
 	ctx := context.Background()
 
@@ -457,8 +440,8 @@ func BenchmarkOrderService_CreateOrder(b *testing.B) {
 			UserID:        "user-001",
 			ClientOrderID: "client-" + string(rune(i)),
 			Symbol:        "AAPL",
-			Side:          orders.SideBuy,
-			Type:          orders.TypeLimit,
+			Side:          orders.OrderSideBuy,
+			Type:          orders.OrderTypeLimit,
 			Quantity:      100,
 			Price:         150.50 + float64(i%100)*0.01,
 			TimeInForce:   orders.TimeInForceGTC,
@@ -472,11 +455,7 @@ func BenchmarkOrderService_CreateOrder(b *testing.B) {
 }
 
 func BenchmarkOrderLifecycle_StateTransition(b *testing.B) {
-	lifecycle := orders.NewLifecycle(&orders.LifecycleConfig{
-		EnableStateValidation: true,
-		EnableAuditTrail:      false, // Disable for benchmarking
-		MaxRetries:            3,
-	})
+	lifecycle := orders.NewLifecycle(nil) // Updated constructor signature
 
 	ctx := context.Background()
 
@@ -488,10 +467,10 @@ func BenchmarkOrderLifecycle_StateTransition(b *testing.B) {
 			ID:     "order-" + string(rune(i)),
 			UserID: "user-001",
 			Symbol: "AAPL",
-			Status: orders.StatusNew,
+			Status: orders.OrderStatusNew,
 		}
 
-		err := lifecycle.TransitionTo(ctx, order, orders.StatusPending, "Benchmark transition")
+		err := lifecycle.TransitionTo(ctx, order, orders.OrderStatusPending, "Benchmark transition")
 		if err != nil {
 			b.Fatal(err)
 		}
