@@ -8,6 +8,13 @@ import (
 	"github.com/thefabric-io/eventsourcing"
 )
 
+// AggregateState represents the state of an aggregate
+type AggregateState struct {
+	ID      string    `json:"id"`
+	Version int       `json:"version"`
+	Updated time.Time `json:"updated"`
+}
+
 // Event represents a domain event in the CQRS pattern
 type Event interface {
 	// EventName returns the name of the event
@@ -95,11 +102,11 @@ type EventStore interface {
 
 // PostgresEventStore implements the EventStore interface using PostgreSQL
 type PostgresEventStore struct {
-	store *eventsourcing.EventStore
+	store *eventsourcing.EventStore[AggregateState]
 }
 
 // NewPostgresEventStore creates a new PostgreSQL event store
-func NewPostgresEventStore(store *eventsourcing.EventStore) *PostgresEventStore {
+func NewPostgresEventStore(store *eventsourcing.EventStore[AggregateState]) *PostgresEventStore {
 	return &PostgresEventStore{
 		store: store,
 	}

@@ -19,23 +19,23 @@ func ParseOrderSide(side string) (OrderSide, error) {
 }
 
 // ParseOrderType converts string representation to OrderType enum
-func ParseOrderType(orderType string) (tradingTypes.OrderType, error) {
+func ParseOrderType(orderType string) (OrderType, error) {
 	switch strings.ToLower(strings.TrimSpace(orderType)) {
 	case "market":
-		return tradingTypes.OrderTypeMarket, nil
+		return OrderTypeMarket, nil
 	case "limit":
-		return tradingTypes.OrderTypeLimit, nil
+		return OrderTypeLimit, nil
 	case "stop":
-		return tradingTypes.OrderTypeStop, nil
+		return OrderTypeStop, nil
 	case "stop_limit", "stop-limit":
-		return tradingTypes.OrderTypeStopLimit, nil
+		return OrderTypeStopLimit, nil
 	default:
 		return "", fmt.Errorf("invalid order type: %s (must be 'market', 'limit', 'stop', or 'stop_limit')", orderType)
 	}
 }
 
 // MustParseOrderSide is like ParseOrderSide but panics on error
-func MustParseOrderSide(side string) tradingTypes.OrderSide {
+func MustParseOrderSide(side string) OrderSide {
 	result, err := ParseOrderSide(side)
 	if err != nil {
 		panic(err)
@@ -44,7 +44,7 @@ func MustParseOrderSide(side string) tradingTypes.OrderSide {
 }
 
 // MustParseOrderType is like ParseOrderType but panics on error
-func MustParseOrderType(orderType string) tradingTypes.OrderType {
+func MustParseOrderType(orderType string) OrderType {
 	result, err := ParseOrderType(orderType)
 	if err != nil {
 		panic(err)
@@ -53,11 +53,11 @@ func MustParseOrderType(orderType string) tradingTypes.OrderType {
 }
 
 // OrderSideToString converts OrderSide enum to string representation
-func OrderSideToString(side tradingTypes.OrderSide) string {
+func OrderSideToString(side OrderSide) string {
 	switch side {
-	case tradingTypes.OrderSideBuy:
+	case OrderSideBuy:
 		return "buy"
-	case tradingTypes.OrderSideSell:
+	case OrderSideSell:
 		return "sell"
 	default:
 		return "unknown"
@@ -65,15 +65,15 @@ func OrderSideToString(side tradingTypes.OrderSide) string {
 }
 
 // OrderTypeToString converts OrderType enum to string representation
-func OrderTypeToString(orderType tradingTypes.OrderType) string {
+func OrderTypeToString(orderType OrderType) string {
 	switch orderType {
-	case tradingTypes.OrderTypeMarket:
+	case OrderTypeMarket:
 		return "market"
-	case tradingTypes.OrderTypeLimit:
+	case OrderTypeLimit:
 		return "limit"
-	case tradingTypes.OrderTypeStop:
+	case OrderTypeStop:
 		return "stop"
-	case tradingTypes.OrderTypeStopLimit:
+	case OrderTypeStopLimit:
 		return "stop_limit"
 	default:
 		return "unknown"

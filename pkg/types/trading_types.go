@@ -116,6 +116,8 @@ type Trade struct {
 	Price float64 `json:"price"`
 	// Quantity is the traded quantity
 	Quantity float64 `json:"quantity"`
+	// Value is the total value of the trade (Price * Quantity)
+	Value float64 `json:"value"`
 	// Timestamp is the time of the trade
 	Timestamp time.Time `json:"timestamp"`
 	// BuyerID is the buyer user ID
@@ -124,6 +126,10 @@ type Trade struct {
 	SellerID string `json:"seller_id"`
 	// TakerSide indicates which side was the taker
 	TakerSide OrderSide `json:"taker_side"`
+	// MakerFee is the fee charged to the maker
+	MakerFee float64 `json:"maker_fee"`
+	// TakerFee is the fee charged to the taker
+	TakerFee float64 `json:"taker_fee"`
 	// Fees contains fee information
 	Fees TradeFeesInfo `json:"fees,omitempty"`
 }
