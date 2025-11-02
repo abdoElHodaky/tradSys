@@ -5,7 +5,128 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"github.com/abdoElHodaky/tradSys/internal/errors"
 )
+
+// Validator defines the interface for validation
+type Validator interface {
+	Validate(interface{}) error
+}
+
+// MetricsCollector defines the interface for metrics collection
+type MetricsCollector interface {
+	Counter(name string, tags map[string]string) Counter
+	Gauge(name string, tags map[string]string) Gauge
+	Histogram(name string, tags map[string]string) Histogram
+	Timer(name string, tags map[string]string) Timer
+}
+
+// Counter represents a counter metric
+type Counter interface {
+	Inc()
+	Add(delta float64)
+}
+
+// Gauge represents a gauge metric
+type Gauge interface {
+	Set(value float64)
+	Add(delta float64)
+}
+
+// Histogram represents a histogram metric
+type Histogram interface {
+	Observe(value float64)
+}
+
+// Timer represents a timer metric
+type Timer interface {
+	Record(duration time.Duration)
+}
+
+// TradingStatus represents the current trading status
+type TradingStatus struct {
+	Exchange    string          `json:"exchange"`
+	IsOpen      bool            `json:"is_open"`
+	CurrentTime time.Time       `json:"current_time"`
+	NextOpen    time.Time       `json:"next_open,omitempty"`
+	NextClose   time.Time       `json:"next_close,omitempty"`
+	Session     *TradingSession `json:"session,omitempty"`
+	Message     string          `json:"message,omitempty"`
+}
+
+// TradingSession represents a trading session
+type TradingSession struct {
+	Name      string    `json:"name"`
+	StartTime time.Time `json:"start_time"`
+	EndTime   time.Time `json:"end_time"`
+}
+
+// Transaction represents a financial transaction
+type Transaction struct {
+	ID        string                 `json:"id"`
+	Type      string                 `json:"type"`
+	Symbol    string                 `json:"symbol"`
+	Quantity  float64                `json:"quantity"`
+	Price     float64                `json:"price"`
+	Amount    float64                `json:"amount"`
+	Currency  string                 `json:"currency"`
+	Status    string                 `json:"status"`
+	Timestamp time.Time              `json:"timestamp"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// ComplianceRule represents a compliance rule
+type ComplianceRule struct {
+	ID          string      `json:"id"`
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	Type        string      `json:"type"`
+	Severity    string      `json:"severity"`
+	AssetTypes  []AssetType `json:"asset_types,omitempty"`
+	Exchanges   []string    `json:"exchanges,omitempty"`
+	Regions     []string    `json:"regions,omitempty"`
+	IsActive    bool        `json:"is_active"`
+	CreatedAt   time.Time   `json:"created_at"`
+	UpdatedAt   time.Time   `json:"updated_at"`
+}
+
+// Portfolio represents a user's portfolio
+type Portfolio struct {
+	ID          string                 `json:"id"`
+	UserID      string                 `json:"user_id"`
+	Name        string                 `json:"name"`
+	TotalValue  float64                `json:"total_value"`
+	CashBalance float64                `json:"cash_balance"`
+	TotalPL     float64                `json:"total_pl"`
+	DayPL       float64                `json:"day_pl"`
+	Positions   []Position             `json:"positions"`
+	Currency    string                 `json:"currency"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt   time.Time              `json:"created_at"`
+	UpdatedAt   time.Time              `json:"updated_at"`
+}
+
+// Position represents a position in a portfolio
+type Position struct {
+	Symbol       string    `json:"symbol"`
+	Quantity     float64   `json:"quantity"`
+	AveragePrice float64   `json:"average_price"`
+	CurrentPrice float64   `json:"current_price"`
+	MarketValue  float64   `json:"market_value"`
+	UnrealizedPL float64   `json:"unrealized_pl"`
+	RealizedPL   float64   `json:"realized_pl"`
+	LastUpdated  time.Time `json:"last_updated"`
+}
+
+// TradingSchedule represents trading hours and schedules
+type TradingSchedule struct {
+	Timezone     string                   `json:"timezone"`
+	MarketHours  map[string]*TradingHours `json:"market_hours"` // day of week -> hours
+	Holidays     []time.Time              `json:"holidays"`
+	SpecialHours map[string]*TradingHours `json:"special_hours"` // special dates
+	LastUpdated  time.Time                `json:"last_updated"`
+}
 
 // ServiceInterface defines the standard interface that all TradSys services must implement
 type ServiceInterface interface {
@@ -69,7 +190,7 @@ func (bs *BaseService) Start(ctx context.Context) error {
 	defer bs.mu.Unlock()
 
 	if bs.isRunning {
-		return NewServiceError(bs.name, "SERVICE_ALREADY_RUNNING", "Service is already running")
+		return errors.NewServiceError(bs.name, "SERVICE_ALREADY_RUNNING", "Service is already running")
 	}
 
 	bs.logger.Info("Starting service", "service", bs.name)
@@ -85,7 +206,7 @@ func (bs *BaseService) Stop(ctx context.Context) error {
 	defer bs.mu.Unlock()
 
 	if !bs.isRunning {
-		return NewServiceError(bs.name, "SERVICE_NOT_RUNNING", "Service is not running")
+		return errors.NewServiceError(bs.name, "SERVICE_NOT_RUNNING", "Service is not running")
 	}
 
 	bs.logger.Info("Stopping service", "service", bs.name)
@@ -142,7 +263,7 @@ func (bs *BaseService) Configure(config interface{}) error {
 	defer bs.mu.Unlock()
 
 	if err := bs.validator.Validate(config); err != nil {
-		return NewServiceError(bs.name, "INVALID_CONFIG", "Invalid configuration").WithDetail("error", err.Error())
+		return errors.NewServiceError(bs.name, "INVALID_CONFIG", "Invalid configuration").WithDetail("error", err.Error())
 	}
 
 	bs.config = config

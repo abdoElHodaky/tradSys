@@ -6,6 +6,13 @@ import (
 	"time"
 )
 
+// TradingHours represents trading hours for an exchange
+type TradingHours struct {
+	Open     string `json:"open"`     // e.g., "10:00"
+	Close    string `json:"close"`    // e.g., "14:30"
+	Timezone string `json:"timezone"` // e.g., "EET"
+}
+
 // ExchangeInterface defines the standard interface for all exchange implementations
 type ExchangeInterface interface {
 	// Core trading operations

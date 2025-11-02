@@ -6,6 +6,15 @@ import (
 	"time"
 )
 
+// Logger defines the logging interface
+type Logger interface {
+	Debug(msg string, fields ...interface{})
+	Info(msg string, fields ...interface{})
+	Warn(msg string, fields ...interface{})
+	Error(msg string, fields ...interface{})
+	Fatal(msg string, fields ...interface{})
+}
+
 // ServiceError represents a standardized service error
 type ServiceError struct {
 	Code      string                 `json:"code"`

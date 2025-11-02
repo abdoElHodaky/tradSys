@@ -43,7 +43,7 @@ type ADXService struct {
 	riskEngine         *ADXRiskEngine
 	sukukService       *SukukService
 	islamicFundService *IslamicFundService
-	performanceMonitor *PerformanceMonitor
+	performanceMonitor *ADXPerformanceMonitor
 	mu                 sync.RWMutex
 }
 
@@ -230,8 +230,8 @@ type IslamicFund struct {
 	IsActive        bool
 }
 
-// PerformanceMonitor monitors ADX service performance
-type PerformanceMonitor struct {
+// ADXPerformanceMonitor monitors ADX service performance
+type ADXPerformanceMonitor struct {
 	metrics         map[string]*PerformanceMetric
 	islamicMetrics  map[string]*IslamicMetric
 	alertManager    *AlertManager
