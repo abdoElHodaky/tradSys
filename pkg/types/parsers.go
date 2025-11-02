@@ -4,17 +4,15 @@ package types
 import (
 	"fmt"
 	"strings"
-
-	tradingTypes "github.com/abdoElHodaky/tradSys/internal/trading/types"
 )
 
 // ParseOrderSide converts string representation to OrderSide enum
-func ParseOrderSide(side string) (tradingTypes.OrderSide, error) {
+func ParseOrderSide(side string) (OrderSide, error) {
 	switch strings.ToLower(strings.TrimSpace(side)) {
 	case "buy":
-		return tradingTypes.OrderSideBuy, nil
+		return OrderSideBuy, nil
 	case "sell":
-		return tradingTypes.OrderSideSell, nil
+		return OrderSideSell, nil
 	default:
 		return "", fmt.Errorf("invalid order side: %s (must be 'buy' or 'sell')", side)
 	}

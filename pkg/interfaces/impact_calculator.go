@@ -1,7 +1,7 @@
 // Package interfaces provides core interfaces for TradSys components
 package interfaces
 
-import "github.com/abdoElHodaky/tradSys/internal/trading/types"
+import "github.com/abdoElHodaky/tradSys/pkg/types"
 
 // ImpactCalculator defines the interface for market impact calculation strategies
 type ImpactCalculator interface {
