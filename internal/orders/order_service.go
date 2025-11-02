@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/pkg/types"
+	"github.com/abdoElHodaky/tradSys/internal/types"
 	"github.com/google/uuid"
 	cache "github.com/patrickmn/go-cache"
 	"go.uber.org/zap"

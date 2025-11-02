@@ -7,7 +7,7 @@ import (
 
 	order_matching "github.com/abdoElHodaky/tradSys/internal/core/matching"
 	"github.com/abdoElHodaky/tradSys/internal/trading/types"
-	pkgTypes "github.com/abdoElHodaky/tradSys/pkg/types"
+	pkgTypes "github.com/abdoElHodaky/tradSys/internal/types"
 	"github.com/gin-gonic/gin"
 )
 

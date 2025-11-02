@@ -4,8 +4,8 @@ package strategies
 import (
 	"math"
 
-	"github.com/abdoElHodaky/tradSys/pkg/interfaces"
-	"github.com/abdoElHodaky/tradSys/pkg/types"
+	"github.com/abdoElHodaky/tradSys/internal/common"
+	"github.com/abdoElHodaky/tradSys/internal/types"
 )
 
 // SqrtImpactCalculator implements square root market impact calculation
@@ -15,7 +15,7 @@ type SqrtImpactCalculator struct {
 }
 
 // NewSqrtImpactCalculator creates a new square root impact calculator
-func NewSqrtImpactCalculator(liquidityFactor float64) interfaces.ImpactCalculator {
+func NewSqrtImpactCalculator(liquidityFactor float64) common.ImpactCalculator {
 	return &SqrtImpactCalculator{
 		liquidityFactor: liquidityFactor,
 	}

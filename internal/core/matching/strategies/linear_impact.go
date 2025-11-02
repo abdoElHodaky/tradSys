@@ -2,8 +2,8 @@
 package strategies
 
 import (
-	"github.com/abdoElHodaky/tradSys/pkg/interfaces"
-	"github.com/abdoElHodaky/tradSys/pkg/types"
+	"github.com/abdoElHodaky/tradSys/internal/common"
+	"github.com/abdoElHodaky/tradSys/internal/types"
 )
 
 // LinearImpactCalculator implements linear market impact calculation
@@ -12,7 +12,7 @@ type LinearImpactCalculator struct {
 }
 
 // NewLinearImpactCalculator creates a new linear impact calculator
-func NewLinearImpactCalculator(liquidityFactor float64) interfaces.ImpactCalculator {
+func NewLinearImpactCalculator(liquidityFactor float64) common.ImpactCalculator {
 	return &LinearImpactCalculator{
 		liquidityFactor: liquidityFactor,
 	}
