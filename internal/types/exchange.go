@@ -7,66 +7,10 @@ import (
 	"time"
 )
 
-// Order represents a trading order
-type Order struct {
-	ID          string
-	UserID      string
-	Symbol      string
-	AssetType   AssetType
-	Type        OrderType
-	Side        OrderSide
-	Quantity    float64
-	Price       float64
-	TimeInForce TimeInForce
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	Status      OrderStatus
-	Metadata    map[string]interface{}
-}
-
-// OrderType defines order types
-type OrderType int
-
-const (
-	OrderTypeMarket OrderType = iota
-	OrderTypeLimit
-	OrderTypeStop
-	OrderTypeStopLimit
-)
-
-// OrderSide defines order sides
-type OrderSide int
-
-const (
-	OrderSideBuy OrderSide = iota
-	OrderSideSell
-)
-
-// OrderStatus defines order status
-type OrderStatus int
-
-const (
-	OrderStatusPending OrderStatus = iota
-	OrderStatusPartiallyFilled
-	OrderStatusFilled
-	OrderStatusCancelled
-	OrderStatusRejected
-)
-
-// TimeInForce defines time in force options
-type TimeInForce int
-
-const (
-	TimeInForceGTC TimeInForce = iota // Good Till Cancelled
-	TimeInForceIOC                    // Immediate Or Cancel
-	TimeInForceFOK                    // Fill Or Kill
-	TimeInForceDAY                    // Day Order
-)
-
 // OrderResponse represents response from order submission
 type OrderResponse struct {
 	OrderID     string
-	Status      OrderStatus
+	Status      string
 	Message     string
 	Timestamp   time.Time
 	ExecutedQty float64
@@ -476,7 +420,7 @@ func (om *EGXOrderManager) SubmitOrder(ctx context.Context, order *Order) (*Orde
 	// Implement order submission
 	return &OrderResponse{
 		OrderID:   order.ID,
-		Status:    OrderStatusPending,
+		Status:    "pending",
 		Timestamp: time.Now(),
 	}, nil
 }

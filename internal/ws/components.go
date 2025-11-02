@@ -13,13 +13,6 @@ type ConnectionManager struct {
 	mu          sync.RWMutex
 }
 
-// NewConnectionManager creates a new connection manager
-func NewConnectionManager() *ConnectionManager {
-	return &ConnectionManager{
-		connections: make(map[string]*WebSocketConnection),
-	}
-}
-
 // RegisterConnection registers a new WebSocket connection
 func (cm *ConnectionManager) RegisterConnection(conn *WebSocketConnection) {
 	cm.mu.Lock()
@@ -60,13 +53,6 @@ func (cm *ConnectionManager) GetActiveConnections() []*WebSocketConnection {
 type SubscriptionManager struct {
 	subscriptions map[string]*Subscription
 	mu            sync.RWMutex
-}
-
-// NewSubscriptionManager creates a new subscription manager
-func NewSubscriptionManager() *SubscriptionManager {
-	return &SubscriptionManager{
-		subscriptions: make(map[string]*Subscription),
-	}
 }
 
 // AddSubscription adds a new subscription
@@ -117,13 +103,6 @@ type LicenseValidationResult struct {
 	Tier      LicenseTier
 	ExpiresAt time.Time
 	Features  []string
-}
-
-// NewLicenseValidator creates a new license validator
-func NewLicenseValidator() *LicenseValidator {
-	return &LicenseValidator{
-		cache: make(map[string]*LicenseValidationResult),
-	}
 }
 
 // ValidateLicense validates a user's license for WebSocket access
@@ -196,17 +175,7 @@ const (
 	FilterActionModify
 )
 
-// NewIslamicFilter creates a new Islamic finance filter
-func NewIslamicFilter() *IslamicFilter {
-	filter := &IslamicFilter{
-		rules: make(map[string]FilterRule),
-	}
 
-	// Initialize default Islamic finance rules
-	filter.initializeDefaultRules()
-
-	return filter
-}
 
 // FilterMessage filters a WebSocket message for Islamic compliance
 func (if_ *IslamicFilter) FilterMessage(message *WebSocketMessage, ctx *WebSocketConnectionContext) (*WebSocketMessage, error) {
@@ -364,17 +333,7 @@ const (
 	SeverityCritical
 )
 
-// NewComplianceEngine creates a new compliance engine
-func NewComplianceEngine() *ComplianceEngine {
-	engine := &ComplianceEngine{
-		rules: make(map[string]ComplianceRule),
-	}
 
-	// Initialize default compliance rules
-	engine.initializeDefaultRules()
-
-	return engine
-}
 
 // ValidateCompliance validates regulatory compliance for a connection
 func (ce *ComplianceEngine) ValidateCompliance(ctx *WebSocketConnectionContext) error {
@@ -469,13 +428,7 @@ type AnalyticsEvent struct {
 	Timestamp time.Time
 }
 
-// NewAnalyticsEngine creates a new analytics engine
-func NewAnalyticsEngine() *AnalyticsEngine {
-	return &AnalyticsEngine{
-		metrics: make(map[string]*ConnectionMetrics),
-		events:  make([]AnalyticsEvent, 0),
-	}
-}
+
 
 // RecordConnection records connection analytics
 func (ae *AnalyticsEngine) RecordConnection(conn *WebSocketConnection) {
