@@ -249,14 +249,6 @@ type ComplianceRuleSet struct {
 	Rules       []ComplianceRule
 }
 
-type ComplianceRule struct {
-	ID        string
-	Type      string
-	Condition string
-	Action    string
-	Severity  string
-}
-
 type LicenseInfo struct {
 	LicenseID   string
 	UserID      string
@@ -313,16 +305,6 @@ type ArbitrageAlert struct {
 type CrossExchangePositionManager struct {
 	positions map[string]*Position
 	mu        sync.RWMutex
-}
-
-type Position struct {
-	PositionID    string
-	Symbol        string
-	Exchange      string
-	Quantity      float64
-	AveragePrice  float64
-	CurrentPrice  float64
-	UnrealizedPnL float64
 }
 
 type CrossExchangeRiskManager struct {
