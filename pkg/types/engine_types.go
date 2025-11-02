@@ -143,9 +143,7 @@ const (
 	DefaultFlushInterval      = 100 * time.Millisecond
 	DefaultMetricsInterval    = 1 * time.Second
 	
-	// Order status (engine-specific statuses not in trading_types.go)
-	OrderStatusPending   = "pending"
-	OrderStatusPartial   = "partial"
+	// Note: Order status constants are now defined in trading_types.go
 	
 	// Time in force
 	TimeInForceGTC = "GTC" // Good Till Cancelled

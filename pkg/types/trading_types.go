@@ -36,6 +36,10 @@ type OrderStatus string
 const (
 	// OrderStatusNew represents a new order
 	OrderStatusNew OrderStatus = "new"
+	// OrderStatusPending represents a pending order
+	OrderStatusPending OrderStatus = "pending"
+	// OrderStatusPartial represents a partially filled order
+	OrderStatusPartial OrderStatus = "partial"
 	// OrderStatusPartiallyFilled represents a partially filled order
 	OrderStatusPartiallyFilled OrderStatus = "partially_filled"
 	// OrderStatusFilled represents a filled order
@@ -74,6 +78,8 @@ type Order struct {
 	CreatedAt time.Time `json:"created_at"`
 	// UpdatedAt is the time the order was last updated
 	UpdatedAt time.Time `json:"updated_at"`
+	// Timestamp is an alias for CreatedAt for backward compatibility
+	Timestamp time.Time `json:"timestamp"`
 	// ClientOrderID is the client order ID
 	ClientOrderID string `json:"client_order_id"`
 	// UserID is the user ID
@@ -174,7 +180,7 @@ func IsValidOrderType(orderType string) bool {
 // IsValidOrderStatus checks if the given string is a valid order status
 func IsValidOrderStatus(status string) bool {
 	switch OrderStatus(status) {
-	case OrderStatusNew, OrderStatusPartiallyFilled, OrderStatusFilled, 
+	case OrderStatusNew, OrderStatusPending, OrderStatusPartial, OrderStatusPartiallyFilled, OrderStatusFilled, 
 		 OrderStatusCanceled, OrderStatusCancelled, OrderStatusRejected, OrderStatusExpired:
 		return true
 	default:
