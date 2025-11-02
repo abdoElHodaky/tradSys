@@ -106,6 +106,16 @@ type Order struct {
 	IsIcebergChild bool `json:"is_iceberg_child,omitempty"`
 	// Priority is the order priority for matching
 	Priority int64 `json:"priority,omitempty"`
+	// MinQuantity is the minimum quantity for execution
+	MinQuantity float64 `json:"min_quantity,omitempty"`
+	// MaxFloor is the maximum floor quantity
+	MaxFloor float64 `json:"max_floor,omitempty"`
+	// ExpireTime is the expiration time for the order
+	ExpireTime time.Time `json:"expire_time,omitempty"`
+	// Tags are custom tags for the order
+	Tags map[string]string `json:"tags,omitempty"`
+	// Timestamp is an alias for CreatedAt for backward compatibility
+	Timestamp time.Time `json:"timestamp,omitempty"`
 }
 
 // Trade represents a completed trade in the trading system
@@ -186,4 +196,111 @@ func IsValidOrderStatus(status string) bool {
 	default:
 		return false
 	}
+}
+
+// Reset resets the Order struct for object pooling
+func (o *Order) Reset() {
+	o.ID = ""
+	o.Symbol = ""
+	o.AssetType = ""
+	o.Side = ""
+	o.Type = ""
+	o.Price = 0
+	o.Quantity = 0
+	o.FilledQuantity = 0
+	o.Status = ""
+	o.CreatedAt = time.Time{}
+	o.UpdatedAt = time.Time{}
+	o.Timestamp = time.Time{}
+	o.ClientOrderID = ""
+	o.UserID = ""
+	o.StopPrice = 0
+	o.TimeInForce = ""
+	o.Index = 0
+
+	// Reset advanced features
+	o.DisplayQuantity = 0
+	o.IsHidden = false
+	o.IsPriceImproved = false
+	o.EstimatedImpact = 0
+	o.ParentOrderID = ""
+	o.IsIcebergChild = false
+	o.Priority = 0
+	o.MinQuantity = 0
+	o.MaxFloor = 0
+	o.ExpireTime = time.Time{}
+	o.Tags = nil
+}
+
+// IsIceberg returns true if this is an iceberg order
+func (o *Order) IsIceberg() bool {
+	return o.DisplayQuantity > 0 && o.DisplayQuantity < o.Quantity
+}
+
+// RemainingQuantity returns the remaining quantity to be filled
+func (o *Order) RemainingQuantity() float64 {
+	return o.Quantity - o.FilledQuantity
+}
+
+// IsFilled returns true if the order is completely filled
+func (o *Order) IsFilled() bool {
+	return o.FilledQuantity >= o.Quantity
+}
+
+// IsPartiallyFilled returns true if the order is partially filled
+func (o *Order) IsPartiallyFilled() bool {
+	return o.FilledQuantity > 0 && o.FilledQuantity < o.Quantity
+}
+
+// IsExpired returns true if the order has expired
+func (o *Order) IsExpired() bool {
+	return !o.ExpireTime.IsZero() && time.Now().After(o.ExpireTime)
+}
+
+// CanMatch returns true if this order can match with another order
+func (o *Order) CanMatch(other *Order) bool {
+	if o.Symbol != other.Symbol {
+		return false
+	}
+	if o.Side == other.Side {
+		return false
+	}
+	if o.IsExpired() || other.IsExpired() {
+		return false
+	}
+
+	// Price matching logic
+	if o.Side == OrderSideBuy && other.Side == OrderSideSell {
+		return o.Price >= other.Price
+	}
+	if o.Side == OrderSideSell && other.Side == OrderSideBuy {
+		return o.Price <= other.Price
+	}
+
+	return false
+}
+
+// GetEffectiveQuantity returns the effective quantity for matching
+func (o *Order) GetEffectiveQuantity() float64 {
+	if o.IsIceberg() {
+		return o.DisplayQuantity
+	}
+	return o.RemainingQuantity()
+}
+
+// SetTag sets a custom tag on the order
+func (o *Order) SetTag(key, value string) {
+	if o.Tags == nil {
+		o.Tags = make(map[string]string)
+	}
+	o.Tags[key] = value
+}
+
+// GetTag gets a custom tag from the order
+func (o *Order) GetTag(key string) (string, bool) {
+	if o.Tags == nil {
+		return "", false
+	}
+	value, exists := o.Tags[key]
+	return value, exists
 }

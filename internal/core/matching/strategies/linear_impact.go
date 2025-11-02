@@ -2,8 +2,8 @@
 package strategies
 
 import (
-	"github.com/abdoElHodaky/tradSys/internal/trading/types"
 	"github.com/abdoElHodaky/tradSys/pkg/interfaces"
+	"github.com/abdoElHodaky/tradSys/pkg/types"
 )
 
 // LinearImpactCalculator implements linear market impact calculation

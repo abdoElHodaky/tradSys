@@ -102,8 +102,8 @@ func createOrderHandler(ts TradingSystemInterface) gin.HandlerFunc {
 		// Create order
 		order := &types.Order{
 			Symbol:    req.Symbol,
-			Side:      side,
-			Type:      orderType,
+			Side:      types.OrderSide(side),
+			Type:      types.OrderType(orderType),
 			Quantity:  req.Quantity,
 			Price:     req.Price,
 			StopPrice: req.StopPrice,
