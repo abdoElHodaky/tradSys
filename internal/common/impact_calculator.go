@@ -1,13 +1,11 @@
 // Package interfaces provides core interfaces for TradSys components
-package interfaces
-
-import "github.com/abdoElHodaky/tradSys/internal/types"
+package common
 
 // ImpactCalculator defines the interface for market impact calculation strategies
 type ImpactCalculator interface {
 	// CalculateImpact calculates the market impact for a given order
 	// Returns the impact factor that should be applied to the order
-	CalculateImpact(order *types.Order, avgTradeSize float64) float64
+	CalculateImpact(order *Order, avgTradeSize float64) float64
 
 	// GetModelName returns the name of the impact model
 	GetModelName() string

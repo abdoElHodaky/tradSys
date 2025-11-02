@@ -1,5 +1,5 @@
-// Package interfaces provides state machine abstractions for standardized state management
-package interfaces
+// Package common provides state machine abstractions for standardized state management
+package common
 
 import "context"
 

@@ -1,5 +1,5 @@
-// Package interfaces provides message dispatch abstractions for unified messaging
-package interfaces
+// Package common provides message dispatch abstractions for unified messaging
+package common
 
 import (
 	"context"

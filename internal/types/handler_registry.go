@@ -10,20 +10,20 @@ import (
 
 // AssetHandler defines the interface for asset-specific operations
 type AssetHandler interface {
-	ValidateOrder(ctx context.Context, order *interfaces.Order) error
-	CalculateSettlement(ctx context.Context, order *interfaces.Order) (*Settlement, error)
+	ValidateOrder(ctx context.Context, order *common.Order) error
+	CalculateSettlement(ctx context.Context, order *common.Order) (*Settlement, error)
 	GetTradingHours(exchange ExchangeType) *TradingHours
 	GetRiskParameters() *RiskParameters
 	GetMinOrderSize() float64
 	GetMaxOrderSize() float64
 	GetPriceStep() float64
-	IsMarketOrder(orderType interfaces.OrderType) bool
-	CalculateFees(ctx context.Context, order *interfaces.Order) (*FeeCalculation, error)
+	IsMarketOrder(orderType common.OrderType) bool
+	CalculateFees(ctx context.Context, order *common.Order) (*FeeCalculation, error)
 }
 
 // BaseAssetHandler provides common functionality for all asset handlers
 type BaseAssetHandler struct {
-	AssetType      types.AssetType
+	AssetType      AssetType
 	MinOrderSize   float64
 	MaxOrderSize   float64
 	PriceStep      float64

@@ -1,5 +1,5 @@
-// Package interfaces provides unified service interfaces for all TradSys v3 services
-package interfaces
+// Package common provides unified service interfaces for all TradSys v3 services
+package common
 
 import (
 	"context"

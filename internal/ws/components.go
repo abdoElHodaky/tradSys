@@ -1,5 +1,5 @@
-// Package websocket provides supporting components for WebSocket system
-package websocket
+// Package ws provides supporting components for WebSocket system
+package ws
 
 import (
 	"fmt"

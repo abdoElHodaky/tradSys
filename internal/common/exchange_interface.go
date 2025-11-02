@@ -1,11 +1,9 @@
-// Package interfaces provides unified interfaces for TradSys v3
-package interfaces
+// Package common provides unified interfaces for TradSys v3
+package common
 
 import (
 	"context"
 	"time"
-
-	"github.com/abdoElHodaky/tradSys/internal/types"
 )
 
 // ExchangeInterface defines the standard interface for all exchange implementations
@@ -28,8 +26,8 @@ type ExchangeInterface interface {
 	GetHalalScreening(ctx context.Context, symbol string) (*HalalScreening, error)
 
 	// Exchange information
-	GetExchangeType() types.ExchangeType
-	GetTradingHours() *types.TradingHours
+	GetExchangeType() ExchangeType
+	GetTradingHours() *TradingHours
 	IsMarketOpen() bool
 
 	// Connection management
@@ -42,8 +40,8 @@ type ExchangeInterface interface {
 type Order struct {
 	ID          string             `json:"id"`
 	Symbol      string             `json:"symbol"`
-	AssetType   types.AssetType    `json:"asset_type"`
-	Exchange    types.ExchangeType `json:"exchange"`
+	AssetType   AssetType    `json:"asset_type"`
+	Exchange    ExchangeType `json:"exchange"`
 	Side        OrderSide          `json:"side"`
 	Type        OrderType          `json:"type"`
 	Quantity    float64            `json:"quantity"`
@@ -90,8 +88,8 @@ type MarketData struct {
 type AssetInfo struct {
 	Symbol             string             `json:"symbol"`
 	Name               string             `json:"name"`
-	AssetType          types.AssetType    `json:"asset_type"`
-	Exchange           types.ExchangeType `json:"exchange"`
+	AssetType          AssetType    `json:"asset_type"`
+	Exchange           ExchangeType `json:"exchange"`
 	Currency           string             `json:"currency"`
 	IsActive           bool               `json:"is_active"`
 	IsShariahCompliant bool               `json:"is_shariah_compliant"`
@@ -104,8 +102,8 @@ type AssetInfo struct {
 type Asset struct {
 	Symbol    string             `json:"symbol"`
 	Name      string             `json:"name"`
-	AssetType types.AssetType    `json:"asset_type"`
-	Exchange  types.ExchangeType `json:"exchange"`
+	AssetType AssetType    `json:"asset_type"`
+	Exchange  ExchangeType `json:"exchange"`
 	Currency  string             `json:"currency"`
 	IsActive  bool               `json:"is_active"`
 }
@@ -145,4 +143,49 @@ const (
 	TimeInForceIOC TimeInForce = "IOC" // Immediate Or Cancel
 	TimeInForceFOK TimeInForce = "FOK" // Fill Or Kill
 	TimeInForceDAY TimeInForce = "DAY" // Day order
+)
+
+// AssetType represents different types of assets
+type AssetType int
+
+const (
+	AssetTypeStock AssetType = iota
+	AssetTypeBond
+	AssetTypeETF
+	AssetTypeREIT
+	AssetTypeMutualFund
+	AssetTypeCommodity
+	AssetTypeCrypto
+	AssetTypeForex
+	AssetTypeGovernmentBond
+	AssetTypeCorporateBond
+	AssetTypeIslamicInstrument
+	AssetTypeSukuk
+	AssetTypeIslamicFund
+	AssetTypeIslamicREIT
+)
+
+// ExchangeType represents different exchanges
+type ExchangeType int
+
+const (
+	ExchangeEGX ExchangeType = iota
+	ExchangeNASDAQ
+	ExchangeNYSE
+	ExchangeLSE
+	ExchangeTSE
+	ExchangeHKEX
+	ExchangeSSE
+	ExchangeSZSE
+	ExchangeNSE
+	ExchangeBSE
+	ExchangeJSE
+	ExchangeASX
+	ExchangeTSX
+	ExchangeEuronext
+	ExchangeXETRA
+	ExchangeBinance
+	ExchangeCoinbase
+	ExchangeKraken
+	ExchangeBitfinex
 )
