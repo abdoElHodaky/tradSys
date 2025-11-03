@@ -5,8 +5,6 @@ import (
 	"context"
 	"sync"
 	"time"
-
-	"github.com/abdoElHodaky/tradSys/internal/types"
 )
 
 // ShariaService provides Sharia compliance and Islamic finance services
@@ -38,7 +36,7 @@ type ShariaRule struct {
 	Name            string                 `json:"name"`
 	Description     string                 `json:"description"`
 	Category        string                 `json:"category"`
-	AssetTypes      []types.AssetType      `json:"asset_types"`
+	AssetTypes      []AssetType      `json:"asset_types"`
 	Validator       func(interface{}) bool `json:"-"`
 	ComplianceLevel ComplianceLevel        `json:"compliance_level"`
 	IsActive        bool                   `json:"is_active"`
@@ -66,8 +64,8 @@ type ScreeningEngine struct {
 // ZakatCalculator calculates Zakat for Islamic portfolios
 type ZakatCalculator struct {
 	config     *ZakatConfig
-	rateTable  map[types.AssetType]float64
-	exemptions map[types.AssetType]bool
+	rateTable  map[AssetType]float64
+	exemptions map[AssetType]bool
 	mu         sync.RWMutex
 }
 
@@ -141,7 +139,7 @@ type ContactInfo struct {
 // AssetScreeningInfo represents screening information for an asset
 type AssetScreeningInfo struct {
 	Symbol          string
-	AssetType       types.AssetType
+	AssetType       AssetType
 	ComplianceScore float64
 	IsCompliant     bool
 	Violations      []string

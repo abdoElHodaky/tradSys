@@ -4,16 +4,13 @@ package types
 import (
 	"context"
 	"time"
-
-	"github.com/abdoElHodaky/tradSys/internal/common"
-	"github.com/abdoElHodaky/tradSys/internal/types"
 )
 
 // AssetHandler defines the interface for asset-specific operations
 type AssetHandler interface {
 	ValidateOrder(ctx context.Context, order *interfaces.Order) error
 	CalculateSettlement(ctx context.Context, order *interfaces.Order) (*Settlement, error)
-	GetTradingHours(exchange types.ExchangeType) *TradingHours
+	GetTradingHours(exchange ExchangeType) *TradingHours
 	GetRiskParameters() *RiskParameters
 	GetMinOrderSize() float64
 	GetMaxOrderSize() float64
@@ -24,7 +21,7 @@ type AssetHandler interface {
 
 // BaseAssetHandler provides common functionality for all asset handlers
 type BaseAssetHandler struct {
-	AssetType      types.AssetType
+	AssetType      AssetType
 	MinOrderSize   float64
 	MaxOrderSize   float64
 	PriceStep      float64

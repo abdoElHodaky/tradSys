@@ -5,9 +5,6 @@ import (
 	"context"
 	"sync"
 	"time"
-
-	"github.com/abdoElHodaky/tradSys/internal/common"
-	"github.com/abdoElHodaky/tradSys/internal/types"
 )
 
 // RiskManager provides comprehensive risk management
@@ -60,8 +57,8 @@ type UserRiskProfile struct {
 type Position struct {
 	UserID       string             `json:"user_id"`
 	Symbol       string             `json:"symbol"`
-	AssetType    types.AssetType    `json:"asset_type"`
-	Exchange     types.ExchangeType `json:"exchange"`
+	AssetType    AssetType    `json:"asset_type"`
+	Exchange     ExchangeType `json:"exchange"`
 	Quantity     float64            `json:"quantity"`
 	AveragePrice float64            `json:"average_price"`
 	MarketValue  float64            `json:"market_value"`
