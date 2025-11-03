@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/pkg/matching"
+	"github.com/abdoElHodaky/tradSys/internal/core/matching"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

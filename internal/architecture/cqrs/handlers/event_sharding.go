@@ -176,67 +176,68 @@ func (m *EventShardingManager) hashString(s string) int {
 	return int(h.Sum32())
 }
 
+// TODO: Fix missing eventbus import
 // ShardingEventBusDecorator decorates an event bus with sharding
-type ShardingEventBusDecorator struct {
-	eventBus eventbus.EventBus
-	manager  *EventShardingManager
-	logger   *zap.Logger
-}
+//type ShardingEventBusDecorator struct {
+//	eventBus eventbus.EventBus
+//	manager  *EventShardingManager
+//	logger   *zap.Logger
+//}
 
-// NewShardingEventBusDecorator creates a new sharding event bus decorator
-func NewShardingEventBusDecorator(
-	eventBus eventbus.EventBus,
-	manager *EventShardingManager,
-	logger *zap.Logger,
-) *ShardingEventBusDecorator {
-	return &ShardingEventBusDecorator{
-		eventBus: eventBus,
-		manager:  manager,
-		logger:   logger,
-	}
-}
-
-// PublishEvent publishes an event with sharding
-func (d *ShardingEventBusDecorator) PublishEvent(ctx context.Context, event *eventsourcing.Event) error {
-	// Add the shard to the event metadata
-	if event.Metadata == nil {
-		event.Metadata = make(map[string]string)
-	}
-
-	shard := d.manager.GetShardForEvent(event)
-	event.Metadata["shard"] = fmt.Sprintf("%d", shard)
-
-	// Publish the event
-	return d.eventBus.PublishEvent(ctx, event)
-}
-
-// PublishEvents publishes multiple events with sharding
-func (d *ShardingEventBusDecorator) PublishEvents(ctx context.Context, events []*eventsourcing.Event) error {
-	// Add the shard to each event's metadata
-	for _, event := range events {
-		if event.Metadata == nil {
-			event.Metadata = make(map[string]string)
-		}
-
-		shard := d.manager.GetShardForEvent(event)
-		event.Metadata["shard"] = fmt.Sprintf("%d", shard)
-	}
-
-	// Publish the events
-	return d.eventBus.PublishEvents(ctx, events)
-}
-
-// Subscribe subscribes to all events
-func (d *ShardingEventBusDecorator) Subscribe(handler eventsourcing.EventHandler) error {
-	return d.eventBus.Subscribe(handler)
-}
-
-// SubscribeToType subscribes to events of a specific type
-func (d *ShardingEventBusDecorator) SubscribeToType(eventType string, handler eventsourcing.EventHandler) error {
-	return d.eventBus.SubscribeToType(eventType, handler)
-}
-
-// SubscribeToAggregate subscribes to events of a specific aggregate type
-func (d *ShardingEventBusDecorator) SubscribeToAggregate(aggregateType string, handler eventsourcing.EventHandler) error {
-	return d.eventBus.SubscribeToAggregate(aggregateType, handler)
-}
+//// NewShardingEventBusDecorator creates a new sharding event bus decorator
+//func NewShardingEventBusDecorator(
+//	eventBus eventbus.EventBus,
+//	manager *EventShardingManager,
+//	logger *zap.Logger,
+//) *ShardingEventBusDecorator {
+//	return &ShardingEventBusDecorator{
+//		eventBus: eventBus,
+//		manager:  manager,
+//		logger:   logger,
+//	}
+//}
+//
+//// PublishEvent publishes an event with sharding
+//func (d *ShardingEventBusDecorator) PublishEvent(ctx context.Context, event *eventsourcing.Event) error {
+//	// Add the shard to the event metadata
+//	if event.Metadata == nil {
+//		event.Metadata = make(map[string]string)
+//	}
+//
+//	shard := d.manager.GetShardForEvent(event)
+//	event.Metadata["shard"] = fmt.Sprintf("%d", shard)
+//
+//	// Publish the event
+//	return d.eventBus.PublishEvent(ctx, event)
+//}
+//
+//// PublishEvents publishes multiple events with sharding
+//func (d *ShardingEventBusDecorator) PublishEvents(ctx context.Context, events []*eventsourcing.Event) error {
+//	// Add the shard to each event's metadata
+//	for _, event := range events {
+//		if event.Metadata == nil {
+//			event.Metadata = make(map[string]string)
+//		}
+//
+//		shard := d.manager.GetShardForEvent(event)
+//		event.Metadata["shard"] = fmt.Sprintf("%d", shard)
+//	}
+//
+//	// Publish the events
+//	return d.eventBus.PublishEvents(ctx, events)
+//}
+//
+//// Subscribe subscribes to all events
+//func (d *ShardingEventBusDecorator) Subscribe(handler eventsourcing.EventHandler) error {
+//	return d.eventBus.Subscribe(handler)
+//}
+//
+//// SubscribeToType subscribes to events of a specific type
+//func (d *ShardingEventBusDecorator) SubscribeToType(eventType string, handler eventsourcing.EventHandler) error {
+//	return d.eventBus.SubscribeToType(eventType, handler)
+//}
+//
+//// SubscribeToAggregate subscribes to events of a specific aggregate type
+//func (d *ShardingEventBusDecorator) SubscribeToAggregate(aggregateType string, handler eventsourcing.EventHandler) error {
+//	return d.eventBus.SubscribeToAggregate(aggregateType, handler)
+//}

@@ -1,4 +1,4 @@
-package order_matching
+package matching
 
 import (
 	"fmt"

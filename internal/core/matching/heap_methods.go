@@ -8,7 +8,7 @@
 // Performance Requirements: Standard latency, heap-based priority queues
 // File size limit: 410 lines
 
-package order_matching
+package matching
 
 import (
 	"container/heap"

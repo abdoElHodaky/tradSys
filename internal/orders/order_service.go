@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/pkg/types"
+	"github.com/abdoElHodaky/tradSys/internal/types"
 	"github.com/google/uuid"
 	cache "github.com/patrickmn/go-cache"
 	"go.uber.org/zap"
@@ -372,8 +372,8 @@ func (s *OrderService) convertToMatchingOrder(order *Order) *types.Order {
 	return &types.Order{
 		ID:        order.ID,
 		Symbol:    order.Symbol,
-		Side:      string(order.Side),
-		Type:      string(order.Type),
+		Side:      types.OrderSide(order.Side),
+		Type:      types.OrderType(order.Type),
 		Price:     order.Price,
 		Quantity:  order.Quantity,
 		Timestamp: order.CreatedAt,
