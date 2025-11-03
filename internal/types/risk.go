@@ -55,18 +55,7 @@ type UserRiskProfile struct {
 	LastUpdated        time.Time `json:"last_updated"`
 }
 
-// Position represents a trading position
-type Position struct {
-	UserID       string             `json:"user_id"`
-	Symbol       string             `json:"symbol"`
-	AssetType    common.AssetType    `json:"asset_type"`
-	Exchange     common.ExchangeType `json:"exchange"`
-	Quantity     float64            `json:"quantity"`
-	AveragePrice float64            `json:"average_price"`
-	MarketValue  float64            `json:"market_value"`
-	UnrealizedPL float64            `json:"unrealized_pl"`
-	LastUpdated  time.Time          `json:"last_updated"`
-}
+// Position is defined in common_core.go to avoid duplication
 
 // RiskCheckResult represents the result of a risk check
 type RiskCheckResult struct {

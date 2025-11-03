@@ -16,15 +16,7 @@ import (
 	"time"
 )
 
-// ComplianceLevel defines Sharia compliance levels
-type ComplianceLevel int
-
-const (
-	ComplianceLevelHalal ComplianceLevel = iota
-	ComplianceLevelDoubtful
-	ComplianceLevelHaram
-	ComplianceLevelUnderReview
-)
+// ComplianceLevel is defined in sharia.go to avoid duplication
 
 // ADXService provides Abu Dhabi Exchange integration with Islamic finance focus
 type ADXService struct {
@@ -56,27 +48,9 @@ type IslamicCompliance struct {
 	mu              sync.RWMutex
 }
 
-// ShariaRule represents an Islamic finance rule
-type ShariaRule struct {
-	RuleID          string
-	Description     string
-	ShariaBoard     string
-	AssetTypes      []AssetType
-	Validator       func(interface{}) bool
-	ComplianceLevel ComplianceLevel
-	LastUpdated     time.Time
-}
+// ShariaRule is defined in sharia.go to avoid duplication
 
-// ShariaBoard represents a Sharia supervisory board
-type ShariaBoard struct {
-	ID          string
-	Name        string
-	Country     string
-	Scholars    []ShariaScholar
-	Methodology string
-	IsActive    bool
-	LastReview  time.Time
-}
+// ShariaBoard is defined in sharia.go to avoid duplication
 
 // ShariaScholar represents a Sharia scholar
 type ShariaScholar struct {
@@ -86,13 +60,7 @@ type ShariaScholar struct {
 	IsActive       bool
 }
 
-// ZakatCalculator calculates Zakat for Islamic investments
-type ZakatCalculator struct {
-	zakatRates     map[AssetType]float64
-	nisabThreshold float64
-	currency       string
-	mu             sync.RWMutex
-}
+// ZakatCalculator is defined in sharia.go to avoid duplication
 
 // UAECompliance handles UAE regulatory compliance
 type UAECompliance struct {

@@ -66,33 +66,11 @@ type WebSocketMessage struct {
 	Metadata  map[string]interface{} `json:"metadata,omitempty"`
 }
 
-// MessageType defines WebSocket message types
-type MessageType int
-
-const (
-	MessageTypeSubscribe MessageType = iota
-	MessageTypeUnsubscribe
-	MessageTypeMarketData
-	MessageTypeOrderUpdate
-	MessageTypePortfolioUpdate
-	MessageTypeAlert
-	MessageTypeHeartbeat
-	MessageTypeError
-	MessageTypeAuth
-	MessageTypeCompliance
-)
+// MessageType is defined in ws_gateway.go to avoid duplication
 
 // ExchangeType is available in pkg/types
 
-// LicenseTier defines license tiers for WebSocket access
-type LicenseTier int
-
-const (
-	LicenseTierBasic LicenseTier = iota
-	LicenseTierProfessional
-	LicenseTierEnterprise
-	LicenseTierIslamic
-)
+// LicenseTier is defined in licensing.go to avoid duplication
 
 // Subscription represents a WebSocket subscription
 type Subscription struct {
@@ -131,10 +109,7 @@ type SubscriptionManager struct {
 	mu            sync.RWMutex
 }
 
-// LicenseValidator validates WebSocket license access
-type LicenseValidator struct {
-	// License validation logic
-}
+// LicenseValidator is defined in asset_system.go to avoid duplication
 
 // IslamicFilter filters WebSocket messages for Islamic compliance
 type IslamicFilter struct {

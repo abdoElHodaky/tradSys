@@ -12,31 +12,7 @@ import "time"
 
 // Order is available in pkg/types
 
-// Trade represents a completed trade in the trading system
-type Trade struct {
-	// ID is the unique identifier for the trade
-	ID string `json:"id"`
-	// Symbol is the trading symbol
-	Symbol string `json:"symbol"`
-	// BuyOrderID is the ID of the buy order
-	BuyOrderID string `json:"buy_order_id"`
-	// SellOrderID is the ID of the sell order
-	SellOrderID string `json:"sell_order_id"`
-	// Price is the execution price
-	Price float64 `json:"price"`
-	// Quantity is the traded quantity
-	Quantity float64 `json:"quantity"`
-	// Timestamp is the time of the trade
-	Timestamp time.Time `json:"timestamp"`
-	// BuyerID is the buyer user ID
-	BuyerID string `json:"buyer_id"`
-	// SellerID is the seller user ID
-	SellerID string `json:"seller_id"`
-	// TakerSide indicates which side was the taker
-	TakerSide OrderSide `json:"taker_side"`
-	// Fees contains fee information
-	Fees TradeFeesInfo `json:"fees,omitempty"`
-}
+// Trade is defined in common_core.go to avoid duplication
 
 // TradeFeesInfo is available in pkg/types
 

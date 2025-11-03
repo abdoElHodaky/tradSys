@@ -371,10 +371,7 @@ type IntelligentLoadBalancer struct {
 	mu         sync.RWMutex
 }
 
-type AlertManager struct {
-	alerts []PerformanceAlert
-	mu     sync.RWMutex
-}
+// AlertManager is defined in asset_system.go to avoid duplication
 
 type PerformanceAnalyzer struct {
 	thresholds map[string]float64

@@ -148,11 +148,7 @@ const (
 	TimeInForceIOC = "IOC" // Immediate Or Cancel
 	TimeInForceFOK = "FOK" // Fill Or Kill
 	
-	// Error severities
-	SeverityLow      = "low"
-	SeverityMedium   = "medium"
-	SeverityHigh     = "high"
-	SeverityCritical = "critical"
+	// Error severities are defined in risk.go as ViolationSeverity type
 )
 
 // DefaultEngineConfig returns a default engine configuration
