@@ -312,48 +312,6 @@ func parseExchangeType(exchange string) ExchangeType {
 	}
 }
 
-// Constructor functions for dependencies
-func NewConnectionManager() *ConnectionManager {
-	return &ConnectionManager{
-		connections: make(map[string]*WebSocketConnection),
-	}
-}
+// Constructor functions are defined in websocket_components.go
 
-func NewSubscriptionManager() *SubscriptionManager {
-	return &SubscriptionManager{
-		subscriptions: make(map[string]*Subscription),
-	}
-}
-
-func NewLicenseValidator() *LicenseValidator {
-	return &LicenseValidator{}
-}
-
-func NewIslamicFilter() *IslamicFilter {
-	return &IslamicFilter{}
-}
-
-func NewComplianceEngine() *ComplianceEngine {
-	return &ComplianceEngine{}
-}
-
-func NewAnalyticsEngine() *AnalyticsEngine {
-	return &AnalyticsEngine{}
-}
-
-// ValidateLicense validates a user's license for WebSocket access
-func (lv *LicenseValidator) ValidateLicense(userID string, tier LicenseTier) (bool, error) {
-	// Implementation for license validation
-	return true, nil
-}
-
-// FilterMessage filters a WebSocket message for Islamic compliance
-func (f *IslamicFilter) FilterMessage(message *WebSocketMessage, ctx *WebSocketConnectionContext) (*WebSocketMessage, error) {
-	// Implementation for Islamic filtering
-	return message, nil
-}
-
-// RecordMessage records a WebSocket message for analytics
-func (ae *AnalyticsEngine) RecordMessage(conn *WebSocketConnection, message *WebSocketMessage, err error) {
-	// Implementation for analytics recording
-}
+// Methods are defined in websocket_components.go

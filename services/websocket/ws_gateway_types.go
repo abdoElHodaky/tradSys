@@ -9,19 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// MessageType defines WebSocket message types
-type MessageType string
-
-const (
-	MessageTypeSubscribe   MessageType = "subscribe"
-	MessageTypeUnsubscribe MessageType = "unsubscribe"
-	MessageTypeMarketData  MessageType = "market_data"
-	MessageTypeOrderUpdate MessageType = "order_update"
-	MessageTypePortfolio   MessageType = "portfolio"
-	MessageTypeAlert       MessageType = "alert"
-	MessageTypeHeartbeat   MessageType = "heartbeat"
-	MessageTypeError       MessageType = "error"
-)
+// MessageType is defined in websocket_types.go
 
 // SubscriptionType defines subscription types
 type SubscriptionType string
@@ -38,7 +26,7 @@ const (
 // Gateway manages WebSocket connections and routing for high-performance trading
 type Gateway struct {
 	// Core components
-	connectionManager *ConnectionManager
+	connectionManager *GatewayConnectionManager
 	messageHandler    *MessageHandler
 	performanceOpt    *PerformanceOptimizer
 
@@ -86,7 +74,7 @@ type Connection struct {
 	receive chan []byte
 
 	// Subscriptions
-	subscriptions map[string]*Subscription
+	subscriptions map[string]*GatewaySubscription
 	subMu         sync.RWMutex
 
 	// Performance tracking
@@ -104,8 +92,8 @@ type Connection struct {
 	cancel context.CancelFunc
 }
 
-// Subscription represents a channel subscription
-type Subscription struct {
+// GatewaySubscription represents a channel subscription for the gateway
+type GatewaySubscription struct {
 	ID       string
 	Channel  string
 	Symbol   string
@@ -139,8 +127,8 @@ type Message struct {
 	Metadata  map[string]interface{} `json:"metadata,omitempty"`
 }
 
-// ConnectionManager manages WebSocket connections
-type ConnectionManager struct {
+// GatewayConnectionManager manages WebSocket connections for the gateway
+type GatewayConnectionManager struct {
 	gateway *Gateway
 	logger  *zap.Logger
 }

@@ -2,8 +2,6 @@ package websocket
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -23,7 +21,7 @@ func (g *Gateway) createConnection(conn *websocket.Conn, userID, exchange string
 		conn:          conn,
 		send:          make(chan []byte, g.config.BufferSize),
 		receive:       make(chan []byte, g.config.BufferSize),
-		subscriptions: make(map[string]*Subscription),
+		subscriptions: make(map[string]*GatewaySubscription),
 		lastActivity:  time.Now(),
 		isActive:      true,
 		ctx:           ctx,
@@ -346,12 +344,7 @@ func (g *Gateway) monitorPerformance() {
 	}
 }
 
-// generateConnectionID generates a unique connection ID
-func generateConnectionID() string {
-	bytes := make([]byte, 16)
-	rand.Read(bytes)
-	return hex.EncodeToString(bytes)
-}
+// generateConnectionID is defined in websocket_core.go
 
 // Connection methods
 
@@ -365,9 +358,9 @@ func (c *Connection) Subscribe(channel, symbol string, subType SubscriptionType,
 		return fmt.Errorf("maximum subscriptions reached")
 	}
 
-	subscriptionID := generateSubscriptionID(channel, symbol)
+	subscriptionID := generateSubscriptionID()
 
-	subscription := &Subscription{
+	subscription := &GatewaySubscription{
 		ID:      subscriptionID,
 		Channel: channel,
 		Symbol:  symbol,
@@ -437,20 +430,11 @@ func (c *Connection) Close() {
 	c.conn.Close()
 }
 
-// generateSubscriptionID generates a unique subscription ID
-func generateSubscriptionID(channel, symbol string) string {
-	return fmt.Sprintf("%s:%s:%d", channel, symbol, time.Now().UnixNano())
-}
+// generateSubscriptionID is defined in websocket_core.go
 
 // Component constructors
 
-// NewConnectionManager creates a new connection manager
-func NewConnectionManager(gateway *Gateway, logger *zap.Logger) *ConnectionManager {
-	return &ConnectionManager{
-		gateway: gateway,
-		logger:  logger,
-	}
-}
+// NewConnectionManager is defined in websocket_components.go
 
 // NewMessageHandler creates a new message handler
 func NewMessageHandler(gateway *Gateway, logger *zap.Logger) *MessageHandler {

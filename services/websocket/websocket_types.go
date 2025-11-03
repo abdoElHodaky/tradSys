@@ -126,34 +126,4 @@ type ExchangeChannel struct {
 	mu                   sync.RWMutex
 }
 
-// ConnectionManager manages WebSocket connections
-type ConnectionManager struct {
-	connections map[string]*WebSocketConnection
-	mu          sync.RWMutex
-}
-
-// SubscriptionManager manages WebSocket subscriptions
-type SubscriptionManager struct {
-	subscriptions map[string]*Subscription
-	mu            sync.RWMutex
-}
-
-// LicenseValidator validates WebSocket license access
-type LicenseValidator struct {
-	// License validation logic
-}
-
-// IslamicFilter filters WebSocket messages for Islamic compliance
-type IslamicFilter struct {
-	// Islamic filtering logic
-}
-
-// ComplianceEngine handles WebSocket compliance validation
-type ComplianceEngine struct {
-	// Compliance validation logic
-}
-
-// AnalyticsEngine processes WebSocket analytics
-type AnalyticsEngine struct {
-	// Analytics processing logic
-}
+// Component types are defined in websocket_components.go

@@ -33,7 +33,10 @@ func NewGateway(config *GatewayConfig, logger *zap.Logger) *Gateway {
 	}
 
 	// Initialize components
-	gateway.connectionManager = NewConnectionManager(gateway, logger)
+	gateway.connectionManager = &GatewayConnectionManager{
+		gateway: gateway,
+		logger:  logger,
+	}
 	gateway.messageHandler = NewMessageHandler(gateway, logger)
 	gateway.performanceOpt = NewPerformanceOptimizer(gateway, logger)
 
