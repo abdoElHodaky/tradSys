@@ -8,15 +8,15 @@ import (
 
 // AssetHandler defines the interface for asset-specific operations
 type AssetHandler interface {
-	ValidateOrder(ctx context.Context, order *interfaces.Order) error
-	CalculateSettlement(ctx context.Context, order *interfaces.Order) (*Settlement, error)
+	ValidateOrder(ctx context.Context, order *Order) error
+	CalculateSettlement(ctx context.Context, order *Order) (*Settlement, error)
 	GetTradingHours(exchange ExchangeType) *TradingHours
 	GetRiskParameters() *RiskParameters
 	GetMinOrderSize() float64
 	GetMaxOrderSize() float64
 	GetPriceStep() float64
-	IsMarketOrder(orderType interfaces.OrderType) bool
-	CalculateFees(ctx context.Context, order *interfaces.Order) (*FeeCalculation, error)
+	IsMarketOrder(orderType OrderType) bool
+	CalculateFees(ctx context.Context, order *Order) (*FeeCalculation, error)
 }
 
 // BaseAssetHandler provides common functionality for all asset handlers
@@ -41,12 +41,7 @@ type Settlement struct {
 	NetAmount      float64   `json:"net_amount"`
 }
 
-// TradingHours represents trading hours for an exchange
-type TradingHours struct {
-	Open     string `json:"open"`
-	Close    string `json:"close"`
-	Timezone string `json:"timezone"`
-}
+
 
 // RiskParameters defines risk limits for an asset type
 type RiskParameters struct {

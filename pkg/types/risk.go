@@ -53,18 +53,7 @@ type UserRiskProfile struct {
 	LastUpdated        time.Time `json:"last_updated"`
 }
 
-// Position represents a trading position
-type Position struct {
-	UserID       string             `json:"user_id"`
-	Symbol       string             `json:"symbol"`
-	AssetType    AssetType    `json:"asset_type"`
-	Exchange     ExchangeType `json:"exchange"`
-	Quantity     float64            `json:"quantity"`
-	AveragePrice float64            `json:"average_price"`
-	MarketValue  float64            `json:"market_value"`
-	UnrealizedPL float64            `json:"unrealized_pl"`
-	LastUpdated  time.Time          `json:"last_updated"`
-}
+
 
 // RiskCheckResult represents the result of a risk check
 type RiskCheckResult struct {
@@ -92,7 +81,7 @@ type RiskCheckRecord struct {
 	UserID    string            `json:"user_id"`
 	OrderID   string            `json:"order_id"`
 	Result    *RiskCheckResult  `json:"result"`
-	Order     *interfaces.Order `json:"order"`
+	Order     *Order `json:"order"`
 	CheckedAt time.Time         `json:"checked_at"`
 }
 
