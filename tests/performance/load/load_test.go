@@ -11,7 +11,7 @@ import (
 
 	"github.com/abdoElHodaky/tradSys/internal/orders"
 	"github.com/abdoElHodaky/tradSys/internal/risk"
-	"github.com/abdoElHodaky/tradSys/pkg/matching"
+	"github.com/abdoElHodaky/tradSys/internal/core/matching"
 	"github.com/stretchr/testify/require"
 )
 

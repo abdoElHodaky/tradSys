@@ -2,10 +2,8 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -182,185 +180,190 @@ func (t *DistributedTracer) exportSpan(span *SpanContext) {
 }
 
 // TracingEventBusDecorator decorates an event bus with distributed tracing
-type TracingEventBusDecorator struct {
-	eventBus eventbus.EventBus
-	tracer   *DistributedTracer
-	logger   *zap.Logger
-}
+// TODO: Fix missing eventbus import
+// type TracingEventBusDecorator struct {
+//	eventBus eventbus.EventBus
+//	tracer   *DistributedTracer
+//	logger   *zap.Logger
+//}
 
 // NewTracingEventBusDecorator creates a new tracing event bus decorator
-func NewTracingEventBusDecorator(
-	eventBus eventbus.EventBus,
-	tracer *DistributedTracer,
-	logger *zap.Logger,
-) *TracingEventBusDecorator {
-	return &TracingEventBusDecorator{
-		eventBus: eventBus,
-		tracer:   tracer,
-		logger:   logger,
-	}
-}
+// TODO: Fix missing eventbus import
+// func NewTracingEventBusDecorator(
+//	eventBus eventbus.EventBus,
+//	tracer *DistributedTracer,
+//	logger *zap.Logger,
+//) *TracingEventBusDecorator {
+//	return &TracingEventBusDecorator{
+//		eventBus: eventBus,
+//		tracer:   tracer,
+//		logger:   logger,
+//	}
+//}
 
 // PublishEvent publishes an event with distributed tracing
-func (d *TracingEventBusDecorator) PublishEvent(ctx context.Context, event *eventsourcing.Event) error {
-	// Start a span for the publish operation
-	operation := fmt.Sprintf("publish_event.%s", event.EventType)
-	ctx, span := d.tracer.StartSpan(ctx, operation)
-
-	// Add tags to the span
-	if span != nil {
-		d.tracer.AddTag(span, "event_type", event.EventType)
-		d.tracer.AddTag(span, "aggregate_id", event.AggregateID)
-		d.tracer.AddTag(span, "aggregate_type", event.AggregateType)
-		d.tracer.AddTag(span, "version", fmt.Sprintf("%d", event.Version))
-
-		// Add the trace ID to the event metadata
-		if event.Metadata == nil {
-			event.Metadata = make(map[string]string)
-		}
-		event.Metadata["trace_id"] = span.TraceID
-		event.Metadata["span_id"] = span.SpanID
-	}
-
-	// Publish the event
-	err := d.eventBus.PublishEvent(ctx, event)
-
-	// End the span
-	if span != nil {
-		if err != nil {
-			d.tracer.AddTag(span, "error", err.Error())
-		}
-		d.tracer.EndSpan(span)
-	}
-
-	return err
-}
+// TODO: Fix missing eventbus import
+// func (d *TracingEventBusDecorator) PublishEvent(ctx context.Context, event *eventsourcing.Event) error {
+//	// Start a span for the publish operation
+//	operation := fmt.Sprintf("publish_event.%s", event.EventType)
+//	ctx, span := d.tracer.StartSpan(ctx, operation)
+//
+//	// Add tags to the span
+//	if span != nil {
+//		d.tracer.AddTag(span, "event_type", event.EventType)
+//		d.tracer.AddTag(span, "aggregate_id", event.AggregateID)
+//		d.tracer.AddTag(span, "aggregate_type", event.AggregateType)
+//		d.tracer.AddTag(span, "version", fmt.Sprintf("%d", event.Version))
+//
+//		// Add the trace ID to the event metadata
+//		if event.Metadata == nil {
+//			event.Metadata = make(map[string]string)
+//		}
+//		event.Metadata["trace_id"] = span.TraceID
+//		event.Metadata["span_id"] = span.SpanID
+//	}
+//
+//	// Publish the event
+//	err := d.eventBus.PublishEvent(ctx, event)
+//
+//	// End the span
+//	if span != nil {
+//		if err != nil {
+//			d.tracer.AddTag(span, "error", err.Error())
+//		}
+//		d.tracer.EndSpan(span)
+//	}
+//
+//	return err
+//}
 
 // PublishEvents publishes multiple events with distributed tracing
-func (d *TracingEventBusDecorator) PublishEvents(ctx context.Context, events []*eventsourcing.Event) error {
-	// Start a span for the publish operation
-	operation := "publish_events"
-	ctx, span := d.tracer.StartSpan(ctx, operation)
-
-	// Add tags to the span
-	if span != nil {
-		d.tracer.AddTag(span, "event_count", fmt.Sprintf("%d", len(events)))
-
-		// Add event types to the span
-		for i, event := range events {
-			d.tracer.AddTag(span, fmt.Sprintf("event_%d_type", i), event.EventType)
-
-			// Add the trace ID to the event metadata
-			if event.Metadata == nil {
-				event.Metadata = make(map[string]string)
-			}
-			event.Metadata["trace_id"] = span.TraceID
-			event.Metadata["span_id"] = span.SpanID
-		}
-	}
-
-	// Publish the events
-	err := d.eventBus.PublishEvents(ctx, events)
-
-	// End the span
-	if span != nil {
-		if err != nil {
-			d.tracer.AddTag(span, "error", err.Error())
-		}
-		d.tracer.EndSpan(span)
-	}
-
-	return err
-}
+// TODO: Fix missing eventbus import
+// func (d *TracingEventBusDecorator) PublishEvents(ctx context.Context, events []*eventsourcing.Event) error {
+//	// Start a span for the publish operation
+//	operation := "publish_events"
+//	ctx, span := d.tracer.StartSpan(ctx, operation)
+//
+//	// Add tags to the span
+//	if span != nil {
+//		d.tracer.AddTag(span, "event_count", fmt.Sprintf("%d", len(events)))
+//
+//		// Add event types to the span
+//		for i, event := range events {
+//			d.tracer.AddTag(span, fmt.Sprintf("event_%d_type", i), event.EventType)
+//
+//			// Add the trace ID to the event metadata
+//			if event.Metadata == nil {
+//				event.Metadata = make(map[string]string)
+//			}
+//			event.Metadata["trace_id"] = span.TraceID
+//			event.Metadata["span_id"] = span.SpanID
+//		}
+//	}
+//
+//	// Publish the events
+//	err := d.eventBus.PublishEvents(ctx, events)
+//
+//	// End the span
+//	if span != nil {
+//		if err != nil {
+//			d.tracer.AddTag(span, "error", err.Error())
+//		}
+//		d.tracer.EndSpan(span)
+//	}
+//
+//	return err
+//}
 
 // Subscribe subscribes to all events
-func (d *TracingEventBusDecorator) Subscribe(handler eventsourcing.EventHandler) error {
-	// Create a tracing event handler
-	tracingHandler := &TracingEventHandler{
-		handler: handler,
-		tracer:  d.tracer,
-		logger:  d.logger,
-	}
-
-	return d.eventBus.Subscribe(tracingHandler)
-}
+//func (d *TracingEventBusDecorator) Subscribe(handler eventsourcing.EventHandler) error {
+//	// Create a tracing event handler
+//	tracingHandler := &TracingEventHandler{
+//		handler: handler,
+//		tracer:  d.tracer,
+//		logger:  d.logger,
+//	}
+//
+//	return d.eventBus.Subscribe(tracingHandler)
+//}
 
 // SubscribeToType subscribes to events of a specific type
-func (d *TracingEventBusDecorator) SubscribeToType(eventType string, handler eventsourcing.EventHandler) error {
-	// Create a tracing event handler
-	tracingHandler := &TracingEventHandler{
-		handler: handler,
-		tracer:  d.tracer,
-		logger:  d.logger,
-	}
-
-	return d.eventBus.SubscribeToType(eventType, tracingHandler)
-}
+//func (d *TracingEventBusDecorator) SubscribeToType(eventType string, handler eventsourcing.EventHandler) error {
+//	// Create a tracing event handler
+//	tracingHandler := &TracingEventHandler{
+//		handler: handler,
+//		tracer:  d.tracer,
+//		logger:  d.logger,
+//	}
+//
+//	return d.eventBus.SubscribeToType(eventType, tracingHandler)
+//}
 
 // SubscribeToAggregate subscribes to events of a specific aggregate type
-func (d *TracingEventBusDecorator) SubscribeToAggregate(aggregateType string, handler eventsourcing.EventHandler) error {
-	// Create a tracing event handler
-	tracingHandler := &TracingEventHandler{
-		handler: handler,
-		tracer:  d.tracer,
-		logger:  d.logger,
-	}
-
-	return d.eventBus.SubscribeToAggregate(aggregateType, tracingHandler)
-}
+//func (d *TracingEventBusDecorator) SubscribeToAggregate(aggregateType string, handler eventsourcing.EventHandler) error {
+//	// Create a tracing event handler
+//	tracingHandler := &TracingEventHandler{
+//		handler: handler,
+//		tracer:  d.tracer,
+//		logger:  d.logger,
+//	}
+//
+//	return d.eventBus.SubscribeToAggregate(aggregateType, tracingHandler)
+//}
 
 // TracingEventHandler is an event handler that adds distributed tracing
-type TracingEventHandler struct {
-	handler eventsourcing.EventHandler
-	tracer  *DistributedTracer
-	logger  *zap.Logger
-}
+// TODO: Fix missing eventbus import - struct depends on TracingEventBusDecorator
+// type TracingEventHandler struct {
+//	handler eventsourcing.EventHandler
+//	tracer  *DistributedTracer
+//	logger  *zap.Logger
+//}
 
-// HandleEvent handles an event with distributed tracing
-func (h *TracingEventHandler) HandleEvent(event *eventsourcing.Event) error {
-	// Create a context
-	ctx := context.Background()
-
-	// Check if there's a trace ID in the event metadata
-	var parentSpanID string
-	if event.Metadata != nil {
-		if traceID, ok := event.Metadata["trace_id"]; ok {
-			// Create a span context with the trace ID
-			ctx = context.WithValue(ctx, "trace_id", traceID)
-		}
-		if spanID, ok := event.Metadata["span_id"]; ok {
-			parentSpanID = spanID
-		}
-	}
-
-	// Start a span for the handle operation
-	operation := fmt.Sprintf("handle_event.%s", event.EventType)
-	ctx, span := h.tracer.StartSpan(ctx, operation)
-
-	// Add tags to the span
-	if span != nil {
-		h.tracer.AddTag(span, "event_type", event.EventType)
-		h.tracer.AddTag(span, "aggregate_id", event.AggregateID)
-		h.tracer.AddTag(span, "aggregate_type", event.AggregateType)
-		h.tracer.AddTag(span, "version", fmt.Sprintf("%d", event.Version))
-		h.tracer.AddTag(span, "handler", fmt.Sprintf("%T", h.handler))
-
-		// Set the parent span ID if available
-		if parentSpanID != "" {
-			span.ParentSpanID = parentSpanID
-		}
-	}
-
-	// Handle the event
-	err := h.handler.HandleEvent(event)
-
-	// End the span
-	if span != nil {
-		if err != nil {
-			h.tracer.AddTag(span, "error", err.Error())
-		}
-		h.tracer.EndSpan(span)
-	}
-
-	return err
-}
+//// HandleEvent handles an event with distributed tracing
+//func (h *TracingEventHandler) HandleEvent(event *eventsourcing.Event) error {
+//	// Create a context
+//	ctx := context.Background()
+//
+//	// Check if there's a trace ID in the event metadata
+//	var parentSpanID string
+//	if event.Metadata != nil {
+//		if traceID, ok := event.Metadata["trace_id"]; ok {
+//			// Create a span context with the trace ID
+//			ctx = context.WithValue(ctx, "trace_id", traceID)
+//		}
+//		if spanID, ok := event.Metadata["span_id"]; ok {
+//			parentSpanID = spanID
+//		}
+//	}
+//
+//	// Start a span for the handle operation
+//	operation := fmt.Sprintf("handle_event.%s", event.EventType)
+//	ctx, span := h.tracer.StartSpan(ctx, operation)
+//
+//	// Add tags to the span
+//	if span != nil {
+//		h.tracer.AddTag(span, "event_type", event.EventType)
+//		h.tracer.AddTag(span, "aggregate_id", event.AggregateID)
+//		h.tracer.AddTag(span, "aggregate_type", event.AggregateType)
+//		h.tracer.AddTag(span, "version", fmt.Sprintf("%d", event.Version))
+//		h.tracer.AddTag(span, "handler", fmt.Sprintf("%T", h.handler))
+//
+//		// Set the parent span ID if available
+//		if parentSpanID != "" {
+//			span.ParentSpanID = parentSpanID
+//		}
+//	}
+//
+//	// Handle the event
+//	err := h.handler.HandleEvent(event)
+//
+//	// End the span
+//	if span != nil {
+//		if err != nil {
+//			h.tracer.AddTag(span, "error", err.Error())
+//		}
+//		h.tracer.EndSpan(span)
+//	}
+//
+//	return err
+//}

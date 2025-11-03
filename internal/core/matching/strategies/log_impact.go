@@ -4,8 +4,8 @@ package strategies
 import (
 	"math"
 
-	"github.com/abdoElHodaky/tradSys/internal/trading/types"
-	"github.com/abdoElHodaky/tradSys/pkg/interfaces"
+	"github.com/abdoElHodaky/tradSys/internal/common"
+	"github.com/abdoElHodaky/tradSys/internal/types"
 )
 
 // LogImpactCalculator implements logarithmic market impact calculation
@@ -15,7 +15,7 @@ type LogImpactCalculator struct {
 }
 
 // NewLogImpactCalculator creates a new logarithmic impact calculator
-func NewLogImpactCalculator(liquidityFactor float64) interfaces.ImpactCalculator {
+func NewLogImpactCalculator(liquidityFactor float64) common.ImpactCalculator {
 	return &LogImpactCalculator{
 		liquidityFactor: liquidityFactor,
 	}

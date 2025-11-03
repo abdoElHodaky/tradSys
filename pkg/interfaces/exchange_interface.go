@@ -5,7 +5,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/pkg/types"
+	"github.com/abdoElHodaky/tradSys/internal/types"
 )
 
 // ExchangeInterface defines the standard interface for all exchange implementations

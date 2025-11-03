@@ -8,7 +8,7 @@
 // Performance Requirements: Standard latency, heap-based order book management
 // File size limit: 300 lines
 
-package order_matching
+package matching
 
 import (
 	"sync"

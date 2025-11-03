@@ -4,7 +4,7 @@ package messaging
 import (
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/pkg/interfaces"
+	"github.com/abdoElHodaky/tradSys/internal/common"
 )
 
 // StandardMessage implements the Message interface

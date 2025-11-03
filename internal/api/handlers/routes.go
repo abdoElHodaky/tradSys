@@ -7,7 +7,7 @@ import (
 
 	order_matching "github.com/abdoElHodaky/tradSys/internal/core/matching"
 	"github.com/abdoElHodaky/tradSys/internal/trading/types"
-	pkgTypes "github.com/abdoElHodaky/tradSys/pkg/types"
+	pkgTypes "github.com/abdoElHodaky/tradSys/internal/types"
 	"github.com/gin-gonic/gin"
 )
 
@@ -102,8 +102,8 @@ func createOrderHandler(ts TradingSystemInterface) gin.HandlerFunc {
 		// Create order
 		order := &types.Order{
 			Symbol:    req.Symbol,
-			Side:      side,
-			Type:      orderType,
+			Side:      types.OrderSide(side),
+			Type:      types.OrderType(orderType),
 			Quantity:  req.Quantity,
 			Price:     req.Price,
 			StopPrice: req.StopPrice,

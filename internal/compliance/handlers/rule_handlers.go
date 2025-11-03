@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/pkg/types"
+	"github.com/abdoElHodaky/tradSys/internal/types"
 	"go.uber.org/zap"
 )
 

@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/pkg/interfaces"
+	"github.com/abdoElHodaky/tradSys/internal/common"
 )
 
 // StandardCircuitBreakerStateMachine implements the CircuitBreakerStateMachine interface

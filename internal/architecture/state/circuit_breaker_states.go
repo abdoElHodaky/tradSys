@@ -1,7 +1,7 @@
 // Package state provides standardized state implementations for circuit breakers
 package state
 
-import "github.com/abdoElHodaky/tradSys/pkg/interfaces"
+import "github.com/abdoElHodaky/tradSys/internal/common"
 
 // ClosedState represents the closed state of a circuit breaker
 type ClosedState struct{}

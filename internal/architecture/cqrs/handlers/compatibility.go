@@ -20,9 +20,9 @@ type CompatibilityLayer struct {
 	cqrsAdapter *WatermillCQRSAdapter
 
 	// Event sourcing components
-	eventStore    store.EventStore
-	aggregateRepo aggregate.Repository
-	eventBus      eventbus.EventBus
+	// TODO: Fix missing imports - eventStore    store.EventStore
+	// TODO: Fix missing imports - aggregateRepo aggregate.Repository
+	// TODO: Fix missing imports - eventBus      eventbus.EventBus
 
 	// Synchronization
 	mu sync.RWMutex

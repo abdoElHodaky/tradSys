@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/abdoElHodaky/tradSys/pkg/interfaces"
+	"github.com/abdoElHodaky/tradSys/internal/common"
 )
 
 // DefaultImpactCalculatorFactory implements the ImpactCalculatorFactory interface

@@ -104,36 +104,7 @@ type PriceLevel struct {
 	Orders   int     `json:"orders"`
 }
 
-// Trade represents a completed trade
-type Trade struct {
-	ID           string    `json:"id"`
-	Symbol       string    `json:"symbol"`
-	BuyOrderID   string    `json:"buy_order_id"`
-	SellOrderID  string    `json:"sell_order_id"`
-	Price        float64   `json:"price"`
-	Quantity     float64   `json:"quantity"`
-	Value        float64   `json:"value"`
-	Timestamp    time.Time `json:"timestamp"`
-	TakerSide    string    `json:"taker_side"`
-	MakerFee     float64   `json:"maker_fee"`
-	TakerFee     float64   `json:"taker_fee"`
-}
-
-// Order represents a trading order
-type Order struct {
-	ID          string    `json:"id"`
-	Symbol      string    `json:"symbol"`
-	Side        string    `json:"side"`        // "buy" or "sell"
-	Type        string    `json:"type"`        // "market", "limit", "stop"
-	Price       float64   `json:"price"`
-	Quantity    float64   `json:"quantity"`
-	Filled      float64   `json:"filled"`
-	Remaining   float64   `json:"remaining"`
-	Status      string    `json:"status"`      // "pending", "partial", "filled", "cancelled"
-	UserID      string    `json:"user_id"`
-	Timestamp   time.Time `json:"timestamp"`
-	TimeInForce string    `json:"time_in_force"` // "GTC", "IOC", "FOK"
-}
+// Note: Order and Trade types are now defined in trading_types.go as canonical types
 
 // EngineError represents an engine-specific error
 type EngineError struct {
@@ -172,20 +143,7 @@ const (
 	DefaultFlushInterval      = 100 * time.Millisecond
 	DefaultMetricsInterval    = 1 * time.Second
 	
-	// Order sides
-	OrderSideBuy  = "buy"
-	OrderSideSell = "sell"
-	
-	// Order types
-	OrderTypeMarket = "market"
-	OrderTypeLimit  = "limit"
-	OrderTypeStop   = "stop"
-	
-	// Order status
-	OrderStatusPending   = "pending"
-	OrderStatusPartial   = "partial"
-	OrderStatusFilled    = "filled"
-	OrderStatusCancelled = "cancelled"
+	// Note: Order status constants are now defined in trading_types.go
 	
 	// Time in force
 	TimeInForceGTC = "GTC" // Good Till Cancelled
