@@ -7,22 +7,7 @@ import (
 	"time"
 )
 
-// Order represents a trading order
-type Order struct {
-	ID          string
-	UserID      string
-	Symbol      string
-	AssetType   AssetType
-	Type        OrderType
-	Side        OrderSide
-	Quantity    float64
-	Price       float64
-	TimeInForce TimeInForce
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	Status      OrderStatus
-	Metadata    map[string]interface{}
-}
+// Order is available in pkg/types
 
 // OrderType defines order types
 type OrderType int

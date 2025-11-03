@@ -114,8 +114,6 @@ type Order struct {
 	ExpireTime time.Time `json:"expire_time,omitempty"`
 	// Tags are custom tags for the order
 	Tags map[string]string `json:"tags,omitempty"`
-	// Timestamp is an alias for CreatedAt for backward compatibility
-	Timestamp time.Time `json:"timestamp,omitempty"`
 }
 
 // Trade represents a completed trade in the trading system

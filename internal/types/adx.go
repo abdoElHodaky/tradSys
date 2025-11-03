@@ -209,35 +209,11 @@ type ADXRiskEngine struct {
 	mu             sync.RWMutex
 }
 
-// IslamicFundService handles Islamic mutual funds
-type IslamicFundService struct {
-	funds           map[string]*IslamicFund
-	fundManager     *IslamicFundManager
-	performanceCalc *IslamicPerformanceCalculator
-	mu              sync.RWMutex
-}
+// IslamicFundService is available in pkg/types
 
-// IslamicFund represents an Islamic mutual fund
-type IslamicFund struct {
-	FundID          string
-	Name            string
-	FundType        string
-	ShariaBoard     string
-	ComplianceLevel ComplianceLevel
-	NAV             float64
-	TotalAssets     float64
-	InceptionDate   time.Time
-	IsActive        bool
-}
+// IslamicFund is available in pkg/types
 
-// PerformanceMonitor monitors ADX service performance
-type PerformanceMonitor struct {
-	metrics         map[string]*PerformanceMetric
-	islamicMetrics  map[string]*IslamicMetric
-	alertManager    *AlertManager
-	reportGenerator *ReportGenerator
-	mu              sync.RWMutex
-}
+// PerformanceMonitor is available in pkg/types
 
 // PerformanceMetric represents a performance metric
 type PerformanceMetric struct {

@@ -82,14 +82,7 @@ const (
 	MessageTypeCompliance
 )
 
-// ExchangeType defines supported exchanges for WebSocket
-type ExchangeType int
-
-const (
-	ExchangeTypeEGX ExchangeType = iota
-	ExchangeTypeADX
-	ExchangeTypeUnified
-)
+// ExchangeType is available in pkg/types
 
 // LicenseTier defines license tiers for WebSocket access
 type LicenseTier int

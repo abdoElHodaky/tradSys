@@ -137,16 +137,7 @@ type OptimizationResult struct {
 	Error          string
 }
 
-// PerformanceMetrics represents comprehensive performance metrics
-type PerformanceMetrics struct {
-	CacheMetrics    *CacheMetrics
-	DatabaseMetrics *DatabaseMetrics
-	NetworkMetrics  *NetworkMetrics
-	RegionalMetrics *RegionalMetrics
-	SecurityMetrics *SecurityMetrics
-	SystemMetrics   *SystemMetrics
-	Timestamp       time.Time
-}
+// PerformanceMetrics is available in pkg/types
 
 // CacheMetrics represents cache performance metrics
 type CacheMetrics struct {
@@ -195,17 +186,7 @@ type SecurityMetrics struct {
 	ThreatDetection   float64
 }
 
-// SystemMetrics represents overall system metrics
-type SystemMetrics struct {
-	CPUUsage       float64
-	MemoryUsage    float64
-	DiskUsage      float64
-	NetworkIO      float64
-	ActiveUsers    int64
-	RequestsPerSec float64
-	ErrorRate      float64
-	Uptime         time.Duration
-}
+// SystemMetrics is available in pkg/types
 
 // PerformanceAlert represents a performance alert
 type PerformanceAlert struct {
@@ -326,10 +307,7 @@ type RegionalDatabaseConfig struct {
 	Consistency string
 }
 
-type MetricsCollector struct {
-	metrics map[string]float64
-	mu      sync.RWMutex
-}
+// MetricsCollector is available in pkg/types
 
 type ScalingPredictionEngine struct {
 	models map[string]interface{}
@@ -351,10 +329,7 @@ type TraceCollector struct {
 	mu     sync.RWMutex
 }
 
-type HealthChecker struct {
-	status map[string]bool
-	mu     sync.RWMutex
-}
+// HealthChecker is available in pkg/types
 
 type DashboardManager struct {
 	dashboards map[string]interface{}

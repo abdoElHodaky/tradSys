@@ -44,14 +44,7 @@ type ShariaRule struct {
 	UpdatedAt       time.Time              `json:"updated_at"`
 }
 
-// ComplianceLevel represents the level of Sharia compliance
-type ComplianceLevel string
 
-const (
-	STRICT   ComplianceLevel = "STRICT"
-	MODERATE ComplianceLevel = "MODERATE"
-	FLEXIBLE ComplianceLevel = "FLEXIBLE"
-)
 
 // ScreeningEngine performs Sharia compliance screening
 type ScreeningEngine struct {

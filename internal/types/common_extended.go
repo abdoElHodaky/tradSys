@@ -102,16 +102,7 @@ type TradingSession struct {
 	AssetTypes []AssetType `json:"asset_types"`
 }
 
-// TradingStatus represents the current trading status
-type TradingStatus struct {
-	Exchange    string          `json:"exchange"`
-	IsOpen      bool            `json:"is_open"`
-	CurrentTime time.Time       `json:"current_time"`
-	NextOpen    time.Time       `json:"next_open,omitempty"`
-	NextClose   time.Time       `json:"next_close,omitempty"`
-	Session     *TradingSession `json:"session,omitempty"`
-	Message     string          `json:"message,omitempty"`
-}
+// TradingStatus is available in pkg/types
 
 // ComplianceRule represents a compliance rule
 type ComplianceRule struct {
@@ -135,13 +126,7 @@ type Validator interface {
 	Validate(interface{}) error
 }
 
-// MetricsCollector defines the interface for metrics collection
-type MetricsCollector interface {
-	Counter(name string, tags map[string]string) Counter
-	Gauge(name string, tags map[string]string) Gauge
-	Histogram(name string, tags map[string]string) Histogram
-	Timer(name string, tags map[string]string) Timer
-}
+// MetricsCollector is available in pkg/types
 
 // Counter represents a counter metric
 type Counter interface {

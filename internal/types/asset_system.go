@@ -173,14 +173,7 @@ type TimeRange struct {
 	EndDate   time.Time
 }
 
-// SystemMetrics represents unified system metrics
-type SystemMetrics struct {
-	TotalAssets     int
-	TotalPortfolios int
-	ActiveUsers     int
-	SystemUptime    time.Duration
-	Timestamp       time.Time
-}
+// SystemMetrics is available in pkg/types
 
 // PortfolioPerformance represents portfolio performance metrics
 type PortfolioPerformance struct {
@@ -514,13 +507,8 @@ type PerformanceEntry struct {
 	Timestamp time.Time
 }
 
-type HealthChecker struct {
-	checks map[string]HealthCheck
-}
-
-type HealthCheck interface {
-	Check() (bool, error)
-}
+// HealthChecker is available in pkg/types
+// HealthCheck interface is available in pkg/types
 
 // Additional supporting types
 type AssetPricingInfo struct {

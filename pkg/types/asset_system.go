@@ -35,7 +35,7 @@ type UnifiedAsset struct {
 	ID               string
 	Symbol           string
 	Name             string
-	AssetType        exchanges.AssetType
+	AssetType        AssetType
 	Exchange         string
 	Region           string
 	Currency         string
@@ -138,7 +138,7 @@ type UnifiedPerformanceMonitor struct {
 type AssetSearchQuery struct {
 	UserID       string
 	Query        string
-	AssetTypes   []exchanges.AssetType
+	AssetTypes   []AssetType
 	Exchanges    []string
 	Sectors      []string
 	IslamicOnly  bool
@@ -173,14 +173,7 @@ type TimeRange struct {
 	EndDate   time.Time
 }
 
-// SystemMetrics represents unified system metrics
-type SystemMetrics struct {
-	TotalAssets     int
-	TotalPortfolios int
-	ActiveUsers     int
-	SystemUptime    time.Duration
-	Timestamp       time.Time
-}
+
 
 // PortfolioPerformance represents portfolio performance metrics
 type PortfolioPerformance struct {
@@ -249,13 +242,7 @@ type ComplianceRuleSet struct {
 	Rules       []ComplianceRule
 }
 
-type ComplianceRule struct {
-	ID        string
-	Type      string
-	Condition string
-	Action    string
-	Severity  string
-}
+
 
 type LicenseInfo struct {
 	LicenseID   string
@@ -315,15 +302,7 @@ type CrossExchangePositionManager struct {
 	mu        sync.RWMutex
 }
 
-type Position struct {
-	PositionID    string
-	Symbol        string
-	Exchange      string
-	Quantity      float64
-	AveragePrice  float64
-	CurrentPrice  float64
-	UnrealizedPnL float64
-}
+
 
 type CrossExchangeRiskManager struct {
 	riskLimits map[string]RiskLimit
@@ -500,10 +479,7 @@ type DeliveryMethod interface {
 	Deliver(report []byte, recipient string) error
 }
 
-type AlertManager struct {
-	alerts chan Alert
-	rules  map[string]AlertRule
-}
+
 
 type Alert struct {
 	AlertID   string
@@ -532,13 +508,7 @@ type PerformanceEntry struct {
 	Timestamp time.Time
 }
 
-type HealthChecker struct {
-	checks map[string]HealthCheck
-}
 
-type HealthCheck interface {
-	Check() (bool, error)
-}
 
 // Additional supporting types
 type AssetPricingInfo struct {

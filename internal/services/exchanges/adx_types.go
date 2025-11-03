@@ -520,15 +520,7 @@ type RiskModel struct {
 	IsActive   bool
 }
 
-// Order represents a trading order (local definition to avoid conflicts)
-type Order struct {
-	ID       string
-	Symbol   string
-	Side     string
-	Type     string
-	Quantity float64
-	Price    float64
-}
+// Order is available in pkg/types
 
 // ExecutionRule defines order execution rules
 type ExecutionRule struct {

@@ -104,16 +104,7 @@ type Connection struct {
 	cancel context.CancelFunc
 }
 
-// Subscription represents a channel subscription
-type Subscription struct {
-	ID       string
-	Channel  string
-	Symbol   string
-	Type     SubscriptionType
-	Filters  map[string]interface{}
-	Created  time.Time
-	LastData time.Time
-}
+
 
 // GatewayMetrics tracks gateway performance
 type GatewayMetrics struct {
@@ -139,11 +130,7 @@ type Message struct {
 	Metadata  map[string]interface{} `json:"metadata,omitempty"`
 }
 
-// ConnectionManager manages WebSocket connections
-type ConnectionManager struct {
-	gateway *Gateway
-	logger  *zap.Logger
-}
+
 
 // MessageHandler handles message processing and routing
 type MessageHandler struct {
@@ -151,11 +138,7 @@ type MessageHandler struct {
 	logger  *zap.Logger
 }
 
-// PerformanceOptimizer optimizes gateway performance
-type PerformanceOptimizer struct {
-	gateway *Gateway
-	logger  *zap.Logger
-}
+
 
 // ConnectionStats represents connection statistics
 type ConnectionStats struct {
@@ -181,13 +164,7 @@ type BroadcastOptions struct {
 	Compression bool                   `json:"compression"`
 }
 
-// RateLimiter manages connection rate limiting
-type RateLimiter struct {
-	requests    map[string][]time.Time
-	maxRequests int
-	window      time.Duration
-	mu          sync.RWMutex
-}
+
 
 // HealthStatus represents gateway health status
 type HealthStatus struct {

@@ -326,10 +326,7 @@ type RegionalDatabaseConfig struct {
 	Consistency string
 }
 
-type MetricsCollector struct {
-	metrics map[string]float64
-	mu      sync.RWMutex
-}
+
 
 type ScalingPredictionEngine struct {
 	models map[string]interface{}

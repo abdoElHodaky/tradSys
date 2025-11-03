@@ -43,12 +43,7 @@ type Settlement struct {
 	NetAmount      float64   `json:"net_amount"`
 }
 
-// TradingHours represents trading hours for an exchange
-type TradingHours struct {
-	Open     string `json:"open"`
-	Close    string `json:"close"`
-	Timezone string `json:"timezone"`
-}
+// TradingHours is available in pkg/types
 
 // RiskParameters defines risk limits for an asset type
 type RiskParameters struct {

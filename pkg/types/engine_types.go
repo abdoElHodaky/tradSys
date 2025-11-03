@@ -149,12 +149,14 @@ const (
 	TimeInForceGTC = "GTC" // Good Till Cancelled
 	TimeInForceIOC = "IOC" // Immediate Or Cancel
 	TimeInForceFOK = "FOK" // Fill Or Kill
+)
+
+// TimeInForce represents how long an order remains active
+type TimeInForce string
+
+const (
 	
-	// Error severities
-	SeverityLow      = "low"
-	SeverityMedium   = "medium"
-	SeverityHigh     = "high"
-	SeverityCritical = "critical"
+
 )
 
 // DefaultEngineConfig returns a default engine configuration

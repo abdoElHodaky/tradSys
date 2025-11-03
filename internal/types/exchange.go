@@ -89,27 +89,9 @@ type IslamicInfo struct {
 	Restrictions    []string
 }
 
-// TradingStatus represents current trading status
-type TradingStatus struct {
-	Exchange    string
-	IsOpen      bool
-	CurrentTime time.Time
-	NextOpen    time.Time
-	NextClose   time.Time
-	Session     *TradingSession
-	Message     string
-}
+// TradingStatus is available in pkg/types
 
-// PerformanceMetrics represents performance metrics
-type PerformanceMetrics struct {
-	OrderLatency    time.Duration
-	DataLatency     time.Duration
-	Throughput      float64
-	ErrorRate       float64
-	Uptime          float64
-	ConnectionCount int64
-	Timestamp       time.Time
-}
+// PerformanceMetrics is available in pkg/types
 
 // Supporting component interfaces and types
 
@@ -135,12 +117,7 @@ type RetryPolicy struct {
 	BackoffFactor float64
 }
 
-// HealthChecker monitors service health
-type HealthChecker struct {
-	CheckInterval time.Duration
-	Timeout       time.Duration
-	isHealthy     bool
-}
+// HealthChecker is available in pkg/types
 
 // DataFeed represents a market data feed
 type DataFeed struct {
@@ -167,19 +144,8 @@ type IndexCalculator struct {
 	Indices map[string]float64
 }
 
-// OrderBook manages order book
-type OrderBook struct {
-	Symbol string
-	Bids   []OrderLevel
-	Asks   []OrderLevel
-}
-
-// OrderLevel represents price level in order book
-type OrderLevel struct {
-	Price    float64
-	Quantity float64
-	Orders   int
-}
+// OrderBook is available in pkg/types
+// OrderLevel is available in pkg/types
 
 // ExecutionEngine handles order execution
 type ExecutionEngine struct {
@@ -243,12 +209,7 @@ type StressScenario struct {
 	Parameters  map[string]float64
 }
 
-// PerformanceMonitor monitors performance metrics
-type PerformanceMonitor struct {
-	MetricsInterval time.Duration
-	AlertThresholds map[string]float64
-	isRunning       bool
-}
+// PerformanceMonitor is available in pkg/types
 
 // NewEgyptianCompliance creates Egyptian compliance engine
 func NewEgyptianCompliance() *EgyptianCompliance {

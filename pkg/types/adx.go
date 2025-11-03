@@ -56,26 +56,99 @@ type IslamicCompliance struct {
 	mu              sync.RWMutex
 }
 
-// ShariaRule represents an Islamic finance rule
-type ShariaRule struct {
-	RuleID          string
-	Description     string
-	ShariaBoard     string
-	AssetTypes      []AssetType
-	Validator       func(interface{}) bool
-	ComplianceLevel ComplianceLevel
-	LastUpdated     time.Time
+
+
+
+
+// TradingSchedule represents trading hours and schedules
+type TradingSchedule struct {
+	Timezone     string                   `json:"timezone"`
+	MarketHours  map[string]*TradingHours `json:"market_hours"` // day of week -> hours
+	Holidays     []time.Time              `json:"holidays"`
+	SpecialHours map[string]*TradingHours `json:"special_hours"` // special dates
+	LastUpdated  time.Time                `json:"last_updated"`
 }
 
-// ShariaBoard represents a Sharia supervisory board
-type ShariaBoard struct {
-	ID          string
-	Name        string
-	Country     string
-	Scholars    []ShariaScholar
-	Methodology string
-	IsActive    bool
-	LastReview  time.Time
+// IslamicAuditTrail tracks Islamic finance transactions for audit
+type IslamicAuditTrail struct {
+	records     []AuditRecord
+	checkpoints map[string]time.Time
+	mu          sync.RWMutex
+}
+
+// AuditRecord represents a single audit record
+type AuditRecord struct {
+	ID        string    `json:"id"`
+	Type      string    `json:"type"`
+	Details   string    `json:"details"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+// ReportingRequirements defines Islamic regulatory reporting standards
+type ReportingRequirements struct {
+	ReportTypes    []string
+	Frequency      string
+	Authorities    []string
+	Templates      map[string]ReportTemplate
+	Deadlines      map[string]time.Time
+}
+
+
+
+// LicensingRequirements defines licensing for Islamic finance operations
+type LicensingRequirements struct {
+	RequiredLicenses []string
+	Authorities      []string
+	ExpiryDates      map[string]time.Time
+	ComplianceLevel  string
+}
+
+// SukukPricingEngine handles Sukuk pricing
+type SukukPricingEngine struct {
+	pricingModels map[string]PricingModel
+	mu            sync.RWMutex
+}
+
+// PricingModel represents a pricing model
+type PricingModel struct {
+	Name       string `json:"name"`
+	Type       string `json:"type"`
+	Parameters map[string]float64 `json:"parameters"`
+}
+
+// IslamicIndexCalculator calculates Islamic indices
+type IslamicIndexCalculator struct {
+	indices map[string]IndexDefinition
+	mu      sync.RWMutex
+}
+
+// IndexDefinition defines an Islamic index
+type IndexDefinition struct {
+	Name        string    `json:"name"`
+	Components  []string  `json:"components"`
+	Weights     []float64 `json:"weights"`
+	LastUpdated time.Time `json:"last_updated"`
+}
+
+// ComplianceDataStore stores compliance data
+type ComplianceDataStore struct {
+	data map[string]interface{}
+	mu   sync.RWMutex
+}
+
+// IslamicOrderValidator validates Islamic orders
+type IslamicOrderValidator struct {
+	rules map[string]ValidationRule
+	mu    sync.RWMutex
+}
+
+// ScreeningResults represents screening results
+type ScreeningResults struct {
+	AssetID     string    `json:"asset_id"`
+	IsCompliant bool      `json:"is_compliant"`
+	Reasons     []string  `json:"reasons"`
+	Score       float64   `json:"score"`
+	Timestamp   time.Time `json:"timestamp"`
 }
 
 // ShariaScholar represents a Sharia scholar
@@ -86,13 +159,7 @@ type ShariaScholar struct {
 	IsActive       bool
 }
 
-// ZakatCalculator calculates Zakat for Islamic investments
-type ZakatCalculator struct {
-	zakatRates     map[AssetType]float64
-	nisabThreshold float64
-	currency       string
-	mu             sync.RWMutex
-}
+
 
 // UAECompliance handles UAE regulatory compliance
 type UAECompliance struct {
@@ -143,6 +210,35 @@ type IslamicDataFeed struct {
 	IsActive         bool
 }
 
+// IslamicYieldCalculator calculates yields for Islamic instruments
+type IslamicYieldCalculator struct {
+	models map[string]YieldModel
+	mu     sync.RWMutex
+}
+
+// YieldModel represents a yield calculation model
+type YieldModel struct {
+	Name       string                 `json:"name"`
+	Type       string                 `json:"type"`
+	Parameters map[string]float64     `json:"parameters"`
+	Formula    string                 `json:"formula"`
+}
+
+// SukukRiskEngine assesses risk for Sukuk instruments
+type SukukRiskEngine struct {
+	riskModels map[string]RiskModel
+	mu         sync.RWMutex
+}
+
+// RiskModel represents a risk assessment model
+type RiskModel struct {
+	Name        string             `json:"name"`
+	Type        string             `json:"type"`
+	Factors     []string           `json:"factors"`
+	Weights     map[string]float64 `json:"weights"`
+	Threshold   float64            `json:"threshold"`
+}
+
 // SukukService handles Sukuk (Islamic bonds) trading
 type SukukService struct {
 	sukukTypes      map[string]SukukType
@@ -162,6 +258,28 @@ type SukukType struct {
 	MinAmount  float64
 	Currency   string
 	IsActive   bool
+}
+
+// ADXExecutionEngine handles order execution for ADX
+type ADXExecutionEngine struct {
+	executors   map[string]OrderExecutor
+	strategies  map[string]ExecutionStrategy
+	mu          sync.RWMutex
+}
+
+// OrderExecutor represents an order execution interface
+type OrderExecutor interface {
+	Execute(order *ADXOrder) (*Trade, error)
+	Cancel(orderID string) error
+	GetStatus(orderID string) (OrderStatus, error)
+}
+
+// ExecutionStrategy represents an execution strategy
+type ExecutionStrategy struct {
+	Name        string                 `json:"name"`
+	Type        string                 `json:"type"`
+	Parameters  map[string]interface{} `json:"parameters"`
+	IsActive    bool                   `json:"is_active"`
 }
 
 // ADXOrderManager handles order management for ADX
@@ -200,6 +318,34 @@ type IslamicOrder struct {
 	ScreeningResults *ScreeningResults
 }
 
+// IslamicRisk represents Islamic finance risk factors
+type IslamicRisk struct {
+	RiskID      string             `json:"risk_id"`
+	Type        string             `json:"type"`
+	Level       string             `json:"level"`
+	Description string             `json:"description"`
+	Factors     []string           `json:"factors"`
+	Mitigation  map[string]string  `json:"mitigation"`
+	Score       float64            `json:"score"`
+}
+
+// ComplianceRiskEngine assesses compliance risks
+type ComplianceRiskEngine struct {
+	rules       map[string]ComplianceRule
+	assessments map[string]RiskAssessment
+	mu          sync.RWMutex
+}
+
+// RiskAssessment represents a risk assessment result
+type RiskAssessment struct {
+	AssetID     string             `json:"asset_id"`
+	RiskScore   float64            `json:"risk_score"`
+	RiskLevel   string             `json:"risk_level"`
+	Factors     []string           `json:"factors"`
+	Timestamp   time.Time          `json:"timestamp"`
+	Details     map[string]interface{} `json:"details"`
+}
+
 // ADXRiskEngine handles risk management for ADX
 type ADXRiskEngine struct {
 	riskLimits     map[string]RiskLimit
@@ -208,6 +354,49 @@ type ADXRiskEngine struct {
 	complianceRisk *ComplianceRiskEngine
 	mu             sync.RWMutex
 }
+
+// IslamicFundManager manages Islamic mutual funds
+type IslamicFundManager struct {
+	funds       map[string]*IslamicFund
+	strategies  map[string]FundStrategy
+	allocations map[string]AssetAllocation
+	mu          sync.RWMutex
+}
+
+// FundStrategy represents a fund management strategy
+type FundStrategy struct {
+	Name        string                 `json:"name"`
+	Type        string                 `json:"type"`
+	Objective   string                 `json:"objective"`
+	Parameters  map[string]interface{} `json:"parameters"`
+	IsActive    bool                   `json:"is_active"`
+}
+
+// AssetAllocation represents asset allocation for a fund
+type AssetAllocation struct {
+	AssetType   string  `json:"asset_type"`
+	Percentage  float64 `json:"percentage"`
+	MinWeight   float64 `json:"min_weight"`
+	MaxWeight   float64 `json:"max_weight"`
+}
+
+// IslamicPerformanceCalculator calculates performance metrics for Islamic instruments
+type IslamicPerformanceCalculator struct {
+	metrics    map[string]PerformanceMetric
+	benchmarks map[string]Benchmark
+	mu         sync.RWMutex
+}
+
+// PerformanceMetric represents a performance metric
+type PerformanceMetric struct {
+	Name        string    `json:"name"`
+	Value       float64   `json:"value"`
+	Period      string    `json:"period"`
+	Benchmark   string    `json:"benchmark"`
+	Timestamp   time.Time `json:"timestamp"`
+}
+
+
 
 // IslamicFundService handles Islamic mutual funds
 type IslamicFundService struct {
@@ -239,15 +428,7 @@ type PerformanceMonitor struct {
 	mu              sync.RWMutex
 }
 
-// PerformanceMetric represents a performance metric
-type PerformanceMetric struct {
-	MetricID  string
-	Name      string
-	Value     float64
-	Unit      string
-	Timestamp time.Time
-	IsIslamic bool
-}
+
 
 // IslamicMetric represents Islamic-specific metrics
 type IslamicMetric struct {

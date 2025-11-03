@@ -7,13 +7,7 @@ import (
 	"time"
 )
 
-// ExchangeType represents different exchanges
-type ExchangeType string
-
-const (
-	EGX ExchangeType = "EGX" // Egyptian Exchange
-	ADX ExchangeType = "ADX" // Abu Dhabi Exchange
-)
+// ExchangeType is available in pkg/types
 
 // IsValid checks if the exchange type is valid
 func (et ExchangeType) IsValid() bool {
@@ -63,12 +57,7 @@ func ParseExchangeType(s string) (ExchangeType, error) {
 	return exchangeType, nil
 }
 
-// TradingHours represents trading hours for an exchange
-type TradingHours struct {
-	Open     string `json:"open"`     // e.g., "10:00"
-	Close    string `json:"close"`    // e.g., "14:30"
-	Timezone string `json:"timezone"` // e.g., "EET"
-}
+// TradingHours is available in pkg/types
 
 // GetTradingHours returns trading hours for the exchange
 func (et ExchangeType) GetTradingHours() *TradingHours {
