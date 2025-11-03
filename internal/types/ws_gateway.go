@@ -104,16 +104,7 @@ type Connection struct {
 	cancel context.CancelFunc
 }
 
-// Subscription represents a channel subscription
-type Subscription struct {
-	ID       string
-	Channel  string
-	Symbol   string
-	Type     SubscriptionType
-	Filters  map[string]interface{}
-	Created  time.Time
-	LastData time.Time
-}
+// Subscription is defined in websocket.go to avoid duplication
 
 // GatewayMetrics tracks gateway performance
 type GatewayMetrics struct {
@@ -140,10 +131,7 @@ type Message struct {
 }
 
 // ConnectionManager manages WebSocket connections
-type ConnectionManager struct {
-	gateway *Gateway
-	logger  *zap.Logger
-}
+// ConnectionManager is defined in websocket.go to avoid duplication
 
 // MessageHandler handles message processing and routing
 type MessageHandler struct {
@@ -151,11 +139,7 @@ type MessageHandler struct {
 	logger  *zap.Logger
 }
 
-// PerformanceOptimizer optimizes gateway performance
-type PerformanceOptimizer struct {
-	gateway *Gateway
-	logger  *zap.Logger
-}
+// PerformanceOptimizer is defined in performance.go to avoid duplication
 
 // ConnectionStats represents connection statistics
 type ConnectionStats struct {
@@ -182,12 +166,7 @@ type BroadcastOptions struct {
 }
 
 // RateLimiter manages connection rate limiting
-type RateLimiter struct {
-	requests    map[string][]time.Time
-	maxRequests int
-	window      time.Duration
-	mu          sync.RWMutex
-}
+// RateLimiter is defined in exchange.go to avoid duplication
 
 // HealthStatus represents gateway health status
 type HealthStatus struct {
