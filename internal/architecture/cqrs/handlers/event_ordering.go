@@ -1,14 +1,11 @@
 package handlers
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -78,17 +75,19 @@ func (v *EventOrderingValidator) ValidateEvent(event *eventsourcing.Event) error
 
 	// Check correlation ID
 	if correlationID, ok := event.Metadata["correlation_id"]; ok {
-		if timestamp, exists := v.correlations[correlationID]; exists {
-			// Log the correlation
-			v.logger.Debug("Correlated event",
-				zap.String("correlation_id", correlationID),
-				zap.String("event_type", event.EventType),
-				zap.String("aggregate_id", event.AggregateID),
-				zap.Duration("time_since_first", time.Since(timestamp)),
-			)
-		} else {
-			// Record the first occurrence
-			v.correlations[correlationID] = time.Now()
+		if correlationIDStr, ok := correlationID.(string); ok {
+			if timestamp, exists := v.correlations[correlationIDStr]; exists {
+				// Log the correlation
+				v.logger.Debug("Correlated event",
+					zap.String("correlation_id", correlationIDStr),
+					zap.String("event_type", event.EventType),
+					zap.String("aggregate_id", event.AggregateID),
+					zap.Duration("time_since_first", time.Since(timestamp)),
+				)
+			} else {
+				// Record the first occurrence
+				v.correlations[correlationIDStr] = time.Now()
+			}
 		}
 	}
 
@@ -96,12 +95,12 @@ func (v *EventOrderingValidator) ValidateEvent(event *eventsourcing.Event) error
 	switch v.requiredGuarantee {
 	case GlobalOrdering:
 		// Check global sequence
-		if event.Version <= v.globalSequence {
+		if int64(event.Version) <= v.globalSequence {
 			v.violations++
 			return fmt.Errorf("global ordering violation: event version %d <= global sequence %d",
 				event.Version, v.globalSequence)
 		}
-		v.globalSequence = event.Version
+		v.globalSequence = int64(event.Version)
 
 		// Fall through to also check type and aggregate ordering
 		fallthrough
@@ -109,13 +108,13 @@ func (v *EventOrderingValidator) ValidateEvent(event *eventsourcing.Event) error
 	case TypeOrdering:
 		// Check type sequence
 		if seq, ok := v.typeSequences[event.EventType]; ok {
-			if event.Version <= seq {
+			if int64(event.Version) <= seq {
 				v.violations++
 				return fmt.Errorf("type ordering violation: event version %d <= type sequence %d for type %s",
 					event.Version, seq, event.EventType)
 			}
 		}
-		v.typeSequences[event.EventType] = event.Version
+		v.typeSequences[event.EventType] = int64(event.Version)
 
 		// Fall through to also check aggregate ordering
 		fallthrough
@@ -124,13 +123,13 @@ func (v *EventOrderingValidator) ValidateEvent(event *eventsourcing.Event) error
 		// Check aggregate sequence
 		aggregateKey := event.AggregateID + ":" + event.AggregateType
 		if seq, ok := v.aggregateSequences[aggregateKey]; ok {
-			if event.Version <= seq {
+			if int64(event.Version) <= seq {
 				v.violations++
 				return fmt.Errorf("aggregate ordering violation: event version %d <= aggregate sequence %d for aggregate %s",
 					event.Version, seq, aggregateKey)
 			}
 		}
-		v.aggregateSequences[aggregateKey] = event.Version
+		v.aggregateSequences[aggregateKey] = int64(event.Version)
 	}
 
 	return nil
@@ -177,7 +176,7 @@ func (h *OrderingEventHandler) HandleEvent(event *eventsourcing.Event) error {
 			zap.String("event_type", event.EventType),
 			zap.String("aggregate_id", event.AggregateID),
 			zap.String("aggregate_type", event.AggregateType),
-			zap.Int64("version", event.Version),
+			zap.Int64("version", int64(event.Version)),
 			zap.Error(err),
 		)
 	}
@@ -186,107 +185,108 @@ func (h *OrderingEventHandler) HandleEvent(event *eventsourcing.Event) error {
 }
 
 // OrderingEventBusDecorator decorates an event bus with ordering validation
-type OrderingEventBusDecorator struct {
-	eventBus   eventbus.EventBus
-	validator  *EventOrderingValidator
-	logger     *zap.Logger
-	addHandler bool
-}
+// TODO: Fix missing eventbus import
+// type OrderingEventBusDecorator struct {
+//	eventBus   eventbus.EventBus
+//	validator  *EventOrderingValidator
+//	logger     *zap.Logger
+//	addHandler bool
+//}
 
-// NewOrderingEventBusDecorator creates a new ordering event bus decorator
-func NewOrderingEventBusDecorator(
-	eventBus eventbus.EventBus,
-	validator *EventOrderingValidator,
-	logger *zap.Logger,
-	addHandler bool,
-) *OrderingEventBusDecorator {
-	decorator := &OrderingEventBusDecorator{
-		eventBus:   eventBus,
-		validator:  validator,
-		logger:     logger,
-		addHandler: addHandler,
-	}
-
-	// Add a handler to validate all events if requested
-	if addHandler {
-		handler := NewOrderingEventHandler(validator, logger)
-		err := eventBus.Subscribe(handler)
-		if err != nil {
-			logger.Error("Failed to subscribe ordering handler", zap.Error(err))
-		}
-	}
-
-	return decorator
-}
-
-// PublishEvent publishes an event with ordering validation
-func (d *OrderingEventBusDecorator) PublishEvent(ctx context.Context, event *eventsourcing.Event) error {
-	// Add a correlation ID if not present
-	if _, ok := event.Metadata["correlation_id"]; !ok {
-		if event.Metadata == nil {
-			event.Metadata = make(map[string]string)
-		}
-		event.Metadata["correlation_id"] = uuid.New().String()
-	}
-
-	// Validate the event ordering
-	err := d.validator.ValidateEvent(event)
-	if err != nil {
-		d.logger.Warn("Event ordering violation during publish",
-			zap.String("event_type", event.EventType),
-			zap.String("aggregate_id", event.AggregateID),
-			zap.String("aggregate_type", event.AggregateType),
-			zap.Int64("version", event.Version),
-			zap.Error(err),
-		)
-		// Continue publishing despite the violation
-	}
-
-	// Publish the event
-	return d.eventBus.PublishEvent(ctx, event)
-}
-
-// PublishEvents publishes multiple events with ordering validation
-func (d *OrderingEventBusDecorator) PublishEvents(ctx context.Context, events []*eventsourcing.Event) error {
-	// Add correlation IDs and validate ordering for each event
-	for _, event := range events {
-		// Add a correlation ID if not present
-		if _, ok := event.Metadata["correlation_id"]; !ok {
-			if event.Metadata == nil {
-				event.Metadata = make(map[string]string)
-			}
-			event.Metadata["correlation_id"] = uuid.New().String()
-		}
-
-		// Validate the event ordering
-		err := d.validator.ValidateEvent(event)
-		if err != nil {
-			d.logger.Warn("Event ordering violation during batch publish",
-				zap.String("event_type", event.EventType),
-				zap.String("aggregate_id", event.AggregateID),
-				zap.String("aggregate_type", event.AggregateType),
-				zap.Int64("version", event.Version),
-				zap.Error(err),
-			)
-			// Continue publishing despite the violation
-		}
-	}
-
-	// Publish the events
-	return d.eventBus.PublishEvents(ctx, events)
-}
-
-// Subscribe subscribes to all events
-func (d *OrderingEventBusDecorator) Subscribe(handler eventsourcing.EventHandler) error {
-	return d.eventBus.Subscribe(handler)
-}
-
-// SubscribeToType subscribes to events of a specific type
-func (d *OrderingEventBusDecorator) SubscribeToType(eventType string, handler eventsourcing.EventHandler) error {
-	return d.eventBus.SubscribeToType(eventType, handler)
-}
-
-// SubscribeToAggregate subscribes to events of a specific aggregate type
-func (d *OrderingEventBusDecorator) SubscribeToAggregate(aggregateType string, handler eventsourcing.EventHandler) error {
-	return d.eventBus.SubscribeToAggregate(aggregateType, handler)
-}
+//// NewOrderingEventBusDecorator creates a new ordering event bus decorator
+//func NewOrderingEventBusDecorator(
+//	eventBus eventbus.EventBus,
+//	validator *EventOrderingValidator,
+//	logger *zap.Logger,
+//	addHandler bool,
+//) *OrderingEventBusDecorator {
+//	decorator := &OrderingEventBusDecorator{
+//		eventBus:   eventBus,
+//		validator:  validator,
+//		logger:     logger,
+//		addHandler: addHandler,
+//	}
+//
+//	// Add a handler to validate all events if requested
+//	if addHandler {
+//		handler := NewOrderingEventHandler(validator, logger)
+//		err := eventBus.Subscribe(handler)
+//		if err != nil {
+//			logger.Error("Failed to subscribe ordering handler", zap.Error(err))
+//		}
+//	}
+//
+//	return decorator
+//}
+//
+//// PublishEvent publishes an event with ordering validation
+//func (d *OrderingEventBusDecorator) PublishEvent(ctx context.Context, event *eventsourcing.Event) error {
+//	// Add a correlation ID if not present
+//	if _, ok := event.Metadata["correlation_id"]; !ok {
+//		if event.Metadata == nil {
+//			event.Metadata = make(map[string]string)
+//		}
+//		event.Metadata["correlation_id"] = uuid.New().String()
+//	}
+//
+//	// Validate the event ordering
+//	err := d.validator.ValidateEvent(event)
+//	if err != nil {
+//		d.logger.Warn("Event ordering violation during publish",
+//			zap.String("event_type", event.EventType),
+//			zap.String("aggregate_id", event.AggregateID),
+//			zap.String("aggregate_type", event.AggregateType),
+//			zap.Int64("version", event.Version),
+//			zap.Error(err),
+//		)
+//		// Continue publishing despite the violation
+//	}
+//
+//	// Publish the event
+//	return d.eventBus.PublishEvent(ctx, event)
+//}
+//
+//// PublishEvents publishes multiple events with ordering validation
+//func (d *OrderingEventBusDecorator) PublishEvents(ctx context.Context, events []*eventsourcing.Event) error {
+//	// Add correlation IDs and validate ordering for each event
+//	for _, event := range events {
+//		// Add a correlation ID if not present
+//		if _, ok := event.Metadata["correlation_id"]; !ok {
+//			if event.Metadata == nil {
+//				event.Metadata = make(map[string]string)
+//			}
+//			event.Metadata["correlation_id"] = uuid.New().String()
+//		}
+//
+//		// Validate the event ordering
+//		err := d.validator.ValidateEvent(event)
+//		if err != nil {
+//			d.logger.Warn("Event ordering violation during batch publish",
+//				zap.String("event_type", event.EventType),
+//				zap.String("aggregate_id", event.AggregateID),
+//				zap.String("aggregate_type", event.AggregateType),
+//				zap.Int64("version", event.Version),
+//				zap.Error(err),
+//			)
+//			// Continue publishing despite the violation
+//		}
+//	}
+//
+//	// Publish the events
+//	return d.eventBus.PublishEvents(ctx, events)
+//}
+//
+//// Subscribe subscribes to all events
+//func (d *OrderingEventBusDecorator) Subscribe(handler eventsourcing.EventHandler) error {
+//	return d.eventBus.Subscribe(handler)
+//}
+//
+//// SubscribeToType subscribes to events of a specific type
+//func (d *OrderingEventBusDecorator) SubscribeToType(eventType string, handler eventsourcing.EventHandler) error {
+//	return d.eventBus.SubscribeToType(eventType, handler)
+//}
+//
+//// SubscribeToAggregate subscribes to events of a specific aggregate type
+//func (d *OrderingEventBusDecorator) SubscribeToAggregate(aggregateType string, handler eventsourcing.EventHandler) error {
+//	return d.eventBus.SubscribeToAggregate(aggregateType, handler)
+//}

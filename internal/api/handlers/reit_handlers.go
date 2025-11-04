@@ -25,17 +25,17 @@ func NewREITHandlers(reitService *services.REITService, logger *zap.Logger) *REI
 
 // REITMetricsRequest represents a request to update REIT metrics
 type REITMetricsRequest struct {
-	Symbol            string  `json:"symbol" binding:"required"`
-	FFO               float64 `json:"ffo"`
-	AFFO              float64 `json:"affo"`
-	NAVPerShare       float64 `json:"nav_per_share"`
-	DividendYield     float64 `json:"dividend_yield"`
-	PayoutRatio       float64 `json:"payout_ratio"`
-	DebtToEquity      float64 `json:"debt_to_equity"`
-	OccupancyRate     float64 `json:"occupancy_rate"`
-	PriceToFFO        float64 `json:"price_to_ffo"`
-	PriceToNAV        float64 `json:"price_to_nav"`
-	TotalReturn       float64 `json:"total_return"`
+	Symbol        string  `json:"symbol" binding:"required"`
+	FFO           float64 `json:"ffo"`
+	AFFO          float64 `json:"affo"`
+	NAVPerShare   float64 `json:"nav_per_share"`
+	DividendYield float64 `json:"dividend_yield"`
+	PayoutRatio   float64 `json:"payout_ratio"`
+	DebtToEquity  float64 `json:"debt_to_equity"`
+	OccupancyRate float64 `json:"occupancy_rate"`
+	PriceToFFO    float64 `json:"price_to_ffo"`
+	PriceToNAV    float64 `json:"price_to_nav"`
+	TotalReturn   float64 `json:"total_return"`
 }
 
 // CreateREITRequest represents a request to create REIT metadata

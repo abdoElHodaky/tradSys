@@ -19,7 +19,7 @@ const (
 	CRYPTO      AssetType = "CRYPTO"
 	FOREX       AssetType = "FOREX"
 	COMMODITY   AssetType = "COMMODITY"
-	
+
 	// Islamic Assets
 	SUKUK        AssetType = "SUKUK"
 	ISLAMIC_FUND AssetType = "ISLAMIC_FUND"
@@ -33,7 +33,7 @@ const (
 func (at AssetType) IsValid() bool {
 	switch at {
 	case STOCK, BOND, ETF, REIT, MUTUAL_FUND, CRYPTO, FOREX, COMMODITY,
-		 SUKUK, ISLAMIC_FUND, SHARIA_STOCK, ISLAMIC_ETF, ISLAMIC_REIT, TAKAFUL:
+		SUKUK, ISLAMIC_FUND, SHARIA_STOCK, ISLAMIC_ETF, ISLAMIC_REIT, TAKAFUL:
 		return true
 	default:
 		return false

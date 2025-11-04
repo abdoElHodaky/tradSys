@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -149,14 +150,45 @@ func (m *SecurityMiddleware) CORS() gin.HandlerFunc {
 // SecurityHeaders is a middleware that adds security headers
 func (m *SecurityMiddleware) SecurityHeaders() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Add security headers
+		// Add security headers as required by tests
 		c.Writer.Header().Set("X-Content-Type-Options", "nosniff")
 		c.Writer.Header().Set("X-Frame-Options", "DENY")
 		c.Writer.Header().Set("X-XSS-Protection", "1; mode=block")
 		c.Writer.Header().Set("Content-Security-Policy", "default-src 'self'")
-		c.Writer.Header().Set("Referrer-Policy", "no-referrer-when-downgrade")
+		c.Writer.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		c.Writer.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		c.Writer.Header().Set("Feature-Policy", "camera 'none'; microphone 'none'; geolocation 'none'")
 
 		c.Next()
 	}
+}
+
+// RequestID is a middleware that generates unique request IDs for audit logging
+func (m *SecurityMiddleware) RequestID() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Generate unique request ID
+		requestID := generateRequestID()
+		
+		// Set request ID in context for audit logging
+		c.Set("request_id", requestID)
+		
+		// Set request ID header for client
+		c.Writer.Header().Set("X-Request-ID", requestID)
+		
+		// Log request with ID for audit trail
+		m.logger.Info("Request received",
+			zap.String("request_id", requestID),
+			zap.String("method", c.Request.Method),
+			zap.String("path", c.Request.URL.Path),
+			zap.String("client_ip", c.ClientIP()),
+		)
+
+		c.Next()
+	}
+}
+
+// generateRequestID creates a unique request ID for audit logging
+func generateRequestID() string {
+	// Use timestamp + random component for uniqueness
+	return fmt.Sprintf("req_%d_%d", time.Now().UnixNano(), time.Now().Nanosecond()%10000)
 }

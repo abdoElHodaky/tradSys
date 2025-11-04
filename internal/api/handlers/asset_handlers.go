@@ -191,9 +191,9 @@ func (h *AssetHandlers) ListAssets(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"assets": assets,
 		"pagination": gin.H{
-			"page":       page,
-			"limit":      limit,
-			"total":      total,
+			"page":        page,
+			"limit":       limit,
+			"total":       total,
 			"total_pages": (total + int64(limit) - 1) / int64(limit),
 		},
 	})
@@ -345,15 +345,15 @@ func (h *AssetHandlers) GetAssetInfo(c *gin.Context) {
 // GetSupportedAssetTypes returns all supported asset types
 func (h *AssetHandlers) GetSupportedAssetTypes(c *gin.Context) {
 	assetTypes := types.GetAllAssetTypes()
-	
+
 	response := make([]gin.H, len(assetTypes))
 	for i, assetType := range assetTypes {
 		response[i] = gin.H{
-			"type":                    assetType,
-			"name":                    string(assetType),
+			"type":                      assetType,
+			"name":                      string(assetType),
 			"requires_special_handling": assetType.RequiresSpecialHandling(),
-			"trading_hours":           assetType.GetTradingHours(),
-			"relevant_attributes":     assetType.GetRelevantAttributes(),
+			"trading_hours":             assetType.GetTradingHours(),
+			"relevant_attributes":       assetType.GetRelevantAttributes(),
 		}
 	}
 

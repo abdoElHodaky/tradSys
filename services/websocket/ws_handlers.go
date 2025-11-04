@@ -3,28 +3,12 @@ package websocket
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
 
 	"go.uber.org/zap"
 )
 
-// MessageHandler handles WebSocket message processing
-type MessageHandler struct {
-	gateway *Gateway
-	logger  *zap.Logger
-}
-
-// Message represents a WebSocket message
-type Message struct {
-	Type      MessageType            `json:"type"`
-	Channel   string                 `json:"channel,omitempty"`
-	Symbol    string                 `json:"symbol,omitempty"`
-	Data      interface{}            `json:"data,omitempty"`
-	Timestamp time.Time              `json:"timestamp"`
-	MessageID string                 `json:"message_id"`
-	Metadata  map[string]interface{} `json:"metadata,omitempty"`
-}
+// MessageHandler and Message types are defined in ws_gateway_types.go
 
 // SubscribeRequest represents a subscription request
 type SubscribeRequest struct {
@@ -39,13 +23,7 @@ type UnsubscribeRequest struct {
 	SubscriptionID string `json:"subscription_id"`
 }
 
-// NewMessageHandler creates a new message handler
-func NewMessageHandler(gateway *Gateway, logger *zap.Logger) *MessageHandler {
-	return &MessageHandler{
-		gateway: gateway,
-		logger:  logger,
-	}
-}
+// NewMessageHandler is defined in ws_gateway_handlers.go
 
 // ProcessMessage processes an incoming WebSocket message
 func (h *MessageHandler) ProcessMessage(conn *Connection, messageBytes []byte) error {
@@ -78,32 +56,18 @@ func (h *MessageHandler) ProcessMessage(conn *Connection, messageBytes []byte) e
 	}
 }
 
-// CreateMessage creates a new message
-func (h *MessageHandler) CreateMessage(messageType MessageType, channel string, data interface{}) (*Message, error) {
-	return &Message{
-		Type:      messageType,
-		Channel:   channel,
-		Data:      data,
-		Timestamp: time.Now(),
-		MessageID: generateMessageID(),
-	}, nil
-}
-
-// SerializeMessage serializes a message to JSON bytes
-func (h *MessageHandler) SerializeMessage(message *Message) ([]byte, error) {
-	return json.Marshal(message)
-}
+// CreateMessage and SerializeMessage methods are defined in ws_gateway_handlers.go
 
 // handleSubscribe handles subscription requests
 func (h *MessageHandler) handleSubscribe(conn *Connection, message *Message) error {
 	var subReq SubscribeRequest
-	
+
 	// Parse subscription request from message data
 	dataBytes, err := json.Marshal(message.Data)
 	if err != nil {
 		return h.sendError(conn, "invalid_subscription", "Invalid subscription data")
 	}
-	
+
 	if err := json.Unmarshal(dataBytes, &subReq); err != nil {
 		return h.sendError(conn, "invalid_subscription", "Failed to parse subscription request")
 	}
@@ -132,13 +96,13 @@ func (h *MessageHandler) handleSubscribe(conn *Connection, message *Message) err
 // handleUnsubscribe handles unsubscription requests
 func (h *MessageHandler) handleUnsubscribe(conn *Connection, message *Message) error {
 	var unsubReq UnsubscribeRequest
-	
+
 	// Parse unsubscription request from message data
 	dataBytes, err := json.Marshal(message.Data)
 	if err != nil {
 		return h.sendError(conn, "invalid_unsubscription", "Invalid unsubscription data")
 	}
-	
+
 	if err := json.Unmarshal(dataBytes, &unsubReq); err != nil {
 		return h.sendError(conn, "invalid_unsubscription", "Failed to parse unsubscription request")
 	}
@@ -216,7 +180,7 @@ func (h *MessageHandler) sendMessage(conn *Connection, messageType MessageType, 
 		Channel:   channel,
 		Data:      data,
 		Timestamp: time.Now(),
-		MessageID: generateMessageID(),
+		ID: generateMessageID(),
 	}
 
 	messageBytes, err := json.Marshal(message)
@@ -247,59 +211,32 @@ func (h *MessageHandler) sendError(conn *Connection, errorCode, errorMessage str
 	return h.sendMessage(conn, MessageTypeError, "", errorData)
 }
 
-// generateMessageID generates a unique message ID
-func generateMessageID() string {
-	return fmt.Sprintf("msg_%d", time.Now().UnixNano())
-}
-
-// ConnectionManager manages WebSocket connections
-type ConnectionManager struct {
-	gateway *Gateway
-	logger  *zap.Logger
-}
-
-// NewConnectionManager creates a new connection manager
-func NewConnectionManager(gateway *Gateway, logger *zap.Logger) *ConnectionManager {
-	return &ConnectionManager{
-		gateway: gateway,
-		logger:  logger,
-	}
-}
-
-// PerformanceOptimizer optimizes WebSocket performance
-type PerformanceOptimizer struct {
-	gateway *Gateway
-	logger  *zap.Logger
-}
-
-// NewPerformanceOptimizer creates a new performance optimizer
-func NewPerformanceOptimizer(gateway *Gateway, logger *zap.Logger) *PerformanceOptimizer {
-	return &PerformanceOptimizer{
-		gateway: gateway,
-		logger:  logger,
-	}
-}
+// generateMessageID is defined in websocket_core.go
+// ConnectionManager is defined in websocket_components.go
+// NewConnectionManager is defined in websocket_components.go
+// PerformanceOptimizer is defined in ws_gateway_types.go
+// NewPerformanceOptimizer is defined in ws_gateway_handlers.go
 
 // OptimizePerformance performs performance optimizations
 func (p *PerformanceOptimizer) OptimizePerformance() {
 	// Get current metrics
 	metrics := p.gateway.GetMetrics()
-	
+
 	// Log performance metrics
 	p.logger.Debug("WebSocket performance metrics",
 		zap.Int64("active_connections", metrics.ActiveConnections),
 		zap.Float64("messages_per_second", metrics.MessagesPerSecond),
 		zap.Duration("average_latency", metrics.AverageLatency),
 		zap.Int64("subscription_count", metrics.SubscriptionCount))
-	
+
 	// Perform optimizations based on metrics
 	if metrics.AverageLatency > 100*time.Millisecond {
 		p.logger.Warn("High WebSocket latency detected",
 			zap.Duration("average_latency", metrics.AverageLatency))
 		// Could implement latency optimization strategies here
 	}
-	
-	if metrics.ActiveConnections > int64(p.gateway.config.MaxConnections*0.8) {
+
+	if metrics.ActiveConnections > int64(float64(p.gateway.config.MaxConnections)*0.8) {
 		p.logger.Warn("High connection count",
 			zap.Int64("active_connections", metrics.ActiveConnections),
 			zap.Int("max_connections", p.gateway.config.MaxConnections))

@@ -3,8 +3,8 @@ package models
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/abdoElHodaky/tradSys/internal/trading/types"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -49,28 +49,28 @@ const (
 
 // Order represents an order in the trading system
 type Order struct {
-	ID              string              `gorm:"primaryKey;type:varchar(36)" json:"id"`
-	UserID          string              `gorm:"type:varchar(36);index" json:"user_id"`
-	AccountID       string              `gorm:"type:varchar(36);index" json:"account_id"`
-	Symbol          string              `gorm:"type:varchar(20);index" json:"symbol"`
-	AssetType       types.AssetType     `gorm:"type:varchar(20);index" json:"asset_type"`
-	Side            OrderSide           `gorm:"type:varchar(10);index" json:"side"`
-	Type            OrderType           `gorm:"type:varchar(20);index" json:"type"`
-	Quantity        float64             `gorm:"type:decimal(20,8)" json:"quantity"`
-	Price           float64             `gorm:"type:decimal(20,8)" json:"price"`
-	StopPrice       float64             `gorm:"type:decimal(20,8)" json:"stop_price"`
-	TrailingOffset  float64             `gorm:"type:decimal(20,8)" json:"trailing_offset"`
-	TimeInForce     string              `gorm:"type:varchar(10)" json:"time_in_force"`
-	Status          OrderStatus         `gorm:"type:varchar(20);index" json:"status"`
-	FilledQty       float64             `gorm:"type:decimal(20,8)" json:"filled_qty"`
-	AvgPrice        float64             `gorm:"type:decimal(20,8)" json:"avg_price"`
-	ClientOrderID   string              `gorm:"type:varchar(50);index" json:"client_order_id"`
-	ExchangeOrderID string              `gorm:"type:varchar(50);index" json:"exchange_order_id"`
-	AssetMetadata   AssetAttributes     `gorm:"type:text" json:"asset_metadata,omitempty"`
-	Notes           string              `gorm:"type:text" json:"notes"`
-	CreatedAt       time.Time           `json:"created_at"`
-	UpdatedAt       time.Time           `json:"updated_at"`
-	ExpiresAt       *time.Time          `json:"expires_at"`
+	ID              string          `gorm:"primaryKey;type:varchar(36)" json:"id"`
+	UserID          string          `gorm:"type:varchar(36);index" json:"user_id"`
+	AccountID       string          `gorm:"type:varchar(36);index" json:"account_id"`
+	Symbol          string          `gorm:"type:varchar(20);index" json:"symbol"`
+	AssetType       types.AssetType `gorm:"type:varchar(20);index" json:"asset_type"`
+	Side            OrderSide       `gorm:"type:varchar(10);index" json:"side"`
+	Type            OrderType       `gorm:"type:varchar(20);index" json:"type"`
+	Quantity        float64         `gorm:"type:decimal(20,8)" json:"quantity"`
+	Price           float64         `gorm:"type:decimal(20,8)" json:"price"`
+	StopPrice       float64         `gorm:"type:decimal(20,8)" json:"stop_price"`
+	TrailingOffset  float64         `gorm:"type:decimal(20,8)" json:"trailing_offset"`
+	TimeInForce     string          `gorm:"type:varchar(10)" json:"time_in_force"`
+	Status          OrderStatus     `gorm:"type:varchar(20);index" json:"status"`
+	FilledQty       float64         `gorm:"type:decimal(20,8)" json:"filled_qty"`
+	AvgPrice        float64         `gorm:"type:decimal(20,8)" json:"avg_price"`
+	ClientOrderID   string          `gorm:"type:varchar(50);index" json:"client_order_id"`
+	ExchangeOrderID string          `gorm:"type:varchar(50);index" json:"exchange_order_id"`
+	AssetMetadata   AssetAttributes `gorm:"type:text" json:"asset_metadata,omitempty"`
+	Notes           string          `gorm:"type:text" json:"notes"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
+	ExpiresAt       *time.Time      `json:"expires_at"`
 }
 
 // OrderWithTriggers represents an order with stop loss and take profit triggers

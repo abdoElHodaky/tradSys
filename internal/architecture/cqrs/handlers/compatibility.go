@@ -5,10 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
 	"go.uber.org/zap"
 )
 
@@ -23,9 +20,9 @@ type CompatibilityLayer struct {
 	cqrsAdapter *WatermillCQRSAdapter
 
 	// Event sourcing components
-	eventStore    store.EventStore
-	aggregateRepo aggregate.Repository
-	eventBus      eventbus.EventBus
+	// TODO: Fix missing imports - eventStore    store.EventStore
+	// TODO: Fix missing imports - aggregateRepo aggregate.Repository
+	// TODO: Fix missing imports - eventBus      eventbus.EventBus
 
 	// Synchronization
 	mu sync.RWMutex

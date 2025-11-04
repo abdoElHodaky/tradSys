@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/core/matching"
+	order_matching "github.com/abdoElHodaky/tradSys/internal/core/matching"
 	"github.com/abdoElHodaky/tradSys/internal/marketdata/external"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -269,9 +269,19 @@ func (h *Handler) processOrderBooks() {
 			// Process each symbol
 			for symbol := range h.SymbolSubscriptions {
 				// Get order book
-				bids, asks, _, err := h.Engine.GetMarketData(symbol, 10)
+				snapshot, err := h.Engine.GetOrderBookSnapshot(symbol, 10)
 				if err != nil {
 					continue
+				}
+				// Convert PriceLevel to [][]float64 format
+				bids := make([][]float64, len(snapshot.Bids))
+				for i, bid := range snapshot.Bids {
+					bids[i] = []float64{bid.Price, bid.Quantity}
+				}
+
+				asks := make([][]float64, len(snapshot.Asks))
+				for i, ask := range snapshot.Asks {
+					asks[i] = []float64{ask.Price, ask.Quantity}
 				}
 
 				// Create order book update
