@@ -69,18 +69,7 @@ type NetworkConfig struct {
 	WriteTimeout       time.Duration `yaml:"write_timeout" json:"write_timeout"`
 }
 
-// DatabaseConfig contains database settings
-type DatabaseConfig struct {
-	Host            string        `yaml:"host" json:"host"`
-	Port            int           `yaml:"port" json:"port"`
-	Database        string        `yaml:"database" json:"database"`
-	Username        string        `yaml:"username" json:"username"`
-	Password        string        `yaml:"password" json:"password"`
-	MaxConnections  int           `yaml:"max_connections" json:"max_connections"`
-	MaxIdleConns    int           `yaml:"max_idle_conns" json:"max_idle_conns"`
-	ConnMaxLifetime time.Duration `yaml:"conn_max_lifetime" json:"conn_max_lifetime"`
-	SSLMode         string        `yaml:"ssl_mode" json:"ssl_mode"`
-}
+// DatabaseConfig is defined in config.go
 
 // PerformanceConfig contains performance optimization settings
 type PerformanceConfig struct {
@@ -162,7 +151,7 @@ func NewOptimizedConfig() *OptimizedConfig {
 			Database:        "tradSys",
 			Username:        "postgres",
 			Password:        "",
-			MaxConnections:  100,
+			MaxOpenConns:    100,
 			MaxIdleConns:    10,
 			ConnMaxLifetime: time.Hour,
 			SSLMode:         "disable",
@@ -228,8 +217,8 @@ func (c *OptimizedConfig) Validate() error {
 		return fmt.Errorf("network.http_port must be between 1 and 65535")
 	}
 	
-	if c.Database.MaxConnections <= 0 {
-		return fmt.Errorf("database.max_connections must be positive")
+	if c.Database.MaxOpenConns <= 0 {
+		return fmt.Errorf("database.max_open_conns must be positive")
 	}
 	
 	return nil

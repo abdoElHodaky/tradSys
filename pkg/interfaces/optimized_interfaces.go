@@ -51,23 +51,7 @@ type RiskManager interface {
 	IsCircuitBreakerTripped(ctx context.Context) bool
 }
 
-// MatchingEngine defines the order matching interface
-type MatchingEngine interface {
-	// Order processing
-	ProcessOrder(ctx context.Context, order *Order) ([]*Trade, error)
-	
-	// Order book management
-	AddOrder(ctx context.Context, order *Order) error
-	RemoveOrder(ctx context.Context, orderID string) error
-	
-	// Market data
-	GetBestBid(ctx context.Context, symbol string) (*PriceLevel, error)
-	GetBestAsk(ctx context.Context, symbol string) (*PriceLevel, error)
-	GetOrderBook(ctx context.Context, symbol string, depth int) (*OrderBook, error)
-	
-	// Statistics
-	GetMatchingStats(ctx context.Context) (*MatchingStats, error)
-}
+// MatchingEngine is defined in core_interfaces.go
 
 // MarketDataProvider defines the market data interface
 type MarketDataProvider interface {
@@ -102,38 +86,9 @@ type PositionManager interface {
 
 // Performance and Monitoring Interfaces
 
-// MetricsCollector defines the metrics collection interface
-type MetricsCollector interface {
-	// Counter metrics
-	IncrementCounter(name string, tags map[string]string)
-	AddToCounter(name string, value float64, tags map[string]string)
-	
-	// Gauge metrics
-	SetGauge(name string, value float64, tags map[string]string)
-	
-	// Histogram metrics
-	RecordHistogram(name string, value float64, tags map[string]string)
-	
-	// Timing metrics
-	RecordTiming(name string, duration time.Duration, tags map[string]string)
-	
-	// Custom metrics
-	RecordCustomMetric(name string, value interface{}, tags map[string]string)
-}
+// MetricsCollector is defined in core_interfaces.go
 
-// HealthChecker defines the health checking interface
-type HealthChecker interface {
-	// Health status
-	CheckHealth(ctx context.Context) (*HealthStatus, error)
-	
-	// Component health
-	CheckComponentHealth(ctx context.Context, component string) (*ComponentHealth, error)
-	GetAllComponentsHealth(ctx context.Context) (map[string]*ComponentHealth, error)
-	
-	// Health monitoring
-	StartHealthMonitoring(ctx context.Context, interval time.Duration) error
-	StopHealthMonitoring(ctx context.Context) error
-}
+// HealthChecker is defined in common_interfaces.go
 
 // PerformanceMonitor defines the performance monitoring interface
 type PerformanceMonitor interface {
@@ -157,31 +112,9 @@ type PerformanceMonitor interface {
 
 // Storage and Persistence Interfaces
 
-// OrderRepository defines the order storage interface
-type OrderRepository interface {
-	// CRUD operations
-	Create(ctx context.Context, order *Order) error
-	GetByID(ctx context.Context, id string) (*Order, error)
-	Update(ctx context.Context, order *Order) error
-	Delete(ctx context.Context, id string) error
-	
-	// Query operations
-	FindBySymbol(ctx context.Context, symbol string, limit int) ([]*Order, error)
-	FindByStatus(ctx context.Context, status OrderStatus, limit int) ([]*Order, error)
-	FindByTimeRange(ctx context.Context, from, to time.Time, limit int) ([]*Order, error)
-}
+// OrderRepository is defined in core_interfaces.go
 
-// TradeRepository defines the trade storage interface
-type TradeRepository interface {
-	// CRUD operations
-	Create(ctx context.Context, trade *Trade) error
-	GetByID(ctx context.Context, id string) (*Trade, error)
-	
-	// Query operations
-	FindBySymbol(ctx context.Context, symbol string, limit int) ([]*Trade, error)
-	FindByTimeRange(ctx context.Context, from, to time.Time, limit int) ([]*Trade, error)
-	FindByOrderID(ctx context.Context, orderID string) ([]*Trade, error)
-}
+// TradeRepository is defined in core_interfaces.go
 
 // PositionRepository defines the position storage interface
 type PositionRepository interface {
@@ -214,67 +147,17 @@ type WebSocketHandler interface {
 	Unsubscribe(ctx context.Context, connectionID string, channels []string) error
 }
 
-// EventPublisher defines the event publishing interface
-type EventPublisher interface {
-	// Event publishing
-	Publish(ctx context.Context, event *Event) error
-	PublishBatch(ctx context.Context, events []*Event) error
-	
-	// Topic management
-	CreateTopic(ctx context.Context, topic string) error
-	DeleteTopic(ctx context.Context, topic string) error
-}
+// EventPublisher is defined in core_interfaces.go
 
-// EventSubscriber defines the event subscription interface
-type EventSubscriber interface {
-	// Event subscription
-	Subscribe(ctx context.Context, topic string, handler EventHandler) error
-	Unsubscribe(ctx context.Context, topic string) error
-	
-	// Message processing
-	StartProcessing(ctx context.Context) error
-	StopProcessing(ctx context.Context) error
-}
+// EventSubscriber is defined in core_interfaces.go
 
 // Configuration Interface
 
-// ConfigManager defines the configuration management interface
-type ConfigManager interface {
-	// Configuration loading
-	Load(ctx context.Context) error
-	Reload(ctx context.Context) error
-	
-	// Configuration access
-	Get(key string) interface{}
-	GetString(key string) string
-	GetInt(key string) int
-	GetFloat64(key string) float64
-	GetBool(key string) bool
-	GetDuration(key string) time.Duration
-	
-	// Configuration updates
-	Set(key string, value interface{}) error
-	Save(ctx context.Context) error
-	
-	// Configuration validation
-	Validate() error
-}
+// ConfigManager is defined in core_interfaces.go
 
 // Common Types and Structures
 
-// Order represents a trading order
-type Order struct {
-	ID               string      `json:"id"`
-	Symbol           string      `json:"symbol"`
-	Side             OrderSide   `json:"side"`
-	Type             OrderType   `json:"type"`
-	Quantity         float64     `json:"quantity"`
-	Price            float64     `json:"price"`
-	RemainingQuantity float64    `json:"remaining_quantity"`
-	Status           OrderStatus `json:"status"`
-	CreatedAt        time.Time   `json:"created_at"`
-	UpdatedAt        time.Time   `json:"updated_at"`
-}
+// Order is defined in exchange_interface.go
 
 // Trade represents a completed trade
 type Trade struct {
@@ -316,27 +199,11 @@ type PriceLevel struct {
 
 // Enums and Constants
 
-type OrderSide string
-const (
-	OrderSideBuy  OrderSide = "buy"
-	OrderSideSell OrderSide = "sell"
-)
+// OrderSide is defined in exchange_interface.go
 
-type OrderType string
-const (
-	OrderTypeMarket OrderType = "market"
-	OrderTypeLimit  OrderType = "limit"
-	OrderTypeStop   OrderType = "stop"
-)
+// OrderType is defined in exchange_interface.go
 
-type OrderStatus string
-const (
-	OrderStatusPending   OrderStatus = "pending"
-	OrderStatusOpen      OrderStatus = "open"
-	OrderStatusFilled    OrderStatus = "filled"
-	OrderStatusCancelled OrderStatus = "cancelled"
-	OrderStatusRejected  OrderStatus = "rejected"
-)
+// OrderStatus is defined in exchange_interface.go
 
 // Result and Status Types
 
@@ -354,11 +221,7 @@ type RiskCheckResult struct {
 	CheckLatency time.Duration `json:"check_latency"`
 }
 
-type HealthStatus struct {
-	Status    string                       `json:"status"`
-	Timestamp time.Time                    `json:"timestamp"`
-	Components map[string]*ComponentHealth `json:"components"`
-}
+// HealthStatus is defined in core_interfaces.go
 
 type ComponentHealth struct {
 	Status    string    `json:"status"`
@@ -369,15 +232,9 @@ type ComponentHealth struct {
 
 // Event Types
 
-type Event struct {
-	ID        string                 `json:"id"`
-	Type      string                 `json:"type"`
-	Topic     string                 `json:"topic"`
-	Data      map[string]interface{} `json:"data"`
-	Timestamp time.Time              `json:"timestamp"`
-}
+// Event is defined in common_interfaces.go
 
-type EventHandler func(ctx context.Context, event *Event) error
+// EventHandler is defined in common_interfaces.go
 
 // WebSocket Types
 
@@ -403,13 +260,7 @@ type Portfolio struct {
 	UpdatedAt  time.Time  `json:"updated_at"`
 }
 
-type RiskMetrics struct {
-	TotalExposure    float64   `json:"total_exposure"`
-	MaxDrawdown      float64   `json:"max_drawdown"`
-	VaR              float64   `json:"var"`
-	ExpectedShortfall float64  `json:"expected_shortfall"`
-	Timestamp        time.Time `json:"timestamp"`
-}
+// RiskMetrics is defined in core_interfaces.go
 
 type MatchingStats struct {
 	OrdersProcessed   int64     `json:"orders_processed"`
@@ -419,13 +270,7 @@ type MatchingStats struct {
 	Timestamp         time.Time `json:"timestamp"`
 }
 
-type MarketData struct {
-	Symbol    string    `json:"symbol"`
-	Price     float64   `json:"price"`
-	Volume    float64   `json:"volume"`
-	Timestamp time.Time `json:"timestamp"`
-	Type      string    `json:"type"`
-}
+// MarketData is defined in exchange_interface.go
 
 type Ticker struct {
 	Symbol    string    `json:"symbol"`
@@ -454,4 +299,3 @@ type PerformanceReport struct {
 	MemoryUsage uint64                   `json:"memory_usage"`
 	Timestamp   time.Time                `json:"timestamp"`
 }
-

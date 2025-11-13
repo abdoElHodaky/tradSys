@@ -224,7 +224,7 @@ func (r *ServiceRegistry) GetHealthStatus(ctx context.Context) *RegistryHealthSt
 		}
 
 		if healthChecker, ok := service.(interfaces.HealthChecker); ok {
-			if err := healthChecker.CheckHealth(ctx); err != nil {
+			if err := healthChecker.Check(ctx); err != nil {
 				status.Services[name] = &interfaces.HealthStatus{
 					Status:    interfaces.HealthStatusUnhealthy,
 					Message:   err.Error(),
