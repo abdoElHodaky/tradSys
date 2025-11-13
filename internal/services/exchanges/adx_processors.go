@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/abdoElHodaky/tradSys/internal/services/common"
 	"github.com/abdoElHodaky/tradSys/internal/trading/types"
 )
 
@@ -284,7 +285,7 @@ func (adx *ADXService) getNextBusinessDay(from time.Time) time.Time {
 }
 
 // calculateTradingFees calculates trading fees for ADX orders
-func (adx *ADXService) calculateTradingFees(order *Order) (*TradingFees, error) {
+func (adx *ADXService) calculateTradingFees(order *common.Order) (*TradingFees, error) {
 	if order == nil {
 		return nil, fmt.Errorf("order cannot be nil")
 	}
@@ -343,7 +344,7 @@ func (adx *ADXService) formatADXSymbol(symbol string) string {
 }
 
 // validateIslamicCompliance validates Islamic compliance for an order
-func (adx *ADXService) validateIslamicCompliance(order *Order) error {
+func (adx *ADXService) validateIslamicCompliance(order *common.Order) error {
 	if !adx.isIslamicAsset(order.AssetType) {
 		return nil // Not an Islamic asset, no validation needed
 	}
@@ -375,7 +376,7 @@ func (adx *ADXService) generateOrderID() string {
 }
 
 // logOrderActivity logs order activity for audit purposes
-func (adx *ADXService) logOrderActivity(order *Order, activity string, details map[string]interface{}) {
+func (adx *ADXService) logOrderActivity(order *common.Order, activity string, details map[string]interface{}) {
 	logEntry := map[string]interface{}{
 		"timestamp":  time.Now(),
 		"exchange":   "ADX",

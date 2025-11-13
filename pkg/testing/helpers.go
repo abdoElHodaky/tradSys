@@ -24,13 +24,15 @@ func NewTestHelper(t *testing.T) *TestHelper {
 
 // Context creates a test context with timeout
 func (h *TestHelper) Context() context.Context {
-	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	h.t.Cleanup(cancel) // Ensure cancel is called when test completes
 	return ctx
 }
 
 // ContextWithTimeout creates a test context with custom timeout
 func (h *TestHelper) ContextWithTimeout(timeout time.Duration) context.Context {
-	ctx, _ := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	h.t.Cleanup(cancel) // Ensure cancel is called when test completes
 	return ctx
 }
 

@@ -289,6 +289,54 @@ type OrderManagementService interface {
 
 // Supporting Types
 
+// OrderResponse represents the response from order operations
+type OrderResponse struct {
+	OrderID   string      `json:"order_id"`
+	Status    OrderStatus `json:"status"`
+	Message   string      `json:"message,omitempty"`
+	Timestamp time.Time   `json:"timestamp"`
+	Details   interface{} `json:"details,omitempty"`
+}
+
+// MarketData represents market data for a symbol
+type MarketData struct {
+	Symbol    string    `json:"symbol"`
+	Exchange  string    `json:"exchange"`
+	Price     float64   `json:"price"`
+	Volume    float64   `json:"volume"`
+	High      float64   `json:"high"`
+	Low       float64   `json:"low"`
+	Open      float64   `json:"open"`
+	Close     float64   `json:"close"`
+	Change    float64   `json:"change"`
+	ChangePct float64   `json:"change_pct"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+// Transaction represents a financial transaction
+type Transaction struct {
+	ID          string                 `json:"id"`
+	UserID      string                 `json:"user_id"`
+	Type        string                 `json:"type"`
+	Amount      float64                `json:"amount"`
+	Currency    string                 `json:"currency"`
+	Description string                 `json:"description"`
+	Status      string                 `json:"status"`
+	Reference   string                 `json:"reference,omitempty"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt   time.Time              `json:"created_at"`
+	UpdatedAt   time.Time              `json:"updated_at"`
+}
+
+// TradingSchedule represents trading hours for an exchange
+type TradingSchedule struct {
+	Timezone     string           `json:"timezone"`
+	Sessions     []TradingSession `json:"sessions"`
+	Holidays     []time.Time      `json:"holidays,omitempty"`
+	IsActive     bool             `json:"is_active"`
+	LastModified time.Time        `json:"last_modified"`
+}
+
 // HealthStatus represents the health status of a service
 type HealthStatus struct {
 	Service   string                 `json:"service"`

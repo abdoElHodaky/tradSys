@@ -16,14 +16,33 @@ import (
 	"sync"
 	"time"
 
+	"github.com/abdoElHodaky/tradSys/internal/services/common"
 	"github.com/abdoElHodaky/tradSys/internal/trading/types"
 )
 
 // ComplianceEngine interface for compliance checking
 type ComplianceEngine interface {
-	ProcessOrder(order *types.Order) (*types.Trade, error)
+	ProcessOrder(order *types.Order) (*common.Trade, error)
 	Start(ctx context.Context) error
 	Stop(ctx context.Context) error
+}
+
+// AssetLimits defines trading limits for an asset type
+type AssetLimits struct {
+	MinOrderSize  float64 `json:"min_order_size"`
+	MaxOrderSize  float64 `json:"max_order_size"`
+	MinOrderValue float64 `json:"min_order_value"`
+	MaxOrderValue float64 `json:"max_order_value"`
+}
+
+// TradingFees represents trading fees for an order
+type TradingFees struct {
+	Commission    float64 `json:"commission"`
+	ClearingFee   float64 `json:"clearing_fee"`
+	ExchangeFee   float64 `json:"exchange_fee"`
+	RegulatoryFee float64 `json:"regulatory_fee"`
+	TotalFees     float64 `json:"total_fees"`
+	Currency      string  `json:"currency"`
 }
 
 // ComplianceLevel defines Sharia compliance levels

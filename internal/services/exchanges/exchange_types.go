@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/abdoElHodaky/tradSys/internal/services/common"
 )
 
 // Order is available in pkg/types
@@ -351,7 +353,7 @@ func (ec *EgyptianCompliance) LoadRegulatoryRules() {
 }
 
 // ValidateOrder validates order against Egyptian compliance rules
-func (ec *EgyptianCompliance) ValidateOrder(order *Order) error {
+func (ec *EgyptianCompliance) ValidateOrder(order *common.Order) error {
 	ec.mu.RLock()
 	defer ec.mu.RUnlock()
 
@@ -457,11 +459,11 @@ func NewEGXOrderManager() *EGXOrderManager {
 }
 
 // SubmitOrder submits order to EGX
-func (om *EGXOrderManager) SubmitOrder(ctx context.Context, order *Order) (*OrderResponse, error) {
+func (om *EGXOrderManager) SubmitOrder(ctx context.Context, order *common.Order) (*common.OrderResponse, error) {
 	// Implement order submission
-	return &OrderResponse{
+	return &common.OrderResponse{
 		OrderID:   order.ID,
-		Status:    OrderStatusPending,
+		Status:    common.OrderStatusPending,
 		Timestamp: time.Now(),
 	}, nil
 }
@@ -477,7 +479,7 @@ func NewEGXRiskEngine() *EGXRiskEngine {
 }
 
 // AssessOrder assesses order risk
-func (re *EGXRiskEngine) AssessOrder(order *Order) error {
+func (re *EGXRiskEngine) AssessOrder(order *common.Order) error {
 	// Implement risk assessment
 	return nil
 }

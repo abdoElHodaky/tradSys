@@ -8,6 +8,8 @@ import (
 	"log"
 	"sync"
 	"time"
+
+	"github.com/abdoElHodaky/tradSys/internal/services/common"
 )
 
 // EGXService provides Egyptian Exchange integration
@@ -187,7 +189,7 @@ func (egx *EGXService) initialize() {
 }
 
 // SubmitOrder submits an order to EGX
-func (egx *EGXService) SubmitOrder(ctx context.Context, order *Order) (*OrderResponse, error) {
+func (egx *EGXService) SubmitOrder(ctx context.Context, order *common.Order) (*common.OrderResponse, error) {
 	startTime := time.Now()
 
 	// Validate order
@@ -298,7 +300,7 @@ func (egx *EGXService) GetPerformanceMetrics() *PerformanceMetrics {
 }
 
 // validateOrder validates an order for EGX submission
-func (egx *EGXService) validateOrder(order *Order) error {
+func (egx *EGXService) validateOrder(order *common.Order) error {
 	// Check if asset type is supported
 	if !egx.isAssetTypeSupported(order.AssetType) {
 		return fmt.Errorf("asset type not supported: %v", order.AssetType)
