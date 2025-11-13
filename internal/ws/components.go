@@ -5,16 +5,18 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/abdoElHodaky/tradSys/internal/types"
 )
 
 // ConnectionManager manages WebSocket connections
 type ConnectionManager struct {
-	connections map[string]*WebSocketConnection
+	connections map[string]*types.WebSocketConnection
 	mu          sync.RWMutex
 }
 
 // RegisterConnection registers a new WebSocket connection
-func (cm *ConnectionManager) RegisterConnection(conn *WebSocketConnection) {
+func (cm *ConnectionManager) RegisterConnection(conn *types.WebSocketConnection) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 	cm.connections[conn.ID] = conn
@@ -28,7 +30,7 @@ func (cm *ConnectionManager) UnregisterConnection(connectionID string) {
 }
 
 // GetConnection retrieves a connection by ID
-func (cm *ConnectionManager) GetConnection(connectionID string) (*WebSocketConnection, bool) {
+func (cm *ConnectionManager) GetConnection(connectionID string) (*types.WebSocketConnection, bool) {
 	cm.mu.RLock()
 	defer cm.mu.RUnlock()
 	conn, exists := cm.connections[connectionID]
@@ -36,11 +38,11 @@ func (cm *ConnectionManager) GetConnection(connectionID string) (*WebSocketConne
 }
 
 // GetActiveConnections returns all active connections
-func (cm *ConnectionManager) GetActiveConnections() []*WebSocketConnection {
+func (cm *ConnectionManager) GetActiveConnections() []*types.WebSocketConnection {
 	cm.mu.RLock()
 	defer cm.mu.RUnlock()
 
-	var active []*WebSocketConnection
+	var active []*types.WebSocketConnection
 	for _, conn := range cm.connections {
 		if conn.IsActive {
 			active = append(active, conn)
@@ -100,13 +102,13 @@ type LicenseValidator struct {
 // LicenseValidationResult represents license validation result
 type LicenseValidationResult struct {
 	Valid     bool
-	Tier      LicenseTier
+	Tier      types.LicenseTier
 	ExpiresAt time.Time
 	Features  []string
 }
 
 // ValidateLicense validates a user's license for WebSocket access
-func (lv *LicenseValidator) ValidateLicense(userID string, tier LicenseTier) (bool, error) {
+func (lv *LicenseValidator) ValidateLicense(userID string, tier types.LicenseTier) (bool, error) {
 	lv.mu.RLock()
 	if result, exists := lv.cache[userID]; exists {
 		if time.Now().Before(result.ExpiresAt) {
@@ -178,7 +180,7 @@ const (
 
 
 // FilterMessage filters a WebSocket message for Islamic compliance
-func (if_ *IslamicFilter) FilterMessage(message *WebSocketMessage, ctx *WebSocketConnectionContext) (*WebSocketMessage, error) {
+func (if_ *IslamicFilter) FilterMessage(message *WebSocketMessage, ctx *types.WebSocketConnectionContext) (*WebSocketMessage, error) {
 	if !ctx.IslamicCompliant {
 		return message, nil
 	}
@@ -319,7 +321,7 @@ type ComplianceRule struct {
 	Region      string
 	Exchange    ExchangeType
 	Requirement string
-	Validator   func(*WebSocketConnectionContext) bool
+	Validator   func(*types.WebSocketConnectionContext) bool
 	Severity    ComplianceSeverity
 }
 
@@ -336,7 +338,7 @@ const (
 
 
 // ValidateCompliance validates regulatory compliance for a connection
-func (ce *ComplianceEngine) ValidateCompliance(ctx *WebSocketConnectionContext) error {
+func (ce *ComplianceEngine) ValidateCompliance(ctx *types.WebSocketConnectionContext) error {
 	ce.mu.RLock()
 	defer ce.mu.RUnlock()
 
@@ -368,7 +370,7 @@ func (ce *ComplianceEngine) initializeDefaultRules() {
 		Region:      "Egypt",
 		Exchange:    ExchangeTypeEGX,
 		Requirement: "KYC verification required for EGX trading",
-		Validator: func(ctx *WebSocketConnectionContext) bool {
+		Validator: func(ctx *types.WebSocketConnectionContext) bool {
 			// Check if user has completed KYC
 			return ctx.UserID != "" // Simplified check
 		},
@@ -379,9 +381,9 @@ func (ce *ComplianceEngine) initializeDefaultRules() {
 		Region:      "UAE",
 		Exchange:    ExchangeTypeADX,
 		Requirement: "Islamic compliance verification for ADX Islamic instruments",
-		Validator: func(ctx *WebSocketConnectionContext) bool {
+		Validator: func(ctx *types.WebSocketConnectionContext) bool {
 			// For Islamic tier, ensure compliance is enabled
-			if ctx.LicenseTier == LicenseTierIslamic {
+			if ctx.types.LicenseTier == LicenseTierIslamic {
 				return ctx.IslamicCompliant
 			}
 			return true
@@ -393,8 +395,8 @@ func (ce *ComplianceEngine) initializeDefaultRules() {
 		Region:      "Global",
 		Exchange:    ExchangeTypeUnified,
 		Requirement: "Valid license required for trading access",
-		Validator: func(ctx *WebSocketConnectionContext) bool {
-			return ctx.LicenseTier >= LicenseTierBasic
+		Validator: func(ctx *types.WebSocketConnectionContext) bool {
+			return ctx.types.LicenseTier >= LicenseTierBasic
 		},
 		Severity: SeverityCritical,
 	}
@@ -416,7 +418,7 @@ type ConnectionMetrics struct {
 	SessionDuration  time.Duration
 	LastActivity     time.Time
 	Exchange         ExchangeType
-	LicenseTier      LicenseTier
+	types.LicenseTier      types.LicenseTier
 }
 
 // AnalyticsEvent represents an analytics event
@@ -431,7 +433,7 @@ type AnalyticsEvent struct {
 
 
 // RecordConnection records connection analytics
-func (ae *AnalyticsEngine) RecordConnection(conn *WebSocketConnection) {
+func (ae *AnalyticsEngine) RecordConnection(conn *types.WebSocketConnection) {
 	ae.mu.Lock()
 	defer ae.mu.Unlock()
 
@@ -443,7 +445,7 @@ func (ae *AnalyticsEngine) RecordConnection(conn *WebSocketConnection) {
 		SessionDuration:  0,
 		LastActivity:     time.Now(),
 		Exchange:         conn.Context.Exchange,
-		LicenseTier:      conn.Context.LicenseTier,
+		types.LicenseTier:      conn.Context.types.LicenseTier,
 	}
 
 	// Record connection event
@@ -454,7 +456,7 @@ func (ae *AnalyticsEngine) RecordConnection(conn *WebSocketConnection) {
 		Data: map[string]interface{}{
 			"connection_id": conn.ID,
 			"exchange":      conn.Context.Exchange,
-			"license_tier":  conn.Context.LicenseTier,
+			"license_tier":  conn.Context.types.LicenseTier,
 			"client_ip":     conn.Context.ClientIP,
 		},
 		Timestamp: time.Now(),
@@ -463,7 +465,7 @@ func (ae *AnalyticsEngine) RecordConnection(conn *WebSocketConnection) {
 }
 
 // RecordMessage records message analytics
-func (ae *AnalyticsEngine) RecordMessage(conn *WebSocketConnection, message *WebSocketMessage, decision interface{}) {
+func (ae *AnalyticsEngine) RecordMessage(conn *types.WebSocketConnection, message *WebSocketMessage, decision interface{}) {
 	ae.mu.Lock()
 	defer ae.mu.Unlock()
 
@@ -508,13 +510,13 @@ func (ae *AnalyticsEngine) GetAggregatedMetrics() map[string]interface{} {
 	totalBytes := int64(0)
 
 	exchangeDistribution := make(map[ExchangeType]int)
-	licenseDistribution := make(map[LicenseTier]int)
+	licenseDistribution := make(map[types.LicenseTier]int)
 
 	for _, metrics := range ae.metrics {
 		totalMessages += metrics.MessageCount
 		totalBytes += metrics.BytesTransferred
 		exchangeDistribution[metrics.Exchange]++
-		licenseDistribution[metrics.LicenseTier]++
+		licenseDistribution[metrics.types.LicenseTier]++
 	}
 
 	return map[string]interface{}{
@@ -531,7 +533,7 @@ func (ae *AnalyticsEngine) GetAggregatedMetrics() map[string]interface{} {
 // Helper functions
 
 // getLicenseFeatures returns features available for a license tier
-func getLicenseFeatures(tier LicenseTier) []string {
+func getLicenseFeatures(tier types.LicenseTier) []string {
 	switch tier {
 	case LicenseTierBasic:
 		return []string{"basic_trading", "market_data"}

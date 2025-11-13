@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/abdoElHodaky/tradSys/internal/services/common"
 )
 
 // OrderResponse represents response from order submission
@@ -20,7 +22,7 @@ type OrderResponse struct {
 // MarketData represents market data for an asset
 type MarketData struct {
 	Symbol        string
-	AssetType     AssetType
+	common.AssetType     common.AssetType
 	Price         float64
 	Bid           float64
 	Ask           float64
@@ -57,7 +59,7 @@ const (
 type AssetInfo struct {
 	Symbol         string
 	Name           string
-	AssetType      AssetType
+	common.AssetType      common.AssetType
 	Exchange       string
 	Region         string
 	Currency       string
@@ -122,7 +124,7 @@ type RetryPolicy struct {
 // DataFeed represents a market data feed
 type DataFeed struct {
 	Symbol     string
-	AssetType  AssetType
+	common.AssetType  common.AssetType
 	IsActive   bool
 	LastUpdate time.Time
 }
@@ -237,7 +239,7 @@ func (ec *EgyptianCompliance) LoadRegulatoryRules() {
 	ec.regulatoryRules["EFA_001"] = ComplianceRule{
 		RuleID:      "EFA_001",
 		Description: "Maximum position limit per security",
-		AssetTypes:  []AssetType{AssetTypeStock},
+		AssetTypes:  []common.AssetType{AssetTypeStock},
 		Validator: func(data interface{}) bool {
 			// Implement position limit validation
 			return true
@@ -261,7 +263,7 @@ func (ec *EgyptianCompliance) LoadRegulatoryRules() {
 	ec.regulatoryRules["EFA_003"] = ComplianceRule{
 		RuleID:      "EFA_003",
 		Description: "Islamic finance Sharia compliance",
-		AssetTypes:  []AssetType{AssetTypeIslamicInstrument},
+		AssetTypes:  []common.AssetType{AssetTypeIslamicInstrument},
 		Validator: func(data interface{}) bool {
 			// Implement Sharia compliance validation
 			return true
@@ -279,7 +281,7 @@ func (ec *EgyptianCompliance) ValidateOrder(order *Order) error {
 		// Check if rule applies to this asset type
 		applies := false
 		for _, assetType := range rule.AssetTypes {
-			if assetType == order.AssetType {
+			if assetType == order.common.AssetType {
 				applies = true
 				break
 			}
@@ -325,7 +327,7 @@ func (conn *EGXConnector) GetAssetInfo(symbol string) (*AssetInfo, error) {
 		Symbol:    symbol,
 		Exchange:  "EGX",
 		Currency:  "EGP",
-		AssetType: AssetTypeStock,
+		common.AssetType: AssetTypeStock,
 	}, nil
 }
 
@@ -350,11 +352,11 @@ func (md *EGXMarketData) Stop() {
 }
 
 // GetRealTimeData gets real-time market data
-func (md *EGXMarketData) GetRealTimeData(symbol string, assetType AssetType) (*MarketData, error) {
+func (md *EGXMarketData) GetRealTimeData(symbol string, assetType common.AssetType) (*MarketData, error) {
 	// Implement real-time data retrieval
 	return &MarketData{
 		Symbol:    symbol,
-		AssetType: assetType,
+		common.AssetType: assetType,
 		Exchange:  "EGX",
 		Timestamp: time.Now(),
 	}, nil
@@ -390,7 +392,7 @@ func (om *EGXOrderManager) SubmitOrder(ctx context.Context, order *Order) (*Orde
 func NewEGXRiskEngine() *EGXRiskEngine {
 	return &EGXRiskEngine{
 		riskRules:       make(map[string]RiskRule),
-		positionLimits:  make(map[AssetType]PositionLimit),
+		positionLimits:  make(map[common.AssetType]PositionLimit),
 		volatilityModel: &VolatilityModel{Model: "GARCH", WindowSize: 252, Lambda: 0.94},
 		stressTest:      &StressTestEngine{},
 	}

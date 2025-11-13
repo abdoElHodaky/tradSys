@@ -14,6 +14,10 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/abdoElHodaky/tradSys/internal/monitoring"
+	"github.com/abdoElHodaky/tradSys/internal/services/common"
+	"github.com/abdoElHodaky/tradSys/internal/services/exchanges"
 )
 
 // ComplianceLevel is defined in sharia.go to avoid duplication
@@ -22,8 +26,8 @@ import (
 type ADXService struct {
 	exchangeID         string
 	region             string
-	assetTypes         []AssetType
-	tradingHours       *TradingSchedule
+	assetTypes         []common.AssetType
+	tradingHours       *common.TradingSchedule
 	islamicCompliance  *IslamicCompliance
 	uaeCompliance      *UAECompliance
 	shariaBoards       []*ShariaBoard
@@ -44,7 +48,7 @@ type IslamicCompliance struct {
 	shariaRules     map[string]ShariaRule
 	screeningEngine *ScreeningEngine
 	complianceDB    *ComplianceDatabase
-	auditTrail      *IslamicAuditTrail
+	auditTrail      *exchanges.IslamicAuditTrail
 	mu              sync.RWMutex
 }
 
@@ -74,8 +78,8 @@ type UAECompliance struct {
 // SCACompliance handles SCA (Securities and Commodities Authority) compliance
 type SCACompliance struct {
 	rules        map[string]ComplianceRule
-	reportingReq ReportingRequirements
-	licensing    LicensingRequirements
+	reportingReq exchanges.ReportingRequirements
+	licensing    exchanges.LicensingRequirements
 }
 
 // ADXConnector handles connection to Abu Dhabi Exchange
@@ -86,7 +90,7 @@ type ADXConnector struct {
 	connectionPool  *ConnectionPool
 	rateLimiter     *RateLimiter
 	retryPolicy     *RetryPolicy
-	healthChecker   *HealthChecker
+	healthChecker   *monitoring.HealthChecker
 	mu              sync.RWMutex
 }
 
@@ -94,7 +98,7 @@ type ADXConnector struct {
 type ADXMarketData struct {
 	realTimeFeeds  map[string]*DataFeed
 	islamicFeeds   map[string]*IslamicDataFeed
-	sukukPricing   *SukukPricingEngine
+	sukukPricing   *exchanges.SukukPricingEngine
 	islamicIndices *IslamicIndexCalculator
 	historicalData *HistoricalDataStore
 	complianceData *ComplianceDataStore

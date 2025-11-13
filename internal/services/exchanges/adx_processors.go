@@ -14,10 +14,12 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/abdoElHodaky/tradSys/internal/trading/types"
 )
 
 // validateOrder validates an order for ADX submission
-func (adx *ADXService) validateOrder(order *Order) error {
+func (adx *ADXService) validateOrder(order *types.Order) error {
 	if order == nil {
 		return fmt.Errorf("order cannot be nil")
 	}
@@ -59,7 +61,7 @@ func (adx *ADXService) validateOrder(order *Order) error {
 }
 
 // validateOrderSize validates order size against ADX limits
-func (adx *ADXService) validateOrderSize(order *Order) error {
+func (adx *ADXService) validateOrderSize(order *types.Order) error {
 	// Get asset-specific limits
 	limits := adx.getAssetLimits(order.AssetType)
 

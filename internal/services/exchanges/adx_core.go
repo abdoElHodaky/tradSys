@@ -15,6 +15,10 @@ import (
 	"fmt"
 	"log"
 	"time"
+
+	"github.com/abdoElHodaky/tradSys/internal/monitoring"
+	"github.com/abdoElHodaky/tradSys/internal/services/common"
+	"github.com/abdoElHodaky/tradSys/internal/trading/types"
 )
 
 // NewADXService creates a new ADX service instance with Islamic finance capabilities
@@ -75,7 +79,7 @@ func (adx *ADXService) initialize() {
 }
 
 // SubmitOrder submits an order to ADX with Islamic compliance checking
-func (adx *ADXService) SubmitOrder(ctx context.Context, order *Order) (*OrderResponse, error) {
+func (adx *ADXService) SubmitOrder(ctx context.Context, order *types.Order) (*OrderResponse, error) {
 	startTime := time.Now()
 
 	// Validate order
@@ -233,13 +237,13 @@ func (adx *ADXService) GetShariaBoards() []*ShariaBoard {
 }
 
 // GetPerformanceMetrics returns service performance metrics
-func (adx *ADXService) GetPerformanceMetrics() *PerformanceReport {
+func (adx *ADXService) GetPerformanceMetrics() *monitoring.PerformanceReport {
 	return adx.performanceMonitor.GenerateReport()
 }
 
 // HealthCheck performs health check on ADX service
-func (adx *ADXService) HealthCheck(ctx context.Context) *HealthStatus {
-	status := &HealthStatus{
+func (adx *ADXService) HealthCheck(ctx context.Context) *common.HealthStatus {
+	status := &common.HealthStatus{
 		Service:   "ADX",
 		Timestamp: time.Now(),
 		Status:    "healthy",
@@ -303,11 +307,11 @@ func (adx *ADXService) Shutdown(ctx context.Context) error {
 }
 
 // GetExchangeInfo returns ADX exchange information
-func (adx *ADXService) GetExchangeInfo() *ExchangeInfo {
+func (adx *ADXService) GetExchangeInfo() *common.ExchangeInfo {
 	adx.mu.RLock()
 	defer adx.mu.RUnlock()
 
-	return &ExchangeInfo{
+	return &common.ExchangeInfo{
 		ExchangeID:      adx.exchangeID,
 		Name:            "Abu Dhabi Securities Exchange",
 		Region:          adx.region,
@@ -348,8 +352,8 @@ func (adx *ADXService) AddShariaBoard(board *ShariaBoard) error {
 }
 
 // GetServiceStatus returns current service status
-func (adx *ADXService) GetServiceStatus() *ServiceStatus {
-	return &ServiceStatus{
+func (adx *ADXService) GetServiceStatus() *common.ServiceStatus {
+	return &common.ServiceStatus{
 		Service:           "ADX",
 		Status:            "running",
 		Uptime:            adx.performanceMonitor.GetUptime(),

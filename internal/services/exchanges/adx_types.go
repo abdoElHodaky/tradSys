@@ -14,6 +14,9 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/abdoElHodaky/tradSys/internal/core/matching"
+	"github.com/abdoElHodaky/tradSys/internal/trading/types"
 )
 
 // ComplianceLevel defines Sharia compliance levels
@@ -463,7 +466,7 @@ type SukukRiskEngine struct {
 
 // ADXExecutionEngine handles order execution for ADX
 type ADXExecutionEngine struct {
-	orderQueue    []Order
+	orderQueue    []types.Order
 	executionRules map[string]ExecutionRule
 	latencyTracker *LatencyTracker
 	mu             sync.RWMutex
@@ -566,7 +569,7 @@ type RiskAlert struct {
 type IslamicFundManager struct {
 	funds       map[string]*IslamicFund
 	performance map[string]*PerformanceData
-	compliance  *ComplianceEngine
+	compliance  *matching.ComplianceEngine
 	mu          sync.RWMutex
 }
 
@@ -659,15 +662,6 @@ type ComplianceReport struct {
 }
 
 // Supporting types for the above
-
-// IslamicFund represents an Islamic investment fund
-type IslamicFund struct {
-	ID       string
-	Name     string
-	Type     string
-	NAV      float64
-	Holdings map[string]*Holding
-}
 
 // PerformanceData represents performance metrics
 type PerformanceData struct {

@@ -2,6 +2,8 @@ package types
 
 import (
 	"time"
+
+	"github.com/abdoElHodaky/tradSys/internal/services/common"
 )
 
 // Market Data Types
@@ -111,7 +113,7 @@ type ComplianceRule struct {
 	Description string      `json:"description"`
 	Type        string      `json:"type"`
 	Severity    string      `json:"severity"`
-	AssetTypes  []AssetType `json:"asset_types,omitempty"`
+	AssetTypes  []common.AssetType `json:"asset_types,omitempty"`
 	Exchanges   []string    `json:"exchanges,omitempty"`
 	Regions     []string    `json:"regions,omitempty"`
 	IsActive    bool        `json:"is_active"`

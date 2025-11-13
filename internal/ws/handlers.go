@@ -6,49 +6,30 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/abdoElHodaky/tradSys/internal/types"
 	"go.uber.org/zap"
 )
 
-// MessageHandler handles WebSocket message processing
-type MessageHandler struct {
+// WebSocketMessageHandler handles WebSocket message processing
+type WebSocketMessageHandler struct {
 	gateway *Gateway
 	logger  *zap.Logger
 }
 
-// Message represents a WebSocket message
-type Message struct {
-	Type      MessageType            `json:"type"`
-	Channel   string                 `json:"channel,omitempty"`
-	Symbol    string                 `json:"symbol,omitempty"`
-	Data      interface{}            `json:"data,omitempty"`
-	Timestamp time.Time              `json:"timestamp"`
-	MessageID string                 `json:"message_id"`
-	Metadata  map[string]interface{} `json:"metadata,omitempty"`
-}
+// Message is defined in message.go
 
-// SubscribeRequest represents a subscription request
-type SubscribeRequest struct {
-	Channel string                 `json:"channel"`
-	Symbol  string                 `json:"symbol,omitempty"`
-	Type    SubscriptionType       `json:"type"`
-	Filters map[string]interface{} `json:"filters,omitempty"`
-}
+// SubscribeRequest and UnsubscribeRequest are defined in types.go
 
-// UnsubscribeRequest represents an unsubscription request
-type UnsubscribeRequest struct {
-	SubscriptionID string `json:"subscription_id"`
-}
-
-// NewMessageHandler creates a new message handler
-func NewMessageHandler(gateway *Gateway, logger *zap.Logger) *MessageHandler {
-	return &MessageHandler{
+// NewWebSocketMessageHandler creates a new message handler
+func NewWebSocketMessageHandler(gateway *Gateway, logger *zap.Logger) *WebSocketMessageHandler {
+	return &WebSocketMessageHandler{
 		gateway: gateway,
 		logger:  logger,
 	}
 }
 
 // ProcessMessage processes an incoming WebSocket message
-func (h *MessageHandler) ProcessMessage(conn *Connection, messageBytes []byte) error {
+func (h *WebSocketMessageHandler) ProcessMessage(conn *Connection, messageBytes []byte) error {
 	var message Message
 	if err := json.Unmarshal(messageBytes, &message); err != nil {
 		h.logger.Error("Failed to unmarshal message",
@@ -64,11 +45,11 @@ func (h *MessageHandler) ProcessMessage(conn *Connection, messageBytes []byte) e
 
 	// Process message based on type
 	switch message.Type {
-	case MessageTypeSubscribe:
+	case types.MessageTypeSubscribe:
 		return h.handleSubscribe(conn, &message)
-	case MessageTypeUnsubscribe:
+	case types.MessageTypeUnsubscribe:
 		return h.handleUnsubscribe(conn, &message)
-	case MessageTypeHeartbeat:
+	case types.MessageTypeHeartbeat:
 		return h.handleHeartbeat(conn, &message)
 	default:
 		h.logger.Warn("Unknown message type",
@@ -79,7 +60,7 @@ func (h *MessageHandler) ProcessMessage(conn *Connection, messageBytes []byte) e
 }
 
 // CreateMessage creates a new message
-func (h *MessageHandler) CreateMessage(messageType MessageType, channel string, data interface{}) (*Message, error) {
+func (h *WebSocketMessageHandler) CreateMessage(messageType types.MessageType, channel string, data interface{}) (*Message, error) {
 	return &Message{
 		Type:      messageType,
 		Channel:   channel,
@@ -90,12 +71,12 @@ func (h *MessageHandler) CreateMessage(messageType MessageType, channel string, 
 }
 
 // SerializeMessage serializes a message to JSON bytes
-func (h *MessageHandler) SerializeMessage(message *Message) ([]byte, error) {
+func (h *WebSocketMessageHandler) SerializeMessage(message *Message) ([]byte, error) {
 	return json.Marshal(message)
 }
 
 // handleSubscribe handles subscription requests
-func (h *MessageHandler) handleSubscribe(conn *Connection, message *Message) error {
+func (h *WebSocketMessageHandler) handleSubscribe(conn *Connection, message *Message) error {
 	var subReq SubscribeRequest
 
 	// Parse subscription request from message data
@@ -126,11 +107,11 @@ func (h *MessageHandler) handleSubscribe(conn *Connection, message *Message) err
 		"type":    subReq.Type,
 	}
 
-	return h.sendMessage(conn, MessageTypeSubscribe, "", response)
+	return h.sendMessage(conn, types.MessageTypeSubscribe, "", response)
 }
 
 // handleUnsubscribe handles unsubscription requests
-func (h *MessageHandler) handleUnsubscribe(conn *Connection, message *Message) error {
+func (h *WebSocketMessageHandler) handleUnsubscribe(conn *Connection, message *Message) error {
 	var unsubReq UnsubscribeRequest
 
 	// Parse unsubscription request from message data
@@ -154,21 +135,21 @@ func (h *MessageHandler) handleUnsubscribe(conn *Connection, message *Message) e
 		"subscription_id": unsubReq.SubscriptionID,
 	}
 
-	return h.sendMessage(conn, MessageTypeUnsubscribe, "", response)
+	return h.sendMessage(conn, types.MessageTypeUnsubscribe, "", response)
 }
 
 // handleHeartbeat handles heartbeat messages
-func (h *MessageHandler) handleHeartbeat(conn *Connection, message *Message) error {
+func (h *WebSocketMessageHandler) handleHeartbeat(conn *Connection, message *Message) error {
 	response := map[string]interface{}{
 		"status":    "alive",
 		"timestamp": time.Now(),
 	}
 
-	return h.sendMessage(conn, MessageTypeHeartbeat, "", response)
+	return h.sendMessage(conn, types.MessageTypeHeartbeat, "", response)
 }
 
 // validateSubscriptionRequest validates a subscription request
-func (h *MessageHandler) validateSubscriptionRequest(req *SubscribeRequest) error {
+func (h *WebSocketMessageHandler) validateSubscriptionRequest(req *SubscribeRequest) error {
 	if req.Channel == "" {
 		return errors.New("channel is required")
 	}
@@ -210,7 +191,7 @@ func (h *MessageHandler) validateSubscriptionRequest(req *SubscribeRequest) erro
 }
 
 // sendMessage sends a message to a connection
-func (h *MessageHandler) sendMessage(conn *Connection, messageType MessageType, channel string, data interface{}) error {
+func (h *WebSocketMessageHandler) sendMessage(conn *Connection, messageType types.MessageType, channel string, data interface{}) error {
 	message := &Message{
 		Type:      messageType,
 		Channel:   channel,
@@ -238,33 +219,18 @@ func (h *MessageHandler) sendMessage(conn *Connection, messageType MessageType, 
 }
 
 // sendError sends an error message to a connection
-func (h *MessageHandler) sendError(conn *Connection, errorCode, errorMessage string) error {
+func (h *WebSocketMessageHandler) sendError(conn *Connection, errorCode, errorMessage string) error {
 	errorData := map[string]interface{}{
 		"code":    errorCode,
 		"message": errorMessage,
 	}
 
-	return h.sendMessage(conn, MessageTypeError, "", errorData)
+	return h.sendMessage(conn, types.MessageTypeError, "", errorData)
 }
 
-// generateMessageID generates a unique message ID
-func generateMessageID() string {
-	return fmt.Sprintf("msg_%d", time.Now().UnixNano())
-}
+// generateMessageID is defined in core.go
 
-// ConnectionManager manages WebSocket connections
-type ConnectionManager struct {
-	gateway *Gateway
-	logger  *zap.Logger
-}
-
-// NewConnectionManager creates a new connection manager
-func NewConnectionManager(gateway *Gateway, logger *zap.Logger) *ConnectionManager {
-	return &ConnectionManager{
-		gateway: gateway,
-		logger:  logger,
-	}
-}
+// ConnectionManager is defined in components.go
 
 // PerformanceOptimizer optimizes WebSocket performance
 type PerformanceOptimizer struct {
