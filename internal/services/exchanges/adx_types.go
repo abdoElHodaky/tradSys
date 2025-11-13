@@ -11,13 +11,20 @@
 package exchanges
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/core/matching"
 	"github.com/abdoElHodaky/tradSys/internal/trading/types"
 )
+
+// ComplianceEngine interface for compliance checking
+type ComplianceEngine interface {
+	ProcessOrder(order *types.Order) (*types.Trade, error)
+	Start(ctx context.Context) error
+	Stop(ctx context.Context) error
+}
 
 // ComplianceLevel defines Sharia compliance levels
 type ComplianceLevel int
@@ -569,7 +576,7 @@ type RiskAlert struct {
 type IslamicFundManager struct {
 	funds       map[string]*IslamicFund
 	performance map[string]*PerformanceData
-	compliance  *matching.ComplianceEngine
+	compliance  ComplianceEngine
 	mu          sync.RWMutex
 }
 
