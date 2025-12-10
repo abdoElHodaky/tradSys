@@ -139,7 +139,7 @@ type TradingStatus struct {
 	CurrentTime time.Time
 	NextOpen    time.Time
 	NextClose   time.Time
-	Session     *TradingSession
+	Session     *common.TradingSession
 	Message     string
 }
 

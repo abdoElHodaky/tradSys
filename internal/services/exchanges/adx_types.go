@@ -992,14 +992,18 @@ func (ic *IslamicCompliance) IsCompliant(order *common.Order) bool {
 func (ic *IslamicCompliance) GenerateReport() *compliance.ComplianceReport {
 	// TODO: Implement compliance report generation
 	log.Printf("IslamicCompliance.GenerateReport() - stub implementation")
+	now := time.Now()
 	return &compliance.ComplianceReport{
-		ID:          "COMP-" + time.Now().Format("20060102150405"),
+		ID:          "COMP-" + now.Format("20060102150405"),
 		Type:        compliance.ReportTypeDaily,
 		Regulation:  "Islamic Finance",
-		Period:      compliance.ReportPeriodDaily,
+		Period:      compliance.ReportPeriod{
+			StartDate: now.Truncate(24 * time.Hour),
+			EndDate:   now.Truncate(24 * time.Hour).Add(24 * time.Hour),
+		},
 		Data:        make(map[string]interface{}),
 		Status:      compliance.ReportStatusPending,
-		GeneratedAt: time.Now(),
+		GeneratedAt: now,
 	}
 }
 

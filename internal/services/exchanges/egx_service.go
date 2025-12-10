@@ -17,7 +17,7 @@ type EGXService struct {
 	exchangeID         string
 	region             string
 	assetTypes         []AssetType
-	tradingHours       *TradingSchedule
+	tradingHours       *common.TradingSchedule
 	compliance         *EgyptianCompliance
 	islamicSupport     bool
 	languageSupport    []string
@@ -42,24 +42,7 @@ const (
 	AssetTypeCommodity         = common.AssetTypeCommodity
 )
 
-// TradingSession represents a trading session
-type TradingSession struct {
-	Name       string
-	StartTime  time.Time
-	EndTime    time.Time
-	AssetTypes []AssetType
-}
-
-// TradingSchedule represents the trading schedule for an exchange
-type TradingSchedule struct {
-	MarketOpen      time.Time         `json:"market_open"`
-	MarketClose     time.Time         `json:"market_close"`
-	PreMarketOpen   time.Time         `json:"pre_market_open"`
-	PostMarketClose time.Time         `json:"post_market_close"`
-	TradingSessions []TradingSession  `json:"trading_sessions"`
-	Holidays        []time.Time       `json:"holidays"`
-	Timezone        *time.Location    `json:"timezone"`
-}
+// Use TradingSession from common package (no redeclaration needed)
 
 // EgyptianCompliance handles EFA regulatory compliance
 type EgyptianCompliance struct {
@@ -265,10 +248,11 @@ func (egx *EGXService) GetAssetInfo(ctx context.Context, symbol string) (*AssetI
 }
 
 // GetTradingStatus returns current trading status
-func (egx *EGXService) GetTradingStatus() *TradingStatus {
-	now := time.Now().In(egx.tradingHours.Timezone)
+func (egx *EGXService) GetTradingStatus() *common.TradingStatus {
+	timezone, _ := time.LoadLocation(egx.tradingHours.Timezone)
+	now := time.Now().In(timezone)
 
-	status := &TradingStatus{
+	status := &common.TradingStatus{
 		Exchange:    "EGX",
 		IsOpen:      egx.isMarketOpen(now),
 		CurrentTime: now,
@@ -347,7 +331,8 @@ func (egx *EGXService) isAssetTypeSupported(assetType common.AssetType) bool {
 // isMarketOpen checks if the EGX market is currently open
 func (egx *EGXService) isMarketOpen(now time.Time) bool {
 	// Convert to Cairo timezone
-	cairoTime := now.In(egx.tradingHours.Timezone)
+	timezone, _ := time.LoadLocation(egx.tradingHours.Timezone)
+	cairoTime := now.In(timezone)
 
 	// Check if it's a weekend (Friday-Saturday in Egypt)
 	weekday := cairoTime.Weekday()
@@ -374,10 +359,11 @@ func (egx *EGXService) isMarketOpen(now time.Time) bool {
 }
 
 // getCurrentSession returns the current trading session
-func (egx *EGXService) getCurrentSession(now time.Time) *TradingSession {
-	cairoTime := now.In(egx.tradingHours.Timezone)
+func (egx *EGXService) getCurrentSession(now time.Time) *common.TradingSession {
+	timezone, _ := time.LoadLocation(egx.tradingHours.Timezone)
+	cairoTime := now.In(timezone)
 
-	for _, session := range egx.tradingHours.TradingSessions {
+	for _, session := range egx.tradingHours.Sessions {
 		if cairoTime.After(session.StartTime) && cairoTime.Before(session.EndTime) {
 			return &session
 		}
@@ -388,7 +374,8 @@ func (egx *EGXService) getCurrentSession(now time.Time) *TradingSession {
 
 // getNextMarketOpen returns the next market opening time
 func (egx *EGXService) getNextMarketOpen(now time.Time) time.Time {
-	cairoTime := now.In(egx.tradingHours.Timezone)
+	timezone, _ := time.LoadLocation(egx.tradingHours.Timezone)
+	cairoTime := now.In(timezone)
 
 	// If market is currently open, return tomorrow's opening
 	if egx.isMarketOpen(cairoTime) {
@@ -397,7 +384,7 @@ func (egx *EGXService) getNextMarketOpen(now time.Time) time.Time {
 
 	// If it's the same day but before opening, return today's opening
 	if cairoTime.Hour() < 10 {
-		return time.Date(cairoTime.Year(), cairoTime.Month(), cairoTime.Day(), 10, 0, 0, 0, egx.tradingHours.Timezone)
+		return time.Date(cairoTime.Year(), cairoTime.Month(), cairoTime.Day(), 10, 0, 0, 0, timezone)
 	}
 
 	// Otherwise, return next business day opening
@@ -406,11 +393,12 @@ func (egx *EGXService) getNextMarketOpen(now time.Time) time.Time {
 
 // getNextMarketClose returns the next market closing time
 func (egx *EGXService) getNextMarketClose(now time.Time) time.Time {
-	cairoTime := now.In(egx.tradingHours.Timezone)
+	timezone, _ := time.LoadLocation(egx.tradingHours.Timezone)
+	cairoTime := now.In(timezone)
 
 	// If market is currently open, return today's closing
 	if egx.isMarketOpen(cairoTime) {
-		return time.Date(cairoTime.Year(), cairoTime.Month(), cairoTime.Day(), 14, 30, 0, 0, egx.tradingHours.Timezone)
+		return time.Date(cairoTime.Year(), cairoTime.Month(), cairoTime.Day(), 14, 30, 0, 0, timezone)
 	}
 
 	// Otherwise, return next business day closing
@@ -488,24 +476,28 @@ func getSupportedAssetTypes() []common.AssetType {
 }
 
 // createEGXTradingSchedule creates the trading schedule for EGX
-func createEGXTradingSchedule(timezone *time.Location) *TradingSchedule {
+func createEGXTradingSchedule(timezone *time.Location) *common.TradingSchedule {
 	now := time.Now().In(timezone)
 
-	return &TradingSchedule{
-		MarketOpen:      time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, timezone),
-		MarketClose:     time.Date(now.Year(), now.Month(), now.Day(), 14, 30, 0, 0, timezone),
-		PreMarketOpen:   time.Date(now.Year(), now.Month(), now.Day(), 9, 30, 0, 0, timezone),
-		PostMarketClose: time.Date(now.Year(), now.Month(), now.Day(), 15, 0, 0, 0, timezone),
-		TradingSessions: []TradingSession{
+	return &common.TradingSchedule{
+		Timezone: timezone.String(),
+		Sessions: []common.TradingSession{
 			{
 				Name:       "Main Session",
 				StartTime:  time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, timezone),
 				EndTime:    time.Date(now.Year(), now.Month(), now.Day(), 14, 30, 0, 0, timezone),
-				AssetTypes: getSupportedAssetTypes(),
+				AssetTypes: []common.AssetType{AssetTypeStock, AssetTypeGovernmentBond, AssetTypeETF},
+			},
+			{
+				Name:       "Pre-Market Session",
+				StartTime:  time.Date(now.Year(), now.Month(), now.Day(), 9, 30, 0, 0, timezone),
+				EndTime:    time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, timezone),
+				AssetTypes: []common.AssetType{AssetTypeStock},
 			},
 		},
-		Holidays: getEGXHolidays(now.Year()),
-		Timezone: timezone,
+		Holidays:     getEGXHolidays(now.Year()),
+		IsActive:     true,
+		LastModified: now,
 	}
 }
 

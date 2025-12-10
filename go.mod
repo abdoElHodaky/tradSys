@@ -20,16 +20,16 @@ require (
 	github.com/segmentio/ksuid v1.0.4
 	github.com/spf13/viper v1.13.0
 	github.com/stretchr/testify v1.10.0
-	github.com/thefabric-io/eventsourcing v0.6.0
+	github.com/thefabric-io/eventsourcing v0.5.2
 	github.com/ulule/limiter/v3 v3.11.1
 	go-micro.dev/v4 v4.9.0
 	go.uber.org/fx v1.24.0
 	go.uber.org/zap v1.26.0
 	golang.org/x/crypto v0.17.0
 	google.golang.org/grpc v1.50.0
-	google.golang.org/protobuf v1.36.10
+	google.golang.org/protobuf v1.30.0
 	gopkg.in/yaml.v3 v3.0.1
-	gorm.io/driver/postgres v1.5.11
+	gorm.io/driver/postgres v1.4.5
 	gorm.io/driver/sqlite v1.5.7
 	gorm.io/gorm v1.25.12
 )
@@ -73,16 +73,20 @@ require (
 	github.com/hashicorp/go-hclog v1.6.2 // indirect
 	github.com/hashicorp/raft v1.7.3 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
+	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
+	github.com/jackc/pgconn v1.13.0 // indirect
+	github.com/jackc/pgio v1.0.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgproto3/v2 v2.3.1 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
-	github.com/jackc/pgx/v5 v5.6.0 // indirect
-	github.com/jackc/puddle/v2 v2.2.2 // indirect
+	github.com/jackc/pgtype v1.12.0 // indirect
+	github.com/jackc/pgx/v4 v4.17.2 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kevinburke/ssh_config v0.0.0-20201106050909-4977a11b4351 // indirect
-	github.com/klauspost/compress v1.18.0 // indirect
+	github.com/klauspost/compress v1.16.7 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-sqlite3 v1.14.22 // indirect
@@ -91,7 +95,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/nats-io/nats-server/v2 v2.11.0-dev // indirect
+	github.com/nats-io/nats-server/v2 v2.9.25 // indirect
 	github.com/nats-io/nkeys v0.4.8 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/nats-io/stan.go v0.10.0 // indirect
@@ -115,7 +119,7 @@ require (
 	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
 	golang.org/x/tools v0.16.1 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251014184007-4626949a642f // indirect
+	google.golang.org/genproto v0.0.0-20220519153652-3a47de7e79bd // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
@@ -123,7 +127,7 @@ require (
 
 require (
 	github.com/lithammer/shortuuid/v3 v3.0.7 // indirect
-	github.com/nats-io/nats.go v1.31.0
+	github.com/nats-io/nats.go v1.29.0
 	github.com/oklog/ulid v1.3.1 // indirect
 	golang.org/x/time v0.14.0
 )

@@ -12,6 +12,7 @@ package exchanges
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"time"
 

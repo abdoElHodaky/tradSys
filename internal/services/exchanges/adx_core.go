@@ -16,6 +16,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/abdoElHodaky/tradSys/internal/compliance"
 	"github.com/abdoElHodaky/tradSys/internal/monitoring"
 	"github.com/abdoElHodaky/tradSys/internal/services/common"
 	"github.com/abdoElHodaky/tradSys/internal/trading/types"
@@ -314,7 +315,7 @@ func (adx *ADXService) CalculateZakat(ctx context.Context, portfolio *Portfolio)
 }
 
 // GetComplianceReport generates Islamic compliance report
-func (adx *ADXService) GetComplianceReport(ctx context.Context, portfolioID string) (*ComplianceReport, error) {
+func (adx *ADXService) GetComplianceReport(ctx context.Context, portfolioID string) (*compliance.ComplianceReport, error) {
 	// Generate compliance report (portfolioID not used in stub implementation)
 	report := adx.islamicCompliance.GenerateReport()
 	
