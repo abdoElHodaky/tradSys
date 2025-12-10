@@ -33,12 +33,12 @@ func (c *Calculator) CalculatePositionRisk(ctx context.Context, position *Positi
 	}
 
 	metrics := &PositionRiskMetrics{
-		Symbol:        position.Symbol,
-		UserID:        position.UserID,
-		Quantity:      position.Quantity,
-		AveragePrice:  position.AveragePrice,
-		CurrentPrice:  currentPrice,
-		CalculatedAt:  time.Now(),
+		Symbol:       position.Symbol,
+		UserID:       position.UserID,
+		Quantity:     position.Quantity,
+		AveragePrice: position.AveragePrice,
+		CurrentPrice: currentPrice,
+		CalculatedAt: time.Now(),
 	}
 
 	// Calculate unrealized P&L
@@ -188,7 +188,7 @@ func (c *Calculator) CalculateOrderRisk(ctx context.Context, order *orders.Order
 	// Calculate position impact
 	if currentPosition != nil {
 		metrics.CurrentPosition = currentPosition.Quantity
-		
+
 		// Calculate new position after order execution
 		newQuantity := currentPosition.Quantity
 		if order.Side == orders.OrderSideBuy {
@@ -238,7 +238,7 @@ func (c *Calculator) CalculateOrderRisk(ctx context.Context, order *orders.Order
 func (c *Calculator) calculateVaR(position *Position, currentPrice float64, confidence float64) float64 {
 	// Simplified VaR calculation using historical volatility
 	// In production, this would use more sophisticated models
-	
+
 	volatility := c.getHistoricalVolatility(position.Symbol)
 	if volatility == 0 {
 		volatility = 0.02 // Default 2% daily volatility
@@ -329,12 +329,12 @@ func (c *Calculator) determineAccountRiskLevel(metrics *AccountRiskMetrics, maxP
 	} else if math.Abs(metrics.TotalUnrealizedPnLPercent) > 4 || metrics.ConcentrationRisk > 0.4 {
 		return RiskLevelMedium
 	}
-	
+
 	// Consider maximum position risk
 	if maxPositionRisk == RiskLevelCritical {
 		return RiskLevelHigh // Downgrade slightly for portfolio effect
 	}
-	
+
 	return RiskLevelLow
 }
 
@@ -392,12 +392,12 @@ func (c *Calculator) calculateCorrelationRisk(positions []*PositionRiskMetrics) 
 func (c *Calculator) calculateLeverageImpact(order *orders.Order, currentPosition *Position) float64 {
 	// Simplified leverage calculation
 	orderValue := order.Quantity * order.Price
-	
+
 	if currentPosition != nil {
 		currentValue := math.Abs(currentPosition.Quantity) * order.Price
 		return orderValue / math.Max(currentValue, 1000) // Avoid division by zero
 	}
-	
+
 	return orderValue / 1000 // Normalized impact
 }
 
@@ -406,7 +406,7 @@ func (c *Calculator) calculateMarginRequirement(order *orders.Order, currentPric
 	// Simplified margin calculation - typically 10-50% of order value
 	orderValue := order.Quantity * currentPrice
 	marginRate := 0.2 // 20% margin requirement
-	
+
 	return orderValue * marginRate
 }
 
@@ -414,12 +414,12 @@ func (c *Calculator) calculateMarginRequirement(order *orders.Order, currentPric
 func (c *Calculator) calculateMaxLossPotential(order *orders.Order, currentPrice float64) float64 {
 	// For market orders, assume 2% slippage
 	// For limit orders, calculate based on price difference
-	
+
 	if order.Type == orders.OrderTypeMarket {
 		slippage := 0.02
 		return order.Quantity * currentPrice * slippage
 	}
-	
+
 	// For limit orders, max loss is the difference between limit and current price
 	priceDiff := math.Abs(order.Price - currentPrice)
 	return order.Quantity * priceDiff
@@ -429,16 +429,16 @@ func (c *Calculator) calculateMaxLossPotential(order *orders.Order, currentPrice
 func (c *Calculator) getHistoricalVolatility(symbol string) float64 {
 	// Placeholder - in production would fetch from market data service
 	volatilityMap := map[string]float64{
-		"AAPL": 0.25,
+		"AAPL":  0.25,
 		"GOOGL": 0.30,
-		"TSLA": 0.45,
-		"SPY": 0.15,
+		"TSLA":  0.45,
+		"SPY":   0.15,
 	}
-	
+
 	if vol, exists := volatilityMap[symbol]; exists {
 		return vol
 	}
-	
+
 	return 0.20 // Default volatility
 }
 
@@ -451,10 +451,10 @@ func (c *Calculator) compareRiskLevels(a, b RiskLevel) int {
 		RiskLevelHigh:     3,
 		RiskLevelCritical: 4,
 	}
-	
+
 	levelA := levels[a]
 	levelB := levels[b]
-	
+
 	if levelA < levelB {
 		return -1
 	} else if levelA > levelB {

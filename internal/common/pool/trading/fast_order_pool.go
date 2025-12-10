@@ -1,8 +1,9 @@
 package pools
 
 import (
-	"github.com/abdoElHodaky/tradSys/internal/trading/types"
 	"sync"
+
+	"github.com/abdoElHodaky/tradSys/internal/trading/types"
 )
 
 // FastOrder represents an optimized order structure for HFT

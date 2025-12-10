@@ -7,10 +7,8 @@ import (
 
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
-	"github.com/abdoElHodaky/tradSys/internal/orders"
 	"github.com/abdoElHodaky/tradSys/internal/services"
 	"github.com/abdoElHodaky/tradSys/proto/marketdata"
-	orderspb "github.com/abdoElHodaky/tradSys/proto/orders"
 	"go.uber.org/zap"
 )
 

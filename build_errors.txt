@@ -1,0 +1,135 @@
+# github.com/abdoElHodaky/tradSys/internal/api/handlers
+internal/api/handlers/routes.go:105:15: cannot use side (variable of string type "github.com/abdoElHodaky/tradSys/pkg/types".OrderSide) as "github.com/abdoElHodaky/tradSys/internal/trading/types".OrderSide value in struct literal
+internal/api/handlers/routes.go:106:15: cannot use orderType (variable of string type "github.com/abdoElHodaky/tradSys/pkg/types".OrderType) as "github.com/abdoElHodaky/tradSys/internal/trading/types".OrderType value in struct literal
+# github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core
+internal/architecture/cqrs/core/handler.go:30:16: undefined: eventbus
+internal/architecture/cqrs/core/handler.go:31:16: undefined: aggregate
+internal/architecture/cqrs/core/handler.go:37:41: undefined: eventbus
+internal/architecture/cqrs/core/handler.go:37:74: undefined: aggregate
+internal/architecture/cqrs/core/handler.go:116:16: undefined: aggregate
+internal/architecture/cqrs/core/handler.go:121:69: undefined: aggregate
+internal/architecture/cqrs/core/handler.go:130:125: undefined: aggregate
+internal/architecture/cqrs/core/handler.go:148:131: undefined: aggregate
+internal/architecture/cqrs/core/handler.go:178:77: undefined: aggregate
+internal/architecture/cqrs/core/event.go:105:34: AggregateState does not satisfy "github.com/thefabric-io/eventsourcing".AggregateState (missing method Type)
+internal/architecture/cqrs/core/event.go:105:34: too many errors
+# github.com/abdoElHodaky/tradSys/internal/api/handlers_disabled
+internal/api/handlers_disabled/pairs_handler.go:20:19: undefined: strategy
+internal/api/handlers_disabled/pairs_handler.go:29:19: undefined: strategy
+internal/api/handlers_disabled/fast_orders.go:35:9: undefined: pools
+internal/api/handlers_disabled/fast_orders.go:36:8: undefined: pools
+internal/api/handlers_disabled/fast_orders.go:38:10: undefined: pools
+internal/api/handlers_disabled/fast_orders.go:39:8: undefined: pools
+internal/api/handlers_disabled/fast_orders.go:41:11: undefined: pools
+internal/api/handlers_disabled/fast_orders.go:307:54: undefined: pools
+internal/api/handlers_disabled/fast_orders.go:330:79: undefined: pools
+internal/api/handlers_disabled/fast_orders.go:344:77: undefined: pools
+internal/api/handlers_disabled/fast_orders.go:41:11: too many errors
+# github.com/abdoElHodaky/tradSys/internal/orders
+internal/orders/order_service.go:375:14: cannot use string(order.Side) (value of type string) as "github.com/abdoElHodaky/tradSys/pkg/types".OrderSide value in struct literal
+internal/orders/order_service.go:376:14: cannot use string(order.Type) (value of type string) as "github.com/abdoElHodaky/tradSys/pkg/types".OrderType value in struct literal
+internal/orders/order_service.go:379:3: unknown field Timestamp in struct literal of type "github.com/abdoElHodaky/tradSys/pkg/types".Order
+# github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/handlers
+internal/architecture/cqrs/handlers/circuit_breaker.go:265:11: undefined: eventbus
+internal/architecture/cqrs/handlers/watermill_cqrs.go:26:16: undefined: store
+internal/architecture/cqrs/handlers/watermill_cqrs.go:27:16: undefined: aggregate
+internal/architecture/cqrs/handlers/compatibility.go:23:16: undefined: store
+internal/architecture/cqrs/handlers/compatibility.go:24:16: undefined: aggregate
+internal/architecture/cqrs/handlers/compatibility.go:25:16: undefined: eventbus
+internal/architecture/cqrs/handlers/distributed_tracing.go:186:11: undefined: eventbus
+internal/architecture/cqrs/handlers/event_bus_router.go:52:25: undefined: eventbus
+internal/architecture/cqrs/handlers/event_ordering.go:189:13: undefined: eventbus
+internal/architecture/cqrs/handlers/event_sharding.go:181:11: undefined: eventbus
+internal/architecture/cqrs/handlers/event_sharding.go:181:11: too many errors
+# github.com/abdoElHodaky/tradSys/internal/core/matching/strategies
+internal/core/matching/strategies/linear_impact.go:16:9: cannot use &LinearImpactCalculator{…} (value of type *LinearImpactCalculator) as interfaces.ImpactCalculator value in return statement: *LinearImpactCalculator does not implement interfaces.ImpactCalculator (wrong type for method CalculateImpact)
+		have CalculateImpact(*"github.com/abdoElHodaky/tradSys/internal/trading/types".Order, float64) float64
+		want CalculateImpact(*"github.com/abdoElHodaky/tradSys/pkg/types".Order, float64) float64
+internal/core/matching/strategies/log_impact.go:19:9: cannot use &LogImpactCalculator{…} (value of type *LogImpactCalculator) as interfaces.ImpactCalculator value in return statement: *LogImpactCalculator does not implement interfaces.ImpactCalculator (wrong type for method CalculateImpact)
+		have CalculateImpact(*"github.com/abdoElHodaky/tradSys/internal/trading/types".Order, float64) float64
+		want CalculateImpact(*"github.com/abdoElHodaky/tradSys/pkg/types".Order, float64) float64
+internal/core/matching/strategies/sqrt_impact.go:19:9: cannot use &SqrtImpactCalculator{…} (value of type *SqrtImpactCalculator) as interfaces.ImpactCalculator value in return statement: *SqrtImpactCalculator does not implement interfaces.ImpactCalculator (wrong type for method CalculateImpact)
+		have CalculateImpact(*"github.com/abdoElHodaky/tradSys/internal/trading/types".Order, float64) float64
+		want CalculateImpact(*"github.com/abdoElHodaky/tradSys/pkg/types".Order, float64) float64
+# github.com/abdoElHodaky/tradSys/internal/orders/matching
+internal/orders/matching/engine_types.go:119:6: EngineConfig redeclared in this block
+	internal/orders/matching/advanced_engine.go:30:6: other declaration of EngineConfig
+internal/orders/matching/hft_types.go:54:6: EngineStats redeclared in this block
+	internal/orders/matching/engine_types.go:147:6: other declaration of EngineStats
+internal/orders/matching/hft_types.go:213:6: PriceLevel redeclared in this block
+	internal/orders/matching/engine_types.go:140:6: other declaration of PriceLevel
+internal/orders/matching/hft_types.go:248:2: MaxOrderBookDepth redeclared in this block
+	internal/orders/matching/engine_types.go:190:2: other declaration of MaxOrderBookDepth
+internal/orders/matching/hft_types.go:252:2: DefaultTradeChannelBuffer redeclared in this block
+	internal/orders/matching/engine_types.go:186:2: other declaration of DefaultTradeChannelBuffer
+internal/orders/matching/engine_core.go:34:42: config.TradeChannelBuffer undefined (type *EngineConfig has no field or method TradeChannelBuffer)
+internal/orders/matching/hft_core.go:40:4: unknown field MinLatencyNanos in struct literal of type EngineStats
+internal/orders/matching/hft_core.go:72:4: unknown field MinLatencyNanos in struct literal of type EngineStats
+internal/orders/matching/hft_core.go:166:3: unknown field OrdersProcessed in struct literal of type EngineStats
+internal/orders/matching/hft_core.go:167:3: unknown field TradesExecuted in struct literal of type EngineStats
+internal/orders/matching/hft_core.go:167:3: too many errors
+# github.com/abdoElHodaky/tradSys/internal/performance
+internal/performance/websocket_optimizer.go:157:49: cannot use writer.Flush (value of type func() error) as func() value in argument to time.AfterFunc
+# github.com/abdoElHodaky/tradSys/services/exchanges
+services/exchanges/exchange_types.go:303:6: PerformanceMonitor redeclared in this block
+	services/exchanges/adx_types.go:234:6: other declaration of PerformanceMonitor
+services/exchanges/adx_types.go:53:19: undefined: ScreeningEngine
+services/exchanges/adx_types.go:54:19: undefined: ComplianceDatabase
+services/exchanges/adx_types.go:55:19: undefined: IslamicAuditTrail
+services/exchanges/adx_types.go:109:15: undefined: ReportingRequirements
+services/exchanges/adx_types.go:110:15: undefined: LicensingRequirements
+services/exchanges/adx_types.go:129:18: undefined: SukukPricingEngine
+services/exchanges/adx_types.go:130:18: undefined: IslamicIndexCalculator
+services/exchanges/adx_types.go:132:18: undefined: ComplianceDataStore
+services/exchanges/adx_types.go:200:20: undefined: ScreeningResults
+services/exchanges/adx_types.go:200:20: too many errors
+# github.com/abdoElHodaky/tradSys/services/common
+services/common/interfaces.go:187:51: undefined: OrderResponse
+services/common/interfaces.go:188:53: undefined: OrderResponse
+services/common/interfaces.go:190:54: undefined: MarketData
+services/common/interfaces.go:221:53: undefined: Transaction
+services/common/interfaces.go:264:56: undefined: MarketData
+services/common/interfaces.go:265:80: undefined: MarketData
+services/common/interfaces.go:279:51: undefined: OrderResponse
+services/common/interfaces.go:280:76: undefined: OrderResponse
+services/common/interfaces.go:281:53: undefined: OrderResponse
+services/common/interfaces.go:320:16: undefined: TradingSchedule
+services/common/interfaces.go:281:53: too many errors
+# github.com/abdoElHodaky/tradSys/services/exchange/adx
+services/exchange/adx/client.go:17:18: undefined: Connector
+services/exchange/adx/client.go:18:18: undefined: MarketDataService
+services/exchange/adx/client.go:19:18: undefined: OrderManager
+services/exchange/adx/client.go:20:18: undefined: AssetManager
+services/exchange/adx/client.go:21:18: undefined: ComplianceService
+services/exchange/adx/client.go:22:18: undefined: IslamicFinanceService
+services/exchange/adx/client.go:46:19: undefined: NewConnector
+services/exchange/adx/client.go:47:19: undefined: NewMarketDataService
+services/exchange/adx/client.go:48:19: undefined: NewOrderManager
+services/exchange/adx/client.go:49:19: undefined: NewAssetManager
+services/exchange/adx/client.go:49:19: too many errors
+# github.com/abdoElHodaky/tradSys/services/core
+services/core/service_mesh.go:25:20: undefined: ServiceDiscovery
+services/core/service_mesh.go:26:20: undefined: LoadBalancer
+services/core/service_mesh.go:27:20: undefined: HealthChecker
+services/core/service_mesh.go:28:20: undefined: MetricsCollector
+services/core/service_mesh.go:77:21: undefined: NewServiceDiscovery
+services/core/service_mesh.go:78:21: undefined: NewLoadBalancer
+services/core/service_mesh.go:79:21: undefined: NewHealthChecker
+services/core/service_mesh.go:80:21: undefined: NewMetricsCollector
+# github.com/abdoElHodaky/tradSys/services/exchange/egx
+services/exchange/egx/client.go:17:16: undefined: Connector
+services/exchange/egx/client.go:18:16: undefined: MarketDataService
+services/exchange/egx/client.go:19:16: undefined: OrderManager
+services/exchange/egx/client.go:20:16: undefined: AssetManager
+services/exchange/egx/client.go:21:16: undefined: ComplianceService
+services/exchange/egx/client.go:43:17: undefined: NewConnector
+services/exchange/egx/client.go:44:17: undefined: NewMarketDataService
+services/exchange/egx/client.go:45:17: undefined: NewOrderManager
+services/exchange/egx/client.go:46:17: undefined: NewAssetManager
+services/exchange/egx/client.go:47:17: undefined: NewComplianceService
+services/exchange/egx/client.go:47:17: too many errors
+# github.com/abdoElHodaky/tradSys/services/islamic
+services/islamic/sharia_service_core.go:81:98: undefined: interfaces.Portfolio
+services/islamic/sharia_service_core.go:81:122: undefined: interfaces.ZakatCalculation
+services/islamic/sharia_service_core.go:96:21: undefined: interfaces.ZakatCalculation
+services/islamic/sharia_service_core.go:358:100: undefined: interfaces.Portfolio

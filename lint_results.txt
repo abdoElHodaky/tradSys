@@ -1,0 +1,10 @@
+services/licensing/config.go:1: : # github.com/abdoElHodaky/tradSys/services/licensing
+services/licensing/types.go:228:19: field and method with the same name IsActive
+	services/licensing/types.go:77:2: other declaration of IsActive
+services/licensing/types.go:229:9: invalid operation: l.IsActive && !l.IsExpired() (mismatched types func() bool and bool)
+services/licensing/config.go:308:2: cannot assign to license.IsActive (neither addressable nor a map index expression)
+services/licensing/config.go:313:2: cannot assign to license.IsActive (neither addressable nor a map index expression)
+services/licensing/validator.go:249:6: invalid operation: operator ! not defined on license.IsActive (value of type func() bool) (typecheck)
+// Package licensing provides license configuration and tier definitions
+1 issues:
+* typecheck: 1

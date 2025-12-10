@@ -1,0 +1,276 @@
+# github.com/abdoElHodaky/tradSys/internal/services/exchanges
+internal/services/exchanges/adx_types.go:466:18: undefined: Order
+internal/services/exchanges/adx_types.go:569:15: undefined: ComplianceEngine
+internal/services/exchanges/adx_types.go:664:6: IslamicFund redeclared in this block
+	internal/services/exchanges/adx_types.go:221:6: other declaration of IslamicFund
+internal/services/exchanges/adx_core.go:78:64: undefined: Order
+internal/services/exchanges/adx_core.go:236:49: undefined: PerformanceReport
+internal/services/exchanges/adx_core.go:241:58: undefined: HealthStatus
+internal/services/exchanges/adx_core.go:306:43: undefined: ExchangeInfo
+internal/services/exchanges/adx_core.go:351:44: undefined: ServiceStatus
+internal/services/exchanges/adx_processors.go:20:45: undefined: Order
+internal/services/exchanges/adx_processors.go:62:49: undefined: Order
+internal/services/exchanges/adx_processors.go:62:49: too many errors
+# github.com/abdoElHodaky/tradSys/internal/types
+internal/types/performance.go:374:6: AlertManager redeclared in this block
+	internal/types/asset_system.go:478:6: other declaration of AlertManager
+internal/types/risk.go:59:6: Position redeclared in this block
+	internal/types/common_core.go:219:6: other declaration of Position
+internal/types/risk.go:178:2: SeverityLow redeclared in this block
+	internal/types/engine_types.go:152:2: other declaration of SeverityLow
+internal/types/risk.go:179:2: SeverityMedium redeclared in this block
+	internal/types/engine_types.go:153:2: other declaration of SeverityMedium
+internal/types/risk.go:180:2: SeverityHigh redeclared in this block
+	internal/types/engine_types.go:154:2: other declaration of SeverityHigh
+internal/types/risk.go:181:2: SeverityCritical redeclared in this block
+	internal/types/engine_types.go:155:2: other declaration of SeverityCritical
+internal/types/sharia.go:36:6: ShariaRule redeclared in this block
+	internal/types/adx.go:60:6: other declaration of ShariaRule
+internal/types/sharia.go:50:6: ComplianceLevel redeclared in this block
+	internal/types/adx.go:20:6: other declaration of ComplianceLevel
+internal/types/sharia.go:67:6: ZakatCalculator redeclared in this block
+	internal/types/adx.go:90:6: other declaration of ZakatCalculator
+internal/types/sharia.go:117:6: ShariaBoard redeclared in this block
+	internal/types/adx.go:71:6: other declaration of ShariaBoard
+internal/types/sharia.go:117:6: too many errors
+# github.com/abdoElHodaky/tradSys/internal/ws
+internal/ws/handlers.go:13:6: MessageHandler redeclared in this block
+	internal/ws/authenticated_server.go:345:6: other declaration of MessageHandler
+internal/ws/handlers.go:20:12: undefined: MessageType
+internal/ws/handlers.go:251:6: generateMessageID redeclared in this block
+	internal/ws/core.go:294:6: other declaration of generateMessageID
+internal/ws/handlers.go:256:6: ConnectionManager redeclared in this block
+	internal/ws/components.go:11:6: other declaration of ConnectionManager
+internal/ws/handlers.go:262:6: NewConnectionManager redeclared in this block
+	internal/ws/core.go:316:6: other declaration of NewConnectionManager
+internal/ws/message.go:13:6: Message redeclared in this block
+	internal/ws/handlers.go:19:6: other declaration of Message
+internal/ws/types.go:4:6: SubscribeRequest redeclared in this block
+	internal/ws/handlers.go:30:6: other declaration of SubscribeRequest
+internal/ws/types.go:19:6: UnsubscribeRequest redeclared in this block
+	internal/ws/handlers.go:38:6: other declaration of UnsubscribeRequest
+internal/ws/components.go:12:26: undefined: WebSocketConnection
+internal/ws/components.go:103:12: undefined: LicenseTier
+internal/ws/components.go:103:12: too many errors
+# github.com/abdoElHodaky/tradSys/internal/api/handlers_disabled
+internal/api/handlers_disabled/pairs_handler_base.go:12:6: PairsHandler redeclared in this block
+	internal/api/handlers_disabled/pairs_handler.go:16:6: other declaration of PairsHandler
+internal/api/handlers_disabled/pairs_handler_base.go:16:19: undefined: strategy
+internal/api/handlers_disabled/pairs_handler_base.go:21:6: NewPairsHandler redeclared in this block
+	internal/api/handlers_disabled/pairs_handler.go:25:6: other declaration of NewPairsHandler
+internal/api/handlers_disabled/pairs_handler_base.go:38:24: method PairsHandler.RegisterRoutes already declared at internal/api/handlers_disabled/pairs_handler.go:42:24
+internal/api/handlers_disabled/pairs_handler_base.go:56:6: PairRequest redeclared in this block
+	internal/api/handlers_disabled/pairs_handler.go:60:6: other declaration of PairRequest
+internal/api/handlers_disabled/pairs_handler_base.go:68:6: PairResponse redeclared in this block
+	internal/api/handlers_disabled/pairs_handler.go:72:6: other declaration of PairResponse
+internal/api/handlers_disabled/pairs_handler.go:20:19: undefined: strategy
+internal/api/handlers_disabled/fast_orders.go:307:54: undefined: pools
+internal/api/handlers_disabled/fast_orders.go:330:79: undefined: pools
+internal/api/handlers_disabled/fast_orders.go:344:77: undefined: pools
+internal/api/handlers_disabled/fast_orders.go:344:77: too many errors
+# github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/handlers
+internal/architecture/cqrs/handlers/middleware.go:13:35: undefined: command
+internal/architecture/cqrs/handlers/middleware.go:17:58: undefined: command
+internal/architecture/cqrs/handlers/middleware.go:27:33: undefined: query
+internal/architecture/cqrs/handlers/middleware.go:31:54: undefined: query
+internal/architecture/cqrs/handlers/middleware.go:170:33: undefined: command
+internal/architecture/cqrs/handlers/middleware.go:203:31: undefined: query
+internal/architecture/cqrs/handlers/nats_cqrs.go:25:16: undefined: store
+internal/architecture/cqrs/handlers/nats_cqrs.go:26:16: undefined: aggregate
+internal/architecture/cqrs/handlers/nats_cqrs.go:29:29: undefined: command
+internal/architecture/cqrs/handlers/projection.go:15:20: undefined: projection
+internal/architecture/cqrs/handlers/projection.go:15:20: too many errors
+# github.com/abdoElHodaky/tradSys/internal/architecture/state
+internal/architecture/state/circuit_breaker_state_machine.go:17:22: undefined: interfaces
+internal/architecture/state/circuit_breaker_state_machine.go:24:24: undefined: interfaces
+internal/architecture/state/circuit_breaker_state_machine.go:37:65: undefined: interfaces
+internal/architecture/state/circuit_breaker_state_machine.go:59:65: undefined: interfaces
+internal/architecture/state/circuit_breaker_state_machine.go:66:64: undefined: interfaces
+internal/architecture/state/circuit_breaker_state_machine.go:85:61: undefined: interfaces
+internal/architecture/state/circuit_breaker_state_machine.go:115:71: undefined: interfaces
+internal/architecture/state/circuit_breaker_state_machine.go:133:76: undefined: interfaces
+internal/architecture/state/circuit_breaker_state_machine.go:140:79: undefined: interfaces
+internal/architecture/state/circuit_breaker_state_machine.go:206:70: undefined: interfaces
+internal/architecture/state/circuit_breaker_state_machine.go:206:70: too many errors
+# github.com/abdoElHodaky/tradSys/internal/messaging
+internal/messaging/unified_dispatcher.go:20:31: undefined: interfaces
+internal/messaging/unified_dispatcher.go:22:20: undefined: interfaces
+internal/messaging/unified_dispatcher.go:24:20: undefined: interfaces
+internal/messaging/unified_dispatcher.go:30:30: undefined: interfaces
+internal/messaging/unified_dispatcher.go:34:29: undefined: interfaces
+internal/messaging/unified_dispatcher.go:55:11: undefined: interfaces
+internal/messaging/unified_dispatcher.go:56:12: undefined: interfaces
+internal/messaging/unified_dispatcher_extensions.go:256:20: undefined: interfaces
+internal/messaging/message.go:19:58: undefined: interfaces
+internal/messaging/message.go:29:103: undefined: interfaces
+internal/messaging/message.go:29:103: too many errors
+# github.com/abdoElHodaky/tradSys/internal/optimization
+internal/optimization/performance_components.go:9:11: undefined: CacheOptimizer
+internal/optimization/performance_components.go:13:11: undefined: CacheOptimizer
+internal/optimization/performance_components.go:13:59: undefined: OptimizationResult
+internal/optimization/performance_components.go:25:11: undefined: CacheOptimizer
+internal/optimization/performance_components.go:25:70: undefined: RegionConfig
+internal/optimization/performance_components.go:30:11: undefined: CacheOptimizer
+internal/optimization/performance_components.go:30:41: undefined: CacheMetrics
+internal/optimization/performance_components.go:42:11: undefined: DatabaseOptimizer
+internal/optimization/performance_components.go:46:11: undefined: DatabaseOptimizer
+internal/optimization/performance_components.go:46:62: undefined: OptimizationResult
+internal/optimization/performance_components.go:46:62: too many errors
+# github.com/abdoElHodaky/tradSys/internal/orders/matching
+internal/orders/matching/engine_types.go:119:6: EngineConfig redeclared in this block
+	internal/orders/matching/advanced_engine.go:30:6: other declaration of EngineConfig
+internal/orders/matching/hft_types.go:54:6: EngineStats redeclared in this block
+	internal/orders/matching/engine_types.go:147:6: other declaration of EngineStats
+internal/orders/matching/hft_types.go:213:6: PriceLevel redeclared in this block
+	internal/orders/matching/engine_types.go:140:6: other declaration of PriceLevel
+internal/orders/matching/hft_types.go:248:2: MaxOrderBookDepth redeclared in this block
+	internal/orders/matching/engine_types.go:190:2: other declaration of MaxOrderBookDepth
+internal/orders/matching/hft_types.go:252:2: DefaultTradeChannelBuffer redeclared in this block
+	internal/orders/matching/engine_types.go:186:2: other declaration of DefaultTradeChannelBuffer
+internal/orders/matching/engine_core.go:34:42: config.TradeChannelBuffer undefined (type *EngineConfig has no field or method TradeChannelBuffer)
+internal/orders/matching/hft_core.go:40:4: unknown field MinLatencyNanos in struct literal of type EngineStats
+internal/orders/matching/hft_core.go:72:4: unknown field MinLatencyNanos in struct literal of type EngineStats
+internal/orders/matching/hft_core.go:166:3: unknown field OrdersProcessed in struct literal of type EngineStats
+internal/orders/matching/hft_core.go:167:3: unknown field TradesExecuted in struct literal of type EngineStats
+internal/orders/matching/hft_core.go:167:3: too many errors
+# github.com/abdoElHodaky/tradSys/internal/performance
+internal/performance/websocket_optimizer.go:157:49: cannot use writer.Flush (value of type func() error) as func() value in argument to time.AfterFunc
+# github.com/abdoElHodaky/tradSys/internal/services/common
+internal/services/common/interfaces.go:187:51: undefined: OrderResponse
+internal/services/common/interfaces.go:188:53: undefined: OrderResponse
+internal/services/common/interfaces.go:190:54: undefined: MarketData
+internal/services/common/interfaces.go:221:53: undefined: Transaction
+internal/services/common/interfaces.go:264:56: undefined: MarketData
+internal/services/common/interfaces.go:265:80: undefined: MarketData
+internal/services/common/interfaces.go:279:51: undefined: OrderResponse
+internal/services/common/interfaces.go:280:76: undefined: OrderResponse
+internal/services/common/interfaces.go:281:53: undefined: OrderResponse
+internal/services/common/interfaces.go:320:16: undefined: TradingSchedule
+internal/services/common/interfaces.go:281:53: too many errors
+# github.com/abdoElHodaky/tradSys/internal/services/core
+internal/services/core/service_mesh.go:25:20: undefined: ServiceDiscovery
+internal/services/core/service_mesh.go:26:20: undefined: LoadBalancer
+internal/services/core/service_mesh.go:27:20: undefined: HealthChecker
+internal/services/core/service_mesh.go:28:20: undefined: MetricsCollector
+internal/services/core/service_mesh.go:77:21: undefined: NewServiceDiscovery
+internal/services/core/service_mesh.go:78:21: undefined: NewLoadBalancer
+internal/services/core/service_mesh.go:79:21: undefined: NewHealthChecker
+internal/services/core/service_mesh.go:80:21: undefined: NewMetricsCollector
+# github.com/abdoElHodaky/tradSys/internal/services/websocket
+internal/services/websocket/websocket_core.go:316:6: NewConnectionManager redeclared in this block
+	internal/services/websocket/websocket_components.go:17:6: other declaration of NewConnectionManager
+internal/services/websocket/websocket_core.go:322:6: NewSubscriptionManager redeclared in this block
+	internal/services/websocket/websocket_components.go:66:6: other declaration of NewSubscriptionManager
+internal/services/websocket/websocket_core.go:328:6: NewLicenseValidator redeclared in this block
+	internal/services/websocket/websocket_components.go:123:6: other declaration of NewLicenseValidator
+internal/services/websocket/websocket_core.go:332:6: NewIslamicFilter redeclared in this block
+	internal/services/websocket/websocket_components.go:200:6: other declaration of NewIslamicFilter
+internal/services/websocket/websocket_core.go:336:6: NewComplianceEngine redeclared in this block
+	internal/services/websocket/websocket_components.go:368:6: other declaration of NewComplianceEngine
+internal/services/websocket/websocket_core.go:340:6: NewAnalyticsEngine redeclared in this block
+	internal/services/websocket/websocket_components.go:473:6: other declaration of NewAnalyticsEngine
+internal/services/websocket/websocket_types.go:130:6: ConnectionManager redeclared in this block
+	internal/services/websocket/websocket_components.go:11:6: other declaration of ConnectionManager
+internal/services/websocket/websocket_types.go:136:6: SubscriptionManager redeclared in this block
+	internal/services/websocket/websocket_components.go:60:6: other declaration of SubscriptionManager
+internal/services/websocket/websocket_types.go:142:6: LicenseValidator redeclared in this block
+	internal/services/websocket/websocket_components.go:109:6: other declaration of LicenseValidator
+internal/services/websocket/websocket_types.go:147:6: IslamicFilter redeclared in this block
+	internal/services/websocket/websocket_components.go:177:6: other declaration of IslamicFilter
+internal/services/websocket/websocket_types.go:147:6: too many errors
+# github.com/abdoElHodaky/tradSys/internal/trading
+internal/trading/risk_manager_core.go:12:29: undefined: RiskManagerConfig
+internal/trading/risk_manager_core.go:12:58: undefined: RiskStore
+internal/trading/risk_manager_core.go:12:70: undefined: RiskManager
+internal/trading/risk_manager_core.go:25:27: undefined: RiskCalculator
+internal/trading/risk_manager_core.go:33:37: undefined: RiskManagerConfig
+internal/trading/risk_manager_core.go:46:11: undefined: RiskManager
+internal/trading/risk_manager_core.go:46:66: undefined: interfaces
+internal/trading/risk_manager_core.go:46:86: undefined: RiskCheckResult
+internal/trading/risk_manager_core.go:127:11: undefined: RiskManager
+internal/trading/risk_manager_core.go:127:81: undefined: UserRiskProfile
+internal/trading/risk_manager_core.go:127:81: too many errors
+# github.com/abdoElHodaky/tradSys/internal/ws/gateway
+internal/ws/gateway/core.go:23:25: undefined: GatewayConfig
+internal/ws/gateway/core.go:23:61: undefined: Gateway
+internal/ws/gateway/core.go:44:10: undefined: Gateway
+internal/ws/gateway/core.go:58:10: undefined: Gateway
+internal/ws/gateway/core.go:74:10: undefined: Gateway
+internal/ws/gateway/core.go:74:85: undefined: Connection
+internal/ws/gateway/core.go:102:10: undefined: Gateway
+internal/ws/gateway/core.go:102:75: undefined: SubscriptionType
+internal/ws/gateway/core.go:115:10: undefined: Gateway
+internal/ws/gateway/core.go:128:10: undefined: Gateway
+internal/ws/gateway/core.go:128:10: too many errors
+# github.com/abdoElHodaky/tradSys/pkg/errors
+pkg/errors/common.go:250:9: undefined: Logger
+pkg/errors/common.go:254:29: undefined: Logger
+# github.com/abdoElHodaky/tradSys/scripts
+scripts/dependency_analyzer.go:40:6: main redeclared in this block
+	scripts/analyze_codebase.go:31:6: other declaration of main
+scripts/dependency_analyzer.go:55:28: cannot use packages (variable of type map[string]*PackageInfo) as map[string][]string value in argument to printCircularDependencies
+scripts/dependency_analyzer.go:86:21: too many arguments in call to analyzeFile
+	have (string, *PackageInfo, *[]ViolationInfo)
+	want (string)
+scripts/dependency_analyzer.go:96:6: analyzeFile redeclared in this block
+	scripts/analyze_codebase.go:75:6: other declaration of analyzeFile
+scripts/dependency_analyzer.go:271:6: printCircularDependencies redeclared in this block
+	scripts/analyze_codebase.go:148:6: other declaration of printCircularDependencies
+scripts/migrate_orders_service.go:331:6: main redeclared in this block
+	scripts/analyze_codebase.go:31:6: other declaration of main
+scripts/analyze_codebase.go:33:14: invalid operation: "=" * 50 (mismatched types untyped string and untyped int)
+scripts/analyze_codebase.go:36:6: declared and not used: circularDeps
+# github.com/abdoElHodaky/tradSys/services/common
+services/common/interfaces.go:187:51: undefined: OrderResponse
+services/common/interfaces.go:188:53: undefined: OrderResponse
+services/common/interfaces.go:190:54: undefined: MarketData
+services/common/interfaces.go:221:53: undefined: Transaction
+services/common/interfaces.go:264:56: undefined: MarketData
+services/common/interfaces.go:265:80: undefined: MarketData
+services/common/interfaces.go:279:51: undefined: OrderResponse
+services/common/interfaces.go:280:76: undefined: OrderResponse
+services/common/interfaces.go:281:53: undefined: OrderResponse
+services/common/interfaces.go:320:16: undefined: TradingSchedule
+services/common/interfaces.go:281:53: too many errors
+# github.com/abdoElHodaky/tradSys/services/exchanges
+services/exchanges/exchange_types.go:303:6: PerformanceMonitor redeclared in this block
+	services/exchanges/adx_types.go:234:6: other declaration of PerformanceMonitor
+services/exchanges/adx_types.go:53:19: undefined: ScreeningEngine
+services/exchanges/adx_types.go:54:19: undefined: ComplianceDatabase
+services/exchanges/adx_types.go:55:19: undefined: IslamicAuditTrail
+services/exchanges/adx_types.go:109:15: undefined: ReportingRequirements
+services/exchanges/adx_types.go:110:15: undefined: LicensingRequirements
+services/exchanges/adx_types.go:129:18: undefined: SukukPricingEngine
+services/exchanges/adx_types.go:130:18: undefined: IslamicIndexCalculator
+services/exchanges/adx_types.go:132:18: undefined: ComplianceDataStore
+services/exchanges/adx_types.go:200:20: undefined: ScreeningResults
+services/exchanges/adx_types.go:200:20: too many errors
+# github.com/abdoElHodaky/tradSys/services/core
+services/core/service_mesh.go:25:20: undefined: ServiceDiscovery
+services/core/service_mesh.go:26:20: undefined: LoadBalancer
+services/core/service_mesh.go:27:20: undefined: HealthChecker
+services/core/service_mesh.go:28:20: undefined: MetricsCollector
+services/core/service_mesh.go:77:21: undefined: NewServiceDiscovery
+services/core/service_mesh.go:78:21: undefined: NewLoadBalancer
+services/core/service_mesh.go:79:21: undefined: NewHealthChecker
+services/core/service_mesh.go:80:21: undefined: NewMetricsCollector
+# github.com/abdoElHodaky/tradSys/pkg/interfaces
+pkg/interfaces/service.go:35:12: undefined: Logger
+pkg/interfaces/service.go:36:12: undefined: MetricsCollector
+pkg/interfaces/service.go:37:12: undefined: Validator
+pkg/interfaces/service.go:191:42: undefined: TradingStatus
+pkg/interfaces/service.go:195:25: undefined: AssetType
+pkg/interfaces/service.go:210:29: undefined: AssetType
+pkg/interfaces/service.go:221:53: undefined: Transaction
+pkg/interfaces/service.go:320:16: undefined: TradingSchedule
+pkg/interfaces/service.go:321:17: undefined: AssetType
+pkg/interfaces/service.go:327:15: undefined: AssetType
+pkg/interfaces/service.go:221:53: too many errors
+# github.com/abdoElHodaky/tradSys/pkg/matching
+pkg/matching/engines.go:32:87: cannot use types.SeverityHigh (constant "HIGH" of string type types.ViolationSeverity) as string value in argument to types.NewEngineError
+pkg/matching/engines.go:72:87: cannot use types.SeverityHigh (constant "HIGH" of string type types.ViolationSeverity) as string value in argument to types.NewEngineError
+pkg/matching/engines.go:122:87: cannot use types.SeverityHigh (constant "HIGH" of string type types.ViolationSeverity) as string value in argument to types.NewEngineError
+pkg/matching/engines.go:176:87: cannot use types.SeverityHigh (constant "HIGH" of string type types.ViolationSeverity) as string value in argument to types.NewEngineError
+pkg/matching/engines.go:223:87: cannot use types.SeverityHigh (constant "HIGH" of string type types.ViolationSeverity) as string value in argument to types.NewEngineError
+pkg/matching/engines.go:258:4: cannot use types.SeverityHigh (constant "HIGH" of string type types.ViolationSeverity) as string value in argument to types.NewEngineError
+pkg/matching/engines.go:271:5: cannot use types.SeverityMedium (constant "MEDIUM" of string type types.ViolationSeverity) as string value in argument to types.NewEngineError

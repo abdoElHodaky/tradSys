@@ -31,13 +31,13 @@ func NewMutualFundService(db *gorm.DB, assetService *AssetService, logger *zap.L
 type FundCategory string
 
 const (
-	FundCategoryEquity       FundCategory = "equity"
-	FundCategoryBond         FundCategory = "bond"
-	FundCategoryMoney        FundCategory = "money_market"
-	FundCategoryBalanced     FundCategory = "balanced"
-	FundCategoryIndex        FundCategory = "index"
-	FundCategoryTarget       FundCategory = "target_date"
-	FundCategorySector       FundCategory = "sector"
+	FundCategoryEquity        FundCategory = "equity"
+	FundCategoryBond          FundCategory = "bond"
+	FundCategoryMoney         FundCategory = "money_market"
+	FundCategoryBalanced      FundCategory = "balanced"
+	FundCategoryIndex         FundCategory = "index"
+	FundCategoryTarget        FundCategory = "target_date"
+	FundCategorySector        FundCategory = "sector"
 	FundCategoryInternational FundCategory = "international"
 )
 
@@ -52,21 +52,21 @@ const (
 
 // MutualFundMetrics represents key mutual fund performance metrics
 type MutualFundMetrics struct {
-	Symbol              string    `json:"symbol"`
-	NAV                 float64   `json:"nav"`                    // Net Asset Value
-	ExpenseRatio        float64   `json:"expense_ratio"`          // Annual expense ratio
-	YTDReturn           float64   `json:"ytd_return"`             // Year-to-date return
-	OneYearReturn       float64   `json:"one_year_return"`        // 1-year return
-	ThreeYearReturn     float64   `json:"three_year_return"`      // 3-year annualized return
-	FiveYearReturn      float64   `json:"five_year_return"`       // 5-year annualized return
-	TenYearReturn       float64   `json:"ten_year_return"`        // 10-year annualized return
-	Alpha               float64   `json:"alpha"`                  // Alpha vs benchmark
-	Beta                float64   `json:"beta"`                   // Beta vs benchmark
-	Sharpe              float64   `json:"sharpe_ratio"`           // Sharpe ratio
-	StandardDeviation   float64   `json:"standard_deviation"`     // Standard deviation
-	TurnoverRatio       float64   `json:"turnover_ratio"`         // Portfolio turnover ratio
-	TotalAssets         float64   `json:"total_assets"`           // Total fund assets (AUM)
-	CalculationDate     time.Time `json:"calculation_date"`
+	Symbol            string    `json:"symbol"`
+	NAV               float64   `json:"nav"`                // Net Asset Value
+	ExpenseRatio      float64   `json:"expense_ratio"`      // Annual expense ratio
+	YTDReturn         float64   `json:"ytd_return"`         // Year-to-date return
+	OneYearReturn     float64   `json:"one_year_return"`    // 1-year return
+	ThreeYearReturn   float64   `json:"three_year_return"`  // 3-year annualized return
+	FiveYearReturn    float64   `json:"five_year_return"`   // 5-year annualized return
+	TenYearReturn     float64   `json:"ten_year_return"`    // 10-year annualized return
+	Alpha             float64   `json:"alpha"`              // Alpha vs benchmark
+	Beta              float64   `json:"beta"`               // Beta vs benchmark
+	Sharpe            float64   `json:"sharpe_ratio"`       // Sharpe ratio
+	StandardDeviation float64   `json:"standard_deviation"` // Standard deviation
+	TurnoverRatio     float64   `json:"turnover_ratio"`     // Portfolio turnover ratio
+	TotalAssets       float64   `json:"total_assets"`       // Total fund assets (AUM)
+	CalculationDate   time.Time `json:"calculation_date"`
 }
 
 // FundHolding represents a holding in the mutual fund portfolio
@@ -81,14 +81,14 @@ type FundHolding struct {
 
 // MutualFundPortfolio represents the portfolio composition of a mutual fund
 type MutualFundPortfolio struct {
-	Symbol              string                    `json:"symbol"`
-	TopHoldings         []FundHolding             `json:"top_holdings"`
-	SectorAllocation    map[string]float64        `json:"sector_allocation"`
-	AssetAllocation     map[string]float64        `json:"asset_allocation"`
-	GeographicAllocation map[string]float64       `json:"geographic_allocation"`
-	MarketCapAllocation map[string]float64        `json:"market_cap_allocation"`
-	TotalHoldings       int                       `json:"total_holdings"`
-	UpdatedAt           time.Time                 `json:"updated_at"`
+	Symbol               string             `json:"symbol"`
+	TopHoldings          []FundHolding      `json:"top_holdings"`
+	SectorAllocation     map[string]float64 `json:"sector_allocation"`
+	AssetAllocation      map[string]float64 `json:"asset_allocation"`
+	GeographicAllocation map[string]float64 `json:"geographic_allocation"`
+	MarketCapAllocation  map[string]float64 `json:"market_cap_allocation"`
+	TotalHoldings        int                `json:"total_holdings"`
+	UpdatedAt            time.Time          `json:"updated_at"`
 }
 
 // CreateMutualFundMetadata creates mutual fund-specific metadata
@@ -98,9 +98,9 @@ func (s *MutualFundService) CreateMutualFundMetadata(ctx context.Context, symbol
 		AssetType: types.AssetTypeMutualFund,
 		Sector:    string(category),
 		Attributes: models.AssetAttributes{
-			types.AttrFundFamily:  fundFamily,
-			types.AttrAssetClass:  string(style),
-			"fund_category":       string(category),
+			types.AttrFundFamily: fundFamily,
+			types.AttrAssetClass: string(style),
+			"fund_category":      string(category),
 		},
 		IsActive: true,
 	}
@@ -157,7 +157,7 @@ func (s *MutualFundService) UpdateMutualFundMetrics(ctx context.Context, metrics
 		Price:     metrics.NAV,
 		Source:    "NAV",
 	}
-	
+
 	if err := s.assetService.UpdateAssetPricing(ctx, pricing); err != nil {
 		s.logger.Warn("Failed to update NAV pricing", zap.Error(err))
 	}
@@ -237,12 +237,12 @@ func (s *MutualFundService) GetMutualFundMetrics(ctx context.Context, symbol str
 // GetMutualFundsByFamily retrieves all mutual funds from a specific fund family
 func (s *MutualFundService) GetMutualFundsByFamily(ctx context.Context, fundFamily string) ([]*models.AssetMetadata, error) {
 	var funds []*models.AssetMetadata
-	
+
 	err := s.db.WithContext(ctx).
-		Where("asset_type = ? AND is_active = ? AND JSON_EXTRACT(attributes, '$.fund_family') = ?", 
+		Where("asset_type = ? AND is_active = ? AND JSON_EXTRACT(attributes, '$.fund_family') = ?",
 			types.AssetTypeMutualFund, true, fundFamily).
 		Find(&funds).Error
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get mutual funds by family: %w", err)
 	}
@@ -253,12 +253,12 @@ func (s *MutualFundService) GetMutualFundsByFamily(ctx context.Context, fundFami
 // GetMutualFundsByCategory retrieves mutual funds by category
 func (s *MutualFundService) GetMutualFundsByCategory(ctx context.Context, category FundCategory) ([]*models.AssetMetadata, error) {
 	var funds []*models.AssetMetadata
-	
+
 	err := s.db.WithContext(ctx).
-		Where("asset_type = ? AND sector = ? AND is_active = ?", 
+		Where("asset_type = ? AND sector = ? AND is_active = ?",
 			types.AssetTypeMutualFund, string(category), true).
 		Find(&funds).Error
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get mutual funds by category: %w", err)
 	}
@@ -283,7 +283,7 @@ func (s *MutualFundService) ValidateMutualFundOrder(ctx context.Context, symbol 
 	if minInvestment, ok := assetMetadata.Attributes.GetFloatAttribute(types.AttrMinInvestment); ok {
 		orderValue := quantity * price
 		if orderValue < minInvestment {
-			return fmt.Errorf("order value %.2f is below minimum investment %.2f for fund %s", 
+			return fmt.Errorf("order value %.2f is below minimum investment %.2f for fund %s",
 				orderValue, minInvestment, symbol)
 		}
 	}
@@ -296,7 +296,7 @@ func (s *MutualFundService) ValidateMutualFundOrder(ctx context.Context, symbol 
 	// Mutual funds typically trade at NAV at end of day
 	currentTime := time.Now()
 	if currentTime.Hour() < 16 { // Before 4 PM EST
-		s.logger.Info("Mutual fund order will be executed at next NAV calculation", 
+		s.logger.Info("Mutual fund order will be executed at next NAV calculation",
 			zap.String("symbol", symbol))
 	}
 
@@ -317,14 +317,14 @@ func (s *MutualFundService) CalculateExpenseImpact(ctx context.Context, symbol s
 	// Calculate compound impact of expense ratio
 	annualExpense := investmentAmount * (metrics.ExpenseRatio / 100)
 	totalExpenseOverTime := annualExpense * float64(years)
-	
+
 	// Assuming 7% average annual return for calculation
 	assumedReturn := 0.07
 	futureValueWithoutExpenses := investmentAmount * (1 + assumedReturn)
 	for i := 1; i < years; i++ {
 		futureValueWithoutExpenses *= (1 + assumedReturn)
 	}
-	
+
 	futureValueWithExpenses := investmentAmount * (1 + assumedReturn - metrics.ExpenseRatio/100)
 	for i := 1; i < years; i++ {
 		futureValueWithExpenses *= (1 + assumedReturn - metrics.ExpenseRatio/100)
@@ -356,7 +356,7 @@ func (s *MutualFundService) CompareMutualFunds(ctx context.Context, symbols []st
 	}
 
 	funds := make(map[string]*MutualFundMetrics)
-	
+
 	for _, symbol := range symbols {
 		metrics, err := s.GetMutualFundMetrics(ctx, symbol)
 		if err != nil {

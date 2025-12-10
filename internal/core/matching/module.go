@@ -1,7 +1,8 @@
-package order_matching
+package matching
 
 import (
 	"context"
+
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )

@@ -8,6 +8,7 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs"
 	"github.com/abdoElHodaky/tradSys/internal/config"
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
+	"github.com/abdoElHodaky/tradSys/internal/marketdata/external"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -76,7 +77,7 @@ func registerCommandHandlers(service *Service, commandBus *cqrs.CommandBus, logg
 			if !ok {
 				return ErrInvalidCommand
 			}
-			return service.AddMarketDataSource(ctx, addCmd.Source, addCmd.Config)
+			return service.AddMarketDataSource(addCmd.Source, addCmd.Config)
 		},
 	)
 	if err != nil {
@@ -96,7 +97,7 @@ func registerQueryHandlers(service *Service, queryBus *cqrs.QueryBus, logger *za
 			if !ok {
 				return nil, ErrInvalidQuery
 			}
-			return service.GetMarketData(ctx, getQuery.Symbol, getQuery.TimeRange)
+			return service.GetMarketData(ctx, getQuery.Symbol, external.MarketDataType(getQuery.TimeRange))
 		},
 	)
 	if err != nil {

@@ -240,27 +240,27 @@ func (h *ETFHandlers) ProcessCreationRedemption(c *gin.Context) {
 
 	err := h.etfService.ProcessCreationRedemption(operation)
 	if err != nil {
-		h.logger.Error("Failed to process creation/redemption", 
-			zap.String("symbol", symbol), 
-			zap.String("operation", req.OperationType), 
+		h.logger.Error("Failed to process creation/redemption",
+			zap.String("symbol", symbol),
+			zap.String("operation", req.OperationType),
 			zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	h.logger.Info("Creation/redemption processed successfully", 
-		zap.String("symbol", symbol), 
+	h.logger.Info("Creation/redemption processed successfully",
+		zap.String("symbol", symbol),
 		zap.String("operation", req.OperationType),
 		zap.Int("units", req.Units))
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":       "Operation processed successfully",
-		"symbol":        symbol,
-		"operation":     req.OperationType,
-		"units":         req.Units,
-		"total_shares":  operation.TotalShares,
-		"total_value":   operation.TotalValue,
-		"processed_at":  operation.Timestamp,
+		"message":      "Operation processed successfully",
+		"symbol":       symbol,
+		"operation":    req.OperationType,
+		"units":        req.Units,
+		"total_shares": operation.TotalShares,
+		"total_value":  operation.TotalValue,
+		"processed_at": operation.Timestamp,
 	})
 }
 
@@ -295,11 +295,11 @@ func (h *ETFHandlers) GetETFHoldings(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"symbol":        symbol,
-		"holdings":      holdings,
-		"total_weight":  totalWeight,
+		"symbol":         symbol,
+		"holdings":       holdings,
+		"total_weight":   totalWeight,
 		"holdings_count": len(holdings),
-		"retrieved_at":  time.Now(),
+		"retrieved_at":   time.Now(),
 	})
 }
 
@@ -348,7 +348,7 @@ func (h *ETFHandlers) ValidateETFOrder(c *gin.Context) {
 
 	err = h.etfService.ValidateETFOrder(symbol, quantity, price)
 	if err != nil {
-		h.logger.Warn("ETF order validation failed", 
+		h.logger.Warn("ETF order validation failed",
 			zap.String("symbol", symbol),
 			zap.Float64("quantity", quantity),
 			zap.Float64("price", price),
@@ -361,7 +361,7 @@ func (h *ETFHandlers) ValidateETFOrder(c *gin.Context) {
 		return
 	}
 
-	h.logger.Debug("ETF order validation passed", 
+	h.logger.Debug("ETF order validation passed",
 		zap.String("symbol", symbol),
 		zap.Float64("quantity", quantity),
 		zap.Float64("price", price))
@@ -400,8 +400,8 @@ func (h *ETFHandlers) GetETFLiquidity(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"symbol":     symbol,
-		"liquidity":  metrics.Liquidity,
+		"symbol":       symbol,
+		"liquidity":    metrics.Liquidity,
 		"retrieved_at": time.Now(),
 	})
 }

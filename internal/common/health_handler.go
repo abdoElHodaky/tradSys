@@ -8,19 +8,19 @@ import (
 	"go.uber.org/zap"
 )
 
-// HealthStatus represents the health status of a service
-type HealthStatus string
+// HealthState represents the health state of a service
+type HealthState string
 
 const (
-	HealthStatusHealthy   HealthStatus = "healthy"
-	HealthStatusUnhealthy HealthStatus = "unhealthy"
-	HealthStatusDegraded  HealthStatus = "degraded"
+	HealthStateHealthy   HealthState = "healthy"
+	HealthStateUnhealthy HealthState = "unhealthy"
+	HealthStateDegraded  HealthState = "degraded"
 )
 
 // HealthCheck represents a health check result
 type HealthCheck struct {
 	Name        string                 `json:"name"`
-	Status      HealthStatus           `json:"status"`
+	Status      HealthState           `json:"status"`
 	Message     string                 `json:"message,omitempty"`
 	LastChecked time.Time              `json:"last_checked"`
 	Duration    time.Duration          `json:"duration"`
@@ -29,7 +29,7 @@ type HealthCheck struct {
 
 // HealthResponse represents the overall health response
 type HealthResponse struct {
-	Status    HealthStatus  `json:"status"`
+	Status    HealthState  `json:"status"`
 	Timestamp time.Time     `json:"timestamp"`
 	Service   string        `json:"service"`
 	Version   string        `json:"version"`
@@ -85,7 +85,7 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 
 	start := time.Now()
 	checks := make([]HealthCheck, 0, len(h.checkers))
-	overallStatus := HealthStatusHealthy
+	overallStatus := HealthStateHealthy
 
 	// Run all health checks
 	for _, checker := range h.checkers {
@@ -93,10 +93,10 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 		checks = append(checks, check)
 
 		// Determine overall status
-		if check.Status == HealthStatusUnhealthy {
-			overallStatus = HealthStatusUnhealthy
-		} else if check.Status == HealthStatusDegraded && overallStatus == HealthStatusHealthy {
-			overallStatus = HealthStatusDegraded
+		if check.Status == HealthStateUnhealthy {
+			overallStatus = HealthStateUnhealthy
+		} else if check.Status == HealthStateDegraded && overallStatus == HealthStateHealthy {
+			overallStatus = HealthStateDegraded
 		}
 	}
 
@@ -117,9 +117,9 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 
 	// Return appropriate HTTP status
 	statusCode := http.StatusOK
-	if overallStatus == HealthStatusUnhealthy {
+	if overallStatus == HealthStateUnhealthy {
 		statusCode = http.StatusServiceUnavailable
-	} else if overallStatus == HealthStatusDegraded {
+	} else if overallStatus == HealthStateDegraded {
 		statusCode = http.StatusPartialContent
 	}
 
@@ -153,7 +153,7 @@ func (h *HealthHandler) ReadinessCheck(c *gin.Context) {
 
 	for _, checker := range h.checkers {
 		check := checker.Check()
-		if check.Status == HealthStatusUnhealthy {
+		if check.Status == HealthStateUnhealthy {
 			ready = false
 			failedChecks = append(failedChecks, check.Name)
 		}
@@ -210,10 +210,10 @@ func (d *DatabaseHealthChecker) Check() HealthCheck {
 	}
 
 	if err := d.ping(); err != nil {
-		check.Status = HealthStatusUnhealthy
+		check.Status = HealthStateUnhealthy
 		check.Message = err.Error()
 	} else {
-		check.Status = HealthStatusHealthy
+		check.Status = HealthStateHealthy
 		check.Message = "Database connection is healthy"
 	}
 
@@ -258,10 +258,10 @@ func (s *ServiceHealthChecker) Check() HealthCheck {
 	}
 
 	if err := s.check(); err != nil {
-		check.Status = HealthStatusUnhealthy
+		check.Status = HealthStateUnhealthy
 		check.Message = err.Error()
 	} else {
-		check.Status = HealthStatusHealthy
+		check.Status = HealthStateHealthy
 		check.Message = "Service is healthy"
 	}
 
