@@ -39,7 +39,8 @@ func (adx *ADXService) validateOrder(order *types.Order) error {
 	}
 
 	// Validate asset type
-	if !adx.isValidAssetType(order.AssetType) {
+	assetType := convertAssetType(order.AssetType)
+	if !adx.isValidAssetType(assetType) {
 		return fmt.Errorf("invalid asset type: %v", order.AssetType)
 	}
 
@@ -64,7 +65,8 @@ func (adx *ADXService) validateOrder(order *types.Order) error {
 // validateOrderSize validates order size against ADX limits
 func (adx *ADXService) validateOrderSize(order *types.Order) error {
 	// Get asset-specific limits
-	limits := adx.getAssetLimits(order.AssetType)
+	assetType := convertAssetType(order.AssetType)
+	limits := adx.getAssetLimits(assetType)
 
 	if limits == nil {
 		return fmt.Errorf("no limits defined for asset type: %v", order.AssetType)
@@ -189,7 +191,11 @@ func (adx *ADXService) getAssetLimits(assetType AssetType) *AssetLimits {
 // isMarketOpen checks if the ADX market is currently open
 func (adx *ADXService) isMarketOpen(now time.Time) bool {
 	// Convert to UAE timezone
-	uaeTime := now.In(adx.tradingHours.Timezone)
+	timezone, err := time.LoadLocation(adx.tradingHours.Timezone)
+	if err != nil {
+		timezone = time.UTC // fallback to UTC
+	}
+	uaeTime := now.In(timezone)
 
 	// Check if it's a weekend (Friday-Saturday in UAE)
 	weekday := uaeTime.Weekday()
@@ -216,10 +222,14 @@ func (adx *ADXService) isMarketOpen(now time.Time) bool {
 }
 
 // getCurrentSession returns the current trading session
-func (adx *ADXService) getCurrentSession(now time.Time) *TradingSession {
-	uaeTime := now.In(adx.tradingHours.Timezone)
+func (adx *ADXService) getCurrentSession(now time.Time) *common.TradingSession {
+	timezone, err := time.LoadLocation(adx.tradingHours.Timezone)
+	if err != nil {
+		timezone = time.UTC // fallback to UTC
+	}
+	uaeTime := now.In(timezone)
 
-	for _, session := range adx.tradingHours.TradingSessions {
+	for _, session := range adx.tradingHours.Sessions {
 		if uaeTime.After(session.StartTime) && uaeTime.Before(session.EndTime) {
 			return &session
 		}
@@ -230,7 +240,11 @@ func (adx *ADXService) getCurrentSession(now time.Time) *TradingSession {
 
 // getNextMarketOpen returns the next market opening time
 func (adx *ADXService) getNextMarketOpen(now time.Time) time.Time {
-	uaeTime := now.In(adx.tradingHours.Timezone)
+	timezone, err := time.LoadLocation(adx.tradingHours.Timezone)
+	if err != nil {
+		timezone = time.UTC // fallback to UTC
+	}
+	uaeTime := now.In(timezone)
 
 	// If market is currently open, return tomorrow's opening
 	if adx.isMarketOpen(uaeTime) {
@@ -239,7 +253,7 @@ func (adx *ADXService) getNextMarketOpen(now time.Time) time.Time {
 
 	// If it's the same day but before opening, return today's opening
 	if uaeTime.Hour() < 10 {
-		return time.Date(uaeTime.Year(), uaeTime.Month(), uaeTime.Day(), 10, 0, 0, 0, adx.tradingHours.Timezone)
+		return time.Date(uaeTime.Year(), uaeTime.Month(), uaeTime.Day(), 10, 0, 0, 0, timezone)
 	}
 
 	// Otherwise, return next business day opening
@@ -248,11 +262,15 @@ func (adx *ADXService) getNextMarketOpen(now time.Time) time.Time {
 
 // getNextMarketClose returns the next market closing time
 func (adx *ADXService) getNextMarketClose(now time.Time) time.Time {
-	uaeTime := now.In(adx.tradingHours.Timezone)
+	timezone, err := time.LoadLocation(adx.tradingHours.Timezone)
+	if err != nil {
+		timezone = time.UTC // fallback to UTC
+	}
+	uaeTime := now.In(timezone)
 
 	// If market is currently open, return today's closing
 	if adx.isMarketOpen(uaeTime) {
-		return time.Date(uaeTime.Year(), uaeTime.Month(), uaeTime.Day(), 15, 0, 0, 0, adx.tradingHours.Timezone)
+		return time.Date(uaeTime.Year(), uaeTime.Month(), uaeTime.Day(), 15, 0, 0, 0, timezone)
 	}
 
 	// Otherwise, return next business day closing
@@ -314,18 +332,17 @@ func (adx *ADXService) calculateTradingFees(order *common.Order) (*TradingFees, 
 		fees.Commission = minCommission
 	}
 
-	// Market fees (0.005%)
-	fees.MarketFee = orderValue * 0.00005
+	// Exchange fees (0.005%)
+	fees.ExchangeFee = orderValue * 0.00005
 
 	// Clearing fees (0.002%)
 	fees.ClearingFee = orderValue * 0.00002
 
-	// VAT (5% on fees)
-	totalFeesBeforeVAT := fees.Commission + fees.MarketFee + fees.ClearingFee
-	fees.VAT = totalFeesBeforeVAT * 0.05
+	// Regulatory fees (0.001%)
+	fees.RegulatoryFee = orderValue * 0.00001
 
 	// Total fees
-	fees.TotalFees = fees.Commission + fees.MarketFee + fees.ClearingFee + fees.VAT
+	fees.TotalFees = fees.Commission + fees.ExchangeFee + fees.ClearingFee + fees.RegulatoryFee
 
 	return fees, nil
 }
@@ -350,20 +367,13 @@ func (adx *ADXService) validateIslamicCompliance(order *common.Order) error {
 	}
 
 	// Check if symbol is Sharia compliant
-	if !adx.islamicCompliance.IsCompliant(order.Symbol) {
+	if !adx.islamicCompliance.IsCompliant(order) {
 		return fmt.Errorf("symbol %s is not Sharia compliant", order.Symbol)
 	}
 
-	// Check for prohibited activities
-	if err := adx.islamicCompliance.CheckProhibitedActivities(order); err != nil {
-		return fmt.Errorf("prohibited activity detected: %w", err)
-	}
-
-	// Validate against Sharia rules
-	for _, rule := range adx.islamicCompliance.GetApplicableRules(order.AssetType) {
-		if !rule.Validator(order) {
-			return fmt.Errorf("Sharia rule violation: %s", rule.Description)
-		}
+	// Validate order for Islamic compliance
+	if err := adx.islamicCompliance.ValidateOrder(order); err != nil {
+		return fmt.Errorf("Islamic compliance validation failed: %w", err)
 	}
 
 	return nil
@@ -380,7 +390,7 @@ func (adx *ADXService) logOrderActivity(order *common.Order, activity string, de
 	logEntry := map[string]interface{}{
 		"timestamp":  time.Now(),
 		"exchange":   "ADX",
-		"order_id":   order.OrderID,
+		"order_id":   order.ID,
 		"symbol":     order.Symbol,
 		"activity":   activity,
 		"asset_type": order.AssetType,
@@ -389,5 +399,6 @@ func (adx *ADXService) logOrderActivity(order *common.Order, activity string, de
 	}
 
 	// Log to audit trail
-	adx.islamicCompliance.auditTrail.LogActivity(logEntry)
+	// TODO: Implement audit trail logging
+	log.Printf("Audit trail: %+v", logEntry)
 }

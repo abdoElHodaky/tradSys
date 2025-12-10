@@ -337,6 +337,13 @@ type TradingSchedule struct {
 	LastModified time.Time        `json:"last_modified"`
 }
 
+// IsOpen checks if trading is currently open at the given time
+func (ts *TradingSchedule) IsOpen(t time.Time) bool {
+	// TODO: Implement proper trading schedule checking with time
+	// For now, return true if the schedule is active
+	return ts.IsActive
+}
+
 // HealthStatus represents the health status of a service
 type HealthStatus struct {
 	Service   string                 `json:"service"`

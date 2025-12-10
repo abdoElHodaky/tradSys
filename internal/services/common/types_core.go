@@ -10,6 +10,7 @@ type AssetType int
 
 const (
 	AssetTypeStock AssetType = iota
+	AssetTypeEquity // Alias for stock/equity
 	AssetTypeBond
 	AssetTypeETF
 	AssetTypeREIT
@@ -30,6 +31,8 @@ func (at AssetType) String() string {
 	switch at {
 	case AssetTypeStock:
 		return "STOCK"
+	case AssetTypeEquity:
+		return "EQUITY"
 	case AssetTypeBond:
 		return "BOND"
 	case AssetTypeETF:

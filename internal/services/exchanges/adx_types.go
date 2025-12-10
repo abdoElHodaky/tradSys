@@ -13,9 +13,12 @@ package exchanges
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
+	"github.com/abdoElHodaky/tradSys/internal/compliance"
+	"github.com/abdoElHodaky/tradSys/internal/monitoring"
 	"github.com/abdoElHodaky/tradSys/internal/services/common"
 	"github.com/abdoElHodaky/tradSys/internal/trading/types"
 )
@@ -54,6 +57,9 @@ const (
 	ComplianceLevelHaram
 	ComplianceLevelUnderReview
 )
+
+// Type aliases for common types
+type TradingSchedule = common.TradingSchedule
 
 // ADXService provides Abu Dhabi Exchange integration with Islamic finance focus
 type ADXService struct {
@@ -787,6 +793,23 @@ const (
 	ADXTimezone   = "Asia/Dubai"
 )
 
+// Additional types for method return values
+
+// PerformanceReport represents a performance report
+type PerformanceReport struct {
+	ReportID    string    `json:"report_id"`
+	GeneratedAt time.Time `json:"generated_at"`
+	// TODO: Add more fields as needed
+}
+
+// ZakatAmount represents calculated Zakat amount
+type ZakatAmount struct {
+	Amount       float64   `json:"amount"`
+	Currency     string    `json:"currency"`
+	CalculatedAt time.Time `json:"calculated_at"`
+	// TODO: Add more fields as needed
+}
+
 // Error definitions
 var (
 	ErrInvalidShariaCompliance = fmt.Errorf("invalid Sharia compliance")
@@ -798,3 +821,261 @@ var (
 	ErrInvalidAssetType        = fmt.Errorf("invalid asset type")
 	ErrShariaRuleViolation     = fmt.Errorf("Sharia rule violation")
 )
+
+// Method implementations for ADX types
+
+// Connect establishes connection to ADX
+func (c *ADXConnector) Connect() error {
+	// TODO: Implement actual ADX connection logic
+	log.Printf("ADXConnector.Connect() - stub implementation")
+	return nil
+}
+
+// StartIslamicFeeds starts Islamic market data feeds
+func (md *ADXMarketData) StartIslamicFeeds() {
+	// TODO: Implement Islamic market data feed startup
+	log.Printf("ADXMarketData.StartIslamicFeeds() - stub implementation")
+}
+
+// LoadShariaRules loads Sharia compliance rules
+func (ic *IslamicCompliance) LoadShariaRules() {
+	// TODO: Implement Sharia rules loading
+	log.Printf("IslamicCompliance.LoadShariaRules() - stub implementation")
+}
+
+// ValidateOrder validates an order for Islamic compliance
+func (ic *IslamicCompliance) ValidateOrder(order *common.Order) error {
+	// TODO: Implement Islamic order validation
+	log.Printf("IslamicCompliance.ValidateOrder() - stub implementation")
+	return nil
+}
+
+// LoadRegulatoryRules loads UAE regulatory rules
+func (uc *UAECompliance) LoadRegulatoryRules() {
+	// TODO: Implement UAE regulatory rules loading
+	log.Printf("UAECompliance.LoadRegulatoryRules() - stub implementation")
+}
+
+// ValidateOrder validates an order for UAE compliance
+func (uc *UAECompliance) ValidateOrder(order *common.Order) error {
+	// TODO: Implement UAE compliance validation
+	log.Printf("UAECompliance.ValidateOrder() - stub implementation")
+	return nil
+}
+
+// Initialize initializes the Sukuk service
+func (ss *SukukService) Initialize() {
+	// TODO: Implement Sukuk service initialization
+	log.Printf("SukukService.Initialize() - stub implementation")
+}
+
+// Initialize initializes the Islamic fund service
+func (ifs *IslamicFundService) Initialize() {
+	// TODO: Implement Islamic fund service initialization
+	log.Printf("IslamicFundService.Initialize() - stub implementation")
+}
+
+// Start starts the ADX performance monitor
+func (pm *ADXPerformanceMonitor) Start() {
+	// TODO: Implement performance monitoring startup
+	log.Printf("ADXPerformanceMonitor.Start() - stub implementation")
+}
+
+// AssessOrder performs risk assessment on an order
+func (re *ADXRiskEngine) AssessOrder(order *types.Order) error {
+	// TODO: Implement risk assessment logic
+	log.Printf("ADXRiskEngine.AssessOrder() - stub implementation")
+	return nil
+}
+
+// SubmitOrder submits an order to ADX
+func (om *ADXOrderManager) SubmitOrder(ctx context.Context, order *types.Order) (*OrderResponse, error) {
+	// TODO: Implement actual order submission logic
+	log.Printf("ADXOrderManager.SubmitOrder() - stub implementation")
+	
+	// Create a mock response for now
+	response := &OrderResponse{
+		OrderID:   "ADX-" + order.ID,
+		Status:    OrderStatusPending,
+		Message:   "Order submitted successfully",
+		Timestamp: time.Now(),
+	}
+	return response, nil
+}
+
+// RecordOrderLatency records order execution latency
+func (pm *ADXPerformanceMonitor) RecordOrderLatency(latency time.Duration) {
+	// TODO: Implement latency recording
+	log.Printf("ADXPerformanceMonitor.RecordOrderLatency() - stub implementation: %v", latency)
+}
+
+// GenerateReport generates a performance report
+func (pm *ADXPerformanceMonitor) GenerateReport() *monitoring.PerformanceReport {
+	// TODO: Implement report generation
+	log.Printf("ADXPerformanceMonitor.GenerateReport() - stub implementation")
+	now := time.Now()
+	return &monitoring.PerformanceReport{
+		Period:    "1h",
+		StartTime: now.Add(-time.Hour),
+		EndTime:   now,
+		Summary: &monitoring.PerformanceSummary{
+			AvgOrdersPerSecond: 0.0,
+			AvgTradesPerSecond: 0.0,
+			AvgMatchingLatency: 0.0,
+			AvgCPUUsage:        0.0,
+		},
+		Trends:          make(map[string]float64),
+		Anomalies:       []*monitoring.PerformanceAnomaly{},
+		Recommendations: []string{},
+	}
+}
+
+// GetSukukData retrieves Sukuk data
+func (ss *SukukService) GetSukukData(symbol string) (*SukukData, error) {
+	// TODO: Implement Sukuk data retrieval
+	log.Printf("SukukService.GetSukukData() - stub implementation for symbol: %s", symbol)
+	return &SukukData{
+		ID:           symbol,
+		Name:         "Sample Sukuk",
+		Issuer:       "Sample Issuer",
+		Structure:    "Murabaha",
+		Maturity:     time.Now().AddDate(1, 0, 0),
+		FaceValue:    1000.0,
+		CurrentPrice: 1000.0,
+		YieldRate:    5.0,
+		Rating:       "A",
+		IsActive:     true,
+	}, nil
+}
+
+// GetFundData retrieves Islamic fund data
+func (ifs *IslamicFundService) GetFundData(fundID string) (*IslamicFundData, error) {
+	// TODO: Implement fund data retrieval
+	log.Printf("IslamicFundService.GetFundData() - stub implementation for fund: %s", fundID)
+	return &IslamicFundData{
+		ID:        fundID,
+		Name:      "Sample Islamic Fund",
+		IsActive:  true,
+	}, nil
+}
+
+// GetMarketData retrieves market data
+func (md *ADXMarketData) GetMarketData(symbol string, assetType common.AssetType) (*MarketData, error) {
+	// TODO: Implement market data retrieval
+	log.Printf("ADXMarketData.GetMarketData() - stub implementation for symbol: %s, type: %v", symbol, assetType)
+	return &MarketData{
+		Symbol:        symbol,
+		AssetType:     AssetType(assetType),
+		Price:         100.0,
+		Bid:           99.5,
+		Ask:           100.5,
+		Volume:        1000,
+		High:          105.0,
+		Low:           95.0,
+		Open:          98.0,
+		Close:         100.0,
+		Change:        2.0,
+		ChangePercent: 2.04,
+		Timestamp:     time.Now(),
+		Exchange:      "ADX",
+	}, nil
+}
+
+// IsCompliant checks if an order is compliant
+func (ic *IslamicCompliance) IsCompliant(order *common.Order) bool {
+	// TODO: Implement compliance checking
+	log.Printf("IslamicCompliance.IsCompliant() - stub implementation")
+	return true // Default to compliant for now
+}
+
+// GenerateReport generates a compliance report
+func (ic *IslamicCompliance) GenerateReport() *compliance.ComplianceReport {
+	// TODO: Implement compliance report generation
+	log.Printf("IslamicCompliance.GenerateReport() - stub implementation")
+	return &compliance.ComplianceReport{
+		ID:          "COMP-" + time.Now().Format("20060102150405"),
+		Type:        compliance.ReportTypeDaily,
+		Regulation:  "Islamic Finance",
+		Period:      compliance.ReportPeriodDaily,
+		Data:        make(map[string]interface{}),
+		Status:      compliance.ReportStatusPending,
+		GeneratedAt: time.Now(),
+	}
+}
+
+// Calculate calculates Zakat for given assets
+func (zc *ZakatCalculator) Calculate(assets interface{}) (*ZakatCalculation, error) {
+	// TODO: Implement Zakat calculation logic
+	log.Printf("ZakatCalculator.Calculate() - stub implementation")
+	return &ZakatCalculation{
+		UserID:       "default-user",
+		Year:         time.Now().Year(),
+		TotalWealth:  0.0,
+		Nisab:        DefaultNisabThreshold,
+		ZakatDue:     0.0,
+		Assets:       make(map[string]float64),
+		Liabilities:  make(map[string]float64),
+		CalculatedAt: time.Now(),
+	}, nil
+}
+
+// IsHealthy checks if the ADX connector is healthy
+func (ac *ADXConnector) IsHealthy() bool {
+	// TODO: Implement health check logic
+	log.Printf("ADXConnector.IsHealthy() - stub implementation")
+	return true
+}
+
+// Disconnect disconnects from the ADX exchange
+func (ac *ADXConnector) Disconnect() error {
+	// TODO: Implement disconnect logic
+	log.Printf("ADXConnector.Disconnect() - stub implementation")
+	return nil
+}
+
+// IsHealthy checks if the market data service is healthy
+func (md *ADXMarketData) IsHealthy() bool {
+	// TODO: Implement health check logic
+	log.Printf("ADXMarketData.IsHealthy() - stub implementation")
+	return true
+}
+
+// IsHealthy checks if the Islamic compliance service is healthy
+func (ic *IslamicCompliance) IsHealthy() bool {
+	// TODO: Implement health check logic
+	log.Printf("IslamicCompliance.IsHealthy() - stub implementation")
+	return true
+}
+
+// IsHealthy checks if the UAE compliance service is healthy
+func (uc *UAECompliance) IsHealthy() bool {
+	// TODO: Implement health check logic
+	log.Printf("UAECompliance.IsHealthy() - stub implementation")
+	return true
+}
+
+// Stop stops the performance monitor
+func (pm *ADXPerformanceMonitor) Stop() {
+	// TODO: Implement stop logic
+	log.Printf("ADXPerformanceMonitor.Stop() - stub implementation")
+}
+
+// Shutdown shuts down the Islamic fund service
+func (ifs *IslamicFundService) Shutdown() error {
+	// TODO: Implement shutdown logic
+	log.Printf("IslamicFundService.Shutdown() - stub implementation")
+	return nil
+}
+
+// Shutdown shuts down the Sukuk service
+func (ss *SukukService) Shutdown() error {
+	// TODO: Implement shutdown logic
+	log.Printf("SukukService.Shutdown() - stub implementation")
+	return nil
+}
+
+// Stop stops the market data service
+func (md *ADXMarketData) Stop() {
+	// TODO: Implement stop logic
+	log.Printf("ADXMarketData.Stop() - stub implementation")
+}

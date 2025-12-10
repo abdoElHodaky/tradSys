@@ -29,30 +29,18 @@ type EGXService struct {
 	mu                 sync.RWMutex
 }
 
-// AssetType defines supported asset types for EGX
-type AssetType int
+// Use AssetType from common package (no redeclaration needed)
 
 const (
-	AssetTypeStock AssetType = iota
-	AssetTypeGovernmentBond
-	AssetTypeCorporateBond
-	AssetTypeETF
-	AssetTypeREIT
-	AssetTypeIslamicInstrument
-	AssetTypeMutualFund
-	AssetTypeCommodity
+	AssetTypeStock             = common.AssetTypeStock
+	AssetTypeGovernmentBond    = common.AssetTypeGovernmentBond
+	AssetTypeCorporateBond     = common.AssetTypeCorporateBond
+	AssetTypeETF               = common.AssetTypeETF
+	AssetTypeREIT              = common.AssetTypeREIT
+	AssetTypeIslamicInstrument = common.AssetTypeIslamicInstrument
+	AssetTypeMutualFund        = common.AssetTypeMutualFund
+	AssetTypeCommodity         = common.AssetTypeCommodity
 )
-
-// TradingSchedule defines EGX trading hours and sessions
-type TradingSchedule struct {
-	MarketOpen      time.Time
-	MarketClose     time.Time
-	PreMarketOpen   time.Time
-	PostMarketClose time.Time
-	TradingSessions []TradingSession
-	Holidays        []time.Time
-	Timezone        *time.Location
-}
 
 // TradingSession represents a trading session
 type TradingSession struct {
@@ -60,6 +48,17 @@ type TradingSession struct {
 	StartTime  time.Time
 	EndTime    time.Time
 	AssetTypes []AssetType
+}
+
+// TradingSchedule represents the trading schedule for an exchange
+type TradingSchedule struct {
+	MarketOpen      time.Time         `json:"market_open"`
+	MarketClose     time.Time         `json:"market_close"`
+	PreMarketOpen   time.Time         `json:"pre_market_open"`
+	PostMarketClose time.Time         `json:"post_market_close"`
+	TradingSessions []TradingSession  `json:"trading_sessions"`
+	Holidays        []time.Time       `json:"holidays"`
+	Timezone        *time.Location    `json:"timezone"`
 }
 
 // EgyptianCompliance handles EFA regulatory compliance
@@ -222,7 +221,7 @@ func (egx *EGXService) SubmitOrder(ctx context.Context, order *common.Order) (*c
 }
 
 // GetMarketData retrieves market data for an asset
-func (egx *EGXService) GetMarketData(ctx context.Context, symbol string, assetType AssetType) (*MarketData, error) {
+func (egx *EGXService) GetMarketData(ctx context.Context, symbol string, assetType common.AssetType) (*MarketData, error) {
 	// Validate symbol format for EGX
 	if !egx.isValidEGXSymbol(symbol) {
 		return nil, fmt.Errorf("invalid EGX symbol format: %s", symbol)
@@ -317,7 +316,7 @@ func (egx *EGXService) validateOrder(order *common.Order) error {
 	}
 
 	// Validate price for limit orders
-	if order.Type == OrderTypeLimit && order.Price <= 0 {
+	if order.Type == common.OrderTypeLimit && order.Price <= 0 {
 		return fmt.Errorf("invalid limit price: %f", order.Price)
 	}
 
@@ -336,7 +335,7 @@ func (egx *EGXService) isValidEGXSymbol(symbol string) bool {
 }
 
 // isAssetTypeSupported checks if an asset type is supported
-func (egx *EGXService) isAssetTypeSupported(assetType AssetType) bool {
+func (egx *EGXService) isAssetTypeSupported(assetType common.AssetType) bool {
 	for _, supported := range egx.assetTypes {
 		if supported == assetType {
 			return true
@@ -442,7 +441,7 @@ func (egx *EGXService) getNextBusinessDay(from time.Time) time.Time {
 }
 
 // isIslamicInstrument checks if an asset type is an Islamic instrument
-func (egx *EGXService) isIslamicInstrument(assetType AssetType) bool {
+func (egx *EGXService) isIslamicInstrument(assetType common.AssetType) bool {
 	return assetType == AssetTypeIslamicInstrument
 }
 
@@ -476,8 +475,8 @@ func (egx *EGXService) getIslamicInfo(symbol string) *IslamicInfo {
 // Helper functions for creating EGX-specific data structures
 
 // getSupportedAssetTypes returns the asset types supported by EGX
-func getSupportedAssetTypes() []AssetType {
-	return []AssetType{
+func getSupportedAssetTypes() []common.AssetType {
+	return []common.AssetType{
 		AssetTypeStock,
 		AssetTypeGovernmentBond,
 		AssetTypeCorporateBond,
