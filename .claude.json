@@ -1,0 +1,163 @@
+{
+  "numStartups": 8,
+  "tipsHistory": {
+    "new-user-warmup": 7,
+    "plan-mode-for-complex-tasks": 7,
+    "memory-command": 1,
+    "theme-command": 2,
+    "colorterm-truecolor": 2,
+    "status-line": 3,
+    "prompt-queue": 8,
+    "enter-to-steer-in-relatime": 3,
+    "ide-upsell-external-terminal": 7,
+    "agents-view-multiclauding": 7,
+    "color-when-multi-clauding": 4,
+    "double-esc-code-restore": 4,
+    "continue": 4,
+    "shift-tab": 4,
+    "image-paste": 7,
+    "focus-view": 7,
+    "subagent-fanout-nudge": 7,
+    "workflow-size-prompting-ambient": 7,
+    "loop-command-nudge": 7
+  },
+  "promptQueueUseCount": 3,
+  "showExpandedTodos": true,
+  "firstStartTime": "2026-10-03T06:54:15.445Z",
+  "firstStartVersion": "2.1.283",
+  "machineID": "7262238a316b90151ddc55d1bf429457a1813f6a15ace0dc2ca154ea543bba5d",
+  "opusProMigrationComplete": true,
+  "sonnet1m45MigrationComplete": true,
+  "seenNotifications": {},
+  "hasResetAutoModeOptInForDefaultOffer": true,
+  "migrationVersion": 14,
+  "projects": {
+    "/home/abdo_arh36/tadsys": {
+      "allowedTools": [],
+      "mcpContextUris": [],
+      "mcpServers": {},
+      "enabledMcpjsonServers": [],
+      "disabledMcpjsonServers": [],
+      "hasTrustDialogAccepted": true,
+      "hasClaudeMdExternalIncludesApproved": false,
+      "hasClaudeMdExternalIncludesWarningShown": false,
+      "lastGracefulShutdown": false,
+      "lastVersionBase": "2.1.283",
+      "exampleFiles": [
+        "service.go",
+        "main.go",
+        "go.mod",
+        "server.go",
+        "config.go"
+      ],
+      "exampleFilesGeneratedAt": 1791010989566,
+      "disabledMcpServers": [],
+      "lastCost": 4.835471999999999,
+      "lastAPIDuration": 102389,
+      "lastAPIDurationWithoutRetries": 101769,
+      "lastToolDuration": 1978,
+      "lastDuration": 535301,
+      "lastStartTime": 1791013126772,
+      "lastLinesAdded": 0,
+      "lastLinesRemoved": 0,
+      "lastTotalInputTokens": 1168798,
+      "lastTotalOutputTokens": 8014,
+      "lastTotalCacheCreationInputTokens": 0,
+      "lastTotalCacheReadInputTokens": 0,
+      "lastTotalWebSearchRequests": 0,
+      "lastModelUsage": {
+        "nivida/deepseek-ai/deepseek-v4.1-flash": {
+          "inputTokens": 1168798,
+          "outputTokens": 8014,
+          "thinkingTokens": 0,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 4.835471999999999
+        }
+      },
+      "lastSessionId": "a15679f2-d564-4400-b8a4-69cb2658ee3a"
+    }
+  },
+  "userID": "c335fa9eabf71df289681d82f304032e48be1c45050efa14bb8e84746efdc101",
+  "changelogLastFetched": 1791010555194,
+  "hasCompletedOnboarding": true,
+  "lastOnboardingVersion": "2.1.283",
+  "githubRepoPaths": {
+    "abdoelhodaky/tradsys": [
+      "/home/abdo_arh36/tadsys"
+    ]
+  },
+  "pluginUsage": {
+    "agents-md@builtin": {
+      "usageCount": 0,
+      "lastUsedAt": 1791010987606,
+      "lastUsedNumStartups": 1
+    },
+    "gopls-lsp@claude-plugins-official": {
+      "usageCount": 0,
+      "lastUsedAt": 1791012476305,
+      "lastUsedNumStartups": 4
+    }
+  },
+  "lastClawdEntranceVersion": "2.1.283",
+  "lastReleaseNotesSeen": "2.1.283",
+  "hasSeenAutoDefaultNotice": true,
+  "closedIssuesLastChecked": 1791010988290,
+  "officialMarketplaceAutoInstallAttempted": true,
+  "officialMarketplaceAutoInstalled": true,
+  "tipLifetimeShownCounts": {
+    "new-user-warmup": 2,
+    "plan-mode-for-complex-tasks": 2,
+    "memory-command": 1,
+    "theme-command": 1,
+    "colorterm-truecolor": 1,
+    "status-line": 1,
+    "prompt-queue": 2,
+    "enter-to-steer-in-relatime": 1,
+    "ide-upsell-external-terminal": 2,
+    "agents-view-multiclauding": 2,
+    "color-when-multi-clauding": 1,
+    "double-esc-code-restore": 1,
+    "continue": 1,
+    "shift-tab": 1,
+    "image-paste": 1,
+    "focus-view": 1,
+    "subagent-fanout-nudge": 1,
+    "workflow-size-prompting-ambient": 1,
+    "loop-command-nudge": 1
+  },
+  "tipsHistoryByCommand": {
+    "memory": {
+      "tipId": "memory-command",
+      "numStartups": 1
+    },
+    "statusline": {
+      "tipId": "status-line",
+      "numStartups": 3
+    },
+    "ide": {
+      "tipId": "ide-upsell-external-terminal",
+      "numStartups": 7
+    },
+    "focus": {
+      "tipId": "focus-view",
+      "numStartups": 7
+    },
+    "config": {
+      "tipId": "workflow-size-prompting-ambient",
+      "numStartups": 7
+    }
+  },
+  "autoModeClassifierBillingNoticeAcknowledgedAt": 1791011691530,
+  "hasSeenAutoModeOutsideReadPrompt": true,
+  "pluginUsageLspGraceAppliedIds": [
+    "gopls-lsp@claude-plugins-official"
+  ],
+  "skillUsage": {
+    "golang-pro": {
+      "usageCount": 1,
+      "lastUsedAt": 1791014362103
+    }
+  }
+}

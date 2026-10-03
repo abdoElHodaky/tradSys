@@ -7,7 +7,7 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"github.com/abdoElHodaky/tradSys/internal/statistics"
-	"github.com/abdoElHodaky/tradSys/internal/strategies"
+	"github.com/abdoElHodaky/tradSys/internal/trading/strategies"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -18,7 +18,7 @@ type PairsHandler struct {
 	pairRepo        *repositories.PairRepository
 	statsRepo       *repositories.PairStatisticsRepository
 	positionRepo    *repositories.PairPositionRepository
-	strategyManager *strategy.StrategyManager
+	strategyManager *strategies.StrategyManager
 	logger          *zap.Logger
 }
 
@@ -27,7 +27,7 @@ func NewPairsHandler(
 	pairRepo *repositories.PairRepository,
 	statsRepo *repositories.PairStatisticsRepository,
 	positionRepo *repositories.PairPositionRepository,
-	strategyManager *strategy.StrategyManager,
+	strategyManager *strategies.StrategyManager,
 	logger *zap.Logger,
 ) *PairsHandler {
 	return &PairsHandler{
@@ -540,7 +540,7 @@ func (h *PairsHandler) CreatePairStrategy(c *gin.Context) {
 	}
 
 	// Create strategy parameters
-	params := strategy.StatisticalArbitrageParams{
+	params := strategies.StatisticalArbitrageParams{
 		Name:           request.Name,
 		PairID:         pairID,
 		Symbol1:        pair.Symbol1,

@@ -7,7 +7,7 @@ import (
 
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
-	"github.com/abdoElHodaky/tradSys/internal/marketdata"
+	"github.com/abdoElHodaky/tradSys/proto/marketdata"
 	"github.com/abdoElHodaky/tradSys/internal/orders"
 	"github.com/abdoElHodaky/tradSys/internal/statistics"
 	"github.com/google/uuid"
@@ -48,19 +48,7 @@ type StatisticalArbitrageStrategy struct {
 }
 
 // StatisticalArbitrageParams contains parameters for the statistical arbitrage strategy
-type StatisticalArbitrageParams struct {
-	Name           string
-	PairID         string
-	Symbol1        string
-	Symbol2        string
-	Ratio          float64
-	ZScoreEntry    float64
-	ZScoreExit     float64
-	PositionSize   float64
-	MaxPositions   int
-	LookbackPeriod int
-	UpdateInterval time.Duration
-}
+// It is defined here to avoid redeclaration conflicts with framework.go
 
 // NewStatisticalArbitrageStrategy creates a new statistical arbitrage strategy
 func NewStatisticalArbitrageStrategy(

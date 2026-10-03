@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
+	"github.com/abdoElHodaky/tradSys/proto/marketdata"
 	"go.uber.org/zap"
 )
 
@@ -111,7 +112,7 @@ func (s *MeanReversionStrategy) Initialize(ctx context.Context) error {
 }
 
 // ProcessTick processes a market data tick
-func (s *MeanReversionStrategy) ProcessTick(ctx context.Context, tick *models.MarketDataTick) error {
+func (s *MeanReversionStrategy) ProcessTick(ctx context.Context, data *marketdata.MarketDataResponse) error {
 	if !s.active {
 		return fmt.Errorf("strategy not active")
 	}
@@ -119,8 +120,8 @@ func (s *MeanReversionStrategy) ProcessTick(ctx context.Context, tick *models.Ma
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	symbol := tick.Symbol
-	price := tick.Price
+	symbol := data.Symbol
+	price := data.Price
 
 	// Check if we're tracking this symbol
 	if _, ok := s.symbols[symbol]; !ok {

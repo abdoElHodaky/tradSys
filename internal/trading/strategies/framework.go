@@ -8,7 +8,6 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"github.com/abdoElHodaky/tradSys/internal/orders"
-	"github.com/abdoElHodaky/tradSys/internal/services"
 	"github.com/abdoElHodaky/tradSys/proto/marketdata"
 	orderspb "github.com/abdoElHodaky/tradSys/proto/orders"
 	"go.uber.org/zap"
@@ -47,7 +46,7 @@ type StrategyManager struct {
 	strategies   map[string]Strategy
 	running      map[string]bool
 	mu           sync.RWMutex
-	orderService services.OrderService
+	orderService *orders.OrderService
 	pairRepo     *repositories.PairRepository
 	statsRepo    *repositories.PairStatisticsRepository
 	positionRepo *repositories.PairPositionRepository
@@ -56,7 +55,7 @@ type StrategyManager struct {
 // NewStrategyManager creates a new strategy manager
 func NewStrategyManager(
 	logger *zap.Logger,
-	orderService services.OrderService,
+	orderService *orders.OrderService,
 	pairRepo *repositories.PairRepository,
 	statsRepo *repositories.PairStatisticsRepository,
 	positionRepo *repositories.PairPositionRepository,

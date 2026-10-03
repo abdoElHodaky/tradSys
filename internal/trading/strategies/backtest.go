@@ -141,7 +141,7 @@ func (e *BacktestEngine) RunBacktest(ctx context.Context, strategyName string, i
 		lastPrice := 0.0
 		for i := len(marketData) - 1; i >= 0; i-- {
 			if marketData[i].Symbol == symbol {
-				lastPrice = marketData[i].LastPrice
+				lastPrice = marketData[i].Price
 				break
 			}
 		}
@@ -238,7 +238,7 @@ func (s *mockOrderService) CreateOrder(ctx context.Context, req *orders.CreateOr
 
 	// Create order response
 	order := &orders.OrderResponse{
-		OrderId:       orderID,
+		Id:            orderID,
 		ClientOrderId: req.ClientOrderId,
 		Symbol:        req.Symbol,
 		Side:          req.Side,
@@ -246,10 +246,10 @@ func (s *mockOrderService) CreateOrder(ctx context.Context, req *orders.CreateOr
 		TimeInForce:   req.TimeInForce,
 		Quantity:      req.Quantity,
 		Price:         req.Price,
-		Status:        "NEW",
+		Status:        orders.OrderStatus_NEW,
 		FilledQty:     0,
 		AvgPrice:      0,
-		Timestamp:     time.Now().UnixMilli(),
+		CreatedAt:     time.Now().UnixMilli(),
 	}
 
 	// Store order
@@ -264,13 +264,13 @@ func (s *mockOrderService) CancelOrder(ctx context.Context, req *orders.CancelOr
 	defer s.mu.Unlock()
 
 	// Find order
-	order, exists := s.orders[req.OrderId]
+	order, exists := s.orders[req.Id]
 	if !exists {
-		return nil, fmt.Errorf("order not found: %s", req.OrderId)
+		return nil, fmt.Errorf("order not found: %s", req.Id)
 	}
 
 	// Cancel order
-	order.Status = "CANCELLED"
+	order.Status = orders.OrderStatus_CANCELLED
 
 	return order, nil
 }
@@ -288,22 +288,22 @@ func (s *mockOrderService) ProcessOrders(ctx context.Context, data *marketdata.M
 		}
 
 		// Skip orders that are already filled or cancelled
-		if order.Status == "FILLED" || order.Status == "CANCELLED" || order.Status == "REJECTED" {
+		if order.Status == orders.OrderStatus_FILLED || order.Status == orders.OrderStatus_CANCELLED || order.Status == orders.OrderStatus_REJECTED {
 			continue
 		}
 
 		// Process order based on type
 		switch order.Type {
-		case "MARKET":
+		case orders.OrderType_MARKET:
 			// Market orders are filled immediately at the current price
-			s.fillOrder(orderID, order, data.LastPrice)
+			s.fillOrder(orderID, order, data.Price)
 
-		case "LIMIT":
+		case orders.OrderType_LIMIT:
 			// Limit orders are filled if the price is favorable
-			if order.Side == "BUY" && data.LastPrice <= order.Price {
-				s.fillOrder(orderID, order, data.LastPrice)
-			} else if order.Side == "SELL" && data.LastPrice >= order.Price {
-				s.fillOrder(orderID, order, data.LastPrice)
+			if order.Side == orders.OrderSide_BUY && data.Price <= order.Price {
+				s.fillOrder(orderID, order, data.Price)
+			} else if order.Side == orders.OrderSide_SELL && data.Price >= order.Price {
+				s.fillOrder(orderID, order, data.Price)
 			}
 		}
 	}
@@ -312,29 +312,29 @@ func (s *mockOrderService) ProcessOrders(ctx context.Context, data *marketdata.M
 // fillOrder fills an order
 func (s *mockOrderService) fillOrder(orderID string, order *orders.OrderResponse, price float64) {
 	// Update order
-	order.Status = "FILLED"
+	order.Status = orders.OrderStatus_FILLED
 	order.FilledQty = order.Quantity
 	order.AvgPrice = price
 
 	// Update capital and positions
 	cost := order.Quantity * price
-	if order.Side == "BUY" {
+	if order.Side == orders.OrderSide_BUY {
 		*s.capital -= cost
 		s.positions[order.Symbol] += order.Quantity
-	} else if order.Side == "SELL" {
+	} else if order.Side == orders.OrderSide_SELL {
 		*s.capital += cost
 		s.positions[order.Symbol] -= order.Quantity
 	}
 
 	// Create trade
 	trade := models.Trade{
-		TradeID:   fmt.Sprintf("BACKTEST-TRADE-%s", orderID),
+		ID:        fmt.Sprintf("BACKTEST-TRADE-%s", orderID),
 		OrderID:   orderID,
 		Symbol:    order.Symbol,
-		Side:      models.OrderSide(order.Side),
+		Side:      string(order.Side),
 		Quantity:  order.Quantity,
 		Price:     price,
-		Timestamp: time.Unix(0, order.Timestamp*int64(time.Millisecond)),
+		ExecutedAt: time.Unix(0, order.CreatedAt*int64(time.Millisecond)),
 	}
 
 	// Add trade to trades
@@ -343,7 +343,7 @@ func (s *mockOrderService) fillOrder(orderID string, order *orders.OrderResponse
 	s.logger.Debug("Order filled",
 		zap.String("order_id", orderID),
 		zap.String("symbol", order.Symbol),
-		zap.String("side", order.Side),
+		zap.Int32("side", int32(order.Side)),
 		zap.Float64("quantity", order.Quantity),
 		zap.Float64("price", price),
 		zap.Float64("cost", cost))
