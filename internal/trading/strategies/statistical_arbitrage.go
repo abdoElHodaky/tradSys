@@ -7,10 +7,9 @@ import (
 
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
-	"github.com/abdoElHodaky/tradSys/proto/marketdata"
 	"github.com/abdoElHodaky/tradSys/internal/orders"
 	"github.com/abdoElHodaky/tradSys/internal/statistics"
-	"github.com/google/uuid"
+	"github.com/abdoElHodaky/tradSys/proto/marketdata"
 	"go.uber.org/zap"
 )
 
@@ -41,7 +40,7 @@ type StatisticalArbitrageStrategy struct {
 	lastUpdate    time.Time
 
 	// Services
-	orderService orders.OrderService
+	orderService *orders.OrderService
 	pairRepo     *repositories.PairRepository
 	statsRepo    *repositories.PairStatisticsRepository
 	positionRepo *repositories.PairPositionRepository
@@ -54,7 +53,7 @@ type StatisticalArbitrageStrategy struct {
 func NewStatisticalArbitrageStrategy(
 	logger *zap.Logger,
 	params StatisticalArbitrageParams,
-	orderService orders.OrderService,
+	orderService *orders.OrderService,
 	pairRepo *repositories.PairRepository,
 	statsRepo *repositories.PairStatisticsRepository,
 	positionRepo *repositories.PairPositionRepository,

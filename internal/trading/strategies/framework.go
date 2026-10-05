@@ -8,8 +8,8 @@ import (
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
 	"github.com/abdoElHodaky/tradSys/internal/db/repositories"
 	"github.com/abdoElHodaky/tradSys/internal/orders"
+	"github.com/abdoElHodaky/tradSys/internal/services"
 	"github.com/abdoElHodaky/tradSys/proto/marketdata"
-	orderspb "github.com/abdoElHodaky/tradSys/proto/orders"
 	"go.uber.org/zap"
 )
 
@@ -204,7 +204,6 @@ func (m *StrategyManager) IsStrategyRunning(name string) (bool, error) {
 	return m.running[name], nil
 }
 
-// <<<<<< codegen-bot/fix-order-model-syntax
 // CreatePairsStrategy creates a new statistical arbitrage strategy
 func (m *StrategyManager) CreatePairsStrategy(ctx context.Context, params StatisticalArbitrageParams) (Strategy, error) {
 	// Create a new statistical arbitrage strategy

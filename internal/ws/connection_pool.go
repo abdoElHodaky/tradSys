@@ -31,7 +31,7 @@ type ConnectionPoolStats struct {
 	MessagesSent         int64
 	MessagesReceived     int64
 	LastStatsReset       time.Time
-	mu                   sync.RWMutex
+	mu                   *sync.RWMutex
 }
 
 // NewConnectionPool creates a new connection pool
@@ -42,6 +42,7 @@ func NewConnectionPool(logger *zap.Logger) *ConnectionPool {
 		allConnections:     make(map[*Connection]bool),
 		logger:             logger,
 		stats: ConnectionPoolStats{
+				mu:                   &sync.RWMutex{},
 			ConnectionsByChannel: make(map[string]int),
 			ConnectionsBySymbol:  make(map[string]int),
 			LastStatsReset:       time.Now(),

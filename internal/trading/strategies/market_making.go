@@ -128,7 +128,7 @@ func (s *MarketMakingStrategy) OnMarketData(ctx context.Context, data *marketdat
 	defer s.mu.Unlock()
 
 	// Update last mid price
-	midPrice := (data.BidPrice + data.AskPrice) / 2
+	midPrice := (data.Bid + data.Ask) / 2
 	s.lastMidPrice = midPrice
 	s.lastUpdate = time.Now()
 
@@ -146,31 +146,31 @@ func (s *MarketMakingStrategy) OnOrderUpdate(ctx context.Context, order *orders.
 	defer s.mu.Unlock()
 
 	// Check if this is one of our orders
-	if _, exists := s.activeOrders[order.OrderId]; !exists {
+	if _, exists := s.activeOrders[order.Id]; !exists {
 		return nil
 	}
 
 	// Update order in our active orders map
-	s.activeOrders[order.OrderId] = order
+	s.activeOrders[order.Id] = order
 
 	// Update position if the order is filled
-	if order.Status == "FILLED" || order.Status == "PARTIAL" {
-		if order.Side == "BUY" {
+	if order.Status == orders.OrderStatus_FILLED || order.Status == orders.OrderStatus_PARTIAL {
+		if order.Side == orders.OrderSide_BUY {
 			s.position += order.FilledQty
-		} else if order.Side == "SELL" {
+		} else if order.Side == orders.OrderSide_SELL {
 			s.position -= order.FilledQty
 		}
 
 		s.logger.Info("Order filled",
-			zap.String("order_id", order.OrderId),
-			zap.String("side", order.Side),
+			zap.String("order_id", order.Id),
+			zap.String("side", order.Side.String()),
 			zap.Float64("filled_qty", order.FilledQty),
 			zap.Float64("position", s.position))
 	}
 
 	// Remove order from active orders if it's no longer active
-	if order.Status == "FILLED" || order.Status == "CANCELLED" || order.Status == "REJECTED" {
-		delete(s.activeOrders, order.OrderId)
+	if order.Status == orders.OrderStatus_FILLED || order.Status == orders.OrderStatus_CANCELLED || order.Status == orders.OrderStatus_REJECTED {
+		delete(s.activeOrders, order.Id)
 	}
 
 	return nil
@@ -227,15 +227,14 @@ func (s *MarketMakingStrategy) refreshQuotes(ctx context.Context) {
 
 	for _, order := range activeOrdersCopy {
 		cancelRequest := &orders.CancelOrderRequest{
-			OrderId: order.OrderId,
-			Symbol:  s.symbol,
+			Id: order.Id,
 		}
 
 		_, err := s.orderService.CancelOrder(ctx, cancelRequest)
 		if err != nil {
 			s.logger.Error("Failed to cancel order",
 				zap.Error(err),
-				zap.String("order_id", order.OrderId))
+				zap.String("order_id", order.Id))
 		}
 	}
 
@@ -244,9 +243,9 @@ func (s *MarketMakingStrategy) refreshQuotes(ctx context.Context) {
 		bidRequest := &orders.CreateOrderRequest{
 			ClientOrderId: fmt.Sprintf("%s-BID-%d", s.name, time.Now().UnixNano()),
 			Symbol:        s.symbol,
-			Side:          "BUY",
-			Type:          "LIMIT",
-			TimeInForce:   "GTC",
+			Side:          orders.OrderSide_BUY,
+			Type:          orders.OrderType_LIMIT,
+			TimeInForce:   orders.TimeInForce_GTC,
 			Quantity:      bidQty,
 			Price:         bidPrice,
 		}
@@ -259,11 +258,11 @@ func (s *MarketMakingStrategy) refreshQuotes(ctx context.Context) {
 				zap.Float64("quantity", bidQty))
 		} else {
 			s.mu.Lock()
-			s.activeOrders[bidResponse.OrderId] = bidResponse
+			s.activeOrders[bidResponse.Id] = bidResponse
 			s.mu.Unlock()
 
 			s.logger.Info("Placed bid order",
-				zap.String("order_id", bidResponse.OrderId),
+				zap.String("order_id", bidResponse.Id),
 				zap.Float64("price", bidPrice),
 				zap.Float64("quantity", bidQty))
 		}
@@ -273,9 +272,9 @@ func (s *MarketMakingStrategy) refreshQuotes(ctx context.Context) {
 		askRequest := &orders.CreateOrderRequest{
 			ClientOrderId: fmt.Sprintf("%s-ASK-%d", s.name, time.Now().UnixNano()),
 			Symbol:        s.symbol,
-			Side:          "SELL",
-			Type:          "LIMIT",
-			TimeInForce:   "GTC",
+			Side:          orders.OrderSide_SELL,
+			Type:          orders.OrderType_LIMIT,
+			TimeInForce:   orders.TimeInForce_GTC,
 			Quantity:      askQty,
 			Price:         askPrice,
 		}
@@ -288,11 +287,11 @@ func (s *MarketMakingStrategy) refreshQuotes(ctx context.Context) {
 				zap.Float64("quantity", askQty))
 		} else {
 			s.mu.Lock()
-			s.activeOrders[askResponse.OrderId] = askResponse
+			s.activeOrders[askResponse.Id] = askResponse
 			s.mu.Unlock()
 
 			s.logger.Info("Placed ask order",
-				zap.String("order_id", askResponse.OrderId),
+				zap.String("order_id", askResponse.Id),
 				zap.Float64("price", askPrice),
 				zap.Float64("quantity", askQty))
 		}
@@ -314,21 +313,20 @@ func (s *MarketMakingStrategy) cancelAllOrders(ctx context.Context) error {
 
 	for _, order := range activeOrdersCopy {
 		cancelRequest := &orders.CancelOrderRequest{
-			OrderId: order.OrderId,
-			Symbol:  s.symbol,
+			Id: order.Id,
 		}
 
 		_, err := s.orderService.CancelOrder(ctx, cancelRequest)
 		if err != nil {
 			s.logger.Error("Failed to cancel order",
 				zap.Error(err),
-				zap.String("order_id", order.OrderId))
+				zap.String("order_id", order.Id))
 		} else {
 			s.mu.Lock()
-			delete(s.activeOrders, order.OrderId)
+			delete(s.activeOrders, order.Id)
 			s.mu.Unlock()
 
-			s.logger.Info("Cancelled order", zap.String("order_id", order.OrderId))
+			s.logger.Info("Cancelled order", zap.String("order_id", order.Id))
 		}
 	}
 
