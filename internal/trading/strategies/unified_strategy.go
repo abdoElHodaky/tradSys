@@ -3,7 +3,6 @@ package strategies
 import (
 	"context"
 	"fmt"
-	"math"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -206,33 +205,18 @@ func (e *UnifiedStrategyEngine) Stop() error {
 }
 
 // registerDefaultStrategies registers default trading strategies
+// TODO: This function needs to be updated to use strategies that implement TradingStrategy interface
 func (e *UnifiedStrategyEngine) registerDefaultStrategies() {
-	// Mean reversion strategy
-	meanReversion := &MeanReversionStrategy{
-		id:        "mean_reversion_001",
-		name:      "Mean Reversion Strategy",
-		enabled:   true,
-		lookback:  20,
-		threshold: 2.0,
-		metrics:   &StrategyMetrics{LastUpdateTime: time.Now()},
-		logger:    e.logger.Named("mean_reversion"),
-	}
+	// Mean reversion strategy - uses framework strategy but needs TradingStrategy wrapper
+	// meanReversionParams := MeanReversionStrategyParams{...}
+	// meanReversion := NewMeanReversionStrategy(e.logger.Named("mean_reversion"), meanReversionParams)
 
-	// Momentum strategy
-	momentum := &MomentumStrategy{
-		id:        "momentum_001",
-		name:      "Momentum Strategy",
-		enabled:   true,
-		period:    10,
-		threshold: 0.02,
-		metrics:   &StrategyMetrics{LastUpdateTime: time.Now()},
-		logger:    e.logger.Named("momentum"),
-	}
+	// Momentum strategy - uses framework strategy but needs TradingStrategy wrapper
+	// momentumParams := MomentumStrategyParams{...}
+	// momentum := NewMomentumStrategy(e.logger.Named("momentum"), momentumParams)
 
-	e.RegisterStrategy(meanReversion)
-	e.RegisterStrategy(momentum)
-
-	e.logger.Info("Registered default strategies", zap.Int("count", 2))
+	// For now, we'll just log that strategies need to be registered manually
+	e.logger.Info("Default strategies registration skipped - manual registration required")
 }
 
 // RegisterStrategy registers a trading strategy

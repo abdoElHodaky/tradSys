@@ -269,20 +269,25 @@ func (m *StrategyManager) ProcessOrderUpdate(ctx context.Context, order *service
 
 // BaseStrategy provides a base implementation for strategies
 type BaseStrategy struct {
-	name       string
-	logger     *zap.Logger
-	parameters map[string]interface{}
-	running    bool
-	mu         sync.RWMutex
+	name        string
+	description string
+	symbols     map[string]bool
+	active      bool
+	logger      *zap.Logger
+	parameters  map[string]interface{}
+	running     bool
+	mu          sync.RWMutex
 }
 
 // NewBaseStrategy creates a new base strategy
 func NewBaseStrategy(name string, logger *zap.Logger) *BaseStrategy {
 	return &BaseStrategy{
-		name:       name,
-		logger:     logger,
-		parameters: make(map[string]interface{}),
-		running:    false,
+		name:        name,
+		description: "",
+		logger:      logger,
+		parameters:  make(map[string]interface{}),
+		symbols:     make(map[string]bool),
+		active:      false,
 	}
 }
 

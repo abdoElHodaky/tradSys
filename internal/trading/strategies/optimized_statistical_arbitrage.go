@@ -302,7 +302,7 @@ func (s *OptimizedStatisticalArbitrageStrategy) updatePairStatistics(ctx context
 	pair.Correlation = correlation
 	// pair.Cointegration would be set here if calculated
 
-	if err := s.pairRepo.Update(ctx, pair); err != nil {
+	if err := s.pairRepo.UpdatePair(ctx, pair); err != nil {
 		return fmt.Errorf("failed to update pair: %w", err)
 	}
 
@@ -375,31 +375,31 @@ func (s *OptimizedStatisticalArbitrageStrategy) enterLongPosition(ctx context.Co
 
 	// Create buy order for symbol1
 	buyOrder := &models.Order{
-		OrderID:   uuid.New().String(),
+		ID:        uuid.New().String(),
 		Symbol:    s.symbol1,
 		Side:      models.OrderSideBuy,
 		Type:      models.OrderTypeMarket,
 		Quantity:  qty1,
 		Price:     s.prices1[len(s.prices1)-1],
-		Strategy:  s.name,
-		Timestamp: time.Now(),
+		CreatedAt: time.Now(),
 	}
 
 	// Create sell order for symbol2
 	sellOrder := &models.Order{
-		OrderID:   uuid.New().String(),
+		ID:        uuid.New().String(),
 		Symbol:    s.symbol2,
 		Side:      models.OrderSideSell,
 		Type:      models.OrderTypeMarket,
 		Quantity:  qty2,
 		Price:     s.prices2[len(s.prices2)-1],
-		Strategy:  s.name,
-		Timestamp: time.Now(),
+		CreatedAt: time.Now(),
 	}
 
 	// Submit orders
 	// In a real implementation, you would use the order service to submit these orders
 	// and handle the responses. For simplicity, we'll assume they're executed immediately.
+	_ = buyOrder
+	_ = sellOrder
 
 	// Create and store position
 	position := &models.PairPosition{
@@ -455,31 +455,31 @@ func (s *OptimizedStatisticalArbitrageStrategy) enterShortPosition(ctx context.C
 
 	// Create sell order for symbol1
 	sellOrder := &models.Order{
-		OrderID:   uuid.New().String(),
+		ID:        uuid.New().String(),
 		Symbol:    s.symbol1,
 		Side:      models.OrderSideSell,
 		Type:      models.OrderTypeMarket,
 		Quantity:  qty1,
 		Price:     s.prices1[len(s.prices1)-1],
-		Strategy:  s.name,
-		Timestamp: time.Now(),
+		CreatedAt: time.Now(),
 	}
 
 	// Create buy order for symbol2
 	buyOrder := &models.Order{
-		OrderID:   uuid.New().String(),
+		ID:        uuid.New().String(),
 		Symbol:    s.symbol2,
 		Side:      models.OrderSideBuy,
 		Type:      models.OrderTypeMarket,
 		Quantity:  qty2,
 		Price:     s.prices2[len(s.prices2)-1],
-		Strategy:  s.name,
-		Timestamp: time.Now(),
+		CreatedAt: time.Now(),
 	}
 
 	// Submit orders
 	// In a real implementation, you would use the order service to submit these orders
 	// and handle the responses. For simplicity, we'll assume they're executed immediately.
+	_ = buyOrder
+	_ = sellOrder
 
 	// Create and store position
 	position := &models.PairPosition{
@@ -535,58 +535,56 @@ func (s *OptimizedStatisticalArbitrageStrategy) exitPosition(ctx context.Context
 	if position.Quantity1 > 0 {
 		// Long position in symbol1, need to sell
 		order1 = &models.Order{
-			OrderID:   uuid.New().String(),
+			ID:        uuid.New().String(),
 			Symbol:    position.Symbol1,
 			Side:      models.OrderSideSell,
 			Type:      models.OrderTypeMarket,
 			Quantity:  math.Abs(position.Quantity1),
 			Price:     s.prices1[len(s.prices1)-1],
-			Strategy:  s.name,
-			Timestamp: time.Now(),
+			CreatedAt: time.Now(),
 		}
 	} else {
 		// Short position in symbol1, need to buy
 		order1 = &models.Order{
-			OrderID:   uuid.New().String(),
+			ID:        uuid.New().String(),
 			Symbol:    position.Symbol1,
 			Side:      models.OrderSideBuy,
 			Type:      models.OrderTypeMarket,
 			Quantity:  math.Abs(position.Quantity1),
 			Price:     s.prices1[len(s.prices1)-1],
-			Strategy:  s.name,
-			Timestamp: time.Now(),
+			CreatedAt: time.Now(),
 		}
 	}
 
 	if position.Quantity2 > 0 {
 		// Long position in symbol2, need to sell
 		order2 = &models.Order{
-			OrderID:   uuid.New().String(),
+			ID:        uuid.New().String(),
 			Symbol:    position.Symbol2,
 			Side:      models.OrderSideSell,
 			Type:      models.OrderTypeMarket,
 			Quantity:  math.Abs(position.Quantity2),
 			Price:     s.prices2[len(s.prices2)-1],
-			Strategy:  s.name,
-			Timestamp: time.Now(),
+			CreatedAt: time.Now(),
 		}
 	} else {
 		// Short position in symbol2, need to buy
 		order2 = &models.Order{
-			OrderID:   uuid.New().String(),
+			ID:        uuid.New().String(),
 			Symbol:    position.Symbol2,
 			Side:      models.OrderSideBuy,
 			Type:      models.OrderTypeMarket,
 			Quantity:  math.Abs(position.Quantity2),
 			Price:     s.prices2[len(s.prices2)-1],
-			Strategy:  s.name,
-			Timestamp: time.Now(),
+			CreatedAt: time.Now(),
 		}
 	}
 
 	// Submit orders
 	// In a real implementation, you would use the order service to submit these orders
 	// and handle the responses. For simplicity, we'll assume they're executed immediately.
+	_ = order1
+	_ = order2
 
 	// Update position
 	position.Status = "closed"

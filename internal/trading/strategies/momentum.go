@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math"
 	"sync"
-	"time"
 
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
 	"github.com/abdoElHodaky/tradSys/proto/marketdata"
@@ -206,11 +205,36 @@ func (s *MomentumStrategy) calculateVolatility(returns []float64, period int) fl
 	return math.Sqrt(variance)
 }
 
+// GetPosition returns the current position for a symbol (simplified implementation)
+func (s *MomentumStrategy) GetPosition(ctx context.Context, symbol string) (*Position, error) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	// Simple position tracking - in a real implementation this would
+	// query a position manager or database
+	return &Position{
+		Symbol:   symbol,
+		Quantity: 0, // Default to no position - would be tracked in real implementation
+	}, nil
+}
+
+// SubmitOrder submits an order (placeholder implementation)
+func (s *MomentumStrategy) SubmitOrder(ctx context.Context, order *models.Order) error {
+	s.logger.Info("Order submitted (placeholder)",
+		zap.String("symbol", order.Symbol),
+		zap.String("side", string(order.Side)),
+		zap.Float64("quantity", order.Quantity),
+		zap.Float64("price", order.Price))
+
+	// In a real implementation, this would submit the order to an order service
+	return nil
+}
+
 // generateBuySignal generates a buy signal
 func (s *MomentumStrategy) generateBuySignal(ctx context.Context, symbol string, price float64, momentum float64) {
 	// Check if we already have a position
 	position, err := s.GetPosition(ctx, symbol)
-	if err == nil && position.Size > 0 {
+	if err == nil && position.Quantity > 0 {
 		// Already long, do nothing
 		return
 	}
@@ -229,21 +253,16 @@ func (s *MomentumStrategy) generateBuySignal(ctx context.Context, symbol string,
 	stopLoss := price * (1 - s.stopLossPercent)
 	takeProfit := price * (1 + s.takeProfitPercent)
 
-	// Create order
+	// Create order using valid Order fields
 	order := &models.Order{
 		Symbol:     symbol,
 		Side:       models.OrderSideBuy,
 		Type:       models.OrderTypeMarket,
-		Side:       models.OrderSideBuy,
-		Type:       models.OrderTypeMarket,
-		Side:       "buy",
-		OrderType:  "market",
 		Quantity:   adjustedPositionSize,
 		Price:      price,
-		StopLoss:   stopLoss,
-		TakeProfit: takeProfit,
-		Strategy:   s.name,
-		Timestamp:  time.Now(),
+		StopPrice:  stopLoss,
+		Status:     models.OrderStatusNew,
+		TimeInForce: "GTC",
 	}
 
 	// Submit order
@@ -271,7 +290,7 @@ func (s *MomentumStrategy) generateBuySignal(ctx context.Context, symbol string,
 func (s *MomentumStrategy) generateSellSignal(ctx context.Context, symbol string, price float64, momentum float64) {
 	// Check if we already have a position
 	position, err := s.GetPosition(ctx, symbol)
-	if err == nil && position.Size < 0 {
+	if err == nil && position.Quantity < 0 {
 		// Already short, do nothing
 		return
 	}
@@ -290,21 +309,16 @@ func (s *MomentumStrategy) generateSellSignal(ctx context.Context, symbol string
 	stopLoss := price * (1 + s.stopLossPercent)
 	takeProfit := price * (1 - s.takeProfitPercent)
 
-	// Create order
+	// Create order using valid Order fields
 	order := &models.Order{
 		Symbol:     symbol,
 		Side:       models.OrderSideSell,
 		Type:       models.OrderTypeMarket,
-		Side:       models.OrderSideSell,
-		Type:       models.OrderTypeMarket,
-		Side:       "sell",
-		OrderType:  "market",
 		Quantity:   adjustedPositionSize,
 		Price:      price,
-		StopLoss:   stopLoss,
-		TakeProfit: takeProfit,
-		Strategy:   s.name,
-		Timestamp:  time.Now(),
+		StopPrice:  stopLoss,
+		Status:     models.OrderStatusNew,
+		TimeInForce: "GTC",
 	}
 
 	// Submit order

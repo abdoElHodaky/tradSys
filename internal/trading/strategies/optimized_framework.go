@@ -9,6 +9,7 @@ import (
 
 	"github.com/abdoElHodaky/tradSys/internal/common/pool/performance"
 	"github.com/abdoElHodaky/tradSys/internal/performance/latency"
+	"github.com/abdoElHodaky/tradSys/internal/services"
 	"github.com/abdoElHodaky/tradSys/proto/marketdata"
 	"github.com/abdoElHodaky/tradSys/proto/orders"
 	"go.uber.org/zap"
@@ -277,13 +278,13 @@ func (m *OptimizedStrategyManager) ProcessOrderUpdate(ctx context.Context, order
 	// Check circuit breaker
 	if m.circuitBreakerEnabled && atomic.LoadInt32(&m.circuitBreakerTripped) == 1 {
 		m.logger.Warn("Circuit breaker tripped, skipping order update processing",
-			zap.String("order_id", order.OrderId))
+			zap.String("order_id", order.Id))
 		return
 	}
 
 	// Track order processing
 	startTime := time.Now()
-	defer m.latencyTracker.TrackOrderProcessing(order.OrderId, startTime)
+	defer m.latencyTracker.TrackOrderProcessing(order.Id, startTime)
 
 	// Increment processed count
 	atomic.AddUint64(&m.processedOrders, 1)
@@ -294,9 +295,8 @@ func (m *OptimizedStrategyManager) ProcessOrderUpdate(ctx context.Context, order
 		return
 	}
 
-	// Create a copy of the order to avoid race conditions
-	orderCopy := m.orderPool.Get()
-	*orderCopy = *order
+	// Convert OrderResponse to services.Order for the strategy interface
+	servicesOrder := convertOrderResponseToServicesOrder(order)
 
 	// Try to get a worker from the pool
 	select {
@@ -304,16 +304,15 @@ func (m *OptimizedStrategyManager) ProcessOrderUpdate(ctx context.Context, order
 		go func() {
 			defer func() {
 				<-m.workerPool
-				m.orderPool.Put(orderCopy)
 			}()
 
 			for _, s := range strategies {
 				strategyStartTime := time.Now()
-				if err := s.OnOrderUpdate(ctx, orderCopy); err != nil {
+				if err := s.OnOrderUpdate(ctx, servicesOrder); err != nil {
 					m.logger.Error("Failed to process order update",
 						zap.Error(err),
 						zap.String("strategy", s.GetName()),
-						zap.String("order_id", orderCopy.OrderId))
+						zap.String("order_id", order.Id))
 				}
 				m.latencyTracker.TrackStrategyExecution(s.GetName()+"_order_update", strategyStartTime)
 			}
@@ -321,20 +320,35 @@ func (m *OptimizedStrategyManager) ProcessOrderUpdate(ctx context.Context, order
 	default:
 		// Worker pool is full, process in current goroutine
 		m.logger.Warn("Worker pool full, processing order update in current goroutine",
-			zap.String("order_id", order.OrderId))
+			zap.String("order_id", order.Id))
 
 		for _, s := range strategies {
 			strategyStartTime := time.Now()
-			if err := s.OnOrderUpdate(ctx, orderCopy); err != nil {
+			if err := s.OnOrderUpdate(ctx, servicesOrder); err != nil {
 				m.logger.Error("Failed to process order update",
 					zap.Error(err),
 					zap.String("strategy", s.GetName()),
-					zap.String("order_id", orderCopy.OrderId))
+					zap.String("order_id", order.Id))
 			}
 			m.latencyTracker.TrackStrategyExecution(s.GetName()+"_order_update", strategyStartTime)
 		}
+	}
+}
 
-		m.orderPool.Put(orderCopy)
+// convertOrderResponseToServicesOrder converts proto OrderResponse to services.Order
+func convertOrderResponseToServicesOrder(order *orders.OrderResponse) *services.Order {
+	return &services.Order{
+		ID:         order.Id,
+		AccountID:  order.AccountId,
+		Symbol:     order.Symbol,
+		Side:       string(order.Side),
+		Type:       order.Type.String(),
+		Quantity:   order.Quantity,
+		Price:      order.Price,
+		StopPrice:  order.StopPrice,
+		Status:     order.Status.String(),
+		CreatedAt:  time.Unix(order.CreatedAt, 0),
+		UpdatedAt:  time.Unix(order.UpdatedAt, 0),
 	}
 }
 
