@@ -156,11 +156,11 @@ func (f *Factory) RemoveExchange(exchangeType types.ExchangeType) error {
 
 // ValidateExchangeSupport validates if an exchange supports a specific asset type
 func (f *Factory) ValidateExchangeSupport(exchangeType types.ExchangeType, assetType types.AssetType) error {
-	exchange, err := f.GetExchange(exchangeType)
+	_, err := f.GetExchange(exchangeType)
 	if err != nil {
 		return err
 	}
-	
+
 	// For now, we'll use a simple validation based on exchange type
 	// This can be enhanced with more sophisticated logic
 	switch exchangeType {

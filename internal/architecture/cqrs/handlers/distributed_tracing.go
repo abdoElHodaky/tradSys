@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
 	eventstore "github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
 	"github.com/google/uuid"
@@ -112,7 +111,7 @@ func (t *DistributedTracer) StartSpan(ctx context.Context, operation string) (co
 		ParentSpanID: parentSpanID,
 		StartTime:    time.Now(),
 		Operation:    operation,
-		Tags:         make(map[string]interface{}),
+		Tags:         make(map[string]string),
 	}
 
 	// Add the span to the context
@@ -331,7 +330,9 @@ func (h *TracingEventHandler) HandleEvent(event *eventsourcing.Event) error {
 			ctx = context.WithValue(ctx, "trace_id", traceID)
 		}
 		if spanID, ok := event.Metadata["span_id"]; ok {
-			parentSpanID = spanID
+			if spanIDStr, ok := spanID.(string); ok {
+					parentSpanID = spanIDStr
+				}
 		}
 	}
 

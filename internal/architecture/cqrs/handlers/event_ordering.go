@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
 	eventstore "github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
 	"github.com/google/uuid"
@@ -79,30 +78,36 @@ func (v *EventOrderingValidator) ValidateEvent(event *eventsourcing.Event) error
 
 	// Check correlation ID
 	if correlationID, ok := event.Metadata["correlation_id"]; ok {
-		if timestamp, exists := v.correlations[correlationID]; exists {
-			// Log the correlation
-			v.logger.Debug("Correlated event",
-				zap.String("correlation_id", correlationID),
-				zap.String("event_type", event.EventType),
-				zap.String("aggregate_id", event.AggregateID),
-				zap.Duration("time_since_first", time.Since(timestamp)),
-			)
-		} else {
-			// Record the first occurrence
-			v.correlations[correlationID] = time.Now()
+		if correlationIDStr, ok := correlationID.(string); ok {
+			if timestamp, exists := v.correlations[correlationIDStr]; exists {
+				// Log the correlation
+				v.logger.Debug("Correlated event",
+					zap.String("correlation_id", correlationIDStr),
+					zap.String("event_type", event.EventType),
+					zap.String("aggregate_id", event.AggregateID),
+					zap.Duration("time_since_first", time.Since(timestamp)),
+				)
+			} else {
+				// Record the first occurrence
+				v.correlations[correlationIDStr] = time.Now()
+			}
 		}
 	}
+
+	// Convert version to int64 for comparison
+	eventVersion := int64(event.Version)
 
 	// Validate based on the required guarantee
 	switch v.requiredGuarantee {
 	case GlobalOrdering:
 		// Check global sequence
-		if event.Version <= v.globalSequence {
+		eventVersion := int64(event.Version)
+		if eventVersion <= v.globalSequence {
 			v.violations++
 			return fmt.Errorf("global ordering violation: event version %d <= global sequence %d",
 				event.Version, v.globalSequence)
 		}
-		v.globalSequence = event.Version
+		v.globalSequence = eventVersion
 
 		// Fall through to also check type and aggregate ordering
 		fallthrough
@@ -110,13 +115,13 @@ func (v *EventOrderingValidator) ValidateEvent(event *eventsourcing.Event) error
 	case TypeOrdering:
 		// Check type sequence
 		if seq, ok := v.typeSequences[event.EventType]; ok {
-			if event.Version <= seq {
+			if eventVersion <= seq {
 				v.violations++
 				return fmt.Errorf("type ordering violation: event version %d <= type sequence %d for type %s",
 					event.Version, seq, event.EventType)
 			}
 		}
-		v.typeSequences[event.EventType] = event.Version
+		v.typeSequences[event.EventType] = eventVersion
 
 		// Fall through to also check aggregate ordering
 		fallthrough
@@ -125,13 +130,13 @@ func (v *EventOrderingValidator) ValidateEvent(event *eventsourcing.Event) error
 		// Check aggregate sequence
 		aggregateKey := event.AggregateID + ":" + event.AggregateType
 		if seq, ok := v.aggregateSequences[aggregateKey]; ok {
-			if event.Version <= seq {
+			if eventVersion <= seq {
 				v.violations++
 				return fmt.Errorf("aggregate ordering violation: event version %d <= aggregate sequence %d for aggregate %s",
 					event.Version, seq, aggregateKey)
 			}
 		}
-		v.aggregateSequences[aggregateKey] = event.Version
+		v.aggregateSequences[aggregateKey] = eventVersion
 	}
 
 	return nil
@@ -178,7 +183,7 @@ func (h *OrderingEventHandler) HandleEvent(event *eventsourcing.Event) error {
 			zap.String("event_type", event.EventType),
 			zap.String("aggregate_id", event.AggregateID),
 			zap.String("aggregate_type", event.AggregateType),
-			zap.Int64("version", event.Version),
+			zap.Int("version", event.Version),
 			zap.Error(err),
 		)
 	}
@@ -225,7 +230,7 @@ func (d *OrderingEventBusDecorator) PublishEvent(ctx context.Context, event *eve
 	// Add a correlation ID if not present
 	if _, ok := event.Metadata["correlation_id"]; !ok {
 		if event.Metadata == nil {
-			event.Metadata = make(map[string]string)
+			event.Metadata = make(map[string]interface{})
 		}
 		event.Metadata["correlation_id"] = uuid.New().String()
 	}
@@ -237,7 +242,7 @@ func (d *OrderingEventBusDecorator) PublishEvent(ctx context.Context, event *eve
 			zap.String("event_type", event.EventType),
 			zap.String("aggregate_id", event.AggregateID),
 			zap.String("aggregate_type", event.AggregateType),
-			zap.Int64("version", event.Version),
+			zap.Int("version", event.Version),
 			zap.Error(err),
 		)
 		// Continue publishing despite the violation
@@ -254,7 +259,7 @@ func (d *OrderingEventBusDecorator) PublishEvents(ctx context.Context, events []
 		// Add a correlation ID if not present
 		if _, ok := event.Metadata["correlation_id"]; !ok {
 			if event.Metadata == nil {
-				event.Metadata = make(map[string]string)
+				event.Metadata = make(map[string]interface{})
 			}
 			event.Metadata["correlation_id"] = uuid.New().String()
 		}
@@ -266,7 +271,7 @@ func (d *OrderingEventBusDecorator) PublishEvents(ctx context.Context, events []
 				zap.String("event_type", event.EventType),
 				zap.String("aggregate_id", event.AggregateID),
 				zap.String("aggregate_type", event.AggregateType),
-				zap.Int64("version", event.Version),
+				zap.Int("version", event.Version),
 				zap.Error(err),
 			)
 			// Continue publishing despite the violation

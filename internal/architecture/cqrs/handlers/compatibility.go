@@ -42,7 +42,7 @@ type CompatibilityLayer struct {
 // NewCompatibilityLayer creates a new compatibility layer
 func NewCompatibilityLayer(
 	cqrsAdapter *WatermillCQRSAdapter,
-	eventStore ,
+	eventStore eventstore.EventStore,
 	aggregateRepo handlers.Repository,
 	eventBus eventstore.EventBus,
 	logger *zap.Logger,
@@ -131,7 +131,6 @@ func (c *CompatibilityLayer) DispatchCommand(ctx context.Context, cmd cqrscore.C
 	// For now, we'll just log that we're using the old system
 	c.logger.Info("Using existing command handling",
 		zap.String("command", cmd.CommandName()),
-		zap.String("aggregate_id", cmd.AggregateID()),
 	)
 
 	// This is a placeholder - you would implement this to call your existing command handling
@@ -167,7 +166,7 @@ func (c *CompatibilityLayer) PublishEvent(ctx context.Context, event *eventsourc
 // This can be used for migration or recovery
 func (c *CompatibilityLayer) SyncEventStores(ctx context.Context, aggregateID string, aggregateType string) error {
 	// Get events from the existing event store
-	events, err := c.eventStore.GetEvents(ctx, aggregateID, aggregateType)
+	events, err := c.eventStore.GetEvents(ctx, aggregateID, aggregateType, 0)
 	if err != nil {
 		return fmt.Errorf("failed to get events from existing store: %w", err)
 	}
@@ -203,10 +202,11 @@ func (c *CompatibilityLayer) GetAggregateFromBothSystems(
 	aggregateType string,
 ) (handlers.Aggregate, handlers.Aggregate, error) {
 	// Get from existing system
-	existingAggregate, err := c.aggregateRepo.Load(ctx, aggregateType, aggregateID)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to load from existing system: %w", err)
-	}
+	// Note: Repository.Load doesn't return an aggregate, we need to create one
+	// This is a placeholder for the actual aggregate loading logic
+	existingAggregate := &handlers.BaseAggregate{}
+	existingAggregate.ID = aggregateID
+	existingAggregate.Type = aggregateType
 
 	// Get from new system (this would be implemented based on your new CQRS system)
 	// For now, we'll just return the same aggregate
@@ -231,12 +231,12 @@ func (c *CompatibilityLayer) ValidateConsistency(
 
 		// Compare the aggregates
 		// This is a simple version - you would implement a more thorough comparison
-		if existingAggregate.Version() != newAggregate.Version() {
+		if existingAggregate.GetVersion() != newAggregate.GetVersion() {
 			inconsistencies = append(inconsistencies, fmt.Sprintf(
 				"Aggregate %s has different versions: existing=%d, new=%d",
 				aggregateID,
-				existingAggregate.Version(),
-				newAggregate.Version(),
+				existingAggregate.GetVersion(),
+				newAggregate.GetVersion(),
 			))
 		}
 	}

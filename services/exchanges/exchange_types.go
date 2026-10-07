@@ -3,8 +3,57 @@ package exchanges
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
+
+// AssetType represents different types of assets
+type AssetType string
+
+const (
+	AssetTypeStock              AssetType = "STOCK"
+	AssetTypeGovernmentBond     AssetType = "GOVERNMENT_BOND"
+	AssetTypeCorporateBond      AssetType = "CORPORATE_BOND"
+	AssetTypeETF                AssetType = "ETF"
+	AssetTypeREIT               AssetType = "REIT"
+	AssetTypeMutualFund         AssetType = "MUTUAL_FUND"
+	AssetTypeIslamicInstrument  AssetType = "ISLAMIC_INSTRUMENT"
+	AssetTypeSukuk              AssetType = "SUKUK"
+	AssetTypeIslamicFund        AssetType = "ISLAMIC_FUND"
+	AssetTypeIslamicREIT        AssetType = "ISLAMIC_REIT"
+	AssetTypeIslamicETF         AssetType = "ISLAMIC_ETF"
+	AssetTypeTAKAFUL            AssetType = "TAKAFUL"
+)
+
+// TradingSchedule represents trading hours and schedule
+type TradingSchedule struct {
+	Timezone       *time.Location
+	MarketOpen     time.Time
+	MarketClose    time.Time
+	PreMarketOpen  time.Time
+	PostMarketClose time.Time
+	TradingSessions []TradingSession
+	Holidays       []time.Time
+}
+
+// TradingSession represents a trading session
+type TradingSession struct {
+	Name       string
+	StartTime  time.Time
+	EndTime    time.Time
+	AssetTypes []AssetType
+}
+
+// Config holds configuration for exchange services
+type Config struct {
+	APIEndpoint  string
+	APIKey       string
+	APISecret    string
+	Timeout      time.Duration
+	RetryAttempts int
+	RateLimitRPS  int
+	EnableIslamic bool
+}
 
 // Order represents a trading order
 type Order struct {

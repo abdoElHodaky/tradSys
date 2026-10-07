@@ -203,7 +203,7 @@ func NewShardingEventBusDecorator(
 func (d *ShardingEventBusDecorator) PublishEvent(ctx context.Context, event *eventsourcing.Event) error {
 	// Add the shard to the event metadata
 	if event.Metadata == nil {
-		event.Metadata = make(map[string]string)
+		event.Metadata = make(map[string]interface{})
 	}
 
 	shard := d.manager.GetShardForEvent(event)
@@ -218,7 +218,7 @@ func (d *ShardingEventBusDecorator) PublishEvents(ctx context.Context, events []
 	// Add the shard to each event's metadata
 	for _, event := range events {
 		if event.Metadata == nil {
-			event.Metadata = make(map[string]string)
+			event.Metadata = make(map[string]interface{})
 		}
 
 		shard := d.manager.GetShardForEvent(event)

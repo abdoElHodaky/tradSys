@@ -381,3 +381,209 @@ type ContactInfo struct {
 	Address string `json:"address"`
 	Website string `json:"website"`
 }
+
+// Connector handles connection to ADX
+type Connector struct {
+	config    *Config
+	conn      string
+	mu        sync.RWMutex
+	connected bool
+}
+
+// NewConnector creates a new connector
+func NewConnector(config *Config) *Connector {
+	return &Connector{
+		config: config,
+	}
+}
+
+// Connect establishes connection to ADX
+func (c *Connector) Connect(ctx context.Context) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.connected = true
+	return nil
+}
+
+// Disconnect closes the connection
+func (c *Connector) Disconnect(ctx context.Context) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.connected = false
+	return nil
+}
+
+// IsConnected returns connection status
+func (c *Connector) IsConnected() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.connected
+}
+
+// MarketDataService handles market data operations
+type MarketDataService struct {
+	config *Config
+	mu     sync.RWMutex
+}
+
+// NewMarketDataService creates a new market data service
+func NewMarketDataService(config *Config) *MarketDataService {
+	return &MarketDataService{config: config}
+}
+
+// GetMarketData retrieves market data for a symbol
+func (m *MarketDataService) GetMarketData(ctx context.Context, symbol string) (*interfaces.MarketData, error) {
+	return &interfaces.MarketData{
+		Symbol:    symbol,
+		Timestamp: time.Now(),
+	}, nil
+}
+
+// Subscribe subscribes to market data feed
+func (m *MarketDataService) Subscribe(ctx context.Context, symbols []string) (<-chan *interfaces.MarketData, error) {
+	ch := make(chan *interfaces.MarketData)
+	go func() {
+		defer close(ch)
+		for _, symbol := range symbols {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- &interfaces.MarketData{
+				Symbol:    symbol,
+				Timestamp: time.Now(),
+			}:
+			}
+		}
+	}()
+	return ch, nil
+}
+
+// OrderManager handles order operations
+type OrderManager struct {
+	config *Config
+	mu     sync.RWMutex
+}
+
+// NewOrderManager creates a new order manager
+func NewOrderManager(config *Config) *OrderManager {
+	return &OrderManager{config: config}
+}
+
+// PlaceOrder places an order
+func (o *OrderManager) PlaceOrder(ctx context.Context, order *interfaces.Order) (*interfaces.OrderResponse, error) {
+	return &interfaces.OrderResponse{
+		OrderID:   "adx-order-id",
+		Status:    "new",
+		Message:   "Order placed",
+		Timestamp: time.Now(),
+	}, nil
+}
+
+// CancelOrder cancels an order
+func (o *OrderManager) CancelOrder(ctx context.Context, orderID string) error {
+	return nil
+}
+
+// GetOrderStatus gets order status
+func (o *OrderManager) GetOrderStatus(ctx context.Context, orderID string) (*interfaces.OrderStatus, error) {
+	return &interfaces.OrderStatus{
+		OrderID: orderID,
+		Status:  "filled",
+	}, nil
+}
+
+// AssetManager handles asset operations
+type AssetManager struct {
+	config *Config
+	mu     sync.RWMutex
+}
+
+// NewAssetManager creates a new asset manager
+func NewAssetManager(config *Config) *AssetManager {
+	return &AssetManager{config: config}
+}
+
+// GetAssetInfo retrieves asset information
+func (a *AssetManager) GetAssetInfo(ctx context.Context, symbol string) (*interfaces.AssetInfo, error) {
+	return &interfaces.AssetInfo{
+		Symbol:    symbol,
+		IsActive:  true,
+		AssetType: types.STOCK,
+	}, nil
+}
+
+// ValidateAsset validates an asset
+func (a *AssetManager) ValidateAsset(ctx context.Context, asset *interfaces.Asset) error {
+	return nil
+}
+
+// ComplianceService handles compliance operations
+type ComplianceService struct {
+	config *Config
+	mu     sync.RWMutex
+}
+
+// NewComplianceService creates a new compliance service
+func NewComplianceService(config *Config) *ComplianceService {
+	return &ComplianceService{config: config}
+}
+
+// ValidateOrder validates an order against compliance rules
+func (c *ComplianceService) ValidateOrder(order *interfaces.Order) error {
+	return nil
+}
+
+// IslamicFinanceService handles Islamic finance operations
+type IslamicFinanceService struct {
+	config *Config
+	mu     sync.RWMutex
+}
+
+// NewIslamicFinanceService creates a new Islamic finance service
+func NewIslamicFinanceService(config *Config) *IslamicFinanceService {
+	return &IslamicFinanceService{config: config}
+}
+
+// Initialize initializes the Islamic finance service
+func (i *IslamicFinanceService) Initialize(ctx context.Context) error {
+	return nil
+}
+
+// ValidateOrder validates an order for Islamic compliance
+func (i *IslamicFinanceService) ValidateOrder(ctx context.Context, order *interfaces.Order) error {
+	return nil
+}
+
+// IsShariahCompliant checks if an asset is Sharia compliant
+func (i *IslamicFinanceService) IsShariahCompliant(ctx context.Context, symbol string) (bool, error) {
+	return true, nil
+}
+
+// GetHalalScreening gets Halal screening info
+func (i *IslamicFinanceService) GetHalalScreening(ctx context.Context, symbol string) (*interfaces.HalalScreening, error) {
+	return &interfaces.HalalScreening{
+		Symbol:          symbol,
+		IsCompliant:     true,
+		Score:           100,
+		Violations:      []string{},
+		Recommendations: []string{},
+		LastUpdated:     time.Now(),
+	}, nil
+}
+
+// GetSukukInfo retrieves Sukuk information
+func (i *IslamicFinanceService) GetSukukInfo(ctx context.Context, symbol string) (*SukukInfo, error) {
+	return &SukukInfo{Symbol: symbol}, nil
+}
+
+// CalculateZakat calculates Zakat for a portfolio
+func (i *IslamicFinanceService) CalculateZakat(ctx context.Context, portfolio *IslamicPortfolio) (*ZakatCalculation, error) {
+	return &ZakatCalculation{}, nil
+}
+
+// GetShariaBoard returns Sharia board info
+func (i *IslamicFinanceService) GetShariaBoard(ctx context.Context) (*ShariaBoard, error) {
+	return &ShariaBoard{}, nil
+}

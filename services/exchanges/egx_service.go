@@ -27,38 +27,8 @@ type EGXService struct {
 	mu               sync.RWMutex
 }
 
-// AssetType defines supported asset types for EGX
-type AssetType int
-
-const (
-	AssetTypeStock AssetType = iota
-	AssetTypeGovernmentBond
-	AssetTypeCorporateBond
-	AssetTypeETF
-	AssetTypeREIT
-	AssetTypeIslamicInstrument
-	AssetTypeMutualFund
-	AssetTypeCommodity
-)
-
-// TradingSchedule defines EGX trading hours and sessions
-type TradingSchedule struct {
-	MarketOpen    time.Time
-	MarketClose   time.Time
-	PreMarketOpen time.Time
-	PostMarketClose time.Time
-	TradingSessions []TradingSession
-	Holidays       []time.Time
-	Timezone       *time.Location
-}
-
-// TradingSession represents a trading session
-type TradingSession struct {
-	Name      string
-	StartTime time.Time
-	EndTime   time.Time
-	AssetTypes []AssetType
-}
+// EGXAssetType defines EGX-specific asset types (using existing package types)
+// Types are actually using the AssetType from exchange_types.go
 
 // EgyptianCompliance handles EFA regulatory compliance
 type EgyptianCompliance struct {
