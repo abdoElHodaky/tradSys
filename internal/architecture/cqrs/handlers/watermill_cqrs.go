@@ -26,7 +26,7 @@ type WatermillCQRSAdapter struct {
 	router *message.Router
 
 	// Our components
-	eventStore    eventstore.EventStore
+	eventstore    eventstore.EventStore
 	aggregateRepo handlers.Repository
 
 	// Publishers and subscribers
@@ -54,7 +54,7 @@ func DefaultWatermillCQRSConfig() WatermillCQRSConfig {
 
 // NewWatermillCQRSAdapter creates a new WatermillCQRSAdapter
 func NewWatermillCQRSAdapter(
-	eventStore eventstore.EventStore,
+	eventstore eventstore.EventStore,
 	aggregateRepo handlers.Repository,
 	logger *zap.Logger,
 	config WatermillCQRSConfig,
@@ -105,7 +105,7 @@ func NewWatermillCQRSAdapter(
 		logger:            logger,
 		watermillLogger:   watermillLogger,
 		router:            router,
-		eventStore:        eventStore,
+		eventstore:        eventstore,
 		aggregateRepo:     aggregateRepo,
 		commandPublisher:  commandPubSub,
 		commandSubscriber: commandPubSub,
@@ -165,7 +165,7 @@ func (a *WatermillCQRSAdapter) RegisterCommandHandler(
 		// Save and publish events
 		if len(events) > 0 {
 			// Save events to the event store
-			err = a.eventStore.SaveEvents(context.Background(), events)
+			err = a.eventstore.SaveEvents(context.Background(), events)
 			if err != nil {
 				return nil, err
 			}
@@ -281,7 +281,7 @@ type watermillEventBusAdapter struct {
 // PublishEvent publishes an event
 func (a *watermillEventBusAdapter) PublishEvent(ctx context.Context, event *eventsourcing.Event) error {
 	// Save the event to the store
-	err := a.adapter.eventStore.SaveEvents(ctx, []*eventsourcing.Event{event})
+	err := a.adapter.eventstore.SaveEvents(ctx, []*eventsourcing.Event{event})
 	if err != nil {
 		return err
 	}
@@ -311,7 +311,7 @@ func (a *watermillEventBusAdapter) PublishEvents(ctx context.Context, events []*
 	}
 
 	// Save the events to the store
-	err := a.adapter.eventStore.SaveEvents(ctx, events)
+	err := a.adapter.eventstore.SaveEvents(ctx, events)
 	if err != nil {
 		return err
 	}

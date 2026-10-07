@@ -13,7 +13,7 @@ import (
 // ProjectionQueryHandler represents a query handler that uses projections
 type ProjectionQueryHandler[T any] struct {
 	projectionName    string
-	projectionManager projection.ProjectionManager
+	projectionManager handlers.ProjectionManager
 	queryFunc         func(ctx context.Context, projection interface{}, query Query) (T, error)
 	logger            *zap.Logger
 }
@@ -21,7 +21,7 @@ type ProjectionQueryHandler[T any] struct {
 // NewProjectionQueryHandler creates a new projection query handler
 func NewProjectionQueryHandler[T any](
 	projectionName string,
-	projectionManager projection.ProjectionManager,
+	projectionManager handlers.ProjectionManager,
 	queryFunc func(ctx context.Context, projection interface{}, query Query) (T, error),
 	logger *zap.Logger,
 ) *ProjectionQueryHandler[T] {
@@ -61,7 +61,7 @@ func (h *ProjectionQueryHandler[T]) getProjection(ctx context.Context) (interfac
 // CachedProjectionQueryHandler represents a query handler that uses cached projections
 type CachedProjectionQueryHandler[T any] struct {
 	projectionName    string
-	projectionManager projection.ProjectionManager
+	projectionManager handlers.ProjectionManager
 	queryFunc         func(ctx context.Context, projection interface{}, query Query) (T, error)
 	logger            *zap.Logger
 	cache             map[string]interface{}
@@ -73,7 +73,7 @@ type CachedProjectionQueryHandler[T any] struct {
 // NewCachedProjectionQueryHandler creates a new cached projection query handler
 func NewCachedProjectionQueryHandler[T any](
 	projectionName string,
-	projectionManager projection.ProjectionManager,
+	projectionManager handlers.ProjectionManager,
 	queryFunc func(ctx context.Context, projection interface{}, query Query) (T, error),
 	logger *zap.Logger,
 	cacheTTL time.Duration,
@@ -143,12 +143,12 @@ func (h *CachedProjectionQueryHandler[T]) getProjection(ctx context.Context) (in
 
 // ProjectionEventHandler represents an event handler that updates a projection
 type ProjectionEventHandler struct {
-	projection projection.Projection
+	projection handlers.Projection
 	logger     *zap.Logger
 }
 
 // NewProjectionEventHandler creates a new projection event handler
-func NewProjectionEventHandler(projection projection.Projection, logger *zap.Logger) *ProjectionEventHandler {
+func NewProjectionEventHandler(projection handlers.Projection, logger *zap.Logger) *ProjectionEventHandler {
 	return &ProjectionEventHandler{
 		projection: projection,
 		logger:     logger,
@@ -158,13 +158,13 @@ func NewProjectionEventHandler(projection projection.Projection, logger *zap.Log
 // HandleEvent handles an event
 func (h *ProjectionEventHandler) HandleEvent(event *eventsourcing.Event) error {
 	// Handle the event
-	err := h.projection.HandleEvent(context.Background(), event)
+	err := h.handlers.HandleEvent(context.Background(), event)
 	if err != nil {
 		h.logger.Error("Failed to handle event",
 			zap.String("event_type", event.EventType),
 			zap.String("aggregate_id", event.AggregateID),
 			zap.String("aggregate_type", event.AggregateType),
-			zap.String("projection", h.projection.GetName()),
+			zap.String("projection", h.handlers.GetName()),
 			zap.Error(err))
 		return err
 	}
@@ -174,5 +174,5 @@ func (h *ProjectionEventHandler) HandleEvent(event *eventsourcing.Event) error {
 
 // Common errors
 var (
-	ErrProjectionNotFound = projection.ErrProjectionNotFound
+	ErrProjectionNotFound = handlers.ErrProjectionNotFound
 )

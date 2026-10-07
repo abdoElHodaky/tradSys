@@ -25,14 +25,14 @@ func (f CommandMiddlewareFunc) Execute(ctx context.Context, cmd cqrscore.Command
 // QueryMiddleware represents middleware for query handling
 type QueryMiddleware interface {
 	// Execute executes the middleware
-	Execute(ctx context.Context, q query.Query, next func(ctx context.Context, q query.Query) (interface{}, error)) (interface{}, error)
+	Execute(ctx context.Context, q Query, next func(ctx context.Context, q Query) (interface{}, error)) (interface{}, error)
 }
 
 // QueryMiddlewareFunc is a function that implements the QueryMiddleware interface
-type QueryMiddlewareFunc func(ctx context.Context, q query.Query, next func(ctx context.Context, q query.Query) (interface{}, error)) (interface{}, error)
+type QueryMiddlewareFunc func(ctx context.Context, q Query, next func(ctx context.Context, q Query) (interface{}, error)) (interface{}, error)
 
 // Execute executes the middleware
-func (f QueryMiddlewareFunc) Execute(ctx context.Context, q query.Query, next func(ctx context.Context, q query.Query) (interface{}, error)) (interface{}, error) {
+func (f QueryMiddlewareFunc) Execute(ctx context.Context, q Query, next func(ctx context.Context, q Query) (interface{}, error)) (interface{}, error) {
 	return f(ctx, q, next)
 }
 
@@ -88,7 +88,7 @@ func NewLoggingQueryMiddleware(logger *zap.Logger) *LoggingQueryMiddleware {
 }
 
 // Execute executes the middleware
-func (m *LoggingQueryMiddleware) Execute(ctx context.Context, q query.Query, next func(ctx context.Context, q query.Query) (interface{}, error)) (interface{}, error) {
+func (m *LoggingQueryMiddleware) Execute(ctx context.Context, q Query, next func(ctx context.Context, q Query) (interface{}, error)) (interface{}, error) {
 	start := time.Now()
 
 	// Log the query
@@ -151,7 +151,7 @@ func NewMetricsQueryMiddleware() *MetricsQueryMiddleware {
 }
 
 // Execute executes the middleware
-func (m *MetricsQueryMiddleware) Execute(ctx context.Context, q query.Query, next func(ctx context.Context, q query.Query) (interface{}, error)) (interface{}, error) {
+func (m *MetricsQueryMiddleware) Execute(ctx context.Context, q Query, next func(ctx context.Context, q Query) (interface{}, error)) (interface{}, error) {
 	start := time.Now()
 
 	// Execute the next middleware
@@ -201,23 +201,23 @@ func (m *ValidationCommandMiddleware) Execute(ctx context.Context, cmd cqrscore.
 
 // ValidationQueryMiddleware provides validation for query handling
 type ValidationQueryMiddleware struct {
-	validators map[string]func(q query.Query) error
+	validators map[string]func(q Query) error
 }
 
 // NewValidationQueryMiddleware creates a new validation query middleware
 func NewValidationQueryMiddleware() *ValidationQueryMiddleware {
 	return &ValidationQueryMiddleware{
-		validators: make(map[string]func(q query.Query) error),
+		validators: make(map[string]func(q Query) error),
 	}
 }
 
 // RegisterValidator registers a validator for a query
-func (m *ValidationQueryMiddleware) RegisterValidator(queryName string, validator func(q query.Query) error) {
+func (m *ValidationQueryMiddleware) RegisterValidator(queryName string, validator func(q Query) error) {
 	m.validators[queryName] = validator
 }
 
 // Execute executes the middleware
-func (m *ValidationQueryMiddleware) Execute(ctx context.Context, q query.Query, next func(ctx context.Context, q query.Query) (interface{}, error)) (interface{}, error) {
+func (m *ValidationQueryMiddleware) Execute(ctx context.Context, q Query, next func(ctx context.Context, q Query) (interface{}, error)) (interface{}, error) {
 	// Get the validator for the query
 	validator, exists := m.validators[q.QueryName()]
 	if exists {

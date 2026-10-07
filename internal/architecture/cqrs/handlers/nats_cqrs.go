@@ -25,7 +25,7 @@ type NatsCQRSAdapter struct {
 	js   nats.JetStreamContext
 
 	// Our components
-	eventStore    eventeventstore.EventStore
+	eventstore    eventstore.EventStore
 	aggregateRepo handlers.Repository
 
 	// Command handlers
@@ -100,7 +100,7 @@ func DefaultNatsCQRSConfig() NatsCQRSConfig {
 
 // NewNatsCQRSAdapter creates a new NatsCQRSAdapter
 func NewNatsCQRSAdapter(
-	eventStore eventeventstore.EventStore,
+	eventstore eventstore.EventStore,
 	aggregateRepo handlers.Repository,
 	logger *zap.Logger,
 	config NatsCQRSConfig,
@@ -136,7 +136,7 @@ func NewNatsCQRSAdapter(
 	adapter := &NatsCQRSAdapter{
 		logger:          logger,
 		conn:            nc,
-		eventStore:      eventStore,
+		eventstore:      eventstore,
 		aggregateRepo:   aggregateRepo,
 		commandHandlers: make(map[string]cqrscore.EventSourcedHandler),
 		eventHandlers:   make(map[string][]eventsourcing.EventHandler),
@@ -261,7 +261,7 @@ func (a *NatsCQRSAdapter) RegisterCommandHandler(
 		// Save and publish events
 		if len(events) > 0 {
 			// Save events to the event store
-			err = a.eventStore.SaveEvents(context.Background(), events)
+			err = a.eventstore.SaveEvents(context.Background(), events)
 			if err != nil {
 				a.logger.Error("Failed to save events",
 					zap.String("command", cmd.CommandName()),
@@ -434,7 +434,7 @@ func (a *NatsCQRSAdapter) CreateEventBusAdapter() eventstore.EventBus {
 	config := eventbus.DefaultNatsEventBusConfig()
 
 	// Create a NATS event bus
-	bus, err := eventbus.NewNatsEventBus(a.eventStore, a.logger, config)
+	bus, err := eventbus.NewNatsEventBus(a.eventstore, a.logger, config)
 	if err != nil {
 		a.logger.Error("Failed to create NATS event bus", zap.Error(err))
 		return nil

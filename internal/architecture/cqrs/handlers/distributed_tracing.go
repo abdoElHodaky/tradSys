@@ -7,6 +7,7 @@ import (
 
 	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
+	eventstore "github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -111,7 +112,7 @@ func (t *DistributedTracer) StartSpan(ctx context.Context, operation string) (co
 		ParentSpanID: parentSpanID,
 		StartTime:    time.Now(),
 		Operation:    operation,
-		Tags:         make(map[string]string),
+		Tags:         make(map[string]interface{}),
 	}
 
 	// Add the span to the context
@@ -217,7 +218,7 @@ func (d *TracingEventBusDecorator) PublishEvent(ctx context.Context, event *even
 
 		// Add the trace ID to the event metadata
 		if event.Metadata == nil {
-			event.Metadata = make(map[string]string)
+			event.Metadata = make(map[string]interface{})
 		}
 		event.Metadata["trace_id"] = span.TraceID
 		event.Metadata["span_id"] = span.SpanID
@@ -253,7 +254,7 @@ func (d *TracingEventBusDecorator) PublishEvents(ctx context.Context, events []*
 
 			// Add the trace ID to the event metadata
 			if event.Metadata == nil {
-				event.Metadata = make(map[string]string)
+				event.Metadata = make(map[string]interface{})
 			}
 			event.Metadata["trace_id"] = span.TraceID
 			event.Metadata["span_id"] = span.SpanID

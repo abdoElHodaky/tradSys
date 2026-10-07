@@ -10,7 +10,7 @@ import (
 // CQRSSystem represents a complete CQRS system
 type CQRSSystem struct {
 	// Core components
-	EventStore    eventeventstore.EventStore
+	EventStore    eventstore.EventStore
 	AggregateRepo handlers.Repository
 	EventBus      eventstore.EventBus
 
@@ -55,17 +55,17 @@ func NewCQRSFactory(
 // CreateCQRSSystem creates a new CQRS system
 func (f *CQRSFactory) CreateCQRSSystem() (*CQRSSystem, error) {
 	// Create the event store
-	eventStore, err := store.NewInMemoryEventStore()
+	eventstore, err := store.NewInMemoryEventStore()
 	if err != nil {
 		return nil, err
 	}
 
 	// Create the aggregate repository
-	aggregateRepo := aggregate.NewRepository(eventStore)
+	aggregateRepo := aggregate.NewRepository(eventstore)
 
 	// Create the system
 	system := &CQRSSystem{
-		EventStore:    eventStore,
+		EventStore:    eventstore,
 		AggregateRepo: aggregateRepo,
 		Logger:        f.logger,
 	}
@@ -75,7 +75,7 @@ func (f *CQRSFactory) CreateCQRSSystem() (*CQRSSystem, error) {
 		// Create the Watermill adapter
 		watermillConfig := DefaultWatermillCQRSConfig()
 		watermillAdapter, err := NewWatermillCQRSAdapter(
-			eventStore,
+			eventstore,
 			aggregateRepo,
 			f.logger,
 			watermillConfig,
@@ -103,7 +103,7 @@ func (f *CQRSFactory) CreateCQRSSystem() (*CQRSSystem, error) {
 		// Create the NATS adapter
 		natsConfig := DefaultNatsCQRSConfig()
 		natsAdapter, err := NewNatsCQRSAdapter(
-			eventStore,
+			eventstore,
 			aggregateRepo,
 			f.logger,
 			natsConfig,
@@ -129,7 +129,7 @@ func (f *CQRSFactory) CreateCQRSSystem() (*CQRSSystem, error) {
 	// If neither Watermill nor NATS is enabled, create a default event bus
 	if !f.useWatermill && !f.useNats {
 		// Create a default event bus
-		eventBus := eventbus.NewInMemoryEventBus(eventStore, f.logger)
+		eventBus := eventbus.NewInMemoryEventBus(eventstore, f.logger)
 
 		// Set the event bus
 		system.EventBus = eventBus
@@ -140,7 +140,7 @@ func (f *CQRSFactory) CreateCQRSSystem() (*CQRSSystem, error) {
 		// Create the compatibility layer
 		compatLayer := NewCompatibilityLayer(
 			system.WatermillAdapter,
-			eventStore,
+			eventstore,
 			aggregateRepo,
 			system.EventBus,
 			f.logger,
