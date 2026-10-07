@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
+	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
+	eventstore "github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
@@ -25,11 +25,11 @@ type NatsCQRSAdapter struct {
 	js   nats.JetStreamContext
 
 	// Our components
-	eventStore    store.EventStore
-	aggregateRepo aggregate.Repository
+	eventStore    eventeventstore.EventStore
+	aggregateRepo handlers.Repository
 
 	// Command handlers
-	commandHandlers map[string]command.EventSourcedHandler
+	commandHandlers map[string]cqrscore.EventSourcedHandler
 
 	// Event handlers
 	eventHandlers map[string][]eventsourcing.EventHandler
@@ -100,8 +100,8 @@ func DefaultNatsCQRSConfig() NatsCQRSConfig {
 
 // NewNatsCQRSAdapter creates a new NatsCQRSAdapter
 func NewNatsCQRSAdapter(
-	eventStore store.EventStore,
-	aggregateRepo aggregate.Repository,
+	eventStore eventeventstore.EventStore,
+	aggregateRepo handlers.Repository,
 	logger *zap.Logger,
 	config NatsCQRSConfig,
 ) (*NatsCQRSAdapter, error) {
@@ -138,7 +138,7 @@ func NewNatsCQRSAdapter(
 		conn:            nc,
 		eventStore:      eventStore,
 		aggregateRepo:   aggregateRepo,
-		commandHandlers: make(map[string]command.EventSourcedHandler),
+		commandHandlers: make(map[string]cqrscore.EventSourcedHandler),
 		eventHandlers:   make(map[string][]eventsourcing.EventHandler),
 		subs:            make([]*nats.Subscription, 0),
 		ctx:             ctx,
@@ -213,10 +213,10 @@ func (a *NatsCQRSAdapter) Stop() error {
 // RegisterCommandHandler registers a command handler
 func (a *NatsCQRSAdapter) RegisterCommandHandler(
 	commandType reflect.Type,
-	handler command.EventSourcedHandler,
+	handler cqrscore.EventSourcedHandler,
 ) error {
 	// Create a zero value of the command type
-	cmd, ok := reflect.New(commandType).Elem().Interface().(command.Command)
+	cmd, ok := reflect.New(commandType).Elem().Interface().(cqrscore.Command)
 	if !ok {
 		return fmt.Errorf("command type %s does not implement Command interface", commandType.Name())
 	}
@@ -241,7 +241,7 @@ func (a *NatsCQRSAdapter) RegisterCommandHandler(
 	// Create a message handler
 	msgHandler := func(msg *nats.Msg) {
 		// Unmarshal the command
-		var cmd command.Command
+		var cmd cqrscore.Command
 		err := json.Unmarshal(msg.Data, &cmd)
 		if err != nil {
 			a.logger.Error("Failed to unmarshal command", zap.Error(err))
@@ -402,7 +402,7 @@ func (a *NatsCQRSAdapter) RegisterEventHandler(
 }
 
 // DispatchCommand dispatches a command
-func (a *NatsCQRSAdapter) DispatchCommand(ctx context.Context, cmd command.Command) error {
+func (a *NatsCQRSAdapter) DispatchCommand(ctx context.Context, cmd cqrscore.Command) error {
 	// Marshal the command
 	payload, err := json.Marshal(cmd)
 	if err != nil {
@@ -429,7 +429,7 @@ func (a *NatsCQRSAdapter) DispatchCommand(ctx context.Context, cmd command.Comma
 }
 
 // CreateEventBusAdapter creates an EventBus adapter that uses NATS
-func (a *NatsCQRSAdapter) CreateEventBusAdapter() eventbus.EventBus {
+func (a *NatsCQRSAdapter) CreateEventBusAdapter() eventstore.EventBus {
 	// Create a NATS event bus configuration
 	config := eventbus.DefaultNatsEventBusConfig()
 

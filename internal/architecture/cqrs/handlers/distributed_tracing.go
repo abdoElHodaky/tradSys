@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
+	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -184,14 +184,14 @@ func (t *DistributedTracer) exportSpan(span *SpanContext) {
 
 // TracingEventBusDecorator decorates an event bus with distributed tracing
 type TracingEventBusDecorator struct {
-	eventBus eventbus.EventBus
+	eventBus eventstore.EventBus
 	tracer   *DistributedTracer
 	logger   *zap.Logger
 }
 
 // NewTracingEventBusDecorator creates a new tracing event bus decorator
 func NewTracingEventBusDecorator(
-	eventBus eventbus.EventBus,
+	eventBus eventstore.EventBus,
 	tracer *DistributedTracer,
 	logger *zap.Logger,
 ) *TracingEventBusDecorator {

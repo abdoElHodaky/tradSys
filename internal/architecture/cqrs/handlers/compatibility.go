@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
+	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
+	eventstore "github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
 	"go.uber.org/zap"
 )
@@ -23,9 +23,9 @@ type CompatibilityLayer struct {
 	cqrsAdapter *WatermillCQRSAdapter
 
 	// Event sourcing components
-	eventStore    store.EventStore
-	aggregateRepo aggregate.Repository
-	eventBus      eventbus.EventBus
+	eventStore    eventstore.EventStore
+	aggregateRepo handlers.Repository
+	eventBus      eventstore.EventBus
 
 	// Synchronization
 	mu sync.RWMutex
@@ -42,9 +42,9 @@ type CompatibilityLayer struct {
 // NewCompatibilityLayer creates a new compatibility layer
 func NewCompatibilityLayer(
 	cqrsAdapter *WatermillCQRSAdapter,
-	eventStore store.EventStore,
-	aggregateRepo aggregate.Repository,
-	eventBus eventbus.EventBus,
+	eventStore ,
+	aggregateRepo handlers.Repository,
+	eventBus eventstore.EventBus,
 	logger *zap.Logger,
 ) *CompatibilityLayer {
 	return &CompatibilityLayer{
@@ -116,7 +116,7 @@ func (c *CompatibilityLayer) RegisterEventHandler(
 }
 
 // DispatchCommand dispatches a command to the appropriate system
-func (c *CompatibilityLayer) DispatchCommand(ctx context.Context, cmd command.Command) error {
+func (c *CompatibilityLayer) DispatchCommand(ctx context.Context, cmd cqrscore.Command) error {
 	c.mu.RLock()
 	useNew := c.useNewCommandHandling
 	c.mu.RUnlock()
@@ -201,7 +201,7 @@ func (c *CompatibilityLayer) GetAggregateFromBothSystems(
 	ctx context.Context,
 	aggregateID string,
 	aggregateType string,
-) (aggregate.Aggregate, aggregate.Aggregate, error) {
+) (handlers.Aggregate, handlers.Aggregate, error) {
 	// Get from existing system
 	existingAggregate, err := c.aggregateRepo.Load(ctx, aggregateType, aggregateID)
 	if err != nil {

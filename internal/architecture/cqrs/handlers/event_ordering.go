@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
+	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -187,7 +187,7 @@ func (h *OrderingEventHandler) HandleEvent(event *eventsourcing.Event) error {
 
 // OrderingEventBusDecorator decorates an event bus with ordering validation
 type OrderingEventBusDecorator struct {
-	eventBus   eventbus.EventBus
+	eventBus   eventstore.EventBus
 	validator  *EventOrderingValidator
 	logger     *zap.Logger
 	addHandler bool
@@ -195,7 +195,7 @@ type OrderingEventBusDecorator struct {
 
 // NewOrderingEventBusDecorator creates a new ordering event bus decorator
 func NewOrderingEventBusDecorator(
-	eventBus eventbus.EventBus,
+	eventBus eventstore.EventBus,
 	validator *EventOrderingValidator,
 	logger *zap.Logger,
 	addHandler bool,

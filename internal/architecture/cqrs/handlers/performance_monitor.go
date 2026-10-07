@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
+	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
 	"go.uber.org/zap"
 )
@@ -67,8 +67,8 @@ func NewPerformanceMonitor(logger *zap.Logger, sampleRate int) *PerformanceMonit
 // TrackCommandExecution tracks the execution of a command
 func (m *PerformanceMonitor) TrackCommandExecution(
 	ctx context.Context,
-	cmd command.Command,
-	fn func(context.Context, command.Command) error,
+	cmd cqrscore.Command,
+	fn func(context.Context, cqrscore.Command) error,
 ) error {
 	// Record start time
 	startTime := time.Now()

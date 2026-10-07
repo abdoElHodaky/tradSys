@@ -4,8 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/segmentio/ksuid"
-	"github.com/thefabric-io/eventsourcing"
+	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
 )
 
 // Event represents a domain event in the CQRS pattern
@@ -72,7 +71,7 @@ func (e BaseEvent) EventData() interface{} {
 // NewEvent creates a new event
 func NewEvent(name string, aggregateID string, data interface{}, version int) Event {
 	return BaseEvent{
-		ID:        ksuid.New().String(),
+		ID:        generateEventID(),
 		Name:      name,
 		Aggregate: aggregateID,
 		Timestamp: time.Now().UTC(),
@@ -81,65 +80,56 @@ func NewEvent(name string, aggregateID string, data interface{}, version int) Ev
 	}
 }
 
-// EventStore defines the interface for storing and retrieving events
-type EventStore interface {
-	// SaveEvents saves events to the event store
-	SaveEvents(ctx context.Context, events []Event) error
-
-	// GetEvents retrieves events for an aggregate from the event store
-	GetEvents(ctx context.Context, aggregateID string) ([]Event, error)
-
-	// GetEventsByType retrieves events of a specific type from the event store
-	GetEventsByType(ctx context.Context, eventType string) ([]Event, error)
+// generateEventID generates a unique event ID
+func generateEventID() string {
+	return time.Now().UTC().Format("20060102150405") + "-" + string(rune(time.Now().UnixNano()%1000000))
 }
 
-// PostgresEventStore implements the EventStore interface using PostgreSQL
-type PostgresEventStore struct {
-	store *eventsourcing.EventStore
+// EventStoreAdapter adapts the eventsourcing.EventStore to our EventStore interface
+type EventStoreAdapter struct {
+	store eventsourcing.EventStore
 }
 
-// NewPostgresEventStore creates a new PostgreSQL event store
-func NewPostgresEventStore(store *eventsourcing.EventStore) *PostgresEventStore {
-	return &PostgresEventStore{
-		store: store,
-	}
+// NewEventStoreAdapter creates a new event store adapter
+func NewEventStoreAdapter(store eventsourcing.EventStore) *EventStoreAdapter {
+	return &EventStoreAdapter{store: store}
 }
 
-// SaveEvents saves events to the PostgreSQL event store
-func (s *PostgresEventStore) SaveEvents(ctx context.Context, events []Event) error {
-	// Convert our events to thefabric-io/eventsourcing events
-	esEvents := make([]eventsourcing.Event, len(events))
+// SaveEvents saves events to the event store
+func (a *EventStoreAdapter) SaveEvents(ctx context.Context, events []Event) error {
+	// Convert our events to eventsourcing events
+	esEvents := make([]*eventsourcing.Event, len(events))
 	for i, event := range events {
-		esEvents[i] = eventsourcing.Event{
-			ID:          event.EventID(),
-			AggregateID: event.AggregateID(),
-			Type:        event.EventName(),
-			Version:     event.EventVersion(),
-			Payload:     event.EventData(),
-			CreatedAt:   event.EventTimestamp(),
+		esEvents[i] = &eventsourcing.Event{
+			ID:            event.EventID(),
+			AggregateID:   event.AggregateID(),
+			EventType:     event.EventName(),
+			Version:       event.EventVersion(),
+			Payload:       convertToMap(event.EventData()),
+			Timestamp:     event.EventTimestamp(),
+			AggregateType: "", // Will be filled if aggregate type is known
 		}
 	}
 
-	// Save events to the event store
-	return s.store.Save(ctx, esEvents)
+	return a.store.SaveEvents(ctx, esEvents)
 }
 
-// GetEvents retrieves events for an aggregate from the PostgreSQL event store
-func (s *PostgresEventStore) GetEvents(ctx context.Context, aggregateID string) ([]Event, error) {
-	// Get events from the event store
-	esEvents, err := s.store.GetByAggregateID(ctx, aggregateID)
+// GetEvents retrieves events for an aggregate from the event store
+func (a *EventStoreAdapter) GetEvents(ctx context.Context, aggregateID string) ([]Event, error) {
+	// Get events from the event store (need to know aggregate type and version)
+	esEvents, err := a.store.GetEvents(ctx, aggregateID, "", 0)
 	if err != nil {
 		return nil, err
 	}
 
-	// Convert thefabric-io/eventsourcing events to our events
+	// Convert eventsourcing events to our events
 	events := make([]Event, len(esEvents))
 	for i, esEvent := range esEvents {
 		events[i] = BaseEvent{
 			ID:        esEvent.ID,
-			Name:      esEvent.Type,
+			Name:      esEvent.EventType,
 			Aggregate: esEvent.AggregateID,
-			Timestamp: esEvent.CreatedAt,
+			Timestamp: esEvent.Timestamp,
 			Version:   esEvent.Version,
 			Data:      esEvent.Payload,
 		}
@@ -148,26 +138,37 @@ func (s *PostgresEventStore) GetEvents(ctx context.Context, aggregateID string) 
 	return events, nil
 }
 
-// GetEventsByType retrieves events of a specific type from the PostgreSQL event store
-func (s *PostgresEventStore) GetEventsByType(ctx context.Context, eventType string) ([]Event, error) {
+// GetEventsByType retrieves events of a specific type from the event store
+func (a *EventStoreAdapter) GetEventsByType(ctx context.Context, eventType string) ([]Event, error) {
 	// Get events from the event store
-	esEvents, err := s.store.GetByType(ctx, eventType)
+	esEvents, err := a.store.GetEventsByType(ctx, eventType, time.Time{}, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	// Convert thefabric-io/eventsourcing events to our events
+	// Convert eventsourcing events to our events
 	events := make([]Event, len(esEvents))
 	for i, esEvent := range esEvents {
 		events[i] = BaseEvent{
 			ID:        esEvent.ID,
-			Name:      esEvent.Type,
+			Name:      esEvent.EventType,
 			Aggregate: esEvent.AggregateID,
-			Timestamp: esEvent.CreatedAt,
+			Timestamp: esEvent.Timestamp,
 			Version:   esEvent.Version,
 			Data:      esEvent.Payload,
 		}
 	}
 
 	return events, nil
+}
+
+// convertToMap converts interface{} to map[string]interface{}
+func convertToMap(data interface{}) map[string]interface{} {
+	if data == nil {
+		return nil
+	}
+	if m, ok := data.(map[string]interface{}); ok {
+		return m
+	}
+	return map[string]interface{}{"data": data}
 }

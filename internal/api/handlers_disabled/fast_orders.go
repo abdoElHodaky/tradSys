@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/abdoElHodaky/tradSys/internal/common/pool"
+	pools "github.com/abdoElHodaky/tradSys/internal/common/pool/trading"
 	"github.com/abdoElHodaky/tradSys/internal/db/models"
 	"github.com/abdoElHodaky/tradSys/internal/trading/metrics"
 )
@@ -74,7 +74,7 @@ func (h *FastOrderHandler) FastCreateOrder(c *gin.Context) {
 
 	// Populate response from order
 	resp.FromOrder(order)
-	resp.ProcessingTime = time.Since(tracker.startTime).Nanoseconds()
+	resp.ProcessingTime = time.Since(tracker.StartTime).Nanoseconds()
 
 	// Return response
 	c.JSON(http.StatusCreated, resp)
@@ -120,7 +120,7 @@ func (h *FastOrderHandler) FastGetOrder(c *gin.Context) {
 
 	// Populate response
 	resp.FromOrder(order)
-	resp.ProcessingTime = time.Since(tracker.startTime).Nanoseconds()
+	resp.ProcessingTime = time.Since(tracker.StartTime).Nanoseconds()
 
 	c.JSON(http.StatusOK, resp)
 }
@@ -189,7 +189,7 @@ func (h *FastOrderHandler) FastUpdateOrder(c *gin.Context) {
 
 	// Populate response
 	resp.FromOrder(order)
-	resp.ProcessingTime = time.Since(tracker.startTime).Nanoseconds()
+	resp.ProcessingTime = time.Since(tracker.StartTime).Nanoseconds()
 
 	c.JSON(http.StatusOK, resp)
 }
@@ -243,7 +243,7 @@ func (h *FastOrderHandler) FastCancelOrder(c *gin.Context) {
 
 	// Populate response
 	resp.FromOrder(order)
-	resp.ProcessingTime = time.Since(tracker.startTime).Nanoseconds()
+	resp.ProcessingTime = time.Since(tracker.StartTime).Nanoseconds()
 
 	c.JSON(http.StatusOK, resp)
 }
@@ -294,7 +294,7 @@ func (h *FastOrderHandler) FastListOrders(c *gin.Context) {
 		}
 	}()
 
-	processingTime := time.Since(tracker.startTime).Nanoseconds()
+	processingTime := time.Since(tracker.StartTime).Nanoseconds()
 
 	c.JSON(http.StatusOK, gin.H{
 		"orders":          responses,
@@ -332,8 +332,8 @@ func (h *FastOrderHandler) populateOrderFromRequest(order *models.Order, req *po
 	order.ID = uuid.New().String()
 	order.UserID = c.GetString("user_id")
 	order.Symbol = req.Symbol
-	order.Side = req.Side
-	order.Type = req.Type
+	order.Side = models.OrderSide(req.Side)
+	order.Type = models.OrderType(req.Type)
 	order.Quantity = req.Quantity
 	order.Price = req.Price
 	order.StopPrice = req.StopPrice
@@ -362,10 +362,8 @@ func (h *FastOrderHandler) processOrderFast(order *models.Order) error {
 	// For now, just simulate processing
 	time.Sleep(time.Microsecond * 10) // Simulate 10μs processing time
 	order.Status = "filled"
-	order.FilledQuantity = order.Quantity
-	order.AveragePrice = order.Price
-	now := time.Now()
-	order.ExecutedAt = &now
+	order.FilledQty = order.Quantity
+	order.AvgPrice = order.Price
 	return nil
 }
 
@@ -385,8 +383,8 @@ func (h *FastOrderHandler) getOrderFast(orderID string, order *models.Order) err
 	order.Quantity = 1.0
 	order.Price = 50000.0
 	order.Status = "filled"
-	order.FilledQuantity = 1.0
-	order.AveragePrice = 50000.0
+	order.FilledQty = 1.0
+	order.AvgPrice = 50000.0
 	order.CreatedAt = time.Now().Add(-time.Hour)
 	order.UpdatedAt = time.Now()
 
@@ -416,13 +414,13 @@ func (h *FastOrderHandler) listOrdersFast(userID string, limit int) ([]*models.O
 			ID:             fmt.Sprintf("order-%d", i),
 			UserID:         userID,
 			Symbol:         "BTCUSD",
-			Side:           "buy",
-			Type:           "limit",
+			Side:           models.OrderSideBuy,
+			Type:           models.OrderTypeLimit,
 			Quantity:       1.0,
 			Price:          50000.0 + float64(i*100),
 			Status:         "filled",
-			FilledQuantity: 1.0,
-			AveragePrice:   50000.0 + float64(i*100),
+			FilledQty: 1.0,
+			AvgPrice:   50000.0 + float64(i*100),
 			CreatedAt:      time.Now().Add(-time.Duration(i) * time.Hour),
 			UpdatedAt:      time.Now().Add(-time.Duration(i) * time.Hour),
 		}

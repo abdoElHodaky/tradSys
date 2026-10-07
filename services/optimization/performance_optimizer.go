@@ -590,6 +590,13 @@ type AuditOptimizer struct{}
 type RegionalRoutingOptimizer struct{}
 type RegionalDataReplication struct{}
 type AlertManager struct{}
+
+// SendAlert sends a performance alert
+func (am *AlertManager) SendAlert(alert *PerformanceAlert) {
+	// Log the alert - in production this would send to alerting system
+	fmt.Printf("ALERT: %s - %s: %s\n", alert.Severity, alert.Type, alert.Message)
+}
+
 type PerformanceAnalyzer struct{}
 
 // Placeholder methods for components

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
+	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
 	"go.uber.org/zap"
 )
@@ -50,7 +50,7 @@ type EventBusRouter struct {
 	strategy EventRoutingStrategy
 
 	// Event buses
-	buses map[EventBusType]eventbus.EventBus
+	buses map[EventBusType]eventstore.EventBus
 
 	// Default bus
 	defaultBus EventBusType
@@ -85,7 +85,7 @@ func NewEventBusRouter(
 	return &EventBusRouter{
 		logger:          logger,
 		strategy:        config.Strategy,
-		buses:           make(map[EventBusType]eventbus.EventBus),
+		buses:           make(map[EventBusType]eventstore.EventBus),
 		defaultBus:      config.DefaultBus,
 		typeRoutes:      config.TypeRoutes,
 		aggregateRoutes: config.AggregateRoutes,
@@ -94,7 +94,7 @@ func NewEventBusRouter(
 }
 
 // RegisterEventBus registers an event bus with the router
-func (r *EventBusRouter) RegisterEventBus(busType EventBusType, bus eventbus.EventBus) {
+func (r *EventBusRouter) RegisterEventBus(busType EventBusType, bus eventstore.EventBus) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -179,7 +179,7 @@ func (r *EventBusRouter) SetPriorityOrder(order []EventBusType) error {
 }
 
 // getEventBus gets the appropriate event bus for an event
-func (r *EventBusRouter) getEventBus(event *eventsourcing.Event) (eventbus.EventBus, error) {
+func (r *EventBusRouter) getEventBus(event *eventsourcing.Event) (eventstore.EventBus, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -234,11 +234,11 @@ func (r *EventBusRouter) getEventBus(event *eventsourcing.Event) (eventbus.Event
 }
 
 // getAllEventBuses gets all registered event buses
-func (r *EventBusRouter) getAllEventBuses() []eventbus.EventBus {
+func (r *EventBusRouter) getAllEventBuses() []eventstore.EventBus {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	buses := make([]eventbus.EventBus, 0, len(r.buses))
+	buses := make([]eventstore.EventBus, 0, len(r.buses))
 	for _, bus := range r.buses {
 		buses = append(buses, bus)
 	}
@@ -296,7 +296,7 @@ func (r *EventBusRouter) PublishEvents(ctx context.Context, events []*eventsourc
 	}
 
 	// Group events by bus
-	eventsByBus := make(map[eventbus.EventBus][]*eventsourcing.Event)
+	eventsByBus := make(map[eventstore.EventBus][]*eventsourcing.Event)
 
 	for _, event := range events {
 		bus, err := r.getEventBus(event)

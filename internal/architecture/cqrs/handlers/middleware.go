@@ -4,21 +4,21 @@ import (
 	"context"
 	"time"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
+		cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"go.uber.org/zap"
 )
 
 // CommandMiddleware represents middleware for command handling
 type CommandMiddleware interface {
 	// Execute executes the middleware
-	Execute(ctx context.Context, cmd command.Command, next func(ctx context.Context, cmd command.Command) error) error
+	Execute(ctx context.Context, cmd cqrscore.Command, next func(ctx context.Context, cmd cqrscore.Command) error) error
 }
 
 // CommandMiddlewareFunc is a function that implements the CommandMiddleware interface
-type CommandMiddlewareFunc func(ctx context.Context, cmd command.Command, next func(ctx context.Context, cmd command.Command) error) error
+type CommandMiddlewareFunc func(ctx context.Context, cmd cqrscore.Command, next func(ctx context.Context, cmd cqrscore.Command) error) error
 
 // Execute executes the middleware
-func (f CommandMiddlewareFunc) Execute(ctx context.Context, cmd command.Command, next func(ctx context.Context, cmd command.Command) error) error {
+func (f CommandMiddlewareFunc) Execute(ctx context.Context, cmd cqrscore.Command, next func(ctx context.Context, cmd cqrscore.Command) error) error {
 	return f(ctx, cmd, next)
 }
 
@@ -49,7 +49,7 @@ func NewLoggingCommandMiddleware(logger *zap.Logger) *LoggingCommandMiddleware {
 }
 
 // Execute executes the middleware
-func (m *LoggingCommandMiddleware) Execute(ctx context.Context, cmd command.Command, next func(ctx context.Context, cmd command.Command) error) error {
+func (m *LoggingCommandMiddleware) Execute(ctx context.Context, cmd cqrscore.Command, next func(ctx context.Context, cmd cqrscore.Command) error) error {
 	start := time.Now()
 
 	// Log the command
@@ -125,7 +125,7 @@ func NewMetricsCommandMiddleware() *MetricsCommandMiddleware {
 }
 
 // Execute executes the middleware
-func (m *MetricsCommandMiddleware) Execute(ctx context.Context, cmd command.Command, next func(ctx context.Context, cmd command.Command) error) error {
+func (m *MetricsCommandMiddleware) Execute(ctx context.Context, cmd cqrscore.Command, next func(ctx context.Context, cmd cqrscore.Command) error) error {
 	start := time.Now()
 
 	// Execute the next middleware
@@ -168,23 +168,23 @@ func (m *MetricsQueryMiddleware) Execute(ctx context.Context, q query.Query, nex
 
 // ValidationCommandMiddleware provides validation for command handling
 type ValidationCommandMiddleware struct {
-	validators map[string]func(cmd command.Command) error
+	validators map[string]func(cmd cqrscore.Command) error
 }
 
 // NewValidationCommandMiddleware creates a new validation command middleware
 func NewValidationCommandMiddleware() *ValidationCommandMiddleware {
 	return &ValidationCommandMiddleware{
-		validators: make(map[string]func(cmd command.Command) error),
+		validators: make(map[string]func(cmd cqrscore.Command) error),
 	}
 }
 
 // RegisterValidator registers a validator for a command
-func (m *ValidationCommandMiddleware) RegisterValidator(commandName string, validator func(cmd command.Command) error) {
+func (m *ValidationCommandMiddleware) RegisterValidator(commandName string, validator func(cmd cqrscore.Command) error) {
 	m.validators[commandName] = validator
 }
 
 // Execute executes the middleware
-func (m *ValidationCommandMiddleware) Execute(ctx context.Context, cmd command.Command, next func(ctx context.Context, cmd command.Command) error) error {
+func (m *ValidationCommandMiddleware) Execute(ctx context.Context, cmd cqrscore.Command, next func(ctx context.Context, cmd cqrscore.Command) error) error {
 	// Get the validator for the command
 	validator, exists := m.validators[cmd.CommandName()]
 	if exists {

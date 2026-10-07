@@ -4,7 +4,6 @@ package islamic
 import (
 	"context"
 	"fmt"
-	"math"
 	"sync"
 	"time"
 

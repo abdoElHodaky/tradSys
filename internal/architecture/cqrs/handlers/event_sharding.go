@@ -7,9 +7,9 @@ import (
 	"hash/fnv"
 	"sync"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
+	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
+	eventstore "github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 )
@@ -181,14 +181,14 @@ func (m *EventShardingManager) hashString(s string) int {
 
 // ShardingEventBusDecorator decorates an event bus with sharding
 type ShardingEventBusDecorator struct {
-	eventBus eventbus.EventBus
+	eventBus eventstore.EventBus
 	manager  *EventShardingManager
 	logger   *zap.Logger
 }
 
 // NewShardingEventBusDecorator creates a new sharding event bus decorator
 func NewShardingEventBusDecorator(
-	eventBus eventbus.EventBus,
+	eventBus eventstore.EventBus,
 	manager *EventShardingManager,
 	logger *zap.Logger,
 ) *ShardingEventBusDecorator {

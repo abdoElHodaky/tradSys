@@ -10,9 +10,9 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
-	"github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
+	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
-	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
+	eventstore "github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
 	"go.uber.org/zap"
 )
@@ -26,8 +26,8 @@ type WatermillCQRSAdapter struct {
 	router *message.Router
 
 	// Our components
-	eventStore    store.EventStore
-	aggregateRepo aggregate.Repository
+	eventStore    eventstore.EventStore
+	aggregateRepo handlers.Repository
 
 	// Publishers and subscribers
 	commandPublisher  message.Publisher
@@ -54,8 +54,8 @@ func DefaultWatermillCQRSConfig() WatermillCQRSConfig {
 
 // NewWatermillCQRSAdapter creates a new WatermillCQRSAdapter
 func NewWatermillCQRSAdapter(
-	eventStore store.EventStore,
-	aggregateRepo aggregate.Repository,
+	eventStore eventstore.EventStore,
+	aggregateRepo handlers.Repository,
 	logger *zap.Logger,
 	config WatermillCQRSConfig,
 ) (*WatermillCQRSAdapter, error) {
@@ -136,10 +136,10 @@ func (a *WatermillCQRSAdapter) Stop() error {
 // RegisterCommandHandler registers a command handler
 func (a *WatermillCQRSAdapter) RegisterCommandHandler(
 	commandType reflect.Type,
-	handler command.EventSourcedHandler,
+	handler cqrscore.EventSourcedHandler,
 ) error {
 	// Create a zero value of the command type
-	cmd, ok := reflect.New(commandType).Elem().Interface().(command.Command)
+	cmd, ok := reflect.New(commandType).Elem().Interface().(cqrscore.Command)
 	if !ok {
 		return fmt.Errorf("command type %s does not implement Command interface", commandType.Name())
 	}
@@ -150,7 +150,7 @@ func (a *WatermillCQRSAdapter) RegisterCommandHandler(
 	// Create a handler function
 	handlerFunc := func(msg *message.Message) ([]*message.Message, error) {
 		// Unmarshal the command
-		var cmd command.Command
+		var cmd cqrscore.Command
 		err := json.Unmarshal(msg.Payload, &cmd)
 		if err != nil {
 			return nil, err
@@ -241,7 +241,7 @@ func (a *WatermillCQRSAdapter) RegisterEventHandler(
 }
 
 // DispatchCommand dispatches a command
-func (a *WatermillCQRSAdapter) DispatchCommand(ctx context.Context, cmd command.Command) error {
+func (a *WatermillCQRSAdapter) DispatchCommand(ctx context.Context, cmd cqrscore.Command) error {
 	// Marshal the command
 	payload, err := json.Marshal(cmd)
 	if err != nil {
@@ -256,7 +256,7 @@ func (a *WatermillCQRSAdapter) DispatchCommand(ctx context.Context, cmd command.
 }
 
 // CreateEventBusAdapter creates an EventBus adapter that uses Watermill
-func (a *WatermillCQRSAdapter) CreateEventBusAdapter() eventbus.EventBus {
+func (a *WatermillCQRSAdapter) CreateEventBusAdapter() eventstore.EventBus {
 	return &watermillEventBusAdapter{
 		adapter:      a,
 		logger:       a.logger,

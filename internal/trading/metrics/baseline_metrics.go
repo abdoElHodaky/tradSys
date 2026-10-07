@@ -174,7 +174,7 @@ func (m *BaselineMetrics) UpdateThroughputMetrics() {
 
 // LatencyTracker provides high-precision latency tracking
 type LatencyTracker struct {
-	startTime time.Time
+	StartTime time.Time
 	metrics   *BaselineMetrics
 	operation string
 }
@@ -182,7 +182,7 @@ type LatencyTracker struct {
 // NewLatencyTracker creates a new latency tracker
 func NewLatencyTracker(metrics *BaselineMetrics, operation string) *LatencyTracker {
 	return &LatencyTracker{
-		startTime: time.Now(),
+		StartTime: time.Now(),
 		metrics:   metrics,
 		operation: operation,
 	}
@@ -190,7 +190,7 @@ func NewLatencyTracker(metrics *BaselineMetrics, operation string) *LatencyTrack
 
 // Finish records the latency measurement
 func (lt *LatencyTracker) Finish() {
-	duration := time.Since(lt.startTime)
+	duration := time.Since(lt.StartTime)
 
 	switch lt.operation {
 	case "order":
