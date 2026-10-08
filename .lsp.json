@@ -1,0 +1,29 @@
+{
+  "go": {
+    "command": "gopls",
+    "args": [
+      "-remote=auto"
+    ],
+    "extensionToLanguage": {
+      ".go": "go"
+    },
+    "transport": "stdio",
+    "initializationOptions": {
+      "staticcheck": true,
+      "buildFlags": [
+        "-tags=integration"
+      ],
+      "analyses": {
+        "fieldalignment": true,
+        "nilness": true,
+        "shadow": true,
+        "unusedparams": true,
+        "unusedwrite": true,
+        "useany": true,
+        "atomicalign": true,
+        "printf": true
+      },
+      "diagnosticsDelay": "250ms"
+    }
+  }
+}
