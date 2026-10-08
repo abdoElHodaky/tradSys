@@ -1,0 +1,13 @@
+{
+  "enabledPlugins": {
+    "gopls-lsp@claude-plugins-official": true
+  },
+  "modelSettings": {
+    "nvidia_nim/poolside/laguna-xs-2.1": {
+      "effortLevel": "high"
+    }
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "theme": "auto",
+  "autoCompactEnabled": true
+}

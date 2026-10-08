@@ -2,12 +2,10 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"sync"
 
-	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
 	eventstore "github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
 	"github.com/nats-io/nats.go"

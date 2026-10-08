@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sync"
 
-	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	"github.com/abdoElHodaky/tradSys/internal/eventsourcing"
 	eventstore "github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
 	"go.uber.org/zap"

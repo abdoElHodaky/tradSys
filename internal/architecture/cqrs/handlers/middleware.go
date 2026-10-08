@@ -133,6 +133,7 @@ func (m *MetricsCommandMiddleware) Execute(ctx context.Context, cmd cqrscore.Com
 
 	// Record metrics
 	duration := time.Since(start)
+	_ = duration // Silence unused variable warning
 
 	// Record command execution time
 	// m.metrics.RecordCommandExecution(cmd.CommandName(), duration, err == nil)
@@ -159,6 +160,7 @@ func (m *MetricsQueryMiddleware) Execute(ctx context.Context, q Query, next func
 
 	// Record metrics
 	duration := time.Since(start)
+	_ = duration // Silence unused variable warning
 
 	// Record query execution time
 	// m.metrics.RecordQueryExecution(q.QueryName(), duration, err == nil)

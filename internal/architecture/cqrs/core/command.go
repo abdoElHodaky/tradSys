@@ -12,6 +12,9 @@ import (
 type Command interface {
 	// CommandName returns the name of the command
 	CommandName() string
+
+	// AggregateID returns the ID of the aggregate the command is targeting
+	AggregateID() string
 }
 
 // Handler represents a command handler

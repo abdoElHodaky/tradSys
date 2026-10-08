@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"reflect"
 	"sync"
 
@@ -60,7 +61,7 @@ func NewWatermillCQRSAdapter(
 	config WatermillCQRSConfig,
 ) (*WatermillCQRSAdapter, error) {
 	// Create a watermill logger
-	watermillLogger := watermill.NewStdLoggerWithOut(logger.Sugar().Out(), false, false)
+	watermillLogger := watermill.NewStdLoggerWithOut(io.Discard, false, false)
 
 	// Create a router
 	router, err := message.NewRouter(message.RouterConfig{}, watermillLogger)
@@ -86,7 +87,7 @@ func NewWatermillCQRSAdapter(
 	// Create command publisher/subscriber
 	commandPubSub := gochannel.NewGoChannel(
 		gochannel.Config{
-			OutputChannelBuffer: config.CommandsChannelBuffer,
+			OutputChannelBuffer: int64(config.CommandsChannelBuffer),
 			Persistent:          config.Persistent,
 		},
 		watermillLogger,
@@ -95,7 +96,7 @@ func NewWatermillCQRSAdapter(
 	// Create event publisher/subscriber
 	eventPubSub := gochannel.NewGoChannel(
 		gochannel.Config{
-			OutputChannelBuffer: config.EventsChannelBuffer,
+			OutputChannelBuffer: int64(config.EventsChannelBuffer),
 			Persistent:          config.Persistent,
 		},
 		watermillLogger,

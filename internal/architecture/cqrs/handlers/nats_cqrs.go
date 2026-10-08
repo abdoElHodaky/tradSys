@@ -429,16 +429,9 @@ func (a *NatsCQRSAdapter) DispatchCommand(ctx context.Context, cmd cqrscore.Comm
 }
 
 // CreateEventBusAdapter creates an EventBus adapter that uses NATS
+// TODO: This is a stub - full NATS event bus implementation needed
 func (a *NatsCQRSAdapter) CreateEventBusAdapter() eventstore.EventBus {
-	// Create a NATS event bus configuration
-	config := eventbus.DefaultNatsEventBusConfig()
-
-	// Create a NATS event bus
-	bus, err := eventbus.NewNatsEventBus(a.eventstore, a.logger, config)
-	if err != nil {
-		a.logger.Error("Failed to create NATS event bus", zap.Error(err))
-		return nil
-	}
-
-	return bus
+	// For now, return the existing EventStore as EventBus if compatible
+	// Full NatsEventBus implementation would require additional eventbus package
+	return nil // TODO: Implement proper NATS event bus adapter
 }

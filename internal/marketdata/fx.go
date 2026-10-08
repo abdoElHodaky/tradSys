@@ -117,6 +117,11 @@ func (c *AddMarketDataSourceCommand) CommandName() string {
 	return "AddMarketDataSource"
 }
 
+// AggregateID returns the ID of the aggregate (empty for global commands)
+func (c *AddMarketDataSourceCommand) AggregateID() string {
+	return "" // Global command - no specific aggregate
+}
+
 // GetMarketDataQuery is a query to get market data
 type GetMarketDataQuery struct {
 	Symbol    string

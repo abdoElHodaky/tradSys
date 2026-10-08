@@ -158,13 +158,13 @@ func NewProjectionEventHandler(projection handlers.Projection, logger *zap.Logge
 // HandleEvent handles an event
 func (h *ProjectionEventHandler) HandleEvent(event *eventsourcing.Event) error {
 	// Handle the event
-	err := h.handlers.HandleEvent(context.Background(), event)
+	err := h.projection.HandleEvent(context.Background(), event)
 	if err != nil {
 		h.logger.Error("Failed to handle event",
 			zap.String("event_type", event.EventType),
 			zap.String("aggregate_id", event.AggregateID),
 			zap.String("aggregate_type", event.AggregateType),
-			zap.String("projection", h.handlers.GetName()),
+			zap.String("projection", h.projection.GetName()),
 			zap.Error(err))
 		return err
 	}
