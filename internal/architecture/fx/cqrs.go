@@ -5,7 +5,7 @@ import (
 
 	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	cqrshandlers "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/handlers"
-	eventstore "github.com/abdoElhodaky/tradSys/internal/eventsourcing/core"
+	eventstore "github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
 	eventhandler "github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/fx"
