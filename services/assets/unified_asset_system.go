@@ -231,6 +231,11 @@ type ComplianceReport struct {
 	Score       float64
 }
 
+// AnalyticsModel defines analytics calculation interface
+type AnalyticsModel interface {
+	Calculate(data []float64) map[string]float64
+}
+
 // AnalyticsDataProcessor processes analytics data
 type AnalyticsDataProcessor struct{}
 
@@ -390,6 +395,9 @@ func (lm *UnifiedLicensingManager) GetActiveUserCount() int {
 	return 1
 }
 
+// Shutdown shuts down the licensing manager
+func (lm *UnifiedLicensingManager) Shutdown() {}
+
 // NewUnifiedConfigManager creates a new config manager
 func NewUnifiedConfigManager() *UnifiedConfigManager {
 	return &UnifiedConfigManager{
@@ -402,11 +410,6 @@ func NewUnifiedConfigManager() *UnifiedConfigManager {
 
 // Initialize initializes the config manager
 func (cm *UnifiedConfigManager) Initialize() {}
-
-// AnalyticsModel defines analytics calculation interface
-type AnalyticsModel interface {
-	Calculate(data []float64) map[string]float64
-}
 
 // UnifiedPortfolio represents a portfolio across multiple exchanges
 type UnifiedPortfolio struct {
@@ -662,7 +665,7 @@ func (uas *UnifiedAssetSystem) validateAsset(asset *UnifiedAsset) error {
 	if asset.Exchange == "" {
 		return fmt.Errorf("asset exchange is required")
 	}
-	if asset.AssetType < 0 {
+	if asset.AssetType == "" {
 		return fmt.Errorf("invalid asset type")
 	}
 	if asset.Currency == "" {
@@ -938,19 +941,11 @@ func (pm *PositionManager) GetPosition(symbol string) *Position {
 	return pm.positions[symbol]
 }
 
-// AnalyticsModel defines analytics calculation interface
-type AnalyticsModel interface {
-	Calculate(data []float64) map[string]float64
-}
-
 // AnalyticsDataProcessor processes analytics data
-type AnalyticsDataProcessor struct{}
 
 // AnalyticsReportGenerator generates reports
-type AnalyticsReportGenerator struct{}
 
 // MachineLearningEngine handles ML operations
-type MachineLearningEngine struct{}
 
 // ComplianceRuleSet defines compliance rules
 type ComplianceRuleSet struct{}
