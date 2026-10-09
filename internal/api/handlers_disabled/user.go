@@ -356,7 +356,7 @@ func (h *UserHandler) RegisterRoutes(router *gin.Engine, authMiddleware gin.Hand
 
 	// Admin routes
 	admin := router.Group("/api/admin")
-	admin.Use(authMiddleware, auth.RoleMiddleware(string(models.RoleAdmin)))
+	admin.Use(authMiddleware, auth.RoleAuth(string(models.RoleAdmin)))
 	{
 		admin.GET("/users", h.ListUsers)
 		admin.POST("/users/reset-password", h.ResetPassword)
