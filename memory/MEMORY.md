@@ -7,3 +7,5 @@
 - [Files Fixed Layout](files-fixed-layout.md) — structure and logic of fixes applied
 
 - [Golsp LSP Configuration](golsp-config.md) — Created .lsp.json with gopls settings for build output highlighting
+
+- [Licensing Types Extraction](licensing-types-extraction.md) — Extracted license-related types from unified_asset_system.go to licensing service
