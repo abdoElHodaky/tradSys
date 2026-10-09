@@ -40,19 +40,19 @@ func NewEventShardingManager(
 	logger *zap.Logger,
 	conn *nats.Conn,
 	js nats.JetStreamContext,
-) *integration.EventShardingManager {
+) *handlers.EventShardingManager {
 	// Create the sharding configuration
-	config := integration.DefaultShardingConfig()
+	config := handlers.DefaultShardingConfig()
 
 	// Create the event sharding manager
-	return integration.NewEventShardingManager(logger, config, conn, js)
+	return handlers.NewEventShardingManager(logger, config, conn, js)
 }
 
 // registerShardingHooks registers lifecycle hooks for the event sharding manager
 func registerShardingHooks(
 	lc fx.Lifecycle,
 	logger *zap.Logger,
-	manager *integration.EventShardingManager,
+	manager *handlers.EventShardingManager,
 ) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {

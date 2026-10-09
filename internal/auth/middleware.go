@@ -79,3 +79,24 @@ func (m *Middleware) RoleAuth(requiredRole string) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// RoleAuth creates a middleware that checks if the user has the required role
+// This is a standalone function for convenience
+func RoleAuth(requiredRole string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role, exists := c.Get("role")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "User role not found"})
+			c.Abort()
+			return
+		}
+
+		if role != requiredRole {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}

@@ -52,11 +52,11 @@ func NewRandomStrategy() *discovery.RandomStrategy {
 
 // NewServiceSelector creates a new service selector with round-robin strategy
 func NewServiceSelector(
-	discovery *discovery.ServiceDiscovery,
+	discoveryService *discovery.ServiceDiscovery,
 	logger *zap.Logger,
 	strategy *discovery.RoundRobinStrategy,
 ) *discovery.ServiceSelector {
-	return discovery.NewServiceSelector(discovery, logger, strategy)
+	return discovery.NewServiceSelector(discoveryService, logger, strategy)
 }
 
 // registerDiscoveryHooks registers lifecycle hooks for the discovery components

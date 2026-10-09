@@ -194,6 +194,11 @@ func (g *APIGateway) DeregisterService(ctx context.Context, service *registry.Se
 	return g.discovery.DeregisterService(ctx, service)
 }
 
+// GetRouter returns the underlying gin engine router
+func (g *APIGateway) GetRouter() *gin.Engine {
+	return g.router
+}
+
 // LoadBalancer provides load balancing functionality
 type LoadBalancer struct {
 	selector *discovery.ServiceSelector

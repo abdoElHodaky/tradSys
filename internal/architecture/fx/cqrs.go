@@ -2,12 +2,11 @@ package fx
 
 import (
 	"context"
+	"time"
 
-	cqrscore "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/core"
 	cqrshandlers "github.com/abdoElHodaky/tradSys/internal/architecture/cqrs/handlers"
 	eventstore "github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
 	eventhandler "github.com/abdoElHodaky/tradSys/internal/eventsourcing/handlers"
-	"github.com/nats-io/nats.go"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -60,16 +59,16 @@ type CQRSConfig struct {
 	UseMonitoring bool
 
 	// NatsConfig contains configuration for NATS
-	NatsConfig integration.NatsCQRSConfig
+	NatsConfig cqrshandlers.NatsCQRSConfig
 
 	// WatermillConfig contains configuration for Watermill
-	WatermillConfig integration.WatermillCQRSConfig
+	WatermillConfig cqrshandlers.WatermillCQRSConfig
 
 	// EventOrderingGuarantee specifies the required event ordering guarantee
-	EventOrderingGuarantee integration.EventOrderingGuarantee
+	EventOrderingGuarantee cqrshandlers.EventOrderingGuarantee
 
 	// EventRoutingStrategy specifies the event routing strategy
-	EventRoutingStrategy integration.EventRoutingStrategy
+	EventRoutingStrategy cqrshandlers.EventRoutingStrategy
 
 	// CircuitBreakerConfig contains configuration for the circuit breaker
 	CircuitBreakerConfig CircuitBreakerConfig
@@ -88,10 +87,10 @@ func DefaultCQRSConfig() CQRSConfig {
 		UseNats:                true,
 		UseCompatLayer:         true,
 		UseMonitoring:          true,
-		NatsConfig:             integration.DefaultNatsCQRSConfig(),
-		WatermillConfig:        integration.DefaultWatermillCQRSConfig(),
-		EventOrderingGuarantee: integration.AggregateOrdering,
-		EventRoutingStrategy:   integration.SingleBusStrategy,
+		NatsConfig:             cqrshandlers.DefaultNatsCQRSConfig(),
+		WatermillConfig:        cqrshandlers.DefaultWatermillCQRSConfig(),
+		EventOrderingGuarantee: cqrshandlers.AggregateOrdering,
+		EventRoutingStrategy:   cqrshandlers.SingleBusStrategy,
 		CircuitBreakerConfig:   DefaultCircuitBreakerConfig(),
 		TracingConfig:          DefaultTracingConfig(),
 		ShardingConfig:         DefaultShardingConfig(),
@@ -99,23 +98,23 @@ func DefaultCQRSConfig() CQRSConfig {
 }
 
 // NewEventStore creates a new event store
-func NewEventStore() (store.EventStore, error) {
-	return store.NewInMemoryEventStore()
+func NewEventStore(logger *zap.Logger) eventstore.EventStore {
+	return eventstore.NewInMemoryEventStore(logger)
 }
 
 // NewAggregateRepository creates a new aggregate repository
-func NewAggregateRepository(eventStore store.EventStore) aggregate.Repository {
-	return aggregate.NewRepository(eventStore)
+func NewAggregateRepository(eventStore eventstore.EventStore, logger *zap.Logger) eventhandler.Repository {
+	return eventhandler.NewEventSourcedRepository(eventStore, logger)
 }
 
 // NewEventBus creates a new event bus
 func NewEventBus(
-	eventStore store.EventStore,
+	eventStore eventstore.EventStore,
 	logger *zap.Logger,
 	lc fx.Lifecycle,
-) (eventbus.EventBus, error) {
+) eventstore.EventBus {
 	// Create an in-memory event bus
-	bus := eventbus.NewInMemoryEventBus(eventStore, logger)
+	bus := eventstore.NewInMemoryEventBus()
 
 	// Register lifecycle hooks
 	lc.Append(fx.Hook{
@@ -129,20 +128,20 @@ func NewEventBus(
 		},
 	})
 
-	return bus, nil
+	return bus
 }
 
 // NewCQRSSystem creates a new CQRS system
 func NewCQRSSystem(
-	eventStore store.EventStore,
-	aggregateRepo aggregate.Repository,
-	eventBus eventbus.EventBus,
+	eventStore eventstore.EventStore,
+	aggregateRepo eventhandler.Repository,
+	eventBus eventstore.EventBus,
 	logger *zap.Logger,
 	lc fx.Lifecycle,
 	config CQRSConfig,
-) (*integration.CQRSSystem, error) {
+) (*cqrshandlers.CQRSSystem, error) {
 	// Create a CQRS factory
-	factory := integration.NewCQRSFactory(
+	factory := cqrshandlers.NewCQRSFactory(
 		logger,
 		config.UseWatermill,
 		config.UseNats,
@@ -179,7 +178,7 @@ func NewCQRSSystem(
 
 			// Start performance monitoring if enabled
 			if system.PerformanceMonitor != nil {
-				go system.PerformanceMonitor.StartPeriodicLogging(ctx, config.NatsConfig.ReconnectWait)
+				go system.PerformanceMonitor.StartPeriodicLogging(ctx, 10*time.Second)
 			}
 
 			return nil
@@ -214,8 +213,8 @@ func NewCQRSSystem(
 func NewEventOrderingValidator(
 	logger *zap.Logger,
 	config CQRSConfig,
-) *integration.EventOrderingValidator {
-	return integration.NewEventOrderingValidator(
+) *cqrshandlers.EventOrderingValidator {
+	return cqrshandlers.NewEventOrderingValidator(
 		logger,
 		config.EventOrderingGuarantee,
 	)
@@ -226,18 +225,18 @@ func NewEventBusRouter(
 	logger *zap.Logger,
 	config CQRSConfig,
 	lc fx.Lifecycle,
-) *integration.EventBusRouter {
+) *cqrshandlers.EventBusRouter {
 	// Create the router configuration
-	routerConfig := integration.EventBusRouterConfig{
+	routerConfig := cqrshandlers.EventBusRouterConfig{
 		Strategy:        config.EventRoutingStrategy,
-		DefaultBus:      integration.NatsEventBusType,
-		TypeRoutes:      make(map[string]integration.EventBusType),
-		AggregateRoutes: make(map[string]integration.EventBusType),
-		PriorityOrder:   []integration.EventBusType{integration.InMemoryEventBusType, integration.NatsEventBusType, integration.WatermillEventBusType},
+		DefaultBus:      cqrshandlers.NatsEventBusType,
+		TypeRoutes:      make(map[string]cqrshandlers.EventBusType),
+		AggregateRoutes: make(map[string]cqrshandlers.EventBusType),
+		PriorityOrder:   []cqrshandlers.EventBusType{cqrshandlers.InMemoryEventBusType, cqrshandlers.NatsEventBusType, cqrshandlers.WatermillEventBusType},
 	}
 
 	// Create the router
-	router := integration.NewEventBusRouter(logger, routerConfig)
+	router := cqrshandlers.NewEventBusRouter(logger, routerConfig)
 
 	// Register lifecycle hooks
 	lc.Append(fx.Hook{
@@ -258,7 +257,7 @@ func NewEventBusRouter(
 func registerCQRSHooks(
 	lc fx.Lifecycle,
 	logger *zap.Logger,
-	system *integration.CQRSSystem,
+	system *cqrshandlers.CQRSSystem,
 ) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {

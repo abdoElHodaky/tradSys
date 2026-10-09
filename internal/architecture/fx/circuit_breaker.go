@@ -39,19 +39,19 @@ func DefaultCircuitBreakerConfig() CircuitBreakerConfig {
 }
 
 // NewCircuitBreaker creates a new circuit breaker
-func NewCircuitBreaker(logger *zap.Logger) *integration.CircuitBreaker {
+func NewCircuitBreaker(logger *zap.Logger) *handlers.CircuitBreaker {
 	// Create the circuit breaker configuration
-	config := integration.DefaultCircuitBreakerConfig()
+	config := handlers.DefaultCircuitBreakerConfig()
 
 	// Create the circuit breaker
-	return integration.NewCircuitBreaker(logger, config)
+	return handlers.NewCircuitBreaker(logger, config)
 }
 
 // registerCircuitBreakerHooks registers lifecycle hooks for the circuit breaker
 func registerCircuitBreakerHooks(
 	lc fx.Lifecycle,
 	logger *zap.Logger,
-	breaker *integration.CircuitBreaker,
+	breaker *handlers.CircuitBreaker,
 ) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {

@@ -3,7 +3,7 @@ package fx
 import (
 	"context"
 
-	"github.com/abdoElHodaky/tradSys/internal/architecture"
+	eventstore "github.com/abdoElHodaky/tradSys/internal/eventsourcing/core"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -45,8 +45,8 @@ func NewEventBusFactory(logger *zap.Logger) *EventBusFactory {
 }
 
 // CreateInMemoryEventBus creates a new in-memory event bus
-func (f *EventBusFactory) CreateInMemoryEventBus() *architecture.InMemoryEventBus {
-	return architecture.NewInMemoryEventBus(f.config.DefaultQueueSize)
+func (f *EventBusFactory) CreateInMemoryEventBus() eventstore.EventBus {
+	return eventstore.NewInMemoryEventBus()
 }
 
 // registerEventBusHooks registers lifecycle hooks for the event bus components

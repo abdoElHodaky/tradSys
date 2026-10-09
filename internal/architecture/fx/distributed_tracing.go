@@ -43,19 +43,19 @@ func DefaultTracingConfig() TracingConfig {
 }
 
 // NewDistributedTracer creates a new distributed tracer
-func NewDistributedTracer(logger *zap.Logger) *integration.DistributedTracer {
+func NewDistributedTracer(logger *zap.Logger) *handlers.DistributedTracer {
 	// Create the tracing configuration
-	config := integration.DefaultTracingConfig()
+	config := handlers.DefaultTracingConfig()
 
 	// Create the distributed tracer
-	return integration.NewDistributedTracer(logger, config)
+	return handlers.NewDistributedTracer(logger, config)
 }
 
 // registerTracingHooks registers lifecycle hooks for the distributed tracer
 func registerTracingHooks(
 	lc fx.Lifecycle,
 	logger *zap.Logger,
-	tracer *integration.DistributedTracer,
+	tracer *handlers.DistributedTracer,
 ) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
