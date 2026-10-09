@@ -553,7 +553,7 @@ func (e *UnifiedTradingEngine) GetOrderBook(symbol string) *order_matching.Advan
 }
 
 // GetPosition returns the current position for a symbol
-func (e *UnifiedTradingEngine) GetPosition(symbol string) *risk.Position {
+func (e *UnifiedTradingEngine) GetPosition(symbol string) *risk.RealtimePosition {
 	return e.riskEngine.GetPosition(symbol)
 }
 

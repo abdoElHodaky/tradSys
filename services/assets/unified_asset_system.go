@@ -5,6 +5,7 @@ package assets
 import (
 	"context"
 	"fmt"
+	"strings"
 	"log"
 	"sync"
 	"time"
@@ -134,6 +135,277 @@ type CrossExchangePortfolioManager struct {
 	riskManager     *CrossExchangeRiskManager
 	rebalancer      *PortfolioRebalancer
 	mu              sync.RWMutex
+}
+
+// NewAssetRegistry creates a new asset registry
+func NewAssetRegistry() *AssetRegistry {
+	return &AssetRegistry{
+		assets:         make(map[string]*UnifiedAsset),
+		assetsByExchange: make(map[string]map[string]*UnifiedAsset),
+		assetsByType:   make(map[exchanges.AssetType][]*UnifiedAsset),
+		searchIndex:    NewAssetSearchIndex(),
+	}
+}
+
+// Initialize initializes the asset registry
+func (ar *AssetRegistry) Initialize() {}
+
+// RegisterAsset registers an asset
+func (ar *AssetRegistry) RegisterAsset(asset *UnifiedAsset) error {
+	ar.mu.Lock()
+	defer ar.mu.Unlock()
+
+	ar.assets[asset.Symbol] = asset
+
+	if ar.assetsByExchange[asset.Exchange] == nil {
+		ar.assetsByExchange[asset.Exchange] = make(map[string]*UnifiedAsset)
+	}
+	ar.assetsByExchange[asset.Exchange][asset.Symbol] = asset
+
+	ar.assetsByType[asset.AssetType] = append(ar.assetsByType[asset.AssetType], asset)
+
+	return nil
+}
+
+// GetAsset gets an asset by symbol and exchange
+func (ar *AssetRegistry) GetAsset(symbol, exchange string) (*UnifiedAsset, error) {
+	ar.mu.RLock()
+	defer ar.mu.RUnlock()
+
+	if exchangeAssets, ok := ar.assetsByExchange[exchange]; ok {
+		if asset, ok := exchangeAssets[symbol]; ok {
+			return asset, nil
+		}
+	}
+
+	return nil, fmt.Errorf("asset %s not found in exchange %s", symbol, exchange)
+}
+
+// SearchAssets searches for assets
+func (ar *AssetRegistry) SearchAssets(query *AssetSearchQuery) ([]*UnifiedAsset, error) {
+	return nil, fmt.Errorf("search not implemented")
+}
+
+// GetAssetCount returns the total asset count
+func (ar *AssetRegistry) GetAssetCount() int {
+	ar.mu.RLock()
+	defer ar.mu.RUnlock()
+
+	return len(ar.assets)
+}
+
+// CrossExchangeRiskManager manages risk across exchanges
+type CrossExchangeRiskManager struct {
+	mu sync.RWMutex
+}
+
+// PortfolioRebalancer rebalances portfolios
+type PortfolioRebalancer struct {
+	mu sync.RWMutex
+}
+
+// ServiceConfig holds service configuration
+type ServiceConfig struct {
+	Name        string
+	Endpoint    string
+	Enabled     bool
+	Workers     int
+	MaxAlloc    int64
+	LogLevel    string
+}
+
+// AnalyticsReport represents an analytics report
+type AnalyticsReport struct {
+	ReportID   string
+	UserID     string
+	GeneratedAt time.Time
+	Data       map[string]interface{}
+}
+
+// ComplianceReport represents a compliance report
+type ComplianceReport struct {
+	ReportID    string
+	UserID      string
+	GeneratedAt time.Time
+	Violations  []string
+	Score       float64
+}
+
+// AnalyticsDataProcessor processes analytics data
+type AnalyticsDataProcessor struct{}
+
+// AnalyticsReportGenerator generates reports
+type AnalyticsReportGenerator struct{}
+
+// MachineLearningEngine handles ML operations
+type MachineLearningEngine struct{}
+
+// NewUnifiedPricingEngine creates a new unified pricing engine
+func NewUnifiedPricingEngine() *UnifiedPricingEngine {
+	return &UnifiedPricingEngine{
+		pricingModels: make(map[string]PricingModel),
+		dataAggregator: NewDataAggregator(),
+		priceCache: NewPriceCache(),
+		realTimeFeeds: make(map[string]*RealTimeFeed),
+	}
+}
+
+// Initialize initializes the pricing engine
+func (pe *UnifiedPricingEngine) Initialize() {}
+
+// GetCurrentPricing gets current pricing
+func (pe *UnifiedPricingEngine) GetCurrentPricing(symbol, exchange string) (*PricingInfo, error) {
+	return &PricingInfo{}, nil
+}
+
+// InitializeAssetPricing initializes pricing for an asset
+func (pe *UnifiedPricingEngine) InitializeAssetPricing(asset *UnifiedAsset) error {
+	return nil
+}
+
+// Shutdown shuts down the pricing engine
+func (pe *UnifiedPricingEngine) Shutdown() {}
+
+// NewCrossExchangePortfolioManager creates a new portfolio manager
+func NewCrossExchangePortfolioManager() *CrossExchangePortfolioManager {
+	return &CrossExchangePortfolioManager{
+		portfolios: make(map[string]*UnifiedPortfolio),
+		positionManager: NewPositionManager(),
+		riskManager: &CrossExchangeRiskManager{},
+		rebalancer: &PortfolioRebalancer{},
+	}
+}
+
+// Initialize initializes the portfolio manager
+func (pm *CrossExchangePortfolioManager) Initialize() {}
+
+// CreatePortfolio creates a new portfolio
+func (pm *CrossExchangePortfolioManager) CreatePortfolio(userID, name, currency string) (*UnifiedPortfolio, error) {
+	return &UnifiedPortfolio{
+		PortfolioID: fmt.Sprintf("portfolio-%d", time.Now().UnixNano()),
+		Name:        name,
+		Currency:    currency,
+	}, nil
+}
+
+// GetPortfolio gets a portfolio
+func (pm *CrossExchangePortfolioManager) GetPortfolio(portfolioID string) (*UnifiedPortfolio, error) {
+	return &UnifiedPortfolio{}, nil
+}
+
+// GetPortfolioCount returns the number of portfolios
+func (pm *CrossExchangePortfolioManager) GetPortfolioCount() int {
+	pm.mu.RLock()
+	defer pm.mu.RUnlock()
+	return len(pm.portfolios)
+}
+
+// NewUnifiedAnalyticsEngine creates a new analytics engine
+func NewUnifiedAnalyticsEngine() *UnifiedAnalyticsEngine {
+	return &UnifiedAnalyticsEngine{
+		analyticsModels: make(map[string]AnalyticsModel),
+		dataProcessor:   &AnalyticsDataProcessor{},
+		reportGenerator: &AnalyticsReportGenerator{},
+		mlEngine:        &MachineLearningEngine{},
+	}
+}
+
+// Initialize initializes the analytics engine
+func (ae *UnifiedAnalyticsEngine) Initialize() {}
+
+// GenerateReport generates an analytics report
+func (ae *UnifiedAnalyticsEngine) GenerateReport(ctx context.Context, request *AnalyticsRequest) (*AnalyticsReport, error) {
+	return &AnalyticsReport{}, nil
+}
+
+// Shutdown shuts down the analytics engine
+func (ae *UnifiedAnalyticsEngine) Shutdown() {}
+
+// NewUnifiedComplianceManager creates a new compliance manager
+func NewUnifiedComplianceManager() *UnifiedComplianceManager {
+	return &UnifiedComplianceManager{
+		complianceRules: make(map[string]ComplianceRuleSet),
+		auditTrail:      &UnifiedAuditTrail{},
+		reportingEngine: &ComplianceReportingEngine{},
+		alertManager:    &ComplianceAlertManager{},
+	}
+}
+
+// Initialize initializes the compliance manager
+func (cm *UnifiedComplianceManager) Initialize() {}
+
+// ValidateAsset validates an asset
+func (cm *UnifiedComplianceManager) ValidateAsset(asset *UnifiedAsset) error {
+	return nil
+}
+
+// GenerateReport generates a compliance report
+func (cm *UnifiedComplianceManager) GenerateReport(ctx context.Context, request *ComplianceRequest) (*ComplianceReport, error) {
+	return &ComplianceReport{}, nil
+}
+
+// Shutdown shuts down the compliance manager
+func (cm *UnifiedComplianceManager) Shutdown() {}
+
+// NewUnifiedLicensingManager creates a new licensing manager
+func NewUnifiedLicensingManager() *UnifiedLicensingManager {
+	return &UnifiedLicensingManager{
+		licenseValidator: &LicenseValidator{},
+		quotaManager:     &QuotaManager{},
+		billingEngine:    &BillingEngine{},
+		usageTracker:     &UsageTracker{},
+	}
+}
+
+// Initialize initializes the licensing manager
+func (lm *UnifiedLicensingManager) Initialize() {}
+
+// ValidatePortfolioCreation validates portfolio creation
+func (lm *UnifiedLicensingManager) ValidatePortfolioCreation(ctx context.Context, userID string) error {
+	return nil
+}
+
+// ValidatePortfolioAccess validates portfolio access
+func (lm *UnifiedLicensingManager) ValidatePortfolioAccess(ctx context.Context, userID, portfolioID string) error {
+	return nil
+}
+
+// ValidateAnalyticsAccess validates analytics access
+func (lm *UnifiedLicensingManager) ValidateAnalyticsAccess(ctx context.Context, userID string) error {
+	return nil
+}
+
+// ValidateComplianceAccess validates compliance access
+func (lm *UnifiedLicensingManager) ValidateComplianceAccess(ctx context.Context, userID string) error {
+	return nil
+}
+
+// FilterAssetsByLicense filters assets by license
+func (lm *UnifiedLicensingManager) FilterAssetsByLicense(ctx context.Context, assets []*UnifiedAsset, userID string) ([]*UnifiedAsset, error) {
+	return assets, nil
+}
+
+// GetActiveUserCount returns the active user count
+func (lm *UnifiedLicensingManager) GetActiveUserCount() int {
+	return 1
+}
+
+// NewUnifiedConfigManager creates a new config manager
+func NewUnifiedConfigManager() *UnifiedConfigManager {
+	return &UnifiedConfigManager{
+		configs: make(map[string]*ServiceConfig),
+		configStore: &ConfigStore{},
+		configValidator: &ConfigValidator{},
+		changeNotifier: &ConfigChangeNotifier{},
+	}
+}
+
+// Initialize initializes the config manager
+func (cm *UnifiedConfigManager) Initialize() {}
+
+// AnalyticsModel defines analytics calculation interface
+type AnalyticsModel interface {
+	Calculate(data []float64) map[string]float64
 }
 
 // UnifiedPortfolio represents a portfolio across multiple exchanges
@@ -499,6 +771,254 @@ func (uas *UnifiedAssetSystem) Shutdown(ctx context.Context) error {
 }
 
 // Supporting types and structures
+
+// AssetSearchIndex provides indexing for asset search
+type AssetSearchIndex struct {
+	tokens      map[string][]string // token -> []assetIDs
+	assetIndex  map[string]string   // assetID -> token list
+	mu          sync.RWMutex
+}
+
+// NewAssetSearchIndex creates a new asset search index
+func NewAssetSearchIndex() *AssetSearchIndex {
+	return &AssetSearchIndex{
+		tokens:     make(map[string][]string),
+		assetIndex: make(map[string]string),
+	}
+}
+
+// IndexAsset adds an asset to the search index
+func (idx *AssetSearchIndex) IndexAsset(assetID string, tokens []string) {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+
+	for _, token := range tokens {
+		idx.tokens[token] = append(idx.tokens[token], assetID)
+	}
+	idx.assetIndex[assetID] = strings.Join(tokens, " ")
+}
+
+// Search finds assets by token
+func (idx *AssetSearchIndex) Search(token string) []string {
+	idx.mu.RLock()
+	defer idx.mu.RUnlock()
+
+	return idx.tokens[token]
+}
+
+// EgyptianComplianceInfo contains Egyptian market compliance information
+type EgyptianComplianceInfo struct {
+	ExchangeRegulationLevel string
+	RequiredLicenses        []string
+	ReportingRequirements   []string
+	LastUpdated             time.Time
+}
+
+// UAEComplianceInfo contains UAE market compliance information
+type UAEComplianceInfo struct {
+	ExchangeRegulationLevel string
+	FSSARegistered          bool
+	LastUpdated             time.Time
+}
+
+// IslamicComplianceInfo contains Islamic finance compliance information
+type IslamicComplianceInfo struct {
+	IsHalal    bool
+	ShariaBoard string
+	ViolationComments []string
+	LastScreened time.Time
+}
+
+// GlobalComplianceInfo contains global market compliance information
+type GlobalComplianceInfo struct {
+	GlobalRegulationLevel string
+	CrossBorderTrading    bool
+	LastUpdated           time.Time
+}
+
+// PricingModel defines the interface for pricing models
+type PricingModel interface {
+	Name() string
+	Calculate(price float64, volume float64) float64
+}
+
+// DataAggregator aggregates market data
+type DataAggregator struct {
+	history   map[string][]float64
+	mu        sync.RWMutex
+}
+
+// NewDataAggregator creates a new data aggregator
+func NewDataAggregator() *DataAggregator {
+	return &DataAggregator{
+		history: make(map[string][]float64),
+	}
+}
+
+// PriceCache caches price data
+type PriceCache struct {
+	cache     map[string]float64
+	lastPrice map[string]time.Time
+	mu        sync.RWMutex
+}
+
+// NewPriceCache creates a new price cache
+func NewPriceCache() *PriceCache {
+	return &PriceCache{
+		cache:     make(map[string]float64),
+		lastPrice: make(map[string]time.Time),
+	}
+}
+
+// Set stores a price in the cache
+func (pc *PriceCache) Set(symbol string, price float64) {
+	pc.mu.Lock()
+	defer pc.mu.Unlock()
+	pc.cache[symbol] = price
+	pc.lastPrice[symbol] = time.Now()
+}
+
+// Get retrieves a price from the cache
+func (pc *PriceCache) Get(symbol string) (float64, bool) {
+	pc.mu.RLock()
+	defer pc.mu.RUnlock()
+	price, ok := pc.cache[symbol]
+	return price, ok
+}
+
+// RealTimeFeed represents a real-time market data feed
+type RealTimeFeed struct {
+	symbol    string
+	ticker    chan float64
+	isActive  bool
+	mu        sync.RWMutex
+}
+
+// NewRealTimeFeed creates a new real-time feed
+func NewRealTimeFeed(symbol string) *RealTimeFeed {
+	return &RealTimeFeed{
+		symbol: symbol,
+		ticker: make(chan float64, 100),
+	}
+}
+
+// PositionManager manages positions across exchanges
+type PositionManager struct {
+	positions map[string]*Position
+	mu        sync.RWMutex
+}
+
+// Position represents a trading position
+type Position struct {
+	Symbol       string
+	Quantity     float64
+	AveragePrice float64
+	Exchange     string
+	LastUpdated  time.Time
+}
+
+// NewPositionManager creates a new position manager
+func NewPositionManager() *PositionManager {
+	return &PositionManager{
+		positions: make(map[string]*Position),
+	}
+}
+
+// AddPosition adds a position
+func (pm *PositionManager) AddPosition(symbol string, position *Position) {
+	pm.mu.Lock()
+	defer pm.mu.Unlock()
+	pm.positions[symbol] = position
+}
+
+// GetPosition retrieves a position
+func (pm *PositionManager) GetPosition(symbol string) *Position {
+	pm.mu.RLock()
+	defer pm.mu.RUnlock()
+	return pm.positions[symbol]
+}
+
+// AnalyticsModel defines analytics calculation interface
+type AnalyticsModel interface {
+	Calculate(data []float64) map[string]float64
+}
+
+// AnalyticsDataProcessor processes analytics data
+type AnalyticsDataProcessor struct{}
+
+// AnalyticsReportGenerator generates reports
+type AnalyticsReportGenerator struct{}
+
+// MachineLearningEngine handles ML operations
+type MachineLearningEngine struct{}
+
+// ComplianceRuleSet defines compliance rules
+type ComplianceRuleSet struct{}
+
+// UnifiedAuditTrail tracks audit events
+type UnifiedAuditTrail struct{}
+
+// ComplianceReportingEngine generates compliance reports
+type ComplianceReportingEngine struct{}
+
+// ComplianceAlertManager manages alerts
+type ComplianceAlertManager struct{}
+
+// LicenseValidator validates licenses
+type LicenseValidator struct{}
+
+// QuotaManager manages quotas
+type QuotaManager struct{}
+
+// BillingEngine handles billing
+type BillingEngine struct{}
+
+// UsageTracker tracks usage
+type UsageTracker struct{}
+
+// ConfigStore stores configurations
+type ConfigStore struct{}
+
+// ConfigValidator validates configurations
+type ConfigValidator struct{}
+
+// ConfigChangeNotifier notifies of changes
+type ConfigChangeNotifier struct{}
+
+// UnifiedReportingEngine generates reports
+type UnifiedReportingEngine struct {
+	format string
+}
+
+// NewUnifiedReportingEngine creates a new reporting engine
+func NewUnifiedReportingEngine() *UnifiedReportingEngine {
+	return &UnifiedReportingEngine{format: "json"}
+}
+
+// UnifiedPerformanceMonitor monitors performance
+type UnifiedPerformanceMonitor struct {
+	startTime time.Time
+}
+
+// NewUnifiedPerformanceMonitor creates a new performance monitor
+func NewUnifiedPerformanceMonitor() *UnifiedPerformanceMonitor {
+	return &UnifiedPerformanceMonitor{
+		startTime: time.Now(),
+	}
+}
+
+// Start starts monitoring
+func (upm *UnifiedPerformanceMonitor) Start() {
+	upm.startTime = time.Now()
+}
+
+// Stop stops monitoring
+func (upm *UnifiedPerformanceMonitor) Stop() {}
+
+// GetUptime returns the uptime
+func (upm *UnifiedPerformanceMonitor) GetUptime() time.Duration {
+	return time.Since(upm.startTime)
+}
 
 // AssetSearchQuery represents an asset search query
 type AssetSearchQuery struct {
