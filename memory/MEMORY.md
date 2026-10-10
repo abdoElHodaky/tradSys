@@ -9,3 +9,5 @@
 - [Golsp LSP Configuration](golsp-config.md) — Created .lsp.json with gopls settings for build output highlighting
 
 - [Licensing Types Extraction](licensing-types-extraction.md) — Extracted license-related types from unified_asset_system.go to licensing service
+
+- [WebSocket License Integration](websocket-license-integration.md) — Documented websocket LicenseValidator integration decision for WebSocket-specific optimizations

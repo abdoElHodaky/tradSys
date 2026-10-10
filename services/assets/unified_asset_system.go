@@ -5,7 +5,6 @@ package assets
 import (
 	"context"
 	"fmt"
-	"strings"
 	"log"
 	"sync"
 	"time"
@@ -181,16 +180,6 @@ type CrossExchangeRiskManager struct {
 // PortfolioRebalancer rebalances portfolios
 type PortfolioRebalancer struct {
 	mu sync.RWMutex
-}
-
-// ServiceConfig holds service configuration
-type ServiceConfig struct {
-	Name        string
-	Endpoint    string
-	Enabled     bool
-	Workers     int
-	MaxAlloc    int64
-	LogLevel    string
 }
 
 // AnalyticsReport represents an analytics report
@@ -753,42 +742,6 @@ func (uas *UnifiedAssetSystem) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// Supporting types and structures
-
-// AssetSearchIndex provides indexing for asset search
-type AssetSearchIndex struct {
-	tokens      map[string][]string // token -> []assetIDs
-	assetIndex  map[string]string   // assetID -> token list
-	mu          sync.RWMutex
-}
-
-// NewAssetSearchIndex creates a new asset search index
-func NewAssetSearchIndex() *AssetSearchIndex {
-	return &AssetSearchIndex{
-		tokens:     make(map[string][]string),
-		assetIndex: make(map[string]string),
-	}
-}
-
-// IndexAsset adds an asset to the search index
-func (idx *AssetSearchIndex) IndexAsset(assetID string, tokens []string) {
-	idx.mu.Lock()
-	defer idx.mu.Unlock()
-
-	for _, token := range tokens {
-		idx.tokens[token] = append(idx.tokens[token], assetID)
-	}
-	idx.assetIndex[assetID] = strings.Join(tokens, " ")
-}
-
-// Search finds assets by token
-func (idx *AssetSearchIndex) Search(token string) []string {
-	idx.mu.RLock()
-	defer idx.mu.RUnlock()
-
-	return idx.tokens[token]
-}
-
 // EgyptianComplianceInfo contains Egyptian market compliance information
 type EgyptianComplianceInfo = licensing.EgyptianComplianceInfo
 
@@ -822,42 +775,6 @@ type RealTimeFeed = licensing.RealTimeFeed
 // NewRealTimeFeed creates a new real-time feed
 var NewRealTimeFeed = licensing.NewRealTimeFeed
 
-// PositionManager manages positions across exchanges
-type PositionManager struct {
-	positions map[string]*Position
-	mu        sync.RWMutex
-}
-
-// Position represents a trading position
-type Position struct {
-	Symbol       string
-	Quantity     float64
-	AveragePrice float64
-	Exchange     string
-	LastUpdated  time.Time
-}
-
-// NewPositionManager creates a new position manager
-func NewPositionManager() *PositionManager {
-	return &PositionManager{
-		positions: make(map[string]*Position),
-	}
-}
-
-// AddPosition adds a position
-func (pm *PositionManager) AddPosition(symbol string, position *Position) {
-	pm.mu.Lock()
-	defer pm.mu.Unlock()
-	pm.positions[symbol] = position
-}
-
-// GetPosition retrieves a position
-func (pm *PositionManager) GetPosition(symbol string) *Position {
-	pm.mu.RLock()
-	defer pm.mu.RUnlock()
-	return pm.positions[symbol]
-}
-
 // AnalyticsDataProcessor processes analytics data
 
 // AnalyticsReportGenerator generates reports
@@ -882,24 +799,19 @@ type ComplianceAlertManager = licensing.ComplianceAlertManager
 
 // LicenseValidator validates licenses
 // NOTE: Use licensing.LicenseValidator from the licensing service
+type LicenseValidator = licensing.LicenseValidator
 
 // QuotaManager manages quotas
 // NOTE: Use licensing.QuotaManager from the licensing service
+type QuotaManager = licensing.QuotaManager
 
 // BillingEngine handles billing
 // NOTE: Use licensing.BillingEngine from the licensing service
+type BillingEngine = licensing.BillingEngine
 
 // UsageTracker tracks usage
 // NOTE: Use licensing.UsageTracker from the licensing service
-
-// ConfigStore stores configurations
-type ConfigStore struct{}
-
-// ConfigValidator validates configurations
-type ConfigValidator struct{}
-
-// ConfigChangeNotifier notifies of changes
-type ConfigChangeNotifier struct{}
+type UsageTracker = licensing.UsageTracker
 
 // UnifiedReportingEngine generates reports
 type UnifiedReportingEngine struct {
@@ -934,20 +846,6 @@ func (upm *UnifiedPerformanceMonitor) Stop() {}
 // GetUptime returns the uptime
 func (upm *UnifiedPerformanceMonitor) GetUptime() time.Duration {
 	return time.Since(upm.startTime)
-}
-
-// AssetSearchQuery represents an asset search query
-type AssetSearchQuery struct {
-	UserID       string
-	Query        string
-	AssetTypes   []exchanges.AssetType
-	Exchanges    []string
-	Sectors      []string
-	IslamicOnly  bool
-	MinMarketCap float64
-	MaxMarketCap float64
-	Limit        int
-	Offset       int
 }
 
 // AnalyticsRequest represents an analytics request

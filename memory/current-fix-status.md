@@ -57,16 +57,18 @@ services/
 │   ├── websocket_gateway.go
 │   └── websocket_components.go (has its own LicenseValidator)
 └── assets/
-    └── unified_asset_system.go (has local type definitions)
+    ├── unified_asset_system.go (914 lines - reduced from 1020)
+    ├── handler_registry.go (680 lines)
+    ├── position_types.go (NEW - Position, PositionManager)
+    ├── config_types.go (NEW - ServiceConfig, ConfigStore, etc.)
+    └── search_types.go (NEW - AssetSearchIndex, AssetSearchQuery)
 ```
 
 ## Next Steps
 
-1. **Resolve naming conflicts**: The websocket service has its own `LicenseValidator` that should either:
-   - Use the licensing service's types, or
-   - Be documented as having its own simplified implementation
+1. **Resolve naming conflicts**: ✅ COMPLETED - Documented websocket's LicenseValidator as intentionally simplified for WebSocket-specific use cases (see `websocket-license-integration.md`)
 
-2. **Update unified_asset_system.go**: Can be refactored to use types from licensing service instead of defining local copies
+2. **Update unified_asset_system.go**: ✅ COMPLETED - All types now use type aliases to reference licensing package types. File reduced from duplicating types to using shared definitions.
 
 3. **Create compliance service**: The compliance-related types could be moved to a dedicated `services/compliance/` package for better organization
 
