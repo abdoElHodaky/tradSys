@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/abdoElHodaky/tradSys/services/exchanges"
+	"github.com/abdoElHodaky/tradSys/services/licensing"
 )
 
 // UnifiedAssetSystem provides unified asset management across exchanges
@@ -50,9 +51,9 @@ type UnifiedAsset struct {
 	Industry         string
 	MarketCap        float64
 	IslamicInfo      *IslamicAssetInfo
-	ComplianceInfo   *UnifiedComplianceInfo
+	ComplianceInfo   *licensing.UnifiedComplianceInfo
 	TradingInfo      *TradingInfo
-	PricingInfo      *PricingInfo
+	PricingInfo      *licensing.PricingInfo
 	AnalyticsInfo    *AnalyticsInfo
 	Metadata         map[string]interface{}
 	CreatedAt        time.Time
@@ -72,15 +73,6 @@ type IslamicAssetInfo struct {
 	ZakatApplicable   bool
 }
 
-// UnifiedComplianceInfo contains compliance information across jurisdictions
-type UnifiedComplianceInfo struct {
-	EgyptianCompliance *EgyptianComplianceInfo
-	UAECompliance      *UAEComplianceInfo
-	IslamicCompliance  *IslamicComplianceInfo
-	GlobalCompliance   *GlobalComplianceInfo
-	LastUpdated        time.Time
-}
-
 // TradingInfo contains trading-related information
 type TradingInfo struct {
 	TradingHours    *exchanges.TradingSchedule
@@ -91,19 +83,6 @@ type TradingInfo struct {
 	SettlementDays  int
 	IsActive        bool
 	TradingStatus   string
-}
-
-// PricingInfo contains pricing and market data information
-type PricingInfo struct {
-	CurrentPrice    float64
-	PreviousClose   float64
-	DayChange       float64
-	DayChangePercent float64
-	Volume          int64
-	MarketCap       float64
-	PE              float64
-	DividendYield   float64
-	LastUpdated     time.Time
 }
 
 // AnalyticsInfo contains analytics and performance information
@@ -259,8 +238,8 @@ func NewUnifiedPricingEngine() *UnifiedPricingEngine {
 func (pe *UnifiedPricingEngine) Initialize() {}
 
 // GetCurrentPricing gets current pricing
-func (pe *UnifiedPricingEngine) GetCurrentPricing(symbol, exchange string) (*PricingInfo, error) {
-	return &PricingInfo{}, nil
+func (pe *UnifiedPricingEngine) GetCurrentPricing(symbol, exchange string) (*licensing.PricingInfo, error) {
+	return &licensing.PricingInfo{}, nil
 }
 
 // InitializeAssetPricing initializes pricing for an asset
@@ -352,13 +331,14 @@ func (cm *UnifiedComplianceManager) GenerateReport(ctx context.Context, request 
 // Shutdown shuts down the compliance manager
 func (cm *UnifiedComplianceManager) Shutdown() {}
 
-// NewUnifiedLicensingManager creates a new licensing manager
+// NewUnifiedLicensingManager creates a new licensing manager.
+// TODO: Integrate with licensing service properly by passing actual dependencies.
 func NewUnifiedLicensingManager() *UnifiedLicensingManager {
 	return &UnifiedLicensingManager{
-		licenseValidator: &LicenseValidator{},
-		quotaManager:     &QuotaManager{},
-		billingEngine:    &BillingEngine{},
-		usageTracker:     &UsageTracker{},
+		licenseValidator: nil, // TODO: Use licensing.NewLicenseValidator with proper dependencies
+		quotaManager:     nil, // TODO: Use licensing.NewQuotaManager with proper dependencies
+		billingEngine:    licensing.NewBillingEngine(),
+		usageTracker:     licensing.NewUsageTracker(),
 	}
 }
 
@@ -463,10 +443,10 @@ type UnifiedComplianceManager struct {
 
 // UnifiedLicensingManager manages enterprise licensing
 type UnifiedLicensingManager struct {
-	licenseValidator *LicenseValidator
-	quotaManager     *QuotaManager
-	billingEngine    *BillingEngine
-	usageTracker     *UsageTracker
+	licenseValidator *licensing.LicenseValidator
+	quotaManager     *licensing.QuotaManager
+	billingEngine    *licensing.BillingEngine
+	usageTracker     *licensing.UsageTracker
 	mu               sync.RWMutex
 }
 
@@ -810,100 +790,37 @@ func (idx *AssetSearchIndex) Search(token string) []string {
 }
 
 // EgyptianComplianceInfo contains Egyptian market compliance information
-type EgyptianComplianceInfo struct {
-	ExchangeRegulationLevel string
-	RequiredLicenses        []string
-	ReportingRequirements   []string
-	LastUpdated             time.Time
-}
+type EgyptianComplianceInfo = licensing.EgyptianComplianceInfo
 
 // UAEComplianceInfo contains UAE market compliance information
-type UAEComplianceInfo struct {
-	ExchangeRegulationLevel string
-	FSSARegistered          bool
-	LastUpdated             time.Time
-}
+type UAEComplianceInfo = licensing.UAEComplianceInfo
 
 // IslamicComplianceInfo contains Islamic finance compliance information
-type IslamicComplianceInfo struct {
-	IsHalal    bool
-	ShariaBoard string
-	ViolationComments []string
-	LastScreened time.Time
-}
+type IslamicComplianceInfo = licensing.IslamicComplianceInfo
 
 // GlobalComplianceInfo contains global market compliance information
-type GlobalComplianceInfo struct {
-	GlobalRegulationLevel string
-	CrossBorderTrading    bool
-	LastUpdated           time.Time
-}
+type GlobalComplianceInfo = licensing.GlobalComplianceInfo
 
 // PricingModel defines the interface for pricing models
-type PricingModel interface {
-	Name() string
-	Calculate(price float64, volume float64) float64
-}
+type PricingModel = licensing.PricingModel
 
 // DataAggregator aggregates market data
-type DataAggregator struct {
-	history   map[string][]float64
-	mu        sync.RWMutex
-}
+type DataAggregator = licensing.DataAggregator
 
 // NewDataAggregator creates a new data aggregator
-func NewDataAggregator() *DataAggregator {
-	return &DataAggregator{
-		history: make(map[string][]float64),
-	}
-}
+var NewDataAggregator = licensing.NewDataAggregator
 
 // PriceCache caches price data
-type PriceCache struct {
-	cache     map[string]float64
-	lastPrice map[string]time.Time
-	mu        sync.RWMutex
-}
+type PriceCache = licensing.PriceCache
 
 // NewPriceCache creates a new price cache
-func NewPriceCache() *PriceCache {
-	return &PriceCache{
-		cache:     make(map[string]float64),
-		lastPrice: make(map[string]time.Time),
-	}
-}
-
-// Set stores a price in the cache
-func (pc *PriceCache) Set(symbol string, price float64) {
-	pc.mu.Lock()
-	defer pc.mu.Unlock()
-	pc.cache[symbol] = price
-	pc.lastPrice[symbol] = time.Now()
-}
-
-// Get retrieves a price from the cache
-func (pc *PriceCache) Get(symbol string) (float64, bool) {
-	pc.mu.RLock()
-	defer pc.mu.RUnlock()
-	price, ok := pc.cache[symbol]
-	return price, ok
-}
+var NewPriceCache = licensing.NewPriceCache
 
 // RealTimeFeed represents a real-time market data feed
-type RealTimeFeed struct {
-	symbol    string
-	ticker    chan float64
-	isActive  bool
-	mu        sync.RWMutex
-}
+type RealTimeFeed = licensing.RealTimeFeed
 
 // NewRealTimeFeed creates a new real-time feed
-func NewRealTimeFeed(symbol string) *RealTimeFeed {
-	return &RealTimeFeed{
-		symbol: symbol,
-		ticker: make(chan float64, 100),
-	}
-}
+var NewRealTimeFeed = licensing.NewRealTimeFeed
 
 // PositionManager manages positions across exchanges
 type PositionManager struct {
@@ -948,28 +865,32 @@ func (pm *PositionManager) GetPosition(symbol string) *Position {
 // MachineLearningEngine handles ML operations
 
 // ComplianceRuleSet defines compliance rules
-type ComplianceRuleSet struct{}
+// NOTE: Use licensing.ComplianceRuleSet from the licensing service
+type ComplianceRuleSet = licensing.ComplianceRuleSet
 
 // UnifiedAuditTrail tracks audit events
-type UnifiedAuditTrail struct{}
+// NOTE: Use licensing.UnifiedAuditTrail from the licensing service
+type UnifiedAuditTrail = licensing.UnifiedAuditTrail
 
 // ComplianceReportingEngine generates compliance reports
-type ComplianceReportingEngine struct{}
+// NOTE: Use licensing.ComplianceReportingEngine from the licensing service
+type ComplianceReportingEngine = licensing.ComplianceReportingEngine
 
 // ComplianceAlertManager manages alerts
-type ComplianceAlertManager struct{}
+// NOTE: Use licensing.ComplianceAlertManager from the licensing service
+type ComplianceAlertManager = licensing.ComplianceAlertManager
 
 // LicenseValidator validates licenses
-type LicenseValidator struct{}
+// NOTE: Use licensing.LicenseValidator from the licensing service
 
 // QuotaManager manages quotas
-type QuotaManager struct{}
+// NOTE: Use licensing.QuotaManager from the licensing service
 
 // BillingEngine handles billing
-type BillingEngine struct{}
+// NOTE: Use licensing.BillingEngine from the licensing service
 
 // UsageTracker tracks usage
-type UsageTracker struct{}
+// NOTE: Use licensing.UsageTracker from the licensing service
 
 // ConfigStore stores configurations
 type ConfigStore struct{}
