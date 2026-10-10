@@ -11,3 +11,7 @@
 - [Licensing Types Extraction](licensing-types-extraction.md) — Extracted license-related types from unified_asset_system.go to licensing service
 
 - [WebSocket License Integration](websocket-license-integration.md) — Documented websocket LicenseValidator integration decision for WebSocket-specific optimizations
+
+- [DI Analysis](di-analysis.md) — Comprehensive analysis of fx-based DI for internal packages vs manual DI for services packages
+
+- [Large File Extraction Plan](large-file-extraction.md) — Plan for extracting types from adx_service.go, handler_registry.go, performance_optimizer.go for better organization

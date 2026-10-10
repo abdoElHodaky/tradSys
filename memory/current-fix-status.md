@@ -70,17 +70,30 @@ services/
 
 2. **Update unified_asset_system.go**: ✅ COMPLETED - All types now use type aliases to reference licensing package types. File reduced from duplicating types to using shared definitions.
 
-3. **Create compliance service**: The compliance-related types could be moved to a dedicated `services/compliance/` package for better organization
+3. **Analyze DI Patterns**: ✅ COMPLETED - Documented in `di-analysis.md`. Key finding: Internal packages use fx-based DI, services packages use manual initialization.
 
-4. **Create pricing service**: The pricing-related types could be moved to a dedicated `services/pricing/` package
+4. **Large File Extraction Plan**: ✅ COMPLETED - Documented in `large-file-extraction.md`. Identified extraction opportunities for:
+   - `services/exchanges/adx_service.go` (979 lines) - Islamic compliance types
+   - `services/assets/handler_registry.go` (680 lines) - Handler types
+   - `services/optimization/performance_optimizer.go` (711 lines) - Optimizer types
+   - `services/websocket/websocket_gateway.go` (707 lines) - WebSocket types
 
-## Verification Status
+5. **Create compliance service**: The compliance-related types could be moved to a dedicated `services/compliance/` package for better organization
+
+6. **Create pricing service**: The pricing-related types could be moved to a dedicated `services/pricing/` package
+
+## Verifying Status
 
 - ✓ licensing package compiles successfully
 - ✓ websocket package compiles successfully  
 - ✓ entire project compiles successfully
 - ✓ Go vet passes on licensing package
+- ✓ DI analysis completed and documented
+- ✓ Large file extraction plan documented
 
-**Why:** Organizing types into their respective services improves code maintainability and reusability across the codebase.
+**Why:** Organizing types into their respective services improves code maintainability and reusability across the codebase. The DI analysis reveals mismatch between internal (fx-based) and services (manual) patterns.
 
-**How to apply:** When working with licensing, routing, or compliance features, use the types from `services/licensing` package. The websocket service has its own simplified local implementation for WebSocket-specific operations.
+**How to apply:** 
+- For types: Use `services/licensing` package types for licensing features
+- For DI: Consider migrating services packages to use fx framework for consistency
+- For files: Follow the extraction plan to organize types into dedicated files
