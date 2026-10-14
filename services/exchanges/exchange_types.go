@@ -4,6 +4,7 @@ package exchanges
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 )
 
@@ -69,7 +70,7 @@ type Order struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	Status      OrderStatus
-	Metadata    map[string]interface{}
+	Metadata    map[string]any
 }
 
 // OrderType defines order types
@@ -172,7 +173,7 @@ type AssetInfo struct {
 	TradingHours   *TradingSchedule
 	ComplianceInfo *ComplianceInfo
 	IslamicInfo    *IslamicInfo
-	Metadata       map[string]interface{}
+	Metadata       map[string]any
 }
 
 // ComplianceInfo represents compliance information
@@ -221,7 +222,7 @@ type PerformanceMetrics struct {
 type ConnectionPool struct {
 	MaxConnections int
 	IdleTimeout    time.Duration
-	connections    chan interface{}
+	connections    chan any
 }
 
 // RateLimiter manages API rate limiting
@@ -307,7 +308,7 @@ type AuditTrail struct {
 type RiskRule struct {
 	RuleID      string
 	Description string
-	Validator   func(interface{}) bool
+	Validator   func(any) bool
 	Action      RiskAction
 }
 
@@ -381,7 +382,7 @@ func (ec *EgyptianCompliance) LoadRegulatoryRules() {
 		RuleID:      "EFA_001",
 		Description: "Maximum position limit per security",
 		AssetTypes:  []AssetType{AssetTypeStock},
-		Validator: func(data interface{}) bool {
+		Validator: func(data any) bool {
 			// Implement position limit validation
 			return true
 		},
@@ -393,7 +394,7 @@ func (ec *EgyptianCompliance) LoadRegulatoryRules() {
 		RuleID:      "EFA_002",
 		Description: "Market manipulation detection",
 		AssetTypes:  getSupportedAssetTypes(),
-		Validator: func(data interface{}) bool {
+		Validator: func(data any) bool {
 			// Implement market manipulation detection
 			return true
 		},
@@ -405,7 +406,7 @@ func (ec *EgyptianCompliance) LoadRegulatoryRules() {
 		RuleID:      "EFA_003",
 		Description: "Islamic finance Sharia compliance",
 		AssetTypes:  []AssetType{AssetTypeIslamicInstrument},
-		Validator: func(data interface{}) bool {
+		Validator: func(data any) bool {
 			// Implement Sharia compliance validation
 			return true
 		},
@@ -420,13 +421,7 @@ func (ec *EgyptianCompliance) ValidateOrder(order *Order) error {
 
 	for _, rule := range ec.regulatoryRules {
 		// Check if rule applies to this asset type
-		applies := false
-		for _, assetType := range rule.AssetTypes {
-			if assetType == order.AssetType {
-				applies = true
-				break
-			}
-		}
+		applies := slices.Contains(rule.AssetTypes, order.AssetType)
 
 		if applies && !rule.Validator(order) {
 			if rule.Severity == SeverityCritical {

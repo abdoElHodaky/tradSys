@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"slices"
 	"sync"
 	"time"
 )
@@ -43,7 +44,7 @@ type ComplianceRule struct {
 	RuleID      string
 	Description string
 	AssetTypes  []AssetType
-	Validator   func(interface{}) bool
+	Validator   func(any) bool
 	Severity    ComplianceSeverity
 }
 
@@ -305,12 +306,7 @@ func (egx *EGXService) isValidEGXSymbol(symbol string) bool {
 
 // isAssetTypeSupported checks if an asset type is supported
 func (egx *EGXService) isAssetTypeSupported(assetType AssetType) bool {
-	for _, supported := range egx.assetTypes {
-		if supported == assetType {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(egx.assetTypes, assetType)
 }
 
 // isMarketOpen checks if the EGX market is currently open
@@ -422,7 +418,7 @@ func (egx *EGXService) applyIslamicFiltering(data *MarketData) *MarketData {
 }
 
 // getComplianceInfo returns compliance information for an asset
-func (egx *EGXService) getComplianceInfo(symbol string) *ComplianceInfo {
+func (egx *EGXService) getComplianceInfo(_ string) *ComplianceInfo {
 	return &ComplianceInfo{
 		Exchange:     "EGX",
 		Regulator:    "EFA", // Egyptian Financial Authority
@@ -432,7 +428,7 @@ func (egx *EGXService) getComplianceInfo(symbol string) *ComplianceInfo {
 }
 
 // getIslamicInfo returns Islamic finance information for an asset
-func (egx *EGXService) getIslamicInfo(symbol string) *IslamicInfo {
+func (egx *EGXService) getIslamicInfo(_ string) *IslamicInfo {
 	return &IslamicInfo{
 		IsHalal:        true, // This would be determined by actual screening
 		ShariaBoard:    "Egyptian Sharia Board",

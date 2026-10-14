@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"slices"
 	"sync"
 	"time"
 )
@@ -188,7 +189,7 @@ type SukukRiskEngine struct {
 type RiskModel struct {
 	ModelID    string
 	Kind       string
-	Parameters map[string]interface{}
+	Parameters map[string]any
 }
 
 // NewSukukRiskEngine creates a new Sukuk risk engine
@@ -263,14 +264,14 @@ func (i *IslamicNAVCalculator) CalculateNAV(fund string) (float64, error) {
 
 // FundScreeningEngine screens funds for Islamic compliance
 type FundScreeningEngine struct {
-	screeningRules map[string]interface{}
+	screeningRules map[string]any
 	mu             sync.RWMutex
 }
 
 // NewFundScreeningEngine creates a new fund screening engine
 func NewFundScreeningEngine() *FundScreeningEngine {
 	return &FundScreeningEngine{
-		screeningRules: make(map[string]interface{}),
+		screeningRules: make(map[string]any),
 	}
 }
 
@@ -531,12 +532,7 @@ func (adx *ADXService) isValidADXSymbol(symbol string) bool {
 
 // isAssetTypeSupported checks if an asset type is supported
 func (adx *ADXService) isAssetTypeSupported(assetType AssetType) bool {
-	for _, supported := range adx.assetTypes {
-		if supported == assetType {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(adx.assetTypes, assetType)
 }
 
 // isIslamicAsset checks if an asset type is Islamic
@@ -547,13 +543,7 @@ func (adx *ADXService) isIslamicAsset(assetType AssetType) bool {
 		AssetTypeIslamicFund,
 		AssetTypeIslamicREIT,
 	}
-
-	for _, islamic := range islamicAssets {
-		if islamic == assetType {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(islamicAssets, assetType)
 }
 
 // isMarketOpen checks if the ADX market is currently open

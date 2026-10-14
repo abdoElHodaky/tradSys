@@ -42,7 +42,7 @@ type ShariaRule struct {
 	Description     string
 	ShariaBoard     string
 	AssetTypes      []AssetType
-	Validator       func(interface{}) bool
+	Validator       func(any) bool
 	ComplianceLevel ComplianceLevel
 	LastUpdated     time.Time
 }
@@ -211,14 +211,14 @@ type AuditEntry struct {
 
 // ComplianceDatabase stores compliance data
 type ComplianceDatabase struct {
-	entries map[string]interface{}
+	entries map[string]any
 	mu      sync.RWMutex
 }
 
 // NewComplianceDatabase creates a new compliance database
 func NewComplianceDatabase() *ComplianceDatabase {
 	return &ComplianceDatabase{
-		entries: make(map[string]interface{}),
+		entries: make(map[string]any),
 	}
 }
 
@@ -242,13 +242,13 @@ func (a *IslamicAuditTrail) AddEntry(entry *AuditEntry) {
 
 // ComplianceDataStore stores compliance data
 type ComplianceDataStore struct {
-	data map[string]interface{}
+	data map[string]any
 	mu   sync.RWMutex
 }
 
 // NewComplianceDataStore creates a new compliance data store
 func NewComplianceDataStore() *ComplianceDataStore {
 	return &ComplianceDataStore{
-		data: make(map[string]interface{}),
+		data: make(map[string]any),
 	}
 }
