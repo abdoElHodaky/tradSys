@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abdoElhodaky/tradSys/pkg/interfaces"
-	"github.com/abdoElhodaky/tradSys/pkg/types"
+	"github.com/abdoElHodaky/tradSys/pkg/interfaces"
+	"github.com/abdoElHodaky/tradSys/pkg/types"
 )
 
 // HandlerRegistry manages asset-specific handlers
