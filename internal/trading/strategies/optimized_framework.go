@@ -13,6 +13,7 @@ import (
 	"github.com/abdoElHodaky/tradSys/proto/marketdata"
 	"github.com/abdoElHodaky/tradSys/proto/orders"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
 )
 
 // OptimizedStrategyManager is an enhanced version of StrategyManager
@@ -229,8 +230,8 @@ func (m *OptimizedStrategyManager) ProcessMarketData(ctx context.Context, data *
 	}
 
 	// Create a copy of the market data to avoid race conditions
-	dataCopy := m.marketDataPool.Get()
-	*dataCopy = *data
+	// using proto.Clone to properly copy the protobuf message (avoids copying mutex)
+	dataCopy := proto.Clone(data).(*marketdata.MarketDataResponse)
 
 	// Try to get a worker from the pool
 	select {

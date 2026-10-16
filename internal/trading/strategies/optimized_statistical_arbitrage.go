@@ -47,7 +47,7 @@ type OptimizedStatisticalArbitrageStrategy struct {
 	processingMu sync.Mutex
 
 	// Services
-	orderService orders.OrderService
+	orderService *orders.OrderService
 	pairRepo     *repositories.PairRepository
 	statsRepo    *repositories.PairStatisticsRepository
 	positionRepo *repositories.PairPositionRepository
@@ -65,7 +65,7 @@ type OptimizedStatisticalArbitrageStrategy struct {
 func NewOptimizedStatisticalArbitrageStrategy(
 	logger *zap.Logger,
 	params StatisticalArbitrageParams,
-	orderService orders.OrderService,
+	orderService *orders.OrderService,
 	pairRepo *repositories.PairRepository,
 	statsRepo *repositories.PairStatisticsRepository,
 	positionRepo *repositories.PairPositionRepository,
