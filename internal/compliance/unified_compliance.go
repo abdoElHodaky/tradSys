@@ -7,8 +7,100 @@ import (
 	"sync/atomic"
 	"time"
 
+	compliance_types "github.com/abdoElHodaky/tradSys/pkg/types/compliance"
 	"github.com/abdoElHodaky/tradSys/internal/trading/types"
 	"go.uber.org/zap"
+)
+
+// Type aliases for backward compatibility - these point to the centralized types from pkg/types/compliance
+type ComplianceConfig = compliance_types.ComplianceConfig
+type ComplianceMetrics = compliance_types.ComplianceMetrics
+type ComplianceRule = compliance_types.ComplianceRule
+type ComplianceRuleType = compliance_types.ComplianceRuleType
+type ComplianceViolation = compliance_types.ComplianceViolation
+type ViolationSeverity = compliance_types.ViolationSeverity
+type ViolationStatus = compliance_types.ViolationStatus
+type ComplianceReport = compliance_types.ComplianceReport
+type ReportType = compliance_types.ReportType
+type ReportPeriod = compliance_types.ReportPeriod
+type ReportStatus = compliance_types.ReportStatus
+type ReportTemplate = compliance_types.ReportTemplate
+type AuditEntry = compliance_types.AuditEntry
+type AuditEventType = compliance_types.AuditEventType
+type ComplianceAlert = compliance_types.ComplianceAlert
+type AlertType = compliance_types.AlertType
+type AlertStatus = compliance_types.AlertStatus
+type AlertHandler = compliance_types.AlertHandler
+type ComplianceResult = compliance_types.ComplianceResult
+
+// Constants for rules, severity, and other compliance-related values
+const (
+	// Rule types - unified from RuleType in validation.go
+	RuleTypeOrderValidation      RuleType = "order_validation"
+	RuleTypeAMLCheck             RuleType = "aml_check"
+	RuleTypeKYCVerification      RuleType = "kyc_verification"
+	RuleTypeShariaCompliance     RuleType = "sharia_compliance"
+	RuleTypeReportingRequirement RuleType = "reporting_requirement"
+
+	RuleTypePositionLimit      RuleType = "position_limit"
+	RuleTypeOrderSize          RuleType = "order_size"
+	RuleTypeTradingHours       RuleType = "trading_hours"
+	RuleTypeMarketManipulation RuleType = "market_manipulation"
+	RuleTypeInsiderTrading     RuleType = "insider_trading"
+	RuleTypeRiskLimit          RuleType = "risk_limit"
+	RuleTypeReporting          RuleType = "reporting"
+
+	// Severity levels
+	SeverityLow      ViolationSeverity = compliance_types.SeverityLow
+	SeverityMedium   ViolationSeverity = compliance_types.SeverityMedium
+	SeverityHigh     ViolationSeverity = compliance_types.SeverityHigh
+	SeverityCritical ViolationSeverity = compliance_types.SeverityCritical
+
+	// Audit event types
+	AuditEventCompliance     AuditEventType = compliance_types.AuditEventCompliance
+	AuditEventOrderSubmit    AuditEventType = compliance_types.AuditEventOrderSubmit
+	AuditEventOrderCancel    AuditEventType = compliance_types.AuditEventOrderCancel
+	AuditEventOrderModify    AuditEventType = compliance_types.AuditEventOrderModify
+	AuditEventTrade          AuditEventType = compliance_types.AuditEventTrade
+	AuditEventLogin          AuditEventType = compliance_types.AuditEventLogin
+	AuditEventLogout         AuditEventType = compliance_types.AuditEventLogout
+	AuditEventRiskBreach     AuditEventType = compliance_types.AuditEventRiskBreach
+
+	// Alert types and statuses
+	AlertTypeViolation   AlertType = compliance_types.AlertTypeViolation
+	AlertTypeRiskBreach  AlertType = compliance_types.AlertTypeRiskBreach
+	AlertTypeSystemError AlertType = compliance_types.AlertTypeSystemError
+	AlertTypeReporting   AlertType = compliance_types.AlertTypeReporting
+
+	AlertStatusActive       AlertStatus = compliance_types.AlertStatusActive
+	AlertStatusAcknowledged AlertStatus = compliance_types.AlertStatusAcknowledged
+	AlertStatusResolved     AlertStatus = compliance_types.AlertStatusResolved
+
+	// Report types and statuses
+	ReportTypeDaily     ReportType = compliance_types.ReportTypeDaily
+	ReportTypeWeekly    ReportType = compliance_types.ReportTypeWeekly
+	ReportTypeMonthly   ReportType = compliance_types.ReportTypeMonthly
+	ReportTypeQuarterly ReportType = compliance_types.ReportTypeQuarterly
+	ReportTypeAnnual    ReportType = compliance_types.ReportTypeAnnual
+	ReportTypeAdHoc     ReportType = compliance_types.ReportTypeAdHoc
+
+	ReportStatusPending   ReportStatus = compliance_types.ReportStatusPending
+	ReportStatusGenerated ReportStatus = compliance_types.ReportStatusGenerated
+	ReportStatusSubmitted ReportStatus = compliance_types.ReportStatusSubmitted
+	ReportStatusFailed    ReportStatus = compliance_types.ReportStatusFailed
+
+	// Validation types
+	ValidationTypeOrder    = "order"
+	ValidationTypeUser     = "user"
+	ValidationTypeTrade    = "trade"
+	ValidationTypePosition = "position"
+	ValidationTypeAccount  = "account"
+
+	// Violation status
+	ViolationStatusOpen          ViolationStatus = compliance_types.ViolationStatusOpen
+	ViolationStatusInvestigating ViolationStatus = compliance_types.ViolationStatusInvestigating
+	ViolationStatusResolved      ViolationStatus = compliance_types.ViolationStatusResolved
+	ViolationStatusFalsePositive ViolationStatus = compliance_types.ViolationStatusFalsePositive
 )
 
 // UnifiedComplianceEngine provides comprehensive compliance and regulatory reporting
@@ -23,30 +115,6 @@ type UnifiedComplianceEngine struct {
 	isRunning       int32
 	stopChannel     chan struct{}
 	mu              sync.RWMutex
-}
-
-// ComplianceConfig contains configuration for compliance engine
-type ComplianceConfig struct {
-	EnabledRegulations   []string      `json:"enabled_regulations"`
-	ReportingEnabled     bool          `json:"reporting_enabled"`
-	AuditTrailEnabled    bool          `json:"audit_trail_enabled"`
-	AlertingEnabled      bool          `json:"alerting_enabled"`
-	ReportingInterval    time.Duration `json:"reporting_interval"`
-	RetentionPeriod      time.Duration `json:"retention_period"`
-	MaxViolationsPerDay  int           `json:"max_violations_per_day"`
-	AutoReportingEnabled bool          `json:"auto_reporting_enabled"`
-}
-
-// ComplianceMetrics tracks compliance performance
-type ComplianceMetrics struct {
-	TotalChecks        int64         `json:"total_checks"`
-	PassedChecks       int64         `json:"passed_checks"`
-	FailedChecks       int64         `json:"failed_checks"`
-	ViolationsDetected int64         `json:"violations_detected"`
-	ReportsGenerated   int64         `json:"reports_generated"`
-	AlertsTriggered    int64         `json:"alerts_triggered"`
-	AverageCheckTime   time.Duration `json:"average_check_time"`
-	LastUpdateTime     time.Time     `json:"last_update_time"`
 }
 
 // RuleEngine manages compliance rules and checks
@@ -88,186 +156,6 @@ type AlertManager struct {
 	subscribers []AlertHandler
 	logger      *zap.Logger
 	mu          sync.RWMutex
-}
-
-// ComplianceRule defines a compliance rule
-type ComplianceRule struct {
-	ID          string                 `json:"id"`
-	Name        string                 `json:"name"`
-	Description string                 `json:"description"`
-	Regulation  string                 `json:"regulation"`
-	RuleType    ComplianceRuleType     `json:"rule_type"`
-	Parameters  map[string]interface{} `json:"parameters"`
-	Enabled     bool                   `json:"enabled"`
-	Severity    ViolationSeverity      `json:"severity"`
-	CreatedAt   time.Time              `json:"created_at"`
-	UpdatedAt   time.Time              `json:"updated_at"`
-}
-
-// ComplianceRuleType defines types of compliance rules
-type ComplianceRuleType string
-
-const (
-	RuleTypePositionLimit      ComplianceRuleType = "position_limit"
-	RuleTypeOrderSize          ComplianceRuleType = "order_size"
-	RuleTypeTradingHours       ComplianceRuleType = "trading_hours"
-	RuleTypeMarketManipulation ComplianceRuleType = "market_manipulation"
-	RuleTypeInsiderTrading     ComplianceRuleType = "insider_trading"
-	RuleTypeRiskLimit          ComplianceRuleType = "risk_limit"
-	RuleTypeReporting          ComplianceRuleType = "reporting"
-)
-
-// ComplianceViolation represents a compliance violation
-type ComplianceViolation struct {
-	ID          string                 `json:"id"`
-	RuleID      string                 `json:"rule_id"`
-	OrderID     string                 `json:"order_id,omitempty"`
-	UserID      string                 `json:"user_id"`
-	Symbol      string                 `json:"symbol,omitempty"`
-	Severity    ViolationSeverity      `json:"severity"`
-	Description string                 `json:"description"`
-	Details     map[string]interface{} `json:"details"`
-	Status      ViolationStatus        `json:"status"`
-	DetectedAt  time.Time              `json:"detected_at"`
-	ResolvedAt  *time.Time             `json:"resolved_at,omitempty"`
-}
-
-// ViolationSeverity defines severity levels for violations
-type ViolationSeverity string
-
-const (
-	SeverityLow      ViolationSeverity = "low"
-	SeverityMedium   ViolationSeverity = "medium"
-	SeverityHigh     ViolationSeverity = "high"
-	SeverityCritical ViolationSeverity = "critical"
-)
-
-// ViolationStatus defines status of violations
-type ViolationStatus string
-
-const (
-	ViolationStatusOpen          ViolationStatus = "open"
-	ViolationStatusInvestigating ViolationStatus = "investigating"
-	ViolationStatusResolved      ViolationStatus = "resolved"
-	ViolationStatusFalsePositive ViolationStatus = "false_positive"
-)
-
-// ComplianceReport represents a regulatory report
-type ComplianceReport struct {
-	ID          string                 `json:"id"`
-	Type        ReportType             `json:"type"`
-	Regulation  string                 `json:"regulation"`
-	Period      ReportPeriod           `json:"period"`
-	Data        map[string]interface{} `json:"data"`
-	Status      ReportStatus           `json:"status"`
-	GeneratedAt time.Time              `json:"generated_at"`
-	SubmittedAt *time.Time             `json:"submitted_at,omitempty"`
-	FilePath    string                 `json:"file_path,omitempty"`
-}
-
-// ReportType defines types of compliance reports
-type ReportType string
-
-const (
-	ReportTypeDaily     ReportType = "daily"
-	ReportTypeWeekly    ReportType = "weekly"
-	ReportTypeMonthly   ReportType = "monthly"
-	ReportTypeQuarterly ReportType = "quarterly"
-	ReportTypeAnnual    ReportType = "annual"
-	ReportTypeAdHoc     ReportType = "adhoc"
-)
-
-// ReportPeriod defines the period for a report
-type ReportPeriod struct {
-	StartDate time.Time `json:"start_date"`
-	EndDate   time.Time `json:"end_date"`
-}
-
-// ReportStatus defines status of reports
-type ReportStatus string
-
-const (
-	ReportStatusPending   ReportStatus = "pending"
-	ReportStatusGenerated ReportStatus = "generated"
-	ReportStatusSubmitted ReportStatus = "submitted"
-	ReportStatusFailed    ReportStatus = "failed"
-)
-
-// ReportTemplate defines a template for generating reports
-type ReportTemplate struct {
-	ID         string     `json:"id"`
-	Name       string     `json:"name"`
-	Type       ReportType `json:"type"`
-	Regulation string     `json:"regulation"`
-	Fields     []string   `json:"fields"`
-	Format     string     `json:"format"`
-	Template   string     `json:"template"`
-	CreatedAt  time.Time  `json:"created_at"`
-}
-
-// AuditEntry represents an audit trail entry
-type AuditEntry struct {
-	ID        string                 `json:"id"`
-	EventType AuditEventType         `json:"event_type"`
-	UserID    string                 `json:"user_id"`
-	OrderID   string                 `json:"order_id,omitempty"`
-	Symbol    string                 `json:"symbol,omitempty"`
-	Action    string                 `json:"action"`
-	Details   map[string]interface{} `json:"details"`
-	IPAddress string                 `json:"ip_address,omitempty"`
-	UserAgent string                 `json:"user_agent,omitempty"`
-	Timestamp time.Time              `json:"timestamp"`
-}
-
-// AuditEventType defines types of audit events
-type AuditEventType string
-
-const (
-	AuditEventOrderSubmit AuditEventType = "order_submit"
-	AuditEventOrderCancel AuditEventType = "order_cancel"
-	AuditEventOrderModify AuditEventType = "order_modify"
-	AuditEventTrade       AuditEventType = "trade"
-	AuditEventLogin       AuditEventType = "login"
-	AuditEventLogout      AuditEventType = "logout"
-	AuditEventRiskBreach  AuditEventType = "risk_breach"
-	AuditEventCompliance  AuditEventType = "compliance"
-)
-
-// ComplianceAlert represents a compliance alert
-type ComplianceAlert struct {
-	ID             string                 `json:"id"`
-	Type           AlertType              `json:"type"`
-	Severity       ViolationSeverity      `json:"severity"`
-	Title          string                 `json:"title"`
-	Message        string                 `json:"message"`
-	Details        map[string]interface{} `json:"details"`
-	Status         AlertStatus            `json:"status"`
-	CreatedAt      time.Time              `json:"created_at"`
-	AcknowledgedAt *time.Time             `json:"acknowledged_at,omitempty"`
-}
-
-// AlertType defines types of compliance alerts
-type AlertType string
-
-const (
-	AlertTypeViolation   AlertType = "violation"
-	AlertTypeRiskBreach  AlertType = "risk_breach"
-	AlertTypeSystemError AlertType = "system_error"
-	AlertTypeReporting   AlertType = "reporting"
-)
-
-// AlertStatus defines status of alerts
-type AlertStatus string
-
-const (
-	AlertStatusActive       AlertStatus = "active"
-	AlertStatusAcknowledged AlertStatus = "acknowledged"
-	AlertStatusResolved     AlertStatus = "resolved"
-)
-
-// AlertHandler defines the interface for alert handlers
-type AlertHandler interface {
-	HandleAlert(alert *ComplianceAlert) error
 }
 
 // NewUnifiedComplianceEngine creates a new unified compliance engine
@@ -394,16 +282,6 @@ func (c *UnifiedComplianceEngine) CheckCompliance(order *types.Order, userID str
 
 	atomic.AddInt64(&c.metrics.TotalChecks, 1)
 	return result, nil
-}
-
-// ComplianceResult represents the result of a compliance check
-type ComplianceResult struct {
-	OrderID    string                `json:"order_id"`
-	UserID     string                `json:"user_id"`
-	Passed     bool                  `json:"passed"`
-	Violations []ComplianceViolation `json:"violations,omitempty"`
-	CheckedAt  time.Time             `json:"checked_at"`
-	CheckTime  time.Duration         `json:"check_time"`
 }
 
 // loadDefaultRules loads default compliance rules
@@ -612,7 +490,7 @@ func (r *RuleEngine) checkRule(rule ComplianceRule, order *types.Order, userID s
 				Details: map[string]interface{}{
 					"current_hour": now.Hour(),
 					"start_hour":   startHour,
-					"end_hour":     endHour,
+					"end_hour":   endHour,
 				},
 				Status:     ViolationStatusOpen,
 				DetectedAt: time.Now(),
