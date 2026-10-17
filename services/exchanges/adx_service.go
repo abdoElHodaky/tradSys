@@ -7,69 +7,17 @@ import (
 	"fmt"
 	"log"
 	"slices"
-	"sync"
 	"time"
 )
-
-// ADXService provides Abu Dhabi Exchange integration with Islamic finance focus
-type ADXService struct {
-	exchangeID         string
-	region             string
-	assetTypes         []AssetType
-	tradingHours       *TradingSchedule
-	islamicCompliance  *IslamicCompliance
-	uaeCompliance      *UAECompliance
-	shariaBoards       []*ShariaBoard
-	zakatCalculator    *ZakatCalculator
-	languageSupport    []string
-	connector          *ADXConnector
-	marketData         *ADXMarketData
-	orderManager       *ADXOrderManager
-	riskEngine         *ADXRiskEngine
-	sukukService       *SukukService
-	islamicFundService *IslamicFundService
-	performanceMonitor *PerformanceMonitor
-	mu                 sync.RWMutex
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// ADXConnector handles connection to Abu Dhabi Exchange
-type ADXConnector struct {
-	endpoint        string
-	apiKey          string
-	islamicEndpoint string
-	connectionPool  *ConnectionPool
-	rateLimiter     *RateLimiter
-	retryPolicy     *RetryPolicy
-	healthChecker   *HealthChecker
-	mu              sync.RWMutex
-}
 
 // NewADXConnector creates a new ADX connector
 func NewADXConnector() *ADXConnector {
 	return &ADXConnector{
-		endpoint:        "https://api.adx.ae",
-		connectionPool:  &ConnectionPool{MaxConnections: 100, IdleTimeout: 5 * time.Minute},
-		rateLimiter:     &RateLimiter{RequestsPerSecond: 100, BurstSize: 200},
-		retryPolicy:     &RetryPolicy{MaxRetries: 3, InitialDelay: time.Second, MaxDelay: 10 * time.Second, BackoffFactor: 2.0},
-		healthChecker:   &HealthChecker{CheckInterval: 30 * time.Second, Timeout: 5 * time.Second},
+		endpoint:       "https://api.adx.ae",
+		connectionPool: &ConnectionPool{MaxConnections: 100, IdleTimeout: 5 * time.Minute},
+		rateLimiter:    &RateLimiter{RequestsPerSecond: 100, BurstSize: 200},
+		retryPolicy:    &RetryPolicy{MaxRetries: 3, InitialDelay: time.Second, MaxDelay: 10 * time.Second, BackoffFactor: 2.0},
+		healthChecker:  &HealthChecker{CheckInterval: 30 * time.Second, Timeout: 5 * time.Second},
 	}
 }
 
@@ -89,36 +37,15 @@ func (c *ADXConnector) Disconnect() error {
 	return nil
 }
 
-// ADXMarketData handles Islamic-focused market data from ADX
-type ADXMarketData struct {
-	realTimeFeeds     map[string]*DataFeed
-	islamicFeeds      map[string]*IslamicDataFeed
-	sukukPricing      *SukukPricingEngine
-	islamicIndices    *IslamicIndexCalculator
-	historicalData    *HistoricalDataStore
-	complianceData    *ComplianceDataStore
-	mu                sync.RWMutex
-}
-
-// IslamicDataFeed represents Islamic-compliant data feed
-type IslamicDataFeed struct {
-	Symbol           string
-	AssetType        AssetType
-	ComplianceStatus ComplianceLevel
-	ShariaBoard      string
-	LastScreened     time.Time
-	IsActive         bool
-}
-
 // NewADXMarketData creates ADX market data handler
 func NewADXMarketData() *ADXMarketData {
 	return &ADXMarketData{
-		realTimeFeeds:   make(map[string]*DataFeed),
-		islamicFeeds:    make(map[string]*IslamicDataFeed),
-		historicalData:  &HistoricalDataStore{RetentionPeriod: 365 * 24 * time.Hour},
-		sukukPricing:    &SukukPricingEngine{},
-		islamicIndices:  &IslamicIndexCalculator{},
-		complianceData:  &ComplianceDataStore{},
+		realTimeFeeds:  make(map[string]*DataFeed),
+		islamicFeeds:   make(map[string]*IslamicDataFeed),
+		historicalData: &HistoricalDataStore{RetentionPeriod: 365 * 24 * time.Hour},
+		sukukPricing:   &SukukPricingEngine{},
+		islamicIndices: &IslamicIndexCalculator{},
+		complianceData: &ComplianceDataStore{},
 	}
 }
 
@@ -130,15 +57,6 @@ func (md *ADXMarketData) StartIslamicFeeds() {
 // Stop stops market data feeds
 func (md *ADXMarketData) Stop() {
 	// Stop market data feeds
-}
-
-// SukukService handles Sukuk (Islamic bonds) trading
-type SukukService struct {
-	sukukTypes      map[string]SukukType
-	pricingEngine   *SukukPricingEngine
-	yieldCalculator *IslamicYieldCalculator
-	riskAssessment  *SukukRiskEngine
-	mu              sync.RWMutex
 }
 
 // NewSukukService creates a new Sukuk service
@@ -163,12 +81,6 @@ func (s *SukukService) Shutdown() {
 	// Shutdown Sukuk service
 }
 
-// IslamicYieldCalculator calculates Islamic yields
-type IslamicYieldCalculator struct {
-	config *Config
-	mu     sync.RWMutex
-}
-
 // NewIslamicYieldCalculator creates a new Islamic yield calculator
 func NewIslamicYieldCalculator() *IslamicYieldCalculator {
 	return &IslamicYieldCalculator{}
@@ -180,17 +92,6 @@ func (i *IslamicYieldCalculator) CalculateYield(asset string) (float64, error) {
 }
 
 // SukukRiskEngine assesses Sukuk risk
-type SukukRiskEngine struct {
-	riskModels map[string]RiskModel
-	mu         sync.RWMutex
-}
-
-// RiskModel represents a risk assessment model
-type RiskModel struct {
-	ModelID    string
-	Kind       string
-	Parameters map[string]any
-}
 
 // NewSukukRiskEngine creates a new Sukuk risk engine
 func NewSukukRiskEngine() *SukukRiskEngine {
@@ -202,26 +103,6 @@ func NewSukukRiskEngine() *SukukRiskEngine {
 // AssessRisk assesses risk for Sukuk
 func (s *SukukRiskEngine) AssessRisk(asset string) error {
 	return nil
-}
-
-// SukukType defines types of Sukuk
-type SukukType struct {
-	TypeID      string
-	Name        string
-	Structure   string
-	Underlying  string
-	Maturity    time.Duration
-	MinInvest   float64
-	IsActive    bool
-}
-
-// IslamicFundService handles Islamic mutual funds
-type IslamicFundService struct {
-	fundTypes       map[string]IslamicFundType
-	navCalculator   *IslamicNAVCalculator
-	screeningEngine *FundScreeningEngine
-	performanceCalc *IslamicPerformanceCalculator
-	mu              sync.RWMutex
 }
 
 // NewIslamicFundService creates a new Islamic fund service
@@ -246,12 +127,6 @@ func (f *IslamicFundService) Shutdown() {
 	// Shutdown Islamic fund service
 }
 
-// IslamicNAVCalculator calculates Islamic NAV
-type IslamicNAVCalculator struct {
-	config *Config
-	mu     sync.RWMutex
-}
-
 // NewIslamicNAVCalculator creates a new Islamic NAV calculator
 func NewIslamicNAVCalculator() *IslamicNAVCalculator {
 	return &IslamicNAVCalculator{}
@@ -260,12 +135,6 @@ func NewIslamicNAVCalculator() *IslamicNAVCalculator {
 // CalculateNAV calculates Islamic NAV
 func (i *IslamicNAVCalculator) CalculateNAV(fund string) (float64, error) {
 	return 0, nil
-}
-
-// FundScreeningEngine screens funds for Islamic compliance
-type FundScreeningEngine struct {
-	screeningRules map[string]any
-	mu             sync.RWMutex
 }
 
 // NewFundScreeningEngine creates a new fund screening engine
@@ -280,20 +149,6 @@ func (f *FundScreeningEngine) ScreenFund(fund string) error {
 	return nil
 }
 
-// IslamicPerformanceCalculator calculates Islamic performance metrics
-type IslamicPerformanceCalculator struct {
-	history map[string][]PerformanceData
-	mu      sync.RWMutex
-}
-
-// PerformanceData represents performance data point
-type PerformanceData struct {
-	Period    string
-	Return    float64
-	Volatility float64
-	Date      time.Time
-}
-
 // NewIslamicPerformanceCalculator creates a new Islamic performance calculator
 func NewIslamicPerformanceCalculator() *IslamicPerformanceCalculator {
 	return &IslamicPerformanceCalculator{
@@ -306,22 +161,11 @@ func (i *IslamicPerformanceCalculator) CalculatePerformance(asset string) error 
 	return nil
 }
 
-// IslamicFundType defines types of Islamic funds
-type IslamicFundType struct {
-	FundID        string
-	Name          string
-	Strategy      string
-	ShariaBoard   string
-	MinInvestment float64
-	ManagementFee float64
-	IsActive      bool
-}
-
 // NewADXService creates a new ADX service instance
 func NewADXService() *ADXService {
 	// Initialize UAE timezone
 	uaeTZ, _ := time.LoadLocation("Asia/Dubai")
-	
+
 	service := &ADXService{
 		exchangeID:         "ADX",
 		region:             "UAE",
@@ -480,7 +324,7 @@ func (adx *ADXService) ScreenAsset(ctx context.Context, symbol string) (*Screeni
 // GetTradingStatus returns current ADX trading status
 func (adx *ADXService) GetTradingStatus() *TradingStatus {
 	now := time.Now().In(adx.tradingHours.Timezone)
-	
+
 	status := &TradingStatus{
 		Exchange:    "ADX",
 		IsOpen:      adx.isMarketOpen(now),
@@ -550,7 +394,7 @@ func (adx *ADXService) isIslamicAsset(assetType AssetType) bool {
 func (adx *ADXService) isMarketOpen(now time.Time) bool {
 	// Convert to UAE timezone
 	uaeTime := now.In(adx.tradingHours.Timezone)
-	
+
 	// Check if it's a weekend (Friday-Saturday in UAE)
 	weekday := uaeTime.Weekday()
 	if weekday == time.Friday || weekday == time.Saturday {
@@ -569,8 +413,8 @@ func (adx *ADXService) isMarketOpen(now time.Time) bool {
 	minute := uaeTime.Minute()
 	currentMinutes := hour*60 + minute
 
-	openMinutes := 10*60     // 10:00 AM
-	closeMinutes := 15*60    // 3:00 PM
+	openMinutes := 10 * 60  // 10:00 AM
+	closeMinutes := 15 * 60 // 3:00 PM
 
 	return currentMinutes >= openMinutes && currentMinutes < closeMinutes
 }
@@ -578,30 +422,30 @@ func (adx *ADXService) isMarketOpen(now time.Time) bool {
 // getCurrentSession returns the current trading session
 func (adx *ADXService) getCurrentSession(now time.Time) *TradingSession {
 	uaeTime := now.In(adx.tradingHours.Timezone)
-	
+
 	for _, session := range adx.tradingHours.TradingSessions {
 		if uaeTime.After(session.StartTime) && uaeTime.Before(session.EndTime) {
 			return &session
 		}
 	}
-	
+
 	return nil
 }
 
 // getNextMarketOpen returns the next market opening time
 func (adx *ADXService) getNextMarketOpen(now time.Time) time.Time {
 	uaeTime := now.In(adx.tradingHours.Timezone)
-	
+
 	// If market is currently open, return tomorrow's opening
 	if adx.isMarketOpen(uaeTime) {
 		return adx.getNextBusinessDay(uaeTime).Add(10 * time.Hour) // 10:00 AM
 	}
-	
+
 	// If it's the same day but before opening, return today's opening
 	if uaeTime.Hour() < 10 {
 		return time.Date(uaeTime.Year(), uaeTime.Month(), uaeTime.Day(), 10, 0, 0, 0, adx.tradingHours.Timezone)
 	}
-	
+
 	// Otherwise, return next business day opening
 	return adx.getNextBusinessDay(uaeTime).Add(10 * time.Hour)
 }
@@ -609,12 +453,12 @@ func (adx *ADXService) getNextMarketOpen(now time.Time) time.Time {
 // getNextMarketClose returns the next market closing time
 func (adx *ADXService) getNextMarketClose(now time.Time) time.Time {
 	uaeTime := now.In(adx.tradingHours.Timezone)
-	
+
 	// If market is currently open, return today's closing
 	if adx.isMarketOpen(uaeTime) {
 		return time.Date(uaeTime.Year(), uaeTime.Month(), uaeTime.Day(), 15, 0, 0, 0, adx.tradingHours.Timezone)
 	}
-	
+
 	// Otherwise, return next business day closing
 	return adx.getNextBusinessDay(uaeTime).Add(15 * time.Hour)
 }
@@ -622,7 +466,7 @@ func (adx *ADXService) getNextMarketClose(now time.Time) time.Time {
 // getNextBusinessDay returns the next business day (excluding weekends and holidays)
 func (adx *ADXService) getNextBusinessDay(from time.Time) time.Time {
 	next := from.AddDate(0, 0, 1)
-	
+
 	for {
 		weekday := next.Weekday()
 		if weekday != time.Friday && weekday != time.Saturday {
@@ -647,14 +491,14 @@ func (adx *ADXService) getMarketMessage(now time.Time) string {
 	if adx.isMarketOpen(now) {
 		return "Market is open for trading"
 	}
-	
+
 	uaeTime := now.In(adx.tradingHours.Timezone)
 	weekday := uaeTime.Weekday()
-	
+
 	if weekday == time.Friday || weekday == time.Saturday {
 		return "Market closed for weekend"
 	}
-	
+
 	return "Market is closed"
 }
 
@@ -679,17 +523,17 @@ func getADXSupportedAssetTypes() []AssetType {
 // createADXTradingSchedule creates the trading schedule for ADX
 func createADXTradingSchedule(timezone *time.Location) *TradingSchedule {
 	now := time.Now().In(timezone)
-	
+
 	return &TradingSchedule{
-		MarketOpen:    time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, timezone),
-		MarketClose:   time.Date(now.Year(), now.Month(), now.Day(), 15, 0, 0, 0, timezone),
-		PreMarketOpen: time.Date(now.Year(), now.Month(), now.Day(), 9, 30, 0, 0, timezone),
+		MarketOpen:      time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, timezone),
+		MarketClose:     time.Date(now.Year(), now.Month(), now.Day(), 15, 0, 0, 0, timezone),
+		PreMarketOpen:   time.Date(now.Year(), now.Month(), now.Day(), 9, 30, 0, 0, timezone),
 		PostMarketClose: time.Date(now.Year(), now.Month(), now.Day(), 15, 30, 0, 0, timezone),
 		TradingSessions: []TradingSession{
 			{
-				Name:      "Main Session",
-				StartTime: time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, timezone),
-				EndTime:   time.Date(now.Year(), now.Month(), now.Day(), 15, 0, 0, 0, timezone),
+				Name:       "Main Session",
+				StartTime:  time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, timezone),
+				EndTime:    time.Date(now.Year(), now.Month(), now.Day(), 15, 0, 0, 0, timezone),
 				AssetTypes: getADXSupportedAssetTypes(),
 			},
 		},
@@ -702,9 +546,9 @@ func createADXTradingSchedule(timezone *time.Location) *TradingSchedule {
 func getADXHolidays(year int) []time.Time {
 	// UAE holidays (simplified list)
 	return []time.Time{
-		time.Date(year, time.January, 1, 0, 0, 0, 0, time.UTC),      // New Year
-		time.Date(year, time.December, 2, 0, 0, 0, 0, time.UTC),    // UAE National Day
-		time.Date(year, time.December, 3, 0, 0, 0, 0, time.UTC),    // UAE National Day
+		time.Date(year, time.January, 1, 0, 0, 0, 0, time.UTC),  // New Year
+		time.Date(year, time.December, 2, 0, 0, 0, 0, time.UTC), // UAE National Day
+		time.Date(year, time.December, 3, 0, 0, 0, 0, time.UTC), // UAE National Day
 		// Islamic holidays would be calculated based on lunar calendar
 	}
 }
@@ -754,55 +598,6 @@ func (adx *ADXService) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// SukukData represents Sukuk market data
-type SukukData struct {
-	Symbol          string
-	Name            string
-	SukukType       string
-	Yield           float64
-	Maturity        time.Time
-	Rating          string
-	ShariaBoard     string
-	ComplianceScore float64
-	Price           float64
-	Volume          int64
-	Timestamp       time.Time
-}
-
-// IslamicFundData represents Islamic fund data
-type IslamicFundData struct {
-	FundID          string
-	Name            string
-	NAV             float64
-	Strategy        string
-	ShariaBoard     string
-	ComplianceScore float64
-	Performance     *FundPerformance
-	Holdings        []IslamicHolding
-	Timestamp       time.Time
-}
-
-// FundPerformance represents fund performance metrics
-type FundPerformance struct {
-	OneDay    float64
-	OneWeek   float64
-	OneMonth  float64
-	ThreeMonth float64
-	OneYear   float64
-	Inception float64
-}
-
-
-
-
-
-
-// ADXOrderManager handles ADX-specific order operations
-type ADXOrderManager struct {
-	config *Config
-	mu     sync.RWMutex
-}
-
 // NewADXOrderManager creates a new ADX order manager
 func NewADXOrderManager() *ADXOrderManager {
 	return &ADXOrderManager{}
@@ -811,17 +606,11 @@ func NewADXOrderManager() *ADXOrderManager {
 // SubmitOrder submits an order to ADX
 func (o *ADXOrderManager) SubmitOrder(ctx context.Context, order *Order) (*OrderResponse, error) {
 	return &OrderResponse{
-		OrderID:     "adx-order-id",
-		Status:      OrderStatusPending,
-		Message:     "Order submitted to ADX",
-		Timestamp:   time.Now(),
+		OrderID:   "adx-order-id",
+		Status:    OrderStatusPending,
+		Message:   "Order submitted to ADX",
+		Timestamp: time.Now(),
 	}, nil
-}
-
-// ADXRiskEngine handles ADX-specific risk operations
-type ADXRiskEngine struct {
-	config *Config
-	mu     sync.RWMutex
 }
 
 // NewADXRiskEngine creates a new ADX risk engine
@@ -832,12 +621,6 @@ func NewADXRiskEngine() *ADXRiskEngine {
 // AssessOrder assesses order against risk rules
 func (r *ADXRiskEngine) AssessOrder(order *Order) error {
 	return nil
-}
-
-// ScreeningEngine handles Sharia compliance screening
-type ScreeningEngine struct {
-	config *Config
-	mu     sync.RWMutex
 }
 
 // NewScreeningEngine creates a new screening engine
@@ -855,32 +638,12 @@ func (s *ScreeningEngine) ScreenAsset(symbol string) (*ScreeningResult, error) {
 	}, nil
 }
 
-
-
-
-
-
-
-
-
-// SukukPricingEngine handles Sukuk pricing
-type SukukPricingEngine struct {
-	config *Config
-}
-
 // NewSukukPricingEngine creates a new Sukuk pricing engine
 func NewSukukPricingEngine() *SukukPricingEngine {
 	return &SukukPricingEngine{}
-}
-
-// IslamicIndexCalculator calculates Islamic indices
-type IslamicIndexCalculator struct {
-	config *Config
 }
 
 // NewIslamicIndexCalculator creates a new Islamic index calculator
 func NewIslamicIndexCalculator() *IslamicIndexCalculator {
 	return &IslamicIndexCalculator{}
 }
-
-

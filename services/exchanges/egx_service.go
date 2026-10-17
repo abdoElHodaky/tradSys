@@ -13,19 +13,19 @@ import (
 
 // EGXService provides Egyptian Exchange integration
 type EGXService struct {
-	exchangeID       string
-	region           string
-	assetTypes       []AssetType
-	tradingHours     *TradingSchedule
-	compliance       *EgyptianCompliance
-	islamicSupport   bool
-	languageSupport  []string
-	connector        *EGXConnector
-	marketData       *EGXMarketData
-	orderManager     *EGXOrderManager
-	riskEngine       *EGXRiskEngine
+	exchangeID         string
+	region             string
+	assetTypes         []AssetType
+	tradingHours       *TradingSchedule
+	compliance         *EgyptianCompliance
+	islamicSupport     bool
+	languageSupport    []string
+	connector          *EGXConnector
+	marketData         *EGXMarketData
+	orderManager       *EGXOrderManager
+	riskEngine         *EGXRiskEngine
 	performanceMonitor *PerformanceMonitor
-	mu               sync.RWMutex
+	mu                 sync.RWMutex
 }
 
 // EGXAssetType defines EGX-specific asset types (using existing package types)
@@ -74,13 +74,13 @@ type ReportingRules struct {
 
 // EGXConnector handles connection to Egyptian Exchange
 type EGXConnector struct {
-	endpoint        string
-	apiKey          string
-	connectionPool  *ConnectionPool
-	rateLimiter     *RateLimiter
-	retryPolicy     *RetryPolicy
-	healthChecker   *HealthChecker
-	mu              sync.RWMutex
+	endpoint       string
+	apiKey         string
+	connectionPool *ConnectionPool
+	rateLimiter    *RateLimiter
+	retryPolicy    *RetryPolicy
+	healthChecker  *HealthChecker
+	mu             sync.RWMutex
 }
 
 // EGXMarketData handles market data from EGX
@@ -114,19 +114,19 @@ type EGXRiskEngine struct {
 func NewEGXService() *EGXService {
 	// Initialize Cairo timezone
 	cairoTZ, _ := time.LoadLocation("Africa/Cairo")
-	
+
 	service := &EGXService{
-		exchangeID:      "EGX",
-		region:          "Cairo",
-		assetTypes:      getSupportedAssetTypes(),
-		tradingHours:    createEGXTradingSchedule(cairoTZ),
-		compliance:      NewEgyptianCompliance(),
-		islamicSupport:  true,
-		languageSupport: []string{"ar", "en"},
-		connector:       NewEGXConnector(),
-		marketData:      NewEGXMarketData(),
-		orderManager:    NewEGXOrderManager(),
-		riskEngine:      NewEGXRiskEngine(),
+		exchangeID:         "EGX",
+		region:             "Cairo",
+		assetTypes:         getSupportedAssetTypes(),
+		tradingHours:       createEGXTradingSchedule(cairoTZ),
+		compliance:         NewEgyptianCompliance(),
+		islamicSupport:     true,
+		languageSupport:    []string{"ar", "en"},
+		connector:          NewEGXConnector(),
+		marketData:         NewEGXMarketData(),
+		orderManager:       NewEGXOrderManager(),
+		riskEngine:         NewEGXRiskEngine(),
 		performanceMonitor: NewPerformanceMonitor(),
 	}
 
@@ -237,7 +237,7 @@ func (egx *EGXService) GetAssetInfo(ctx context.Context, symbol string) (*AssetI
 // GetTradingStatus returns current trading status
 func (egx *EGXService) GetTradingStatus() *TradingStatus {
 	now := time.Now().In(egx.tradingHours.Timezone)
-	
+
 	status := &TradingStatus{
 		Exchange:    "EGX",
 		IsOpen:      egx.isMarketOpen(now),
@@ -313,7 +313,7 @@ func (egx *EGXService) isAssetTypeSupported(assetType AssetType) bool {
 func (egx *EGXService) isMarketOpen(now time.Time) bool {
 	// Convert to Cairo timezone
 	cairoTime := now.In(egx.tradingHours.Timezone)
-	
+
 	// Check if it's a weekend (Friday-Saturday in Egypt)
 	weekday := cairoTime.Weekday()
 	if weekday == time.Friday || weekday == time.Saturday {
@@ -332,7 +332,7 @@ func (egx *EGXService) isMarketOpen(now time.Time) bool {
 	minute := cairoTime.Minute()
 	currentMinutes := hour*60 + minute
 
-	openMinutes := 10*60      // 10:00 AM
+	openMinutes := 10 * 60     // 10:00 AM
 	closeMinutes := 14*60 + 30 // 2:30 PM
 
 	return currentMinutes >= openMinutes && currentMinutes < closeMinutes
@@ -341,30 +341,30 @@ func (egx *EGXService) isMarketOpen(now time.Time) bool {
 // getCurrentSession returns the current trading session
 func (egx *EGXService) getCurrentSession(now time.Time) *TradingSession {
 	cairoTime := now.In(egx.tradingHours.Timezone)
-	
+
 	for _, session := range egx.tradingHours.TradingSessions {
 		if cairoTime.After(session.StartTime) && cairoTime.Before(session.EndTime) {
 			return &session
 		}
 	}
-	
+
 	return nil
 }
 
 // getNextMarketOpen returns the next market opening time
 func (egx *EGXService) getNextMarketOpen(now time.Time) time.Time {
 	cairoTime := now.In(egx.tradingHours.Timezone)
-	
+
 	// If market is currently open, return tomorrow's opening
 	if egx.isMarketOpen(cairoTime) {
 		return egx.getNextBusinessDay(cairoTime).Add(10 * time.Hour) // 10:00 AM
 	}
-	
+
 	// If it's the same day but before opening, return today's opening
 	if cairoTime.Hour() < 10 {
 		return time.Date(cairoTime.Year(), cairoTime.Month(), cairoTime.Day(), 10, 0, 0, 0, egx.tradingHours.Timezone)
 	}
-	
+
 	// Otherwise, return next business day opening
 	return egx.getNextBusinessDay(cairoTime).Add(10 * time.Hour)
 }
@@ -372,12 +372,12 @@ func (egx *EGXService) getNextMarketOpen(now time.Time) time.Time {
 // getNextMarketClose returns the next market closing time
 func (egx *EGXService) getNextMarketClose(now time.Time) time.Time {
 	cairoTime := now.In(egx.tradingHours.Timezone)
-	
+
 	// If market is currently open, return today's closing
 	if egx.isMarketOpen(cairoTime) {
 		return time.Date(cairoTime.Year(), cairoTime.Month(), cairoTime.Day(), 14, 30, 0, 0, egx.tradingHours.Timezone)
 	}
-	
+
 	// Otherwise, return next business day closing
 	return egx.getNextBusinessDay(cairoTime).Add(14*time.Hour + 30*time.Minute)
 }
@@ -385,7 +385,7 @@ func (egx *EGXService) getNextMarketClose(now time.Time) time.Time {
 // getNextBusinessDay returns the next business day (excluding weekends and holidays)
 func (egx *EGXService) getNextBusinessDay(from time.Time) time.Time {
 	next := from.AddDate(0, 0, 1)
-	
+
 	for {
 		weekday := next.Weekday()
 		if weekday != time.Friday && weekday != time.Saturday {
@@ -420,19 +420,19 @@ func (egx *EGXService) applyIslamicFiltering(data *MarketData) *MarketData {
 // getComplianceInfo returns compliance information for an asset
 func (egx *EGXService) getComplianceInfo(_ string) *ComplianceInfo {
 	return &ComplianceInfo{
-		Exchange:     "EGX",
-		Regulator:    "EFA", // Egyptian Financial Authority
+		Exchange:        "EGX",
+		Regulator:       "EFA", // Egyptian Financial Authority
 		ComplianceLevel: "Full",
-		LastUpdated:  time.Now(),
+		LastUpdated:     time.Now(),
 	}
 }
 
 // getIslamicInfo returns Islamic finance information for an asset
 func (egx *EGXService) getIslamicInfo(_ string) *IslamicInfo {
 	return &IslamicInfo{
-		IsHalal:        true, // This would be determined by actual screening
-		ShariaBoard:    "Egyptian Sharia Board",
-		LastScreened:   time.Now(),
+		IsHalal:         true, // This would be determined by actual screening
+		ShariaBoard:     "Egyptian Sharia Board",
+		LastScreened:    time.Now(),
 		ComplianceScore: 95.0,
 	}
 }
@@ -455,17 +455,17 @@ func getSupportedAssetTypes() []AssetType {
 // createEGXTradingSchedule creates the trading schedule for EGX
 func createEGXTradingSchedule(timezone *time.Location) *TradingSchedule {
 	now := time.Now().In(timezone)
-	
+
 	return &TradingSchedule{
-		MarketOpen:    time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, timezone),
-		MarketClose:   time.Date(now.Year(), now.Month(), now.Day(), 14, 30, 0, 0, timezone),
-		PreMarketOpen: time.Date(now.Year(), now.Month(), now.Day(), 9, 30, 0, 0, timezone),
+		MarketOpen:      time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, timezone),
+		MarketClose:     time.Date(now.Year(), now.Month(), now.Day(), 14, 30, 0, 0, timezone),
+		PreMarketOpen:   time.Date(now.Year(), now.Month(), now.Day(), 9, 30, 0, 0, timezone),
 		PostMarketClose: time.Date(now.Year(), now.Month(), now.Day(), 15, 0, 0, 0, timezone),
 		TradingSessions: []TradingSession{
 			{
-				Name:      "Main Session",
-				StartTime: time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, timezone),
-				EndTime:   time.Date(now.Year(), now.Month(), now.Day(), 14, 30, 0, 0, timezone),
+				Name:       "Main Session",
+				StartTime:  time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, timezone),
+				EndTime:    time.Date(now.Year(), now.Month(), now.Day(), 14, 30, 0, 0, timezone),
 				AssetTypes: getSupportedAssetTypes(),
 			},
 		},
@@ -478,12 +478,12 @@ func createEGXTradingSchedule(timezone *time.Location) *TradingSchedule {
 func getEGXHolidays(year int) []time.Time {
 	// Egyptian holidays (simplified list)
 	return []time.Time{
-		time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC),   // New Year
-		time.Date(year, 1, 25, 0, 0, 0, 0, time.UTC),  // Revolution Day
-		time.Date(year, 4, 25, 0, 0, 0, 0, time.UTC),  // Sinai Liberation Day
-		time.Date(year, 5, 1, 0, 0, 0, 0, time.UTC),   // Labor Day
-		time.Date(year, 7, 23, 0, 0, 0, 0, time.UTC),  // Revolution Day
-		time.Date(year, 10, 6, 0, 0, 0, 0, time.UTC),  // Armed Forces Day
+		time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC),  // New Year
+		time.Date(year, 1, 25, 0, 0, 0, 0, time.UTC), // Revolution Day
+		time.Date(year, 4, 25, 0, 0, 0, 0, time.UTC), // Sinai Liberation Day
+		time.Date(year, 5, 1, 0, 0, 0, 0, time.UTC),  // Labor Day
+		time.Date(year, 7, 23, 0, 0, 0, 0, time.UTC), // Revolution Day
+		time.Date(year, 10, 6, 0, 0, 0, 0, time.UTC), // Armed Forces Day
 		// Islamic holidays would be calculated based on lunar calendar
 	}
 }

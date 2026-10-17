@@ -32,10 +32,10 @@ var ExchangeModule = fx.Options(
 
 // ExchangeServices aggregates all exchange services
 type ExchangeServices struct {
-	ADX  *ADXService
-	EGX  *EGXService
-	IS   *IslamicCompliance
-	UAE  *UAECompliance
+	ADX *ADXService
+	EGX *EGXService
+	IS  *IslamicCompliance
+	UAE *UAECompliance
 }
 
 // NewExchangeService creates the exchange services aggregator

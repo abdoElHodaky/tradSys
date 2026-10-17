@@ -51,10 +51,10 @@ type Connector interface {
 // BaseExchangeService provides common functionality for exchange services
 // This follows the Template Method pattern and DRY principle
 type BaseExchangeService struct {
-	exchangeID       string
-	region           string
-	assetTypes       []AssetType
-	tradingHours     *TradingSchedule
+	exchangeID         string
+	region             string
+	assetTypes         []AssetType
+	tradingHours       *TradingSchedule
 	performanceMonitor *PerformanceMonitor
 }
 
@@ -65,10 +65,10 @@ func NewBaseExchangeService(
 	tradingHours *TradingSchedule,
 ) *BaseExchangeService {
 	return &BaseExchangeService{
-		exchangeID:     exchangeID,
-		region:         region,
-		assetTypes:     assetTypes,
-		tradingHours:   tradingHours,
+		exchangeID:         exchangeID,
+		region:             region,
+		assetTypes:         assetTypes,
+		tradingHours:       tradingHours,
 		performanceMonitor: NewPerformanceMonitor(),
 	}
 }

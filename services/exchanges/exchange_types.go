@@ -12,29 +12,29 @@ import (
 type AssetType string
 
 const (
-	AssetTypeStock              AssetType = "STOCK"
-	AssetTypeGovernmentBond     AssetType = "GOVERNMENT_BOND"
-	AssetTypeCorporateBond      AssetType = "CORPORATE_BOND"
-	AssetTypeETF                AssetType = "ETF"
-	AssetTypeREIT               AssetType = "REIT"
-	AssetTypeMutualFund         AssetType = "MUTUAL_FUND"
-	AssetTypeIslamicInstrument  AssetType = "ISLAMIC_INSTRUMENT"
-	AssetTypeSukuk              AssetType = "SUKUK"
-	AssetTypeIslamicFund        AssetType = "ISLAMIC_FUND"
-	AssetTypeIslamicREIT        AssetType = "ISLAMIC_REIT"
-	AssetTypeIslamicETF         AssetType = "ISLAMIC_ETF"
-	AssetTypeTAKAFUL            AssetType = "TAKAFUL"
+	AssetTypeStock             AssetType = "STOCK"
+	AssetTypeGovernmentBond    AssetType = "GOVERNMENT_BOND"
+	AssetTypeCorporateBond     AssetType = "CORPORATE_BOND"
+	AssetTypeETF               AssetType = "ETF"
+	AssetTypeREIT              AssetType = "REIT"
+	AssetTypeMutualFund        AssetType = "MUTUAL_FUND"
+	AssetTypeIslamicInstrument AssetType = "ISLAMIC_INSTRUMENT"
+	AssetTypeSukuk             AssetType = "SUKUK"
+	AssetTypeIslamicFund       AssetType = "ISLAMIC_FUND"
+	AssetTypeIslamicREIT       AssetType = "ISLAMIC_REIT"
+	AssetTypeIslamicETF        AssetType = "ISLAMIC_ETF"
+	AssetTypeTAKAFUL           AssetType = "TAKAFUL"
 )
 
 // TradingSchedule represents trading hours and schedule
 type TradingSchedule struct {
-	Timezone       *time.Location
-	MarketOpen     time.Time
-	MarketClose    time.Time
-	PreMarketOpen  time.Time
+	Timezone        *time.Location
+	MarketOpen      time.Time
+	MarketClose     time.Time
+	PreMarketOpen   time.Time
 	PostMarketClose time.Time
 	TradingSessions []TradingSession
-	Holidays       []time.Time
+	Holidays        []time.Time
 }
 
 // TradingSession represents a trading session
@@ -47,10 +47,10 @@ type TradingSession struct {
 
 // Config holds configuration for exchange services
 type Config struct {
-	APIEndpoint  string
-	APIKey       string
-	APISecret    string
-	Timeout      time.Duration
+	APIEndpoint   string
+	APIKey        string
+	APISecret     string
+	Timeout       time.Duration
 	RetryAttempts int
 	RateLimitRPS  int
 	EnableIslamic bool
@@ -124,20 +124,20 @@ type OrderResponse struct {
 
 // MarketData represents market data for an asset
 type MarketData struct {
-	Symbol      string
-	AssetType   AssetType
-	Price       float64
-	Bid         float64
-	Ask         float64
-	Volume      int64
-	High        float64
-	Low         float64
-	Open        float64
-	Close       float64
-	Change      float64
+	Symbol        string
+	AssetType     AssetType
+	Price         float64
+	Bid           float64
+	Ask           float64
+	Volume        int64
+	High          float64
+	Low           float64
+	Open          float64
+	Close         float64
+	Change        float64
 	ChangePercent float64
-	Timestamp   time.Time
-	Exchange    string
+	Timestamp     time.Time
+	Exchange      string
 }
 
 // MarketDataUpdate represents real-time market data update
@@ -249,9 +249,9 @@ type HealthChecker struct {
 
 // DataFeed represents a market data feed
 type DataFeed struct {
-	Symbol    string
-	AssetType AssetType
-	IsActive  bool
+	Symbol     string
+	AssetType  AssetType
+	IsActive   bool
 	LastUpdate time.Time
 }
 
@@ -324,8 +324,8 @@ const (
 
 // PositionLimit defines position limits
 type PositionLimit struct {
-	MaxPosition     float64
-	MaxNotional     float64
+	MaxPosition        float64
+	MaxNotional        float64
 	ConcentrationLimit float64
 }
 
@@ -545,8 +545,8 @@ func NewPerformanceMonitor() *PerformanceMonitor {
 	return &PerformanceMonitor{
 		MetricsInterval: time.Minute,
 		AlertThresholds: map[string]float64{
-			"latency":    50.0, // 50ms
-			"error_rate": 0.01, // 1%
+			"latency":    50.0,  // 50ms
+			"error_rate": 0.01,  // 1%
 			"uptime":     0.999, // 99.9%
 		},
 	}

@@ -9,10 +9,10 @@ import (
 // BaseCompliance provides common compliance functionality
 // following DRY principle - shared logic between Egyptian, UAE, and other compliance types
 type BaseCompliance struct {
-	regulatoryRules    map[string]ComplianceRule
-	kycRequirements    KYCRequirements
-	reportingRules     ReportingRules
-	lastUpdated        time.Time
+	regulatoryRules map[string]ComplianceRule
+	kycRequirements KYCRequirements
+	reportingRules  ReportingRules
+	lastUpdated     time.Time
 }
 
 // NewBaseCompliance creates a base compliance instance
